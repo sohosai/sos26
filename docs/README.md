@@ -16,6 +16,7 @@
 - 共有仕様
   - Shared パッケージ: `packages/shared/README.md`
 - テスト全般: `docs/testing.md`
+- データベース: `docs/database.md`
 - How-to
   - エンドポイント追加手順: `docs/how-to/add-endpoint.md`
 - 設定・運用
