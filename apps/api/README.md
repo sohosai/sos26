@@ -48,12 +48,13 @@ export { route as exampleRoute }
 
 ```ts
 import { Hono } from 'hono'
+import { env } from './lib/env'
 import { exampleRoute } from './routes/example'
 
 const app = new Hono()
 app.route('/', exampleRoute)
 
-export default { port: process.env.PORT || 3000, fetch: app.fetch }
+export default { port: env.PORT, fetch: app.fetch }
 ```
 
 ## CORS とポート

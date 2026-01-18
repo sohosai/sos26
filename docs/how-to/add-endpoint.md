@@ -95,11 +95,12 @@ export { route as itemRoute }
 
 ```ts
 import { Hono } from 'hono'
+import { env } from './lib/env'
 import { itemRoute } from './routes/<name>'
 
 const app = new Hono()
 app.route('/', itemRoute)
-export default { port: process.env.PORT || 3000, fetch: app.fetch }
+export default { port: env.PORT, fetch: app.fetch }
 ```
 
 ## 4. Web から呼び出し（apps/web）
