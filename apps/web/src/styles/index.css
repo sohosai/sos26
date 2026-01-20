@@ -1,4 +1,4 @@
-@layer reset, radix, components;
+@layer reset, radix;
 
 @import "./reset.css" layer(reset);
 @import "./global.scss" layer(reset);

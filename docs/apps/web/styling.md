@@ -8,6 +8,10 @@
 	- [目次](#目次)
 	- [基本方針](#基本方針)
 	- [カスケードレイヤー](#カスケードレイヤー)
+		- [レイヤー構成](#レイヤー構成)
+		- [CSS Modules とレイヤー](#css-modules-とレイヤー)
+		- [なぜ CSS Modules で @layer を使わないか](#なぜ-css-modules-で-layer-を使わないか)
+		- [注意点](#注意点)
 	- [Theme の設定](#theme-の設定)
 		- [配置ルール](#配置ルール)
 		- [設定項目](#設定項目)
@@ -31,36 +35,47 @@
 
 ## カスケードレイヤー
 
-本プロジェクトでは **CSS Cascade Layers**（`@layer`）を使用して、スタイルの優先順位を明示的に管理している。
+本プロジェクトでは **CSS Cascade Layers**（`@layer`）を使用して、ベーススタイルの優先順位を明示的に管理している。
 
 ### レイヤー構成
 
 ```css
-@layer reset, radix, components;
+@layer reset, radix;
 
 @import "./reset.css" layer(reset);
 @import "./global.scss" layer(reset);
 @import "@radix-ui/themes/styles.css" layer(radix);
 ```
 
-| レイヤー     | 用途                                     | 優先度 |
-| ------------ | ---------------------------------------- | ------ |
-| `reset`      | リセット CSS、グローバルスタイル         | 低     |
-| `radix`      | Radix UI Themes のスタイル               | 中     |
-| `components` | コンポーネントのスタイル（CSS Modules）  | 高     |
+| レイヤー | 用途                             | 優先度 |
+| -------- | -------------------------------- | ------ |
+| `reset`  | リセット CSS、グローバルスタイル | 低     |
+| `radix`  | Radix UI Themes のスタイル       | 中     |
 
-### レイヤーの効果
+### CSS Modules とレイヤー
 
-- **優先順位の明確化**: レイヤーの定義順で優先度が決まる（後に定義されたレイヤーが優先）
-- **詳細度の問題を回避**: レイヤー間では詳細度に関係なく、後のレイヤーが勝つ
-- **Radix スタイルの上書き**: `radix` レイヤーより `components` レイヤーが優先されるため、CSS Modules で Radix のスタイルを確実に上書きできる
+**CSS Modules では `@layer` を使用しない。**
+
+レイヤーなしのスタイルは、すべてのレイヤーよりも優先度が高くなる。これにより、CSS Modules のスタイルが Radix のスタイルを確実に上書きできる。
+
+```scss
+// ComponentName.module.scss
+// @layer を使わない
+.button {
+  cursor: pointer;
+}
+```
+
+### なぜ CSS Modules で @layer を使わないか
+
+CSS Modules は Vite によって個別にバンドルされるため、`index.css` のレイヤー宣言と同期できない。
+レイヤーなしで記述することで、読み込み順序に関係なく Radix より優先される。
 
 ### 注意点
 
-- CSS Modules で書いたスタイルは `@layer components { ... }` で囲むこと
-- 新しいレイヤーを追加する場合は `@layer` 宣言の順序を慎重に検討すること
 - グローバルに適用したいスタイルは `reset` レイヤーに配置
 - Radix のスタイルは `main.tsx` ではなく `index.css` 内で読み込む（レイヤー制御のため）
+- 新しいレイヤーを追加する場合は `@layer` 宣言の順序を慎重に検討すること
 
 ## Theme の設定
 
