@@ -83,9 +83,9 @@ function ComponentsPage() {
 				</div>
 			</section>
 
-			{/* Checkbox */}
+			{/* Checkbox (単体) */}
 			<section className={styles.section}>
-				<h3>Checkbox</h3>
+				<h3>Checkbox（単体）</h3>
 				<div className={styles.grid}>
 					<div className={styles.item}>
 						<h4>Basic</h4>
