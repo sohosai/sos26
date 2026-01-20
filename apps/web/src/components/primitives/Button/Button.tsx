@@ -1,5 +1,5 @@
 import { Button as RadixButton } from "@radix-ui/themes";
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps, MouseEvent, ReactNode } from "react";
 import styles from "./Button.module.scss";
 
 /**
@@ -42,7 +42,7 @@ type ButtonProps = {
 	loading?: boolean;
 	disabled?: boolean;
 	type?: "button" | "submit" | "reset";
-	onClick?: () => void;
+	onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
 };
 
 export function Button({
