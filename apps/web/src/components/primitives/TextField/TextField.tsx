@@ -26,7 +26,7 @@ type TextFieldProps = {
 	label: string;
 	error?: string;
 	placeholder?: string;
-	type?: "text" | "email" | "password" | "tel" | "url" | "number";
+	type?: "text" | "email" | "password" | "tel" | "url" | "number" | "search";
 	value?: string;
 	defaultValue?: string;
 	onChange?: (value: string) => void;

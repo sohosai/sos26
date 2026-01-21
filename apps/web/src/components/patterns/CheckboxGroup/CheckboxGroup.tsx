@@ -68,6 +68,7 @@ export function CheckboxGroup({
 				defaultValue={defaultValue}
 				onValueChange={onValueChange}
 				disabled={disabled}
+				required={required}
 				name={name}
 				className={styles.group}
 			>
