@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@radix-ui/themes": "^3.2.1",
     "@sos26/shared": "workspace:*",
     "@tanstack/react-router": "^1.147.1",
     "ky": "^1.14.2",

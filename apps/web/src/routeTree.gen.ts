@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SearchIndexRouteImport } from './routes/search/index'
+import { Route as DevUiComponentsIndexRouteImport } from './routes/dev/ui/components/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const SearchIndexRoute = SearchIndexRouteImport.update({
   path: '/search/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevUiComponentsIndexRoute = DevUiComponentsIndexRouteImport.update({
+  id: '/dev/ui/components/',
+  path: '/dev/ui/components/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/search': typeof SearchIndexRoute
+  '/dev/ui/components': typeof DevUiComponentsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/search': typeof SearchIndexRoute
+  '/dev/ui/components': typeof DevUiComponentsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/search/': typeof SearchIndexRoute
+  '/dev/ui/components/': typeof DevUiComponentsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/search'
+  fullPaths: '/' | '/search' | '/dev/ui/components'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/search'
-  id: '__root__' | '/' | '/search/'
+  to: '/' | '/search' | '/dev/ui/components'
+  id: '__root__' | '/' | '/search/' | '/dev/ui/components/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SearchIndexRoute: typeof SearchIndexRoute
+  DevUiComponentsIndexRoute: typeof DevUiComponentsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SearchIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/ui/components/': {
+      id: '/dev/ui/components/'
+      path: '/dev/ui/components'
+      fullPath: '/dev/ui/components'
+      preLoaderRoute: typeof DevUiComponentsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SearchIndexRoute: SearchIndexRoute,
+  DevUiComponentsIndexRoute: DevUiComponentsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
-import { Button } from "@/components/Button";
+import { Button } from "@/components/primitives";
 import { listUsers } from "@/lib/api/user";
 import { type ClientErrorClass, isClientError } from "@/lib/http/error";
 
@@ -56,7 +56,7 @@ function Index() {
 		<div>
 			<h1>Welcome Sohosai Online System!</h1>
 			<div>
-				<Button onClick={handleFetchUsers} disabled={loading}>
+				<Button onClick={handleFetchUsers} loading={loading}>
 					ユーザー一覧を取得
 				</Button>
 			</div>

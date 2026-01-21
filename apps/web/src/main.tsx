@@ -1,10 +1,10 @@
+import { Theme } from "@radix-ui/themes";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { routeTree } from "./routeTree.gen";
 
-import "./styles/reset.css";
-import "./styles/global.scss";
+import "./styles/index.css";
 
 // Create a new router instance
 const router = createRouter({ routeTree });
@@ -23,6 +23,8 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
 	<StrictMode>
-		<RouterProvider router={router} />
+		<Theme accentColor="indigo" grayColor="slate" panelBackground="solid">
+			<RouterProvider router={router} />
+		</Theme>
 	</StrictMode>
 );
