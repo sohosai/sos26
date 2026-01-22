@@ -1,6 +1,7 @@
 import sgMail from "@sendgrid/mail";
-import { z } from "zod";
+import { ZodError, z } from "zod";
 import { env } from "../../env";
+import { Errors } from "../../error";
 
 sgMail.setApiKey(env.SENDGRID_API_KEY);
 
@@ -12,16 +13,6 @@ const SendEmailInputSchema = z.object({
 });
 
 export type SendEmailInput = z.infer<typeof SendEmailInputSchema>;
-
-export class EmailSendError extends Error {
-	constructor(
-		message: string,
-		public readonly cause?: unknown
-	) {
-		super(message);
-		this.name = "EmailSendError";
-	}
-}
 
 export async function sendEmail(input: SendEmailInput): Promise<void> {
 	try {
@@ -40,6 +31,13 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
 			},
 		});
 	} catch (err) {
-		throw new EmailSendError("Failed to send email", err);
+		// 入力値の不正はそのまま ZodError を返す
+		if (err instanceof ZodError) {
+			throw err;
+		}
+
+		// 外部サービスの失敗などは内部エラーとして正規化し、詳細は返さない
+		console.error("[Email] Failed to send email via SendGrid", err);
+		throw Errors.internal("メール送信に失敗しました");
 	}
 }
