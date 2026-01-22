@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@prisma/client": "^7.2.0",
+    "@sendgrid/mail": "^8.1.6",
     "zod": "^4.3.5"
   }
 }
