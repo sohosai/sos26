@@ -35,7 +35,7 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
 			text: parsed.text,
 			mailSettings: {
 				sandboxMode: {
-					enable: env.EMAIL_SANDBOX === "true",
+					enable: env.EMAIL_SANDBOX,
 				},
 			},
 		});
