@@ -20,6 +20,10 @@ apps/apiで使用する環境変数の設定方法とリファレンスです。
 | `SENDGRID_API_KEY` | SendGrid の API キー | なし | ✅ |
 | `EMAIL_FROM` | 送信元メールアドレス | なし | ✅ |
 | `EMAIL_SANDBOX` | SendGrid サンドボックスモード有効化 | `false` | ❌ |
+| `FIREBASE_PROJECT_ID` | Firebase プロジェクトID | なし | ✅ |
+| `FIREBASE_CLIENT_EMAIL` | Firebase サービスアカウントのメールアドレス | なし | ✅ |
+| `FIREBASE_PRIVATE_KEY` | Firebase サービスアカウントの秘密鍵 | なし | ✅ |
+| `APP_URL` | アプリケーションURL（メール内リンク用） | なし | ✅ |
 
 ## 設定方法
 
@@ -36,6 +40,14 @@ CORS_ORIGIN=http://localhost:5173,http://localhost:3001
 SENDGRID_API_KEY=your_sendgrid_api_key_here
 EMAIL_FROM=you@example.com
 EMAIL_SANDBOX=false
+
+# Firebase Admin（認証機能で必要）
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project-id.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+# 認証
+APP_URL=http://localhost:5173
 
 # ローカル専用にしたい場合は .env.local を使用
 # apps/api/.env.local が存在すればこちらが優先されます
@@ -70,6 +82,20 @@ EMAIL_SANDBOX=false
 - 既定は `false`
 - `"1"`/`"0"`、`"yes"`/`"no"` などの値は無効です（起動時にバリデーションエラー）
 
+**FIREBASE_PROJECT_ID:**
+- 空であってはならない必須文字列
+
+**FIREBASE_CLIENT_EMAIL:**
+- 空であってはならない必須文字列
+
+**FIREBASE_PRIVATE_KEY:**
+- 空であってはならない必須文字列
+- `\n` は実際の改行に変換されます
+
+**APP_URL:**
+- 有効なURL形式である必要があります
+- メール内のリンク生成に使用
+
 ### エラー例
 
 ```
@@ -95,6 +121,14 @@ console.log(env.CORS_ORIGIN);    // string[]型
 console.log(env.SENDGRID_API_KEY); // string型
 console.log(env.EMAIL_FROM);     // string型（email）
 console.log(env.EMAIL_SANDBOX);  // boolean型
+
+// Firebase Admin（認証機能）
+console.log(env.FIREBASE_PROJECT_ID);    // string型
+console.log(env.FIREBASE_CLIENT_EMAIL);  // string型
+console.log(env.FIREBASE_PRIVATE_KEY);   // string型
+
+// 認証
+console.log(env.APP_URL);            // string型
 ```
 
 ### 型定義

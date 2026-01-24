@@ -16,6 +16,9 @@ apps/webで使用する環境変数の設定方法とリファレンスです。
 | 変数名 | 説明 | デフォルト値 | 必須 |
 |--------|------|-------------|------|
 | `VITE_API_BASE_URL` | APIのベースURL | `http://localhost:3000` | ❌ |
+| `VITE_FIREBASE_API_KEY` | Firebase API キー | なし | ✅ |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase Auth ドメイン | なし | ✅ |
+| `VITE_FIREBASE_PROJECT_ID` | Firebase プロジェクトID | なし | ✅ |
 
 ## 設定方法
 
@@ -26,6 +29,11 @@ apps/webで使用する環境変数の設定方法とリファレンスです。
 ```bash
 # apps/web/.env
 VITE_API_BASE_URL=http://localhost:3000
+
+# Firebase（認証機能で必要）
+VITE_FIREBASE_API_KEY=AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+VITE_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
 
 # ローカル専用にしたい場合は .env.local を使用
 # apps/web/.env.local が存在すればこちらが優先されます
@@ -41,6 +49,18 @@ VITE_API_BASE_URL=http://localhost:3000
 - `http://` または `https://` で始まる必要があります
 - 空文字列の場合はデフォルト値が使用されます
 - 不正な値の場合は起動時にエラーが発生します
+
+**VITE_FIREBASE_API_KEY:**
+- 空であってはならない必須文字列
+- Firebase Console から取得
+
+**VITE_FIREBASE_AUTH_DOMAIN:**
+- 空であってはならない必須文字列
+- 通常は `{project-id}.firebaseapp.com` 形式
+
+**VITE_FIREBASE_PROJECT_ID:**
+- 空であってはならない必須文字列
+- Firebase プロジェクトの識別子
 
 ### エラー例
 
@@ -63,6 +83,11 @@ import { env } from "@/lib/env";
 
 // 型安全にアクセス
 console.log(env.VITE_API_BASE_URL); // string型
+
+// Firebase（認証機能）
+console.log(env.VITE_FIREBASE_API_KEY);     // string型
+console.log(env.VITE_FIREBASE_AUTH_DOMAIN); // string型
+console.log(env.VITE_FIREBASE_PROJECT_ID);  // string型
 ```
 
 ### 型定義

@@ -29,13 +29,15 @@
 import { ErrorCode } from "@sos26/shared";
 
 // 利用可能なエラーコード
-ErrorCode.UNAUTHORIZED    // 401 - 認証エラー
-ErrorCode.FORBIDDEN       // 403 - 権限エラー
-ErrorCode.NOT_FOUND       // 404 - リソース不在
-ErrorCode.ALREADY_EXISTS  // 409 - 重複エラー
+ErrorCode.UNAUTHORIZED     // 401 - 認証エラー
+ErrorCode.FORBIDDEN        // 403 - 権限エラー
+ErrorCode.NOT_FOUND        // 404 - リソース不在
+ErrorCode.ALREADY_EXISTS   // 409 - 重複エラー
 ErrorCode.VALIDATION_ERROR // 400 - バリデーションエラー
-ErrorCode.INVALID_REQUEST // 400 - 不正リクエスト
-ErrorCode.INTERNAL        // 500 - 内部エラー
+ErrorCode.INVALID_REQUEST  // 400 - 不正リクエスト
+ErrorCode.INTERNAL         // 500 - 内部エラー
+ErrorCode.TOKEN_INVALID    // 400 - トークン不正（認証系）
+ErrorCode.RATE_LIMITED     // 429 - レート制限超過（将来対応予定）
 ```
 
 ### ApiErrorResponse
@@ -84,6 +86,9 @@ throw Errors.validationError("入力値が不正です", {
 
 // 内部エラー
 throw Errors.internal("内部エラーが発生しました");
+
+// トークン不正（認証系）
+throw Errors.tokenInvalid("トークンが無効または期限切れです");
 ```
 
 ### 実装例
@@ -178,6 +183,8 @@ if (error && isClientError(error)) {
       return <div>ユーザーが見つかりません</div>;
     case ErrorCode.UNAUTHORIZED:
       return <div>ログインが必要です</div>;
+    case ErrorCode.TOKEN_INVALID:
+      return <div>セッションが切れました。再度お試しください</div>;
   }
   // 非APIエラーは kind で分岐
   if (error.kind === "network") {
