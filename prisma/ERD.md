@@ -8,17 +8,65 @@
 
 ```mermaid
 erDiagram
+"EmailVerification" {
+  String email PK
+  String tokenHash UK
+  DateTime expiresAt
+  DateTime createdAt
+  DateTime updatedAt
+}
+"RegTicket" {
+  String id PK
+  String tokenHash UK
+  String email UK
+  DateTime expiresAt
+  DateTime createdAt
+  DateTime updatedAt
+}
 "User" {
   String id PK
-  String name
+  String firebaseUid UK
   String email UK
+  String firstName
+  String lastName
+  UserRole role
+  UserStatus status
+  DateTime createdAt
+  DateTime updatedAt
 }
 ```
+
+### `EmailVerification`
+
+Properties as follows:
+
+- `email`:
+- `tokenHash`:
+- `expiresAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `RegTicket`
+
+Properties as follows:
+
+- `id`:
+- `tokenHash`:
+- `email`:
+- `expiresAt`:
+- `createdAt`:
+- `updatedAt`:
 
 ### `User`
 
 Properties as follows:
 
 - `id`:
-- `name`:
+- `firebaseUid`:
 - `email`:
+- `firstName`:
+- `lastName`:
+- `role`:
+- `status`:
+- `createdAt`:
+- `updatedAt`:
