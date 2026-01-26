@@ -44,26 +44,24 @@
 // 認証: メール検証チャレンジ（一時）
 model EmailVerification {
   email     String   @id
-  tokenHash String   @unique @map("token_hash")
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([expiresAt])
-  @@map("email_verifications")
 }
 
 // 認証: 短命チケット（Cookie の Opaque token に対応）
 model RegTicket {
   id        String   @id @default(cuid())
-  tokenHash String   @unique @map("token_hash")
+  tokenHash String   @unique
   email     String   @unique
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([expiresAt])
-  @@map("reg_tickets")
 }
 ```
 

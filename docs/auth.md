@@ -232,8 +232,10 @@ model RegTicket {
 | 保存 | HttpOnly Cookie |
 | Path | `/auth` |
 | 有効期限 | 15分 |
-| SameSite | Strict |
+| SameSite | Lax |
 | Secure | 本番では true |
+
+SameSite=Lax を採用する理由: 同一サイト（例: app.example.jp と api.example.jp）での XHR にクッキーを同送させるため。クロスサイト送信を前提としない運用を想定する。
 
 - Opaque token（ランダムな URL-safe 文字列）
 - Cookie 自体は意味を持たず、サーバは DB に `tokenHash(SHA-256)`, `email`, `expiresAt` を保持
@@ -291,6 +293,8 @@ Response:
   200: { success: true, email: string }
   Set-Cookie: reg_ticket=<opaque>; HttpOnly; Path=/auth; SameSite=Lax; Max-Age=900
 ```
+
+注: `email` は tsukubaEmailSchema に準拠した正規化済み（trim + lowercase）の筑波大学メールです。
 
 **処理（原子的）**
 1. tokenHash を計算（SHA-256）

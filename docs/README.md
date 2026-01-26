@@ -26,9 +26,7 @@
   - エンドポイント追加手順: `docs/how-to/add-endpoint.md`
   - エラーハンドリング: `docs/how-to/error-handling.md`
 - 設定・運用
-  - 設定まとめ: `docs/configuration.md`
-  - 開発環境ガイド: `docs/development.md`
+  - Web 設定: `docs/apps/web/configuration.md`
 - コントリビュート: `CONTRIBUTING.md`
 
 必要に応じて、各トピックを拡張・更新してください。
-

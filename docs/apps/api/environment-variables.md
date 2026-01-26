@@ -78,9 +78,9 @@ APP_URL=http://localhost:5173
 - メールアドレス形式である必要があります（`z.email()`）
 
 **EMAIL_SANDBOX:**
-- 真偽値（厳密）。文字列 `"true"` / `"false"` のみ受け付けます
+- 文字列 `"true"` / `"false"` のみ受け付け、内部で boolean に変換します
 - 既定は `false`
-- `"1"`/`"0"`、`"yes"`/`"no"` などの値は無効です（起動時にバリデーションエラー）
+- `"1"`/`"0"`、`"yes"`/`"no"` 等は無効（起動時にバリデーションエラー）
 
 **FIREBASE_PROJECT_ID:**
 - 空であってはならない必須文字列
@@ -131,7 +131,7 @@ console.log(env.FIREBASE_PRIVATE_KEY);   // string型
 console.log(env.APP_URL);            // string型
 ```
 
-### 型定義
+### 型定義（例）
 
 ```typescript
 import type { Env } from "./lib/env";
@@ -151,7 +151,7 @@ function configureServer(config: Env) {
 2. **バリデーション**: `envSchema.parse()` で起動時にバリデーション
 3. **型推論**: TypeScriptの型推論により型安全にアクセス可能
 
-### スキーマの追加
+### スキーマの追加例
 
 新しい環境変数を追加する場合は `src/lib/env.ts` を編集します。
 
@@ -170,7 +170,10 @@ const envSchema = z.object({
   // SendGrid
   SENDGRID_API_KEY: z.string().min(1),
   EMAIL_FROM: z.email(),
-  EMAIL_SANDBOX: z.coerce.boolean().default(false),
+  EMAIL_SANDBOX: z
+    .enum(["true", "false"]) // 文字列のみ受理
+    .default("false")
+    .transform((v) => v === "true"), // boolean に変換
 });
 ```
 

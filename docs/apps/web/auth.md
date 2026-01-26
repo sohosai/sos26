@@ -245,17 +245,21 @@ function ProtectedPage() {
 
 ```tsx
 import { useAuth } from "@/lib/auth";
+import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, initialized } = useAuth();
 
-  // 既にログイン済みならホームへ
-  if (isLoggedIn) {
-    navigate({ to: "/" });
-    return null;
-  }
+  // 初期化完了後に判定し、副作用で遷移
+  useEffect(() => {
+    if (initialized && isLoggedIn) {
+      navigate({ to: "/" });
+    }
+  }, [initialized, isLoggedIn, navigate]);
+
+  if (!initialized) return null; // ちらつき防止
 
   return <LoginForm />;
 }

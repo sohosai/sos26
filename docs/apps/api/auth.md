@@ -149,6 +149,8 @@ route.post("/register", requireRegTicket, async c => {
 }
 ```
 
+注: `email` は tsukubaEmailSchema に準拠した正規化済み（trim + lowercase）の筑波大学メールです。
+
 **Cookie**:
 ```
 Set-Cookie: reg_ticket=<opaque>; HttpOnly; Path=/auth; SameSite=Lax; Max-Age=900
