@@ -1,4 +1,5 @@
 import { Heading, Link as RadixLink, Text } from "@radix-ui/themes";
+import { ErrorCode } from "@sos26/shared";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button, TextField } from "@/components/primitives";
@@ -35,7 +36,7 @@ function RegisterPage() {
 			setSent(true);
 		} catch (err) {
 			if (isClientError(err)) {
-				if (err.code === "VALIDATION_ERROR") {
+				if (err.code === ErrorCode.VALIDATION_ERROR) {
 					setError(
 						"筑波大学のメールアドレス（s0000000@u.tsukuba.ac.jp）を入力してください"
 					);

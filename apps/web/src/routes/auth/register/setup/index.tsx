@@ -1,4 +1,5 @@
 import { Heading, Text } from "@radix-ui/themes";
+import { ErrorCode } from "@sos26/shared";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
@@ -43,11 +44,11 @@ function SetupPage() {
 		console.error(err);
 		if (isClientError(err)) {
 			switch (err.code) {
-				case "TOKEN_INVALID":
+				case ErrorCode.TOKEN_INVALID:
 					return "セッションが期限切れです。最初から登録をやり直してください。";
-				case "ALREADY_EXISTS":
+				case ErrorCode.ALREADY_EXISTS:
 					return "このメールアドレスは既に登録されています。ログインしてください。";
-				case "VALIDATION_ERROR":
+				case ErrorCode.VALIDATION_ERROR:
 					return "入力内容に問題があります。確認してください。";
 				default:
 					return err.message;

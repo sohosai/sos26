@@ -1,4 +1,5 @@
 import { Heading, Text } from "@radix-ui/themes";
+import { ErrorCode } from "@sos26/shared";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/primitives";
@@ -46,7 +47,7 @@ function VerifyPage() {
 			}, 1500);
 		} catch (err) {
 			if (isClientError(err)) {
-				if (err.code === "TOKEN_INVALID") {
+				if (err.code === ErrorCode.TOKEN_INVALID) {
 					setError(
 						"リンクが無効または期限切れです。再度登録をお試しください。"
 					);

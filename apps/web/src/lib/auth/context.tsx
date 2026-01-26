@@ -1,4 +1,5 @@
 import type { User } from "@sos26/shared";
+import { ErrorCode } from "@sos26/shared";
 import type { User as FirebaseUser } from "firebase/auth";
 import { signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
 import {
@@ -11,6 +12,7 @@ import {
 } from "react";
 import { getMe } from "../api/auth";
 import { auth } from "../firebase";
+import { isClientError } from "../http/error";
 
 type AuthState = {
 	/**
@@ -54,9 +56,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 		try {
 			const response = await getMe();
 			setUser(response.user);
-		} catch {
-			// 未登録ユーザーの場合は404エラーになる
-			setUser(null);
+		} catch (err) {
+			// 未登録ユーザーの場合のみ404（NOT_FOUND）を期待
+			if (isClientError(err) && err.code === ErrorCode.NOT_FOUND) {
+				setUser(null);
+			} else {
+				// それ以外はログに残してユーザーなしとして扱う
+				console.error("[AuthContext] getMe failed", err);
+				setUser(null);
+			}
 		} finally {
 			setIsLoading(false);
 		}

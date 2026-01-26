@@ -1,6 +1,6 @@
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
-import { Errors } from "../lib/error";
+import { AppError, Errors } from "../lib/error";
 import { auth } from "../lib/firebase";
 import { prisma } from "../lib/prisma";
 import type { AuthEnv } from "../types/auth-env";
@@ -37,7 +37,7 @@ export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
 
 		c.set("user", user);
 	} catch (e) {
-		if (e instanceof Error && e.name === "AppError") {
+		if (e instanceof AppError) {
 			throw e;
 		}
 		throw Errors.unauthorized("無効なトークンです");
