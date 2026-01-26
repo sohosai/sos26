@@ -22,7 +22,6 @@ function VerifyPage() {
 	const [token, setToken] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
-	const [verified, setVerified] = useState(false);
 
 	// URL のハッシュからトークンを取得
 	useEffect(() => {
@@ -40,11 +39,7 @@ function VerifyPage() {
 
 		try {
 			await verifyEmail({ token });
-			setVerified(true);
-			// 少し待ってからセットアップページへ遷移
-			setTimeout(() => {
-				navigate({ to: "/auth/register/setup" });
-			}, 1500);
+			navigate({ to: "/auth/register/setup" });
 		} catch (err) {
 			if (isClientError(err)) {
 				if (err.code === ErrorCode.TOKEN_INVALID) {
@@ -69,19 +64,6 @@ function VerifyPage() {
 					<Heading size="6">無効なリンク</Heading>
 					<Text size="2" color="gray">
 						このリンクは無効です。メール内のリンクを再度クリックしてください。
-					</Text>
-				</header>
-			</div>
-		);
-	}
-
-	if (verified) {
-		return (
-			<div className={styles.container}>
-				<header className={styles.header}>
-					<Heading size="6">メールアドレスを確認しました</Heading>
-					<Text size="2" color="gray">
-						パスワード設定ページへ移動します...
 					</Text>
 				</header>
 			</div>

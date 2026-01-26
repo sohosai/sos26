@@ -1,13 +1,13 @@
-import { Heading, Text } from "@radix-ui/themes";
+import { Heading, Link as RadixLink, Text } from "@radix-ui/themes";
 import {
 	ErrorCode,
 	firstNameSchema,
 	lastNameSchema,
 	passwordSchema,
 } from "@sos26/shared";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, TextField } from "@/components/primitives";
 import { register } from "@/lib/api/auth";
 import { useAuth } from "@/lib/auth";
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/auth/register/setup/")({
 
 function SetupPage() {
 	const navigate = useNavigate();
-	const { refreshUser } = useAuth();
+	const { refreshUser, isLoggedIn } = useAuth();
 
 	const [firstName, setFirstName] = useState("");
 	const [lastName, setLastName] = useState("");
@@ -36,6 +36,14 @@ function SetupPage() {
 	const [passwordConfirm, setPasswordConfirm] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
+	const [sessionExpired, setSessionExpired] = useState(false);
+
+	// 既にログイン済みならホームへ
+	useEffect(() => {
+		if (isLoggedIn) {
+			navigate({ to: "/" });
+		}
+	}, [isLoggedIn, navigate]);
 
 	const validate = (): string | null => {
 		const lastNameResult = lastNameSchema.safeParse(lastName);
@@ -111,6 +119,9 @@ function SetupPage() {
 			// ホームページへ遷移
 			navigate({ to: "/" });
 		} catch (err) {
+			if (isClientError(err) && err.code === ErrorCode.TOKEN_INVALID) {
+				setSessionExpired(true);
+			}
 			setError(getErrorMessage(err));
 		} finally {
 			setLoading(false);
@@ -162,12 +173,30 @@ function SetupPage() {
 				/>
 
 				{error && (
-					<Text size="2" color="red">
-						{error}
-					</Text>
+					<>
+						<Text size="2" color="red">
+							{error}
+						</Text>
+						{sessionExpired && (
+							<Text size="2" color="gray">
+								{" "}
+								新規登録の最初のステップからやり直してください。
+								<br />
+								登録メールの送信は{" "}
+								<RadixLink asChild>
+									<Link to="/auth/register">こちら</Link>
+								</RadixLink>{" "}
+								から行えます。
+							</Text>
+						)}
+					</>
 				)}
 
-				<Button type="submit" loading={loading} disabled={loading}>
+				<Button
+					type="submit"
+					loading={loading}
+					disabled={loading || sessionExpired}
+				>
 					登録を完了する
 				</Button>
 			</form>
