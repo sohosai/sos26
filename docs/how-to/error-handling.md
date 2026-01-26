@@ -149,6 +149,19 @@ class ClientErrorClass extends Error {
 }
 ```
 
+### フロントエンドでの ZodError 処理
+
+フロントエンド側で Zod による実行時検証を行う場合、`ZodError` は自動的に `ClientError` に変換されます。
+
+```ts
+// apps/web/src/lib/http/error.ts
+if (error instanceof ZodError) {
+  return { kind: "unknown", message: "入力値が不正です" };
+}
+```
+
+これにより、生の `ZodError.issues` がユーザーに露出することを防ぎ、フレンドリーなメッセージに正規化されます。
+
 ### API 関数の使い方
 
 API 関数は成功時にデータを返し、失敗時に `ClientError` を throw します。
@@ -239,6 +252,62 @@ async function handleFetchUsers() {
     }
   }
 }
+```
+
+---
+
+## UI バリデーション
+
+ユーザー起因のエラーは、API 呼び出し前に UI 層でバリデーションを行います。
+これにより、ユーザーは即座にわかりやすいエラーメッセージを確認できます。
+
+### shared のスキーマを使用する
+
+`@sos26/shared` で定義されたスキーマやヘルパー関数を使用します。
+
+```ts
+import { isTsukubaEmail, passwordSchema, firstNameSchema } from "@sos26/shared";
+
+// ヘルパー関数を使用
+if (!isTsukubaEmail(email)) {
+  setError("筑波大学のメールアドレスを入力してください");
+  return;
+}
+
+// スキーマを使用
+const result = passwordSchema.safeParse(password);
+if (!result.success) {
+  setError(result.error.issues[0]?.message ?? "パスワードが不正です");
+  return;
+}
+```
+
+### バリデーションの実施タイミング
+
+1. **フォーム送信時**: `handleSubmit` 内で API 呼び出し前にバリデーション
+2. **API 呼び出し前**: `setLoading(true)` の前にチェック
+3. **エラー時は早期リターン**: API を呼ばずにエラーメッセージを表示
+
+```ts
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError(null);
+
+  // UI側バリデーション（API呼び出し前）
+  if (!isTsukubaEmail(email)) {
+    setError("筑波大学のメールアドレスを入力してください");
+    return;  // 早期リターン
+  }
+
+  setLoading(true);
+  try {
+    await apiCall();
+  } catch (err) {
+    // APIエラーの処理
+  } finally {
+    setLoading(false);
+  }
+};
 ```
 
 ---

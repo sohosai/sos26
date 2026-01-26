@@ -27,6 +27,8 @@
 
 ## 形式
 
+### 基本形式
+
 ```
 s{学籍番号7桁}@u.tsukuba.ac.jp
 ```
@@ -37,6 +39,18 @@ s{学籍番号7桁}@u.tsukuba.ac.jp
 | `{7桁の数字}` | 学籍番号（0〜9の数字のみ） |
 | `@u.tsukuba.ac.jp` | 筑波大学統一認証ドメイン |
 
+### エイリアス形式
+
+メールのエイリアス（`+` 記法）もサポートしています。
+
+```
+s{学籍番号7桁}+{任意の文字列}@u.tsukuba.ac.jp
+```
+
+| 部分 | 説明 |
+|------|------|
+| `+{任意の文字列}` | 英数字、ドット、ハイフン、アンダースコアで構成（オプショナル） |
+
 ---
 
 ## バリデーション
@@ -44,27 +58,33 @@ s{学籍番号7桁}@u.tsukuba.ac.jp
 ### 正規表現
 
 ```
-/^s\d{7}@u\.tsukuba\.ac\.jp$/
+/^s\d{7}(\+[a-zA-Z0-9._-]+)?@u\.tsukuba\.ac\.jp$/
 ```
 
 ### Zodスキーマ
 
-`packages/shared/src/schemas/email.ts` で定義:
+`packages/shared/src/lib/email.ts` で定義:
 
 ```typescript
 import { z } from "zod";
 
-const TSUKUBA_EMAIL_REGEX = /^s\d{7}@u\.tsukuba\.ac\.jp$/;
+const TSUKUBA_EMAIL_REGEX =
+  /^s\d{7}(\+[a-zA-Z0-9._-]+)?@u\.tsukuba\.ac\.jp$/;
 
 export const tsukubaEmailSchema = z
   .string()
-  .regex(
-    TSUKUBA_EMAIL_REGEX,
-    "筑波大学のメールアドレス（s0000000@u.tsukuba.ac.jp）を入力してください"
+  .transform(email => email.trim().toLowerCase())
+  .pipe(
+    z.string().regex(TSUKUBA_EMAIL_REGEX, {
+      message:
+        "筑波大学のメールアドレス（s0000000@u.tsukuba.ac.jp）を入力してください",
+    })
   );
 
 export type TsukubaEmail = z.infer<typeof tsukubaEmailSchema>;
 ```
+
+スキーマは入力を自動で正規化（トリム + 小文字化）します。
 
 ### ヘルパー関数
 
@@ -96,6 +116,9 @@ if (isTsukubaEmail(email)) {
 | `s1234567@u.tsukuba.ac.jp` | 標準的な形式 |
 | `s0000000@u.tsukuba.ac.jp` | 全て0でも可 |
 | `s9999999@u.tsukuba.ac.jp` | 全て9でも可 |
+| `s1234567+test@u.tsukuba.ac.jp` | エイリアス形式 |
+| `s1234567+foo.bar@u.tsukuba.ac.jp` | ドットを含むエイリアス |
+| `s1234567+a-b_c@u.tsukuba.ac.jp` | ハイフン・アンダースコアを含むエイリアス |
 
 ### 無効
 
@@ -106,5 +129,6 @@ if (isTsukubaEmail(email)) {
 | `s123456@u.tsukuba.ac.jp` | 数字が6桁（7桁必要） |
 | `s12345678@u.tsukuba.ac.jp` | 数字が8桁（7桁必要） |
 | `s1234567@tsukuba.ac.jp` | `u.` が欠けている |
-| `S1234567@u.tsukuba.ac.jp` | 大文字の `S`（小文字のみ許可） |
+| `S1234567@u.tsukuba.ac.jp` | 大文字の `S`（小文字のみ許可、ただし自動で小文字化される） |
 | `s123456a@u.tsukuba.ac.jp` | 数字以外の文字が含まれている |
+| `s1234567+@u.tsukuba.ac.jp` | `+` の後に文字がない |

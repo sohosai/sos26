@@ -173,6 +173,49 @@ function DashboardPage() {
 | `register({ firstName, lastName, password })` | POST /auth/register | 本登録（要 reg_ticket Cookie） |
 | `getMe()` | GET /auth/me | 現在のユーザーを取得（要認証） |
 
+## UI バリデーション
+
+認証ページでは、API 呼び出し前に UI 側でバリデーションを行います。
+これにより、ユーザーは即座にわかりやすいエラーメッセージを確認できます。
+
+### 使用するバリデーション
+
+`@sos26/shared` パッケージからインポートして使用します。
+
+| 関数/スキーマ | 用途 | 使用箇所 |
+|--------------|------|---------|
+| `isTsukubaEmail(email)` | 筑波大学メールアドレス形式チェック | `/auth/register` |
+| `firstNameSchema` | 名のバリデーション | `/auth/register/setup` |
+| `lastNameSchema` | 姓のバリデーション | `/auth/register/setup` |
+| `passwordSchema` | パスワード要件チェック（8文字以上） | `/auth/register/setup` |
+
+### 実装例
+
+```tsx
+import { isTsukubaEmail } from "@sos26/shared";
+
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError(null);
+
+  // UI側バリデーション
+  if (!isTsukubaEmail(email)) {
+    setError("筑波大学のメールアドレス（s0000000@u.tsukuba.ac.jp）を入力してください");
+    return;
+  }
+
+  setLoading(true);
+  try {
+    await startEmailVerification({ email });
+    // ...
+  } catch (err) {
+    // APIエラーの処理
+  }
+};
+```
+
+バリデーションの詳細は [`docs/how-to/error-handling.md`](../../how-to/error-handling.md) を参照。
+
 ## ページ実装パターン
 
 ### 認証必須ページ
