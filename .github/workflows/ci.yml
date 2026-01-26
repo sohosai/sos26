@@ -29,7 +29,7 @@ jobs:
       - name: Check Prisma schema format
         run: |
           bun run db:format
-          git diff --exit-code prisma/schema.prisma
+          git diff --exit-code apps/api/prisma/schema.prisma
 
       - name: Type check
         run: bun run typecheck
