@@ -11,7 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SearchIndexRouteImport } from './routes/search/index'
+import { Route as AuthRegisterIndexRouteImport } from './routes/auth/register/index'
+import { Route as AuthLoginIndexRouteImport } from './routes/auth/login/index'
 import { Route as DevUiComponentsIndexRouteImport } from './routes/dev/ui/components/index'
+import { Route as AuthRegisterVerifyIndexRouteImport } from './routes/auth/register/verify/index'
+import { Route as AuthRegisterSetupIndexRouteImport } from './routes/auth/register/setup/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,39 +27,97 @@ const SearchIndexRoute = SearchIndexRouteImport.update({
   path: '/search/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRegisterIndexRoute = AuthRegisterIndexRouteImport.update({
+  id: '/auth/register/',
+  path: '/auth/register/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthLoginIndexRoute = AuthLoginIndexRouteImport.update({
+  id: '/auth/login/',
+  path: '/auth/login/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DevUiComponentsIndexRoute = DevUiComponentsIndexRouteImport.update({
   id: '/dev/ui/components/',
   path: '/dev/ui/components/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRegisterVerifyIndexRoute = AuthRegisterVerifyIndexRouteImport.update({
+  id: '/auth/register/verify/',
+  path: '/auth/register/verify/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRegisterSetupIndexRoute = AuthRegisterSetupIndexRouteImport.update({
+  id: '/auth/register/setup/',
+  path: '/auth/register/setup/',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/search': typeof SearchIndexRoute
+  '/auth/login': typeof AuthLoginIndexRoute
+  '/auth/register': typeof AuthRegisterIndexRoute
+  '/auth/register/setup': typeof AuthRegisterSetupIndexRoute
+  '/auth/register/verify': typeof AuthRegisterVerifyIndexRoute
   '/dev/ui/components': typeof DevUiComponentsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/search': typeof SearchIndexRoute
+  '/auth/login': typeof AuthLoginIndexRoute
+  '/auth/register': typeof AuthRegisterIndexRoute
+  '/auth/register/setup': typeof AuthRegisterSetupIndexRoute
+  '/auth/register/verify': typeof AuthRegisterVerifyIndexRoute
   '/dev/ui/components': typeof DevUiComponentsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/search/': typeof SearchIndexRoute
+  '/auth/login/': typeof AuthLoginIndexRoute
+  '/auth/register/': typeof AuthRegisterIndexRoute
+  '/auth/register/setup/': typeof AuthRegisterSetupIndexRoute
+  '/auth/register/verify/': typeof AuthRegisterVerifyIndexRoute
   '/dev/ui/components/': typeof DevUiComponentsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/search' | '/dev/ui/components'
+  fullPaths:
+    | '/'
+    | '/search'
+    | '/auth/login'
+    | '/auth/register'
+    | '/auth/register/setup'
+    | '/auth/register/verify'
+    | '/dev/ui/components'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/search' | '/dev/ui/components'
-  id: '__root__' | '/' | '/search/' | '/dev/ui/components/'
+  to:
+    | '/'
+    | '/search'
+    | '/auth/login'
+    | '/auth/register'
+    | '/auth/register/setup'
+    | '/auth/register/verify'
+    | '/dev/ui/components'
+  id:
+    | '__root__'
+    | '/'
+    | '/search/'
+    | '/auth/login/'
+    | '/auth/register/'
+    | '/auth/register/setup/'
+    | '/auth/register/verify/'
+    | '/dev/ui/components/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SearchIndexRoute: typeof SearchIndexRoute
+  AuthLoginIndexRoute: typeof AuthLoginIndexRoute
+  AuthRegisterIndexRoute: typeof AuthRegisterIndexRoute
+  AuthRegisterSetupIndexRoute: typeof AuthRegisterSetupIndexRoute
+  AuthRegisterVerifyIndexRoute: typeof AuthRegisterVerifyIndexRoute
   DevUiComponentsIndexRoute: typeof DevUiComponentsIndexRoute
 }
 
@@ -75,11 +137,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SearchIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/register/': {
+      id: '/auth/register/'
+      path: '/auth/register'
+      fullPath: '/auth/register'
+      preLoaderRoute: typeof AuthRegisterIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/login/': {
+      id: '/auth/login/'
+      path: '/auth/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dev/ui/components/': {
       id: '/dev/ui/components/'
       path: '/dev/ui/components'
       fullPath: '/dev/ui/components'
       preLoaderRoute: typeof DevUiComponentsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/register/verify/': {
+      id: '/auth/register/verify/'
+      path: '/auth/register/verify'
+      fullPath: '/auth/register/verify'
+      preLoaderRoute: typeof AuthRegisterVerifyIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/register/setup/': {
+      id: '/auth/register/setup/'
+      path: '/auth/register/setup'
+      fullPath: '/auth/register/setup'
+      preLoaderRoute: typeof AuthRegisterSetupIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -88,6 +178,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SearchIndexRoute: SearchIndexRoute,
+  AuthLoginIndexRoute: AuthLoginIndexRoute,
+  AuthRegisterIndexRoute: AuthRegisterIndexRoute,
+  AuthRegisterSetupIndexRoute: AuthRegisterSetupIndexRoute,
+  AuthRegisterVerifyIndexRoute: AuthRegisterVerifyIndexRoute,
   DevUiComponentsIndexRoute: DevUiComponentsIndexRoute,
 }
 export const routeTree = rootRouteImport
