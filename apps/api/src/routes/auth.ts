@@ -3,6 +3,7 @@ import {
 	startEmailVerificationRequestSchema,
 	verifyEmailRequestSchema,
 } from "@sos26/shared";
+import { FirebaseAuthError } from "firebase-admin/auth";
 import { Hono } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 import {
@@ -193,15 +194,22 @@ authRoute.post("/register", requireRegTicket, async c => {
 		});
 		firebaseUid = firebaseUser.uid;
 	} catch (e) {
-		// Firebase に同一メールが既存の場合
-		if (
-			e instanceof Error &&
-			"code" in e &&
-			e.code === "auth/email-already-exists"
-		) {
-			throw Errors.alreadyExists("このメールアドレスは既に登録されています");
+		if (e instanceof FirebaseAuthError) {
+			switch (e.code) {
+				case "auth/email-already-exists":
+					throw Errors.alreadyExists(
+						"このメールアドレスは既に登録されています"
+					);
+				case "auth/invalid-password":
+					throw Errors.validationError(
+						"パスワードは6文字以上で入力してください"
+					);
+				default:
+					console.error("[Auth] Firebase createUser failed", e.code, e.message);
+					throw Errors.internal("ユーザー作成に失敗しました");
+			}
 		}
-		console.error("[Auth] Firebase createUser failed", e);
+		console.error("[Auth] Firebase createUser failed (unknown error)", e);
 		throw Errors.internal("ユーザー作成に失敗しました");
 	}
 

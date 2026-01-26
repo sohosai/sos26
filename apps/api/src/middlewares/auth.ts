@@ -1,3 +1,4 @@
+import { FirebaseAuthError } from "firebase-admin/auth";
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import { AppError, Errors } from "../lib/error";
@@ -39,6 +40,18 @@ export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
 	} catch (e) {
 		if (e instanceof AppError) {
 			throw e;
+		}
+		if (e instanceof FirebaseAuthError) {
+			switch (e.code) {
+				case "auth/id-token-expired":
+					throw Errors.unauthorized("トークンの有効期限が切れています");
+				case "auth/id-token-revoked":
+					throw Errors.unauthorized("トークンが無効化されています");
+				case "auth/user-disabled":
+					throw Errors.forbidden("このアカウントは無効化されています");
+				default:
+					throw Errors.unauthorized("無効なトークンです");
+			}
 		}
 		throw Errors.unauthorized("無効なトークンです");
 	}
