@@ -48,9 +48,13 @@ vi.mock("../lib/firebase", () => ({
 
 vi.mock("../lib/emails", () => ({
 	sendVerificationEmail: vi.fn(),
+	sendAlreadyRegisteredEmail: vi.fn(),
 }));
 
-import { sendVerificationEmail } from "../lib/emails";
+import {
+	sendAlreadyRegisteredEmail,
+	sendVerificationEmail,
+} from "../lib/emails";
 import { errorHandler } from "../lib/error-handler";
 import { auth as firebaseAuth } from "../lib/firebase";
 // モック取得（モック定義後にインポート）
@@ -60,6 +64,7 @@ import { authRoute } from "./auth";
 const mockPrisma = vi.mocked(prisma, true);
 const mockFirebaseAuth = vi.mocked(firebaseAuth, true);
 const mockSendVerificationEmail = vi.mocked(sendVerificationEmail);
+const mockSendAlreadyRegisteredEmail = vi.mocked(sendAlreadyRegisteredEmail);
 
 function makeApp() {
 	const app = new Hono();
@@ -112,7 +117,7 @@ describe("POST /auth/email/start", () => {
 		expect(mockSendVerificationEmail).toHaveBeenCalled();
 	});
 
-	it("既存ユーザーでも200を返す（列挙耐性）", async () => {
+	it("既存ユーザーでも200を返し、既存案内メールを送る（列挙耐性）", async () => {
 		// Arrange
 		const app = makeApp();
 		mockPrisma.user.findUnique.mockResolvedValue(mockUser);
@@ -128,8 +133,9 @@ describe("POST /auth/email/start", () => {
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body).toEqual({ success: true });
-		// メールは送信しない
+		// 確認メールは送らないが、既存案内メールは送る
 		expect(mockSendVerificationEmail).not.toHaveBeenCalled();
+		expect(mockSendAlreadyRegisteredEmail).toHaveBeenCalled();
 	});
 
 	it("不正なメールアドレス形式でバリデーションエラー", async () => {

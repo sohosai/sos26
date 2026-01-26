@@ -262,9 +262,10 @@ Response:
 1. email正規化（trim + lowercase）
 2. 筑波大学メールアドレス形式を検証（`s{7桁数字}@u.tsukuba.ac.jp`）
 3. `User` に存在しても常に成功レスポンス（列挙耐性）
-4. token生成（crypto.randomBytes）
+   - 既存ユーザーの場合は「既に登録済みです。ログインしてください」という案内メールを送信（検証メールは送信しない）
+4. 未登録メールの場合は token 生成（crypto.randomBytes）
 5. challenge を UPSERT（tokenHash = SHA-256）
-6. メール送信（`/auth/register/verify#<token>`）
+6. 確認メール送信（`/auth/register/verify#<token>`）
 
 **エラー**
 - `VALIDATION_ERROR`: メールアドレス形式不正
@@ -439,7 +440,9 @@ Response:
 | `FIREBASE_PRIVATE_KEY` | サービスアカウントの秘密鍵 |
 | `APP_URL` | アプリケーションURL（メール内リンク用） |
 
-> **Note**: メール送信は既存の SendGrid 実装（`sendVerificationEmail`）を使用する。
+> **Note**: メール送信は SendGrid 実装を使用する。
+> - 未登録メール: `sendVerificationEmail({ email, verifyUrl })`
+> - 既存メール: `sendAlreadyRegisteredEmail({ email, loginUrl })`
 > SendGrid 関連の環境変数（`SENDGRID_API_KEY`, `EMAIL_FROM`, `EMAIL_SANDBOX`）は設定済み。
 
 ---

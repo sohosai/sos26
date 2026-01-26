@@ -107,8 +107,11 @@ export function hashToken(token: string): string {
 
 ### メール送信
 
-既存の SendGrid ユースケースを使用（`sendVerificationEmail({ email, verifyUrl })`）。
-`verifyUrl = ${APP_URL}/auth/register/verify#<token>`。
+SendGrid ユースケースを使用します。
+- 未登録メール: `sendVerificationEmail({ email, verifyUrl })`
+  - `verifyUrl = ${APP_URL}/auth/register/verify#<token>`
+- 既存メール: `sendAlreadyRegisteredEmail({ email, loginUrl })`
+  - `loginUrl = ${APP_URL}/auth/login`
 
 ### ミドルウェア
 
@@ -129,9 +132,11 @@ Cookie 発行は `HttpOnly; Path=/auth; SameSite=Lax; Max-Age=900; Secure(本番
   - email 正規化（trim + lowercase）
   - tsukuba メール形式検証（shared スキーマを使用）
   - 既存 `User` がいても 200（列挙耐性）
-  - 検証トークン生成: `token`, `tokenHash`, `expiresAt=30分`
-  - `EmailVerification.upsert({ where: { email }, create/update })`
-  - 検証メール送信（`/auth/register/verify#<token>`）
+    - 既存の場合は検証メールではなく「既に登録済み」案内メールを送る
+  - 未登録の場合のみ以下を実施:
+    - 検証トークン生成: `token`, `tokenHash`, `expiresAt=30分`
+    - `EmailVerification.upsert({ where: { email }, create/update })`
+    - 検証メール送信（`/auth/register/verify#<token>`）
 
 #### POST /auth/email/verify
 
@@ -189,7 +194,7 @@ Cookie 発行は `HttpOnly; Path=/auth; SameSite=Lax; Max-Age=900; Secure(本番
 
 - ユニット: `token.ts`（32B base64url 生成、SHA-256 ハッシュ）
 - 統合:
-  - `/auth/email/start`: 正常・形式不正・既存Userでも200
+  - `/auth/email/start`: 正常・形式不正・既存Userでも200（既存は案内メール送信）
   - `/auth/email/verify`: 正常・期限切れ・不正トークン・同一email再送で上書き（旧無効）
   - `/auth/register`: Cookieなし・不正・期限切れ・消費済み・既存Userで冪等成功
   - `/auth/me`: 正常・無効トークン・無効化ユーザー

@@ -122,8 +122,9 @@ function DashboardPage() {
 
 ```
 1. メールアドレス入力
-   └─→ POST /auth/email/start
-       └─→ 確認メール送信
+   └─→ POST /auth/email/start（常に200）
+       └─→ 未登録: 確認メール送信（/auth/register/verify#token）
+       └─→ 既存: 「既に登録済み」案内メール送信（/auth/login への導線）
 
 2. メール内リンクをクリック
    └─→ /auth/register/verify ページ

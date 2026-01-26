@@ -5,7 +5,10 @@ import {
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
-import { sendVerificationEmail } from "../lib/emails";
+import {
+	sendAlreadyRegisteredEmail,
+	sendVerificationEmail,
+} from "../lib/emails";
 import { env } from "../lib/env";
 import { Errors } from "../lib/error";
 import { auth as firebaseAuth } from "../lib/firebase";
@@ -29,6 +32,9 @@ authRoute.post("/email/start", async c => {
 		where: { email },
 	});
 	if (existingUser) {
+		// 既存ユーザーにも案内メールを送信（列挙対策のためレスポンスは常に同一）
+		const loginUrl = `${env.APP_URL}/auth/login`;
+		await sendAlreadyRegisteredEmail({ email, loginUrl });
 		return c.json({ success: true });
 	}
 
