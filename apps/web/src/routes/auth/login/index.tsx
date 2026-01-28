@@ -93,6 +93,12 @@ function LoginPage() {
 			</form>
 
 			<Text size="2" color="gray" className={styles.footer}>
+				<RadixLink asChild>
+					<Link to="/auth/reset-password">パスワードをお忘れの場合</Link>
+				</RadixLink>
+			</Text>
+
+			<Text size="2" color="gray" className={styles.footer}>
 				アカウントをお持ちでない場合は{" "}
 				<RadixLink asChild>
 					<Link to="/auth/register">新規登録</Link>
