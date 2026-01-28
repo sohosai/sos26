@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SearchIndexRouteImport } from './routes/search/index'
+import { Route as PushNotificationIndexRouteImport } from './routes/pushNotification/index'
 import { Route as DevUiComponentsIndexRouteImport } from './routes/dev/ui/components/index'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const SearchIndexRoute = SearchIndexRouteImport.update({
   path: '/search/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PushNotificationIndexRoute = PushNotificationIndexRouteImport.update({
+  id: '/pushNotification/',
+  path: '/pushNotification/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DevUiComponentsIndexRoute = DevUiComponentsIndexRouteImport.update({
   id: '/dev/ui/components/',
   path: '/dev/ui/components/',
@@ -31,30 +37,39 @@ const DevUiComponentsIndexRoute = DevUiComponentsIndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/pushNotification': typeof PushNotificationIndexRoute
   '/search': typeof SearchIndexRoute
   '/dev/ui/components': typeof DevUiComponentsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/pushNotification': typeof PushNotificationIndexRoute
   '/search': typeof SearchIndexRoute
   '/dev/ui/components': typeof DevUiComponentsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/pushNotification/': typeof PushNotificationIndexRoute
   '/search/': typeof SearchIndexRoute
   '/dev/ui/components/': typeof DevUiComponentsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/search' | '/dev/ui/components'
+  fullPaths: '/' | '/pushNotification' | '/search' | '/dev/ui/components'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/search' | '/dev/ui/components'
-  id: '__root__' | '/' | '/search/' | '/dev/ui/components/'
+  to: '/' | '/pushNotification' | '/search' | '/dev/ui/components'
+  id:
+    | '__root__'
+    | '/'
+    | '/pushNotification/'
+    | '/search/'
+    | '/dev/ui/components/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PushNotificationIndexRoute: typeof PushNotificationIndexRoute
   SearchIndexRoute: typeof SearchIndexRoute
   DevUiComponentsIndexRoute: typeof DevUiComponentsIndexRoute
 }
@@ -75,6 +90,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SearchIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pushNotification/': {
+      id: '/pushNotification/'
+      path: '/pushNotification'
+      fullPath: '/pushNotification'
+      preLoaderRoute: typeof PushNotificationIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dev/ui/components/': {
       id: '/dev/ui/components/'
       path: '/dev/ui/components'
@@ -87,6 +109,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PushNotificationIndexRoute: PushNotificationIndexRoute,
   SearchIndexRoute: SearchIndexRoute,
   DevUiComponentsIndexRoute: DevUiComponentsIndexRoute,
 }
