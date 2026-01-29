@@ -7,5 +7,5 @@ pre-commit:
       stage_fixed: true
     prisma:
       glob: "prisma/schema.prisma"
-      run: bun run format:prisma
+      run: bun run db:format
       stage_fixed: true
