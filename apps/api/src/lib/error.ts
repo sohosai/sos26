@@ -66,4 +66,7 @@ export const Errors = {
 
 	internal: (message = "内部エラーが発生しました") =>
 		new AppError("INTERNAL", message),
+
+	tokenInvalid: (message = "トークンが無効または期限切れです") =>
+		new AppError("TOKEN_INVALID", message),
 };

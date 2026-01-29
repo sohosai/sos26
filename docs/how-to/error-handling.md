@@ -29,13 +29,15 @@
 import { ErrorCode } from "@sos26/shared";
 
 // 利用可能なエラーコード
-ErrorCode.UNAUTHORIZED    // 401 - 認証エラー
-ErrorCode.FORBIDDEN       // 403 - 権限エラー
-ErrorCode.NOT_FOUND       // 404 - リソース不在
-ErrorCode.ALREADY_EXISTS  // 409 - 重複エラー
+ErrorCode.UNAUTHORIZED     // 401 - 認証エラー
+ErrorCode.FORBIDDEN        // 403 - 権限エラー
+ErrorCode.NOT_FOUND        // 404 - リソース不在
+ErrorCode.ALREADY_EXISTS   // 409 - 重複エラー
 ErrorCode.VALIDATION_ERROR // 400 - バリデーションエラー
-ErrorCode.INVALID_REQUEST // 400 - 不正リクエスト
-ErrorCode.INTERNAL        // 500 - 内部エラー
+ErrorCode.INVALID_REQUEST  // 400 - 不正リクエスト
+ErrorCode.INTERNAL         // 500 - 内部エラー
+ErrorCode.TOKEN_INVALID    // 400 - トークン不正（認証系）
+ErrorCode.RATE_LIMITED     // 429 - レート制限超過（将来対応予定）
 ```
 
 ### ApiErrorResponse
@@ -84,6 +86,9 @@ throw Errors.validationError("入力値が不正です", {
 
 // 内部エラー
 throw Errors.internal("内部エラーが発生しました");
+
+// トークン不正（認証系）
+throw Errors.tokenInvalid("トークンが無効または期限切れです");
 ```
 
 ### 実装例
@@ -144,6 +149,19 @@ class ClientErrorClass extends Error {
 }
 ```
 
+### フロントエンドでの ZodError 処理
+
+フロントエンド側で Zod による実行時検証を行う場合、`ZodError` は自動的に `ClientError` に変換されます。
+
+```ts
+// apps/web/src/lib/http/error.ts
+if (error instanceof ZodError) {
+  return { kind: "unknown", message: "入力値が不正です" };
+}
+```
+
+これにより、生の `ZodError.issues` がユーザーに露出することを防ぎ、フレンドリーなメッセージに正規化されます。
+
 ### API 関数の使い方
 
 API 関数は成功時にデータを返し、失敗時に `ClientError` を throw します。
@@ -178,6 +196,8 @@ if (error && isClientError(error)) {
       return <div>ユーザーが見つかりません</div>;
     case ErrorCode.UNAUTHORIZED:
       return <div>ログインが必要です</div>;
+    case ErrorCode.TOKEN_INVALID:
+      return <div>セッションが切れました。再度お試しください</div>;
   }
   // 非APIエラーは kind で分岐
   if (error.kind === "network") {
@@ -232,6 +252,62 @@ async function handleFetchUsers() {
     }
   }
 }
+```
+
+---
+
+## UI バリデーション
+
+ユーザー起因のエラーは、API 呼び出し前に UI 層でバリデーションを行います。
+これにより、ユーザーは即座にわかりやすいエラーメッセージを確認できます。
+
+### shared のスキーマを使用する
+
+`@sos26/shared` で定義されたスキーマやヘルパー関数を使用します。
+
+```ts
+import { isTsukubaEmail, passwordSchema, firstNameSchema } from "@sos26/shared";
+
+// ヘルパー関数を使用
+if (!isTsukubaEmail(email)) {
+  setError("筑波大学のメールアドレスを入力してください");
+  return;
+}
+
+// スキーマを使用
+const result = passwordSchema.safeParse(password);
+if (!result.success) {
+  setError(result.error.issues[0]?.message ?? "パスワードが不正です");
+  return;
+}
+```
+
+### バリデーションの実施タイミング
+
+1. **フォーム送信時**: `handleSubmit` 内で API 呼び出し前にバリデーション
+2. **API 呼び出し前**: `setLoading(true)` の前にチェック
+3. **エラー時は早期リターン**: API を呼ばずにエラーメッセージを表示
+
+```ts
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError(null);
+
+  // UI側バリデーション（API呼び出し前）
+  if (!isTsukubaEmail(email)) {
+    setError("筑波大学のメールアドレスを入力してください");
+    return;  // 早期リターン
+  }
+
+  setLoading(true);
+  try {
+    await apiCall();
+  } catch (err) {
+    // APIエラーの処理
+  } finally {
+    setLoading(false);
+  }
+};
 ```
 
 ---

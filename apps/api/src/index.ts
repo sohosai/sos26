@@ -3,8 +3,8 @@ import { cors } from "hono/cors";
 import { initPush } from "./infra/push/client";
 import { env } from "./lib/env";
 import { errorHandler } from "./lib/error-handler";
+import { authRoute } from "./routes/auth";
 import { pushRoute } from "./routes/push";
-import { userRoute } from "./routes/user";
 
 // Push 初期化
 initPush();
@@ -30,8 +30,10 @@ app.get("/", c => {
 	return c.text("Hello Hono!");
 });
 
-// Mount routes at root (e.g. http://localhost:3000/users)
-app.route("/", userRoute);
+// Mount routes
+app.route("/auth", authRoute);
+
+export { app };
 
 app.route("/", pushRoute);
 

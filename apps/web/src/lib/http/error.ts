@@ -4,6 +4,7 @@ import {
 	type ErrorCode,
 } from "@sos26/shared";
 import { HTTPError, TimeoutError } from "ky";
+import { ZodError } from "zod";
 
 /**
  * フロント用統一エラー型
@@ -85,6 +86,11 @@ async function parseHttpError(error: HTTPError): Promise<ClientError> {
 
 /** エラーを ClientError に変換 */
 function toClientError(error: unknown): ClientError {
+	// フロント側のZod実行時検証エラーはユーザー入力の問題
+	// 生のissues配列などを露出しないよう、フレンドリーな文言に正規化
+	if (error instanceof ZodError) {
+		return { kind: "unknown", message: "入力値が不正です" };
+	}
 	if (error instanceof TimeoutError) {
 		return { kind: "timeout", message: "リクエストがタイムアウトしました" };
 	}

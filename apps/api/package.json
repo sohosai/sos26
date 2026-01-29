@@ -3,15 +3,31 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "bun run --hot src/index.ts",
     "build": "bun run typecheck && bun build src/index.ts --outdir dist --target bun",
     "typecheck": "tsc -b",
     "clean": "rm -rf dist .turbo",
     "test:run": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:generate": "prisma generate",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:reset": "prisma migrate reset",
+    "db:push": "prisma db push",
+    "db:pull": "prisma db pull",
+    "db:studio": "prisma studio",
+    "db:format": "prisma format"
   },
   "dependencies": {
+    "@prisma/client": "^6.8.2",
+    "@sendgrid/mail": "^8.1.6",
     "@sos26/shared": "workspace:*",
+    "firebase-admin": "^13.6.0",
     "hono": "^4.11.3"
+  },
+  "devDependencies": {
+    "prisma": "^6.8.2",
+    "prisma-markdown": "^4.0.0"
   }
 }

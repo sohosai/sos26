@@ -17,6 +17,13 @@ apps/apiで使用する環境変数の設定方法とリファレンスです。
 |--------|------|-------------|------|
 | `PORT` | サーバーのポート番号 | `3000` | ❌ |
 | `CORS_ORIGIN` | CORSで許可するオリジン（カンマ区切り） | `""` | ❌ |
+| `SENDGRID_API_KEY` | SendGrid の API キー | なし | ✅ |
+| `EMAIL_FROM` | 送信元メールアドレス | なし | ✅ |
+| `EMAIL_SANDBOX` | SendGrid サンドボックスモード有効化 | `false` | ❌ |
+| `FIREBASE_PROJECT_ID` | Firebase プロジェクトID | なし | ✅ |
+| `FIREBASE_CLIENT_EMAIL` | Firebase サービスアカウントのメールアドレス | なし | ✅ |
+| `FIREBASE_PRIVATE_KEY` | Firebase サービスアカウントの秘密鍵 | なし | ✅ |
+| `APP_URL` | アプリケーションURL（メール内リンク用） | なし | ✅ |
 
 ## 設定方法
 
@@ -28,6 +35,19 @@ apps/apiで使用する環境変数の設定方法とリファレンスです。
 # apps/api/.env
 PORT=3000
 CORS_ORIGIN=http://localhost:5173,http://localhost:3001
+
+# SendGrid
+SENDGRID_API_KEY=your_sendgrid_api_key_here
+EMAIL_FROM=you@example.com
+EMAIL_SANDBOX=false
+
+# Firebase Admin（認証機能で必要）
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project-id.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+# 認証
+APP_URL=http://localhost:5173
 
 # ローカル専用にしたい場合は .env.local を使用
 # apps/api/.env.local が存在すればこちらが優先されます
@@ -51,6 +71,31 @@ CORS_ORIGIN=http://localhost:5173,http://localhost:3001
 - 空文字列は除外されます
 - 未設定の場合は空配列になります
 
+**SENDGRID_API_KEY:**
+- 空であってはならない必須文字列
+
+**EMAIL_FROM:**
+- メールアドレス形式である必要があります（`z.email()`）
+
+**EMAIL_SANDBOX:**
+- 文字列 `"true"` / `"false"` のみ受け付け、内部で boolean に変換します
+- 既定は `false`
+- `"1"`/`"0"`、`"yes"`/`"no"` 等は無効（起動時にバリデーションエラー）
+
+**FIREBASE_PROJECT_ID:**
+- 空であってはならない必須文字列
+
+**FIREBASE_CLIENT_EMAIL:**
+- 空であってはならない必須文字列
+
+**FIREBASE_PRIVATE_KEY:**
+- 空であってはならない必須文字列
+- `\n` は実際の改行に変換されます
+
+**APP_URL:**
+- 有効なURL形式である必要があります
+- メール内のリンク生成に使用
+
 ### エラー例
 
 ```
@@ -71,11 +116,22 @@ ZodError: [
 import { env } from "./lib/env";
 
 // 型安全にアクセス
-console.log(env.PORT);        // number型
-console.log(env.CORS_ORIGIN); // string[]型
+console.log(env.PORT);           // number型
+console.log(env.CORS_ORIGIN);    // string[]型
+console.log(env.SENDGRID_API_KEY); // string型
+console.log(env.EMAIL_FROM);     // string型（email）
+console.log(env.EMAIL_SANDBOX);  // boolean型
+
+// Firebase Admin（認証機能）
+console.log(env.FIREBASE_PROJECT_ID);    // string型
+console.log(env.FIREBASE_CLIENT_EMAIL);  // string型
+console.log(env.FIREBASE_PRIVATE_KEY);   // string型
+
+// 認証
+console.log(env.APP_URL);            // string型
 ```
 
-### 型定義
+### 型定義（例）
 
 ```typescript
 import type { Env } from "./lib/env";
@@ -95,7 +151,7 @@ function configureServer(config: Env) {
 2. **バリデーション**: `envSchema.parse()` で起動時にバリデーション
 3. **型推論**: TypeScriptの型推論により型安全にアクセス可能
 
-### スキーマの追加
+### スキーマの追加例
 
 新しい環境変数を追加する場合は `src/lib/env.ts` を編集します。
 
@@ -111,10 +167,13 @@ const envSchema = z.object({
       "各オリジンは有効なURL（http://またはhttps://で始まる）である必要があります"
     ),
 
-  // 新しい環境変数を追加
-  DATABASE_URL: z
-    .string()
-    .url(),
+  // SendGrid
+  SENDGRID_API_KEY: z.string().min(1),
+  EMAIL_FROM: z.email(),
+  EMAIL_SANDBOX: z
+    .enum(["true", "false"]) // 文字列のみ受理
+    .default("false")
+    .transform((v) => v === "true"), // boolean に変換
 });
 ```
 

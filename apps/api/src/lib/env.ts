@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const envSchema = z.object({
+	// CORS 設定
 	PORT: z.coerce.number().int().min(1).max(65535).default(3000),
 	CORS_ORIGIN: z
 		.string()
@@ -17,6 +18,24 @@ const envSchema = z.object({
 		),
 	VAPID_PUBLIC_KEY: z.string(),
 	VAPID_PRIVATE_KEY: z.string(),
+	// SendGrid
+	SENDGRID_API_KEY: z.string().min(1),
+	EMAIL_FROM: z.email(),
+	EMAIL_SANDBOX: z
+		.enum(["true", "false"])
+		.default("false")
+		.transform(v => v === "true"),
+
+	// Firebase Admin
+	FIREBASE_PROJECT_ID: z.string().min(1),
+	FIREBASE_CLIENT_EMAIL: z.string().min(1),
+	FIREBASE_PRIVATE_KEY: z
+		.string()
+		.min(1)
+		.transform(v => v.replace(/\\n/g, "\n")),
+
+	// 認証リンク用のアプリURL
+	APP_URL: z.url(),
 });
 
 export const env = envSchema.parse({
@@ -24,6 +43,13 @@ export const env = envSchema.parse({
 	CORS_ORIGIN: process.env.CORS_ORIGIN,
 	VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
 	VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+	SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
+	EMAIL_FROM: process.env.EMAIL_FROM,
+	EMAIL_SANDBOX: process.env.EMAIL_SANDBOX,
+	FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
+	FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
+	FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
+	APP_URL: process.env.APP_URL,
 });
 
 export type Env = z.infer<typeof envSchema>;

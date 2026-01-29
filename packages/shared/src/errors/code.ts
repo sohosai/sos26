@@ -11,6 +11,7 @@ export const ERROR_CODES = [
 	"ALREADY_EXISTS", // 409 - 重複エラー
 	"VALIDATION_ERROR", // 400 - バリデーションエラー
 	"INVALID_REQUEST", // 400 - 不正リクエスト
+	"TOKEN_INVALID", // 400 - 検証トークン / reg_ticket が不正または期限切れ
 	"INTERNAL", // 500 - 内部エラー
 ] as const;
 
@@ -31,5 +32,6 @@ export const ErrorCodeToStatus: Record<ErrorCode, number> = {
 	[ErrorCode.ALREADY_EXISTS]: 409,
 	[ErrorCode.VALIDATION_ERROR]: 400,
 	[ErrorCode.INVALID_REQUEST]: 400,
+	[ErrorCode.TOKEN_INVALID]: 400,
 	[ErrorCode.INTERNAL]: 500,
 };

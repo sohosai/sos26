@@ -5,3 +5,7 @@ pre-commit:
       glob: "**/*.{js,ts,jsx,tsx,json,jsonc,cjs,mjs,cts,mts}"
       run: bunx biome check --write {staged_files}
       stage_fixed: true
+    prisma:
+      glob: "prisma/schema.prisma"
+      run: bun run db:format
+      stage_fixed: true

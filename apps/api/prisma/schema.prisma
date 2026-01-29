@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator markdown {
+  provider = "prisma-markdown"
+  output   = "./ERD.md"
+  title    = "ER図"
+}
+
+// ─────────────────────────────────────────────────────────────
+// 認証: メール検証チャレンジ（一時）
+// ─────────────────────────────────────────────────────────────
+
+model EmailVerification {
+  email     String   @id
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([expiresAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 認証: 短命チケット（Cookie の Opaque token に対応）
+// ─────────────────────────────────────────────────────────────
+
+model RegTicket {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  email     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([expiresAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// ユーザー
+// ─────────────────────────────────────────────────────────────
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum UserRole {
+  PLANNER
+  COMMITTEE_MEMBER
+  COMMITTEE_ADMIN
+  SYSTEM_ADMIN
+}
+
+model User {
+  id          String     @id @default(cuid())
+  firebaseUid String     @unique
+  email       String     @unique
+  firstName   String
+  lastName    String
+  role        UserRole   @default(PLANNER)
+  status      UserStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}

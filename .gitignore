@@ -22,6 +22,8 @@ report.*.json
 .env.production.local
 .env.local
 
+secrets/
+
 # caches
 .eslintcache
 .cache
@@ -34,4 +36,5 @@ report.*.json
 # Finder (MacOS) folder config
 .DS_Store
 
+# Prisma
 /generated/prisma
