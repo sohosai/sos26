@@ -1,5 +1,5 @@
 import webpush from "web-push";
-import { env } from "../../lib/env";
+import { env } from "../env";
 
 /**
  * Push Service（FCM / APNs / Autopush）と通信するための
@@ -18,7 +18,7 @@ export function initPush() {
 
 	webpush.setVapidDetails(
 		// Push Service が問題発生時に連絡するための連絡先
-		"mailto:admin@example.com",
+		env.ADMIN_MAIL,
 
 		// ブラウザに配布している VAPID 公開鍵
 		env.VAPID_PUBLIC_KEY,

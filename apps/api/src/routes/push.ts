@@ -1,6 +1,6 @@
 import type { PushSubscription } from "@sos26/shared";
 import { Hono } from "hono";
-import { sendPush } from "../infra/push/send";
+import { sendPush } from "../lib/push/send";
 export const pushRoute = new Hono();
 
 // pushSubscriptionをメモリに保存（開発用）

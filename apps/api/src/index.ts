@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { initPush } from "./infra/push/client";
 import { env } from "./lib/env";
 import { errorHandler } from "./lib/error-handler";
+import { initPush } from "./lib/push/client";
 import { authRoute } from "./routes/auth";
 import { pushRoute } from "./routes/push";
 
