@@ -9,3 +9,13 @@ pre-commit:
       glob: "prisma/schema.prisma"
       run: bun run format:prisma
       stage_fixed: true
+
+pre-push:
+  commands:
+    block-main-push:
+      run: |
+        branch=$(git symbolic-ref --short HEAD)
+        if [ "$branch" = "main" ] || [ "$branch" = "chore/disable-push-main" ]; then
+          echo "main ブランチへの直接の push は禁止されています。"
+          exit 1
+        fi
