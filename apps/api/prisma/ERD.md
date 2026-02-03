@@ -34,6 +34,18 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"PushSubscription" {
+  String id PK
+  String userId FK
+  String endpoint UK
+  String p256dh
+  String auth
+  Boolean isActive
+  DateTime expiresAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"PushSubscription" }o--|| "User" : user
 ```
 
 ### `EmailVerification`
@@ -68,5 +80,19 @@ Properties as follows:
 - `lastName`:
 - `role`:
 - `status`:
+- `createdAt`:
+- `updatedAt`:
+
+### `PushSubscription`
+
+Properties as follows:
+
+- `id`:
+- `userId`:
+- `endpoint`:
+- `p256dh`:
+- `auth`:
+- `isActive`:
+- `expiresAt`:
 - `createdAt`:
 - `updatedAt`:

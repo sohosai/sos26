@@ -68,4 +68,24 @@ model User {
   status      UserStatus @default(ACTIVE)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+
+	pushSubscriptions PushSubscription[]
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Push通知
+// ─────────────────────────────────────────────────────────────
+
+model PushSubscription {
+	id 				String     @id @default(cuid())
+	userId String
+	user   User @relation(fields: [userId], references: [id])
+	endpoint String @unique
+	p256dh String
+	auth String
+	isActive Boolean @default(true)
+	expiresAt DateTime?
+	createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }

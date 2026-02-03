@@ -1,13 +1,14 @@
-import { z } from "zod";
-import { pushSubscriptionSchema } from "../schemas/push";
+import {
+	pushSendRequestSchema,
+	pushSendResponseSchema,
+	pushSubscribeResponseSchema,
+	pushSubscriptionSchema,
+} from "../schemas/push";
 import type { BodyEndpoint } from "./types";
 
 /**
  * POST /push/subscribe
  */
-const pushSubscribeResponseSchema = z.object({
-	ok: z.boolean(),
-});
 
 export const pushSubscribeEndpoint: BodyEndpoint<
 	"POST",
@@ -28,15 +29,6 @@ export const pushSubscribeEndpoint: BodyEndpoint<
 /**
  * POST /push/send
  */
-const pushSendRequestSchema = z.object({
-	title: z.string(),
-	body: z.string().optional(),
-});
-
-const pushSendResponseSchema = z.object({
-	ok: z.boolean(),
-});
-
 export const pushSendEndpoint: BodyEndpoint<
 	"POST",
 	"/push/send",

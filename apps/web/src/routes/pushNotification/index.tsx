@@ -32,7 +32,10 @@ function RouteComponent() {
 		setStatus(null);
 
 		try {
-			await sendPush({ title, body });
+			await sendPush({
+				users: [""],
+				payload: { title, body },
+			});
 			setStatus("Push通知を送信しました");
 		} catch (error) {
 			console.error(error);
