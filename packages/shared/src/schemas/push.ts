@@ -20,6 +20,17 @@ export const pushSubscriptionSchema = z.object({
 
 export type PushSubscription = z.infer<typeof pushSubscriptionSchema>;
 
+/**
+ * Push通知登録リクエスト
+ * userId と PushSubscription をまとめたもの
+ */
+export const pushSubscribeRequestSchema = z.object({
+	userId: z.string(),
+	subscription: pushSubscriptionSchema,
+});
+
+export type PushSubscribeRequest = z.infer<typeof pushSubscribeRequestSchema>;
+
 export const pushSubscribeResponseSchema = z.object({
 	ok: z.boolean(),
 });

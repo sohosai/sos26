@@ -1,8 +1,8 @@
 import {
 	pushSendRequestSchema,
 	pushSendResponseSchema,
+	pushSubscribeRequestSchema,
 	pushSubscribeResponseSchema,
-	pushSubscriptionSchema,
 } from "../schemas/push";
 import type { BodyEndpoint } from "./types";
 
@@ -15,14 +15,14 @@ export const pushSubscribeEndpoint: BodyEndpoint<
 	"/push/subscribe",
 	undefined,
 	undefined,
-	typeof pushSubscriptionSchema,
+	typeof pushSubscribeRequestSchema,
 	typeof pushSubscribeResponseSchema
 > = {
 	method: "POST",
 	path: "/push/subscribe",
 	pathParams: undefined,
 	query: undefined,
-	request: pushSubscriptionSchema,
+	request: pushSubscribeRequestSchema,
 	response: pushSubscribeResponseSchema,
 } as const;
 

@@ -1,4 +1,7 @@
-import type { PushSubscription, pushSendRequest } from "@sos26/shared";
+import {
+	pushSendRequestSchema,
+	pushSubscribeRequestSchema,
+} from "@sos26/shared";
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { sendPush } from "../lib/push/send";
@@ -6,10 +9,10 @@ import { convertExpirationTime } from "../lib/push/timeConvert";
 export const pushRoute = new Hono();
 
 pushRoute.post("/push/subscribe", async c => {
-	const subscription: PushSubscription | null =
-		await c.req.json<PushSubscription>();
-
-	const userId = "";
+	const body = await c.req.json().catch(() => ({}));
+	const parsedBody = pushSubscribeRequestSchema.parse(body);
+	const subscription = parsedBody.subscription;
+	const userId = parsedBody.userId;
 
 	await prisma.pushSubscription.upsert({
 		where: {
@@ -34,9 +37,10 @@ pushRoute.post("/push/subscribe", async c => {
 });
 
 pushRoute.post("/push/send", async c => {
-	const body = await c.req.json<pushSendRequest>();
-
-	const { users, payload } = body;
+	const body = await c.req.json().catch(() => ({}));
+	const parsedBody = pushSendRequestSchema.parse(body);
+	const users = parsedBody.users;
+	const payload = parsedBody.payload;
 
 	if (users.length === 0) {
 		return c.json({ ok: true });

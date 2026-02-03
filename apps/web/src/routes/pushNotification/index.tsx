@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { getMe } from "@/lib/api/auth";
 import { enablePush, sendPush } from "../../lib/api/push";
 
 export const Route = createFileRoute("/pushNotification/")({
@@ -15,9 +16,9 @@ function RouteComponent() {
 	const handleEnablePush = async () => {
 		setLoading(true);
 		setStatus(null);
-
+		const userID = (await getMe()).user.id;
 		try {
-			await enablePush();
+			await enablePush(userID);
 			setStatus("✅ Push通知を有効化しました");
 		} catch (error) {
 			console.error(error);
@@ -30,10 +31,10 @@ function RouteComponent() {
 	const handleSendPush = async () => {
 		setLoading(true);
 		setStatus(null);
-
+		const userID = (await getMe()).user.id;
 		try {
 			await sendPush({
-				users: [""],
+				users: [userID],
 				payload: { title, body },
 			});
 			setStatus("Push通知を送信しました");
