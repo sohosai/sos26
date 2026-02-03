@@ -3,46 +3,56 @@ import {
 	pushSubscribeRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
+import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
 import { sendPush } from "../lib/push/send";
 import { convertExpirationTime } from "../lib/push/timeConvert";
 export const pushRoute = new Hono();
 
 pushRoute.post("/push/subscribe", async c => {
-	const body = await c.req.json().catch(() => ({}));
+	const body = await c.req.json().catch(() => {
+		throw Errors.invalidRequest("JSON の形式が不正です");
+	});
 	const parsedBody = pushSubscribeRequestSchema.parse(body);
 	const subscription = parsedBody.subscription;
 	const userId = parsedBody.userId;
 
-	await prisma.pushSubscription.upsert({
-		where: {
-			endpoint: subscription.endpoint,
-		},
-		update: {
-			p256dh: subscription.keys.p256dh,
-			auth: subscription.keys.auth,
-			isActive: true,
-			expiresAt: convertExpirationTime(subscription.expirationTime),
-		},
-		create: {
-			userId,
-			endpoint: subscription.endpoint,
-			p256dh: subscription.keys.p256dh,
-			auth: subscription.keys.auth,
-			expiresAt: convertExpirationTime(subscription.expirationTime),
-		},
-	});
+	try {
+		await prisma.pushSubscription.upsert({
+			where: {
+				endpoint: subscription.endpoint,
+			},
+			update: {
+				p256dh: subscription.keys.p256dh,
+				auth: subscription.keys.auth,
+				isActive: true,
+				expiresAt: convertExpirationTime(subscription.expirationTime),
+			},
+			create: {
+				userId,
+				endpoint: subscription.endpoint,
+				p256dh: subscription.keys.p256dh,
+				auth: subscription.keys.auth,
+				expiresAt: convertExpirationTime(subscription.expirationTime),
+			},
+		});
+	} catch {
+		throw Errors.internal("PushSubscription の保存に失敗しました");
+	}
 
 	return c.json({ ok: true });
 });
 
 pushRoute.post("/push/send", async c => {
-	const body = await c.req.json().catch(() => ({}));
+	const body = await c.req.json().catch(() => {
+		throw Errors.invalidRequest("JSON の形式が不正です");
+	});
 	const parsedBody = pushSendRequestSchema.parse(body);
 	const users = parsedBody.users;
 	const payload = parsedBody.payload;
 
 	if (users.length === 0) {
+		// エラーにすべきか迷う
 		return c.json({ ok: true });
 	}
 
@@ -54,6 +64,7 @@ pushRoute.post("/push/send", async c => {
 	});
 
 	if (subscriptions.length === 0) {
+		// エラーにすべきか迷う
 		return c.json({ ok: true });
 	}
 
@@ -68,8 +79,7 @@ pushRoute.post("/push/send", async c => {
 					},
 					payload
 				);
-			} catch (_err) {
-				return c.json({ _err });
+			} catch {
 				// 失敗したものは無効化する？（期限切れ・削除済みなど）
 				// await prisma.pushSubscription.update({
 				// 	where: { id: sub.id },
