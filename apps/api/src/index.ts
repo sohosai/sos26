@@ -32,9 +32,6 @@ app.get("/", c => {
 
 // Mount routes
 app.route("/auth", authRoute);
-
-export { app };
-
 app.route("/push", pushRoute);
 
 export default {
