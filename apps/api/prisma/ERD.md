@@ -36,7 +36,6 @@ erDiagram
 }
 "PushSubscription" {
   String id PK
-  String userId FK
   String endpoint UK
   String p256dh
   String auth
@@ -45,7 +44,15 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
-"PushSubscription" }o--|| "User" : user
+"UserPushSubscription" {
+  String id PK
+  String userId FK
+  String pushSubscriptionId FK
+  DateTime createdAt
+  DateTime updatedAt
+}
+"UserPushSubscription" }o--|| "User" : user
+"UserPushSubscription" }o--|| "PushSubscription" : pushSubscription
 ```
 
 ### `EmailVerification`
@@ -88,11 +95,20 @@ Properties as follows:
 Properties as follows:
 
 - `id`:
-- `userId`:
 - `endpoint`:
 - `p256dh`:
 - `auth`:
 - `isActive`:
 - `expiresAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `UserPushSubscription`
+
+Properties as follows:
+
+- `id`:
+- `userId`:
+- `pushSubscriptionId`:
 - `createdAt`:
 - `updatedAt`:

@@ -20,8 +20,9 @@ pushRoute.post("/subscribe", async c => {
 	const expiresAt = subscription.expirationTime
 		? new Date(Date.now() + subscription.expirationTime)
 		: null;
+
 	try {
-		await prisma.pushSubscription.upsert({
+		const pushSub = await prisma.pushSubscription.upsert({
 			where: {
 				endpoint: subscription.endpoint,
 			},
@@ -32,11 +33,24 @@ pushRoute.post("/subscribe", async c => {
 				expiresAt: expiresAt,
 			},
 			create: {
-				userId,
 				endpoint: subscription.endpoint,
 				p256dh: subscription.keys.p256dh,
 				auth: subscription.keys.auth,
 				expiresAt: expiresAt,
+			},
+		});
+
+		await prisma.userPushSubscription.upsert({
+			where: {
+				userId_pushSubscriptionId: {
+					userId,
+					pushSubscriptionId: pushSub.id,
+				},
+			},
+			update: {},
+			create: {
+				userId,
+				pushSubscriptionId: pushSub.id,
 			},
 		});
 	} catch {
@@ -61,8 +75,8 @@ pushRoute.post("/send", async c => {
 
 	const subscriptions = await prisma.pushSubscription.findMany({
 		where: {
-			userId: { in: users },
 			isActive: true,
+			users: { some: { userId: { in: users } } },
 		},
 	});
 

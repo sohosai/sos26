@@ -69,7 +69,7 @@ model User {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  pushSubscriptions PushSubscription[]
+  pushSubscriptions UserPushSubscription[]
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -78,8 +78,6 @@ model User {
 
 model PushSubscription {
   id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id])
   endpoint  String    @unique
   p256dh    String
   auth      String
@@ -87,4 +85,23 @@ model PushSubscription {
   expiresAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  users UserPushSubscription[]
+}
+
+// ─────────────────────────────────────────────────────────────
+// User と PushSubscription の中間テーブル
+// ─────────────────────────────────────────────────────────────
+
+model UserPushSubscription {
+  id                 String @id @default(cuid())
+  userId             String
+  pushSubscriptionId String
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pushSubscription PushSubscription @relation(fields: [pushSubscriptionId], references: [id], onDelete: Cascade)
+	createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  @@unique([userId, pushSubscriptionId])
+  @@index([userId])
 }
