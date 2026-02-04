@@ -9,7 +9,6 @@ import type { BodyEndpoint } from "./types";
 /**
  * POST /push/subscribe
  */
-
 export const pushSubscribeEndpoint: BodyEndpoint<
 	"POST",
 	"/push/subscribe",
