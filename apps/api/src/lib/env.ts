@@ -40,7 +40,7 @@ const envSchema = z.object({
 	ADMIN_MAIL: z.email().transform(v => `mailto:${v}`),
 	VAPID_PUBLIC_KEY: z.string(),
 	VAPID_PRIVATE_KEY: z.string(),
-	PUSH_SEND_BATCH_SIZE: z.number().default(50),
+	PUSH_SEND_BATCH_SIZE: z.coerce.number().default(50),
 });
 
 export const env = envSchema.parse({
