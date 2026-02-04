@@ -1,4 +1,4 @@
-import type { PushSubscription, pushSendRequest } from "@sos26/shared";
+import type { PushSendRequest, PushSubscription } from "@sos26/shared";
 import { pushSendEndpoint, pushSubscribeEndpoint } from "@sos26/shared";
 import { env } from "../env";
 import { callBodyApi } from "./core";
@@ -22,6 +22,6 @@ export async function enablePush(userId: string): Promise<void> {
 	});
 }
 
-export async function sendPush(param: pushSendRequest): Promise<void> {
+export async function sendPush(param: PushSendRequest): Promise<void> {
 	await callBodyApi(pushSendEndpoint, param);
 }

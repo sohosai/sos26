@@ -52,7 +52,7 @@ export const pushSendRequestSchema = z.object({
 	payload: pushPayloadSchema,
 });
 
-export type pushSendRequest = z.infer<typeof pushSendRequestSchema>;
+export type PushSendRequest = z.infer<typeof pushSendRequestSchema>;
 
 /**
  * Push通知送信レスポンス

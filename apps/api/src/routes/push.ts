@@ -18,7 +18,7 @@ pushRoute.post("/subscribe", async c => {
 	const userId = parsedBody.userId;
 	// expirationTime は「ページロードからの相対ミリ秒」
 	const expiresAt = subscription.expirationTime
-		? new Date(subscription.expirationTime)
+		? new Date(Date.now() + subscription.expirationTime)
 		: null;
 	try {
 		await prisma.pushSubscription.upsert({
