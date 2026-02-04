@@ -116,6 +116,7 @@ Subscription は `PushSubscription` テーブルで管理します。
 `ADMIN_MAIL=mailto:admin@example.com`
 `VAPID_PUBLIC_KEY=xxxxxxxxxxxxxxxxxxxx`
 `VAPID_PRIVATE_KEY=xxxxxxxxxxxxxxxxxxxx`
+`PUSH_SEND_BATCH_SIZE=50`
 
 - ADMIN_MAIL
   - Push Service が問題発生時に使用する連絡先
@@ -123,6 +124,8 @@ Subscription は `PushSubscription` テーブルで管理します。
   - Web 側に配布する公開鍵
 - VAPID_PRIVATE_KEY
   - API 側のみで保持する秘密鍵
+- PUSH_SEND_BATCH_SIZE
+	- PUSH通知同時送信のバッチサイズ
 
 VAPID_PUBLIC_KEYとVAPID_PRIVATE_KEYは
 `bun web-push generate-vapid-keys`で作成。

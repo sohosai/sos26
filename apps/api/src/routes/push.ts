@@ -3,6 +3,7 @@ import {
 	pushSubscribeRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
+import { env } from "../lib/env";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
 import { getStatusCode } from "../lib/push/getPushError";
@@ -89,35 +90,39 @@ pushRoute.post("/send", async c => {
 
 	// 無効なIDを集める用
 	const inactiveIds: string[] = [];
+	// リソースの節約のためバッチに分けて送信
+	const batchSize: number = env.PUSH_SEND_BATCH_SIZE;
 
-	// 同時に送信
-	await Promise.all(
-		subscriptions.map(async sub => {
-			try {
-				await sendPush(
-					{
-						endpoint: sub.endpoint,
-						keys: { p256dh: sub.p256dh, auth: sub.auth },
-					},
-					payload
-				);
-			} catch (e: unknown) {
-				console.error("Push通知の送信に失敗しました:", e);
-				// エラーの形はブラウザによって異なるため、statusCode または status を探す
-				const status: number | undefined = getStatusCode(e);
-				const now = new Date();
+	for (let i = 0; i < subscriptions.length; i += batchSize) {
+		const batch = subscriptions.slice(i, i + batchSize);
+		await Promise.all(
+			batch.map(async sub => {
+				try {
+					await sendPush(
+						{
+							endpoint: sub.endpoint,
+							keys: { p256dh: sub.p256dh, auth: sub.auth },
+						},
+						payload
+					);
+				} catch (e: unknown) {
+					console.error("Push通知の送信に失敗しました:", e);
+					// エラーの形はブラウザによって異なるため、statusCode または status を探す
+					const status: number | undefined = getStatusCode(e);
+					const now = new Date();
 
-				// 404 または 410 はサブスクリプションが無効になっている可能性が高いため、DB上でも無効化する
-				if (status === 404 || status === 410) {
-					console.warn("PushSubscription が無効のため無効化");
-					inactiveIds.push(sub.id);
-				} else if (sub.expiresAt && sub.expiresAt < now) {
-					console.warn("PushSubscription の有効期限が切れているため無効化");
-					inactiveIds.push(sub.id);
+					// 404 または 410 はサブスクリプションが無効になっている可能性が高いため、DB上でも無効化する
+					if (status === 404 || status === 410) {
+						console.warn("PushSubscription が無効のため無効化");
+						inactiveIds.push(sub.id);
+					} else if (sub.expiresAt && sub.expiresAt < now) {
+						console.warn("PushSubscription の有効期限が切れているため無効化");
+						inactiveIds.push(sub.id);
+					}
 				}
-			}
-		})
-	);
+			})
+		);
+	}
 
 	if (inactiveIds.length > 0) {
 		await prisma.pushSubscription.updateMany({
