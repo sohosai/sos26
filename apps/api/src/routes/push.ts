@@ -125,10 +125,14 @@ pushRoute.post("/send", async c => {
 	}
 
 	if (inactiveIds.length > 0) {
-		await prisma.pushSubscription.updateMany({
-			where: { id: { in: inactiveIds } },
-			data: { isActive: false },
-		});
+		try {
+			await prisma.pushSubscription.updateMany({
+				where: { id: { in: inactiveIds } },
+				data: { isActive: false },
+			});
+		} catch (e) {
+			console.error("PushSubscriptionの無効化に失敗しました:", e);
+		}
 	}
 
 	return c.json({ ok: true });
