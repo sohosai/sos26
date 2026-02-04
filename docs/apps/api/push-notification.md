@@ -99,10 +99,11 @@ https://developer.mozilla.org/en-US/docs/Web/API/Notification/Notification
 
 ## 6. データベース設計
 
-Subscription は `PushSubscription` テーブルで管理します。
+Subscription は `PushSubscription` テーブル、`UserPushSubscription`テーブル（中間テーブル）で管理します。
 
-- endpoint はユニーク
-- user と 1:N の関係
+- endpoint は端末ごと、ブラウザごとにユニークな値
+- user と N:N の関係
+	- 同じ端末での複数アカウントでのログインに対応するため
 - `isActive` で有効・無効を管理
 - `expiresAt` で有効期限を管理可能
   - ただ、これを使用しないブラウザも存在する

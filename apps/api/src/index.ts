@@ -34,6 +34,8 @@ app.get("/", c => {
 app.route("/auth", authRoute);
 app.route("/push", pushRoute);
 
+export { app };
+
 export default {
 	port: env.PORT,
 	fetch: app.fetch,

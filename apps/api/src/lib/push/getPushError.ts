@@ -12,6 +12,7 @@ const pushErrorSchema = z
  */
 export function getStatusCode(error: unknown): number | undefined {
 	try {
+		// エラーの形はブラウザによって異なるため、statusCodeとstatusの両方を試す
 		const parsed = pushErrorSchema.parse(error);
 		return parsed.statusCode ?? parsed.status;
 	} catch {

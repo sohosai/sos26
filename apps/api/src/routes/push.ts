@@ -107,7 +107,6 @@ pushRoute.post("/send", async c => {
 					);
 				} catch (e: unknown) {
 					console.error("Push通知の送信に失敗しました:", e);
-					// エラーの形はブラウザによって異なるため、statusCode または status を探す
 					const status: number | undefined = getStatusCode(e);
 					const now = new Date();
 
