@@ -100,8 +100,9 @@ model UserPushSubscription {
 
   user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   pushSubscription PushSubscription @relation(fields: [pushSubscriptionId], references: [id], onDelete: Cascade)
-	createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
   @@unique([userId, pushSubscriptionId])
   @@index([userId])
 }
