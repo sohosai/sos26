@@ -37,7 +37,7 @@ const envSchema = z.object({
 	APP_URL: z.url(),
 
 	// push通知
-	ADMIN_MAIL: z.string(),
+	ADMIN_MAIL: z.email().transform(v => `mailto:${v}`),
 	VAPID_PUBLIC_KEY: z.string(),
 	VAPID_PRIVATE_KEY: z.string(),
 });

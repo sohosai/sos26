@@ -17,13 +17,8 @@ export function initPush() {
 	if (initialized) return;
 
 	webpush.setVapidDetails(
-		// Push Service が問題発生時に連絡するための連絡先
 		env.ADMIN_MAIL,
-
-		// ブラウザに配布している VAPID 公開鍵
 		env.VAPID_PUBLIC_KEY,
-
-		// サーバーのみが保持する VAPID 秘密鍵
 		env.VAPID_PRIVATE_KEY
 	);
 

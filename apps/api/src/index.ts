@@ -35,7 +35,7 @@ app.route("/auth", authRoute);
 
 export { app };
 
-app.route("/", pushRoute);
+app.route("/push", pushRoute);
 
 export default {
 	port: env.PORT,

@@ -5,18 +5,21 @@ import {
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
+import { getStatusCode } from "../lib/push/getPushError";
 import { sendPush } from "../lib/push/send";
-import { convertExpirationTime } from "../lib/push/timeConvert";
 export const pushRoute = new Hono();
 
-pushRoute.post("/push/subscribe", async c => {
+pushRoute.post("/subscribe", async c => {
 	const body = await c.req.json().catch(() => {
 		throw Errors.invalidRequest("JSON の形式が不正です");
 	});
 	const parsedBody = pushSubscribeRequestSchema.parse(body);
 	const subscription = parsedBody.subscription;
 	const userId = parsedBody.userId;
-
+	// expirationTime は「ページロードからの相対ミリ秒」
+	const expiresAt = subscription.expirationTime
+		? new Date(subscription.expirationTime)
+		: null;
 	try {
 		await prisma.pushSubscription.upsert({
 			where: {
@@ -26,14 +29,14 @@ pushRoute.post("/push/subscribe", async c => {
 				p256dh: subscription.keys.p256dh,
 				auth: subscription.keys.auth,
 				isActive: true,
-				expiresAt: convertExpirationTime(subscription.expirationTime),
+				expiresAt: expiresAt,
 			},
 			create: {
 				userId,
 				endpoint: subscription.endpoint,
 				p256dh: subscription.keys.p256dh,
 				auth: subscription.keys.auth,
-				expiresAt: convertExpirationTime(subscription.expirationTime),
+				expiresAt: expiresAt,
 			},
 		});
 	} catch {
@@ -43,7 +46,7 @@ pushRoute.post("/push/subscribe", async c => {
 	return c.json({ ok: true });
 });
 
-pushRoute.post("/push/send", async c => {
+pushRoute.post("/send", async c => {
 	const body = await c.req.json().catch(() => {
 		throw Errors.invalidRequest("JSON の形式が不正です");
 	});
@@ -52,7 +55,7 @@ pushRoute.post("/push/send", async c => {
 	const payload = parsedBody.payload;
 
 	if (users.length === 0) {
-		// エラーにすべきか迷う
+		console.warn("Push送信対象ユーザーが0件のためスキップ");
 		return c.json({ ok: true });
 	}
 
@@ -64,9 +67,12 @@ pushRoute.post("/push/send", async c => {
 	});
 
 	if (subscriptions.length === 0) {
-		// エラーにすべきか迷う
+		console.warn("有効なPushSubscriptionが0件のためスキップ");
 		return c.json({ ok: true });
 	}
+
+	// 無効なIDを集める用
+	const inactiveIds: string[] = [];
 
 	// 同時に送信
 	await Promise.all(
@@ -79,15 +85,30 @@ pushRoute.post("/push/send", async c => {
 					},
 					payload
 				);
-			} catch {
-				// 失敗したものは無効化する？（期限切れ・削除済みなど）
-				// await prisma.pushSubscription.update({
-				// 	where: { id: sub.id },
-				// 	data: { isActive: false },
-				// });
+			} catch (e: unknown) {
+				console.error("Push通知の送信に失敗しました:", e);
+				// エラーの形はブラウザによって異なるため、statusCode または status を探す
+				const status: number | undefined = getStatusCode(e);
+				const now = new Date();
+
+				// 404 または 410 はサブスクリプションが無効になっている可能性が高いため、DB上でも無効化する
+				if (status === 404 || status === 410) {
+					console.warn("PushSubscription が無効のため無効化");
+					inactiveIds.push(sub.id);
+				} else if (sub.expiresAt && sub.expiresAt < now) {
+					console.warn("PushSubscription の有効期限が切れているため無効化");
+					inactiveIds.push(sub.id);
+				}
 			}
 		})
 	);
+
+	if (inactiveIds.length > 0) {
+		await prisma.pushSubscription.updateMany({
+			where: { id: { in: inactiveIds } },
+			data: { isActive: false },
+		});
+	}
 
 	return c.json({ ok: true });
 });

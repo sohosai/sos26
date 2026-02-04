@@ -5,8 +5,6 @@
     "": {
       "name": "sos26",
       "dependencies": {
-        "@types/web-push": "^3.6.4",
-        "web-push": "^3.6.7",
         "zod": "^4.3.5",
       },
       "devDependencies": {
@@ -29,8 +27,10 @@
         "hono": "^4.11.3",
       },
       "devDependencies": {
+        "@types/web-push": "^3.6.4",
         "prisma": "^6.8.2",
         "prisma-markdown": "^4.0.0",
+        "web-push": "^3.6.7",
       },
     },
     "apps/web": {
