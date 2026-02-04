@@ -22,36 +22,38 @@ pushRoute.post("/subscribe", async c => {
 		: null;
 
 	try {
-		const pushSub = await prisma.pushSubscription.upsert({
-			where: {
-				endpoint: subscription.endpoint,
-			},
-			update: {
-				p256dh: subscription.keys.p256dh,
-				auth: subscription.keys.auth,
-				isActive: true,
-				expiresAt: expiresAt,
-			},
-			create: {
-				endpoint: subscription.endpoint,
-				p256dh: subscription.keys.p256dh,
-				auth: subscription.keys.auth,
-				expiresAt: expiresAt,
-			},
-		});
+		await prisma.$transaction(async tx => {
+			const pushSub = await prisma.pushSubscription.upsert({
+				where: {
+					endpoint: subscription.endpoint,
+				},
+				update: {
+					p256dh: subscription.keys.p256dh,
+					auth: subscription.keys.auth,
+					isActive: true,
+					expiresAt: expiresAt,
+				},
+				create: {
+					endpoint: subscription.endpoint,
+					p256dh: subscription.keys.p256dh,
+					auth: subscription.keys.auth,
+					expiresAt: expiresAt,
+				},
+			});
 
-		await prisma.userPushSubscription.upsert({
-			where: {
-				userId_pushSubscriptionId: {
+			await tx.userPushSubscription.upsert({
+				where: {
+					userId_pushSubscriptionId: {
+						userId,
+						pushSubscriptionId: pushSub.id,
+					},
+				},
+				update: {},
+				create: {
 					userId,
 					pushSubscriptionId: pushSub.id,
 				},
-			},
-			update: {},
-			create: {
-				userId,
-				pushSubscriptionId: pushSub.id,
-			},
+			});
 		});
 	} catch {
 		throw Errors.internal("PushSubscription の保存に失敗しました");
