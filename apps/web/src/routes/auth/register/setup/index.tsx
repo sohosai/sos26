@@ -113,7 +113,7 @@ function SetupPage() {
 			// 登録成功後、Firebase にログイン
 			await signInWithEmailAndPassword(auth, result.user.email, password);
 
-			// AuthContext のユーザー情報を更新
+			// ストアのユーザー情報を更新
 			await refreshUser();
 
 			// ホームページへ遷移
