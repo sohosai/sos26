@@ -2,13 +2,19 @@ import { Heading, Link as RadixLink, Text } from "@radix-ui/themes";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useEffect, useState } from "react";
+import { z } from "zod";
 import { Button, TextField } from "@/components/primitives";
-import { useAuth } from "@/lib/auth";
+import { sanitizeReturnTo, useAuthStore } from "@/lib/auth";
 import { auth } from "@/lib/firebase";
 import { isFirebaseError, mapFirebaseAuthError } from "@/lib/firebaseError";
 import styles from "../auth.module.scss";
 
+const searchSchema = z.object({
+	returnTo: z.string().optional(),
+});
+
 export const Route = createFileRoute("/auth/login/")({
+	validateSearch: searchSchema,
 	component: LoginPage,
 	head: () => ({
 		meta: [
@@ -20,19 +26,24 @@ export const Route = createFileRoute("/auth/login/")({
 
 function LoginPage() {
 	const navigate = useNavigate();
-	const { isLoggedIn } = useAuth();
+	const { returnTo } = Route.useSearch();
+	const { isLoggedIn } = useAuthStore();
 
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 
-	// 既にログイン済みならリダイレクト（副作用で実施）
+	// ログイン後のリダイレクト先（バリデーション済み）
+	const redirectTo = sanitizeReturnTo(returnTo);
+
+	// ログイン成功後に returnTo へリダイレクト
+	// （beforeLoad は "/" へリダイレクトするため、returnTo 対応はここで行う）
 	useEffect(() => {
 		if (isLoggedIn) {
-			navigate({ to: "/" });
+			navigate({ to: redirectTo });
 		}
-	}, [isLoggedIn, navigate]);
+	}, [isLoggedIn, navigate, redirectTo]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -41,7 +52,7 @@ function LoginPage() {
 
 		try {
 			await signInWithEmailAndPassword(auth, email, password);
-			navigate({ to: "/" });
+			navigate({ to: redirectTo });
 		} catch (err) {
 			if (isFirebaseError(err)) {
 				setError(mapFirebaseAuthError(err));

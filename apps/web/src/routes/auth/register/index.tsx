@@ -1,10 +1,9 @@
 import { Heading, Link as RadixLink, Text } from "@radix-ui/themes";
 import { ErrorCode, isTsukubaEmail } from "@sos26/shared";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { Button, TextField } from "@/components/primitives";
 import { startEmailVerification } from "@/lib/api/auth";
-import { useAuth } from "@/lib/auth";
 import { isClientError } from "@/lib/http/error";
 import styles from "../auth.module.scss";
 
@@ -22,22 +21,10 @@ export const Route = createFileRoute("/auth/register/")({
 });
 
 function RegisterPage() {
-	const navigate = useNavigate();
-	const { isLoggedIn, initialized } = useAuth();
 	const [email, setEmail] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [sent, setSent] = useState(false);
-
-	// 既ログイン時はホームへ
-	useEffect(() => {
-		if (isLoggedIn) {
-			navigate({ to: "/" });
-		}
-	}, [isLoggedIn, navigate]);
-
-	// 認証状態が未初期化なら描画を抑止（ちらつき防止）
-	if (!initialized) return null;
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();

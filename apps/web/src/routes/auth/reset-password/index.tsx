@@ -1,10 +1,9 @@
 import { Heading, Link as RadixLink, Text } from "@radix-ui/themes";
 import { isTsukubaEmail } from "@sos26/shared";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { sendPasswordResetEmail } from "firebase/auth";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button, TextField } from "@/components/primitives";
-import { useAuth } from "@/lib/auth";
 import { auth } from "@/lib/firebase";
 import { isFirebaseError } from "@/lib/firebaseError";
 import styles from "../auth.module.scss";
@@ -23,20 +22,10 @@ export const Route = createFileRoute("/auth/reset-password/")({
 });
 
 function ResetPasswordPage() {
-	const navigate = useNavigate();
-	const { isLoggedIn, initialized } = useAuth();
 	const [email, setEmail] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [sent, setSent] = useState(false);
-
-	useEffect(() => {
-		if (isLoggedIn) {
-			navigate({ to: "/" });
-		}
-	}, [isLoggedIn, navigate]);
-
-	if (!initialized) return null;
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();

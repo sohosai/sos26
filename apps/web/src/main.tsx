@@ -2,7 +2,6 @@ import { Theme } from "@radix-ui/themes";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { AuthProvider } from "./lib/auth";
 import { routeTree } from "./routeTree.gen";
 
 import "./styles/index.css";
@@ -24,10 +23,8 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
 	<StrictMode>
-		<AuthProvider>
-			<Theme accentColor="indigo" grayColor="slate" panelBackground="solid">
-				<RouterProvider router={router} />
-			</Theme>
-		</AuthProvider>
+		<Theme accentColor="indigo" grayColor="slate" panelBackground="solid">
+			<RouterProvider router={router} />
+		</Theme>
 	</StrictMode>
 );

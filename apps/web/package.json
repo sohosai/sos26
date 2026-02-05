@@ -18,7 +18,8 @@
     "firebase": "^12.8.0",
     "ky": "^1.14.2",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@tanstack/router-devtools": "^1.147.1",
