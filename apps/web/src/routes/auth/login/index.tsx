@@ -52,7 +52,7 @@ function LoginPage() {
 
 		try {
 			await signInWithEmailAndPassword(auth, email, password);
-			navigate({ to: redirectTo });
+			// リダイレクトは useEffect で isLoggedIn に応じて行う
 		} catch (err) {
 			if (isFirebaseError(err)) {
 				setError(mapFirebaseAuthError(err));

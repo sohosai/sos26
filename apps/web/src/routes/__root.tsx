@@ -8,7 +8,7 @@ import {
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { Button } from "@/components/primitives";
 import { authReady } from "@/lib/auth";
-import styles from "./__root.module.scss";
+import styles from "./errorLayout.module.scss";
 
 export const Route = createRootRoute({
 	beforeLoad: () => authReady(),
@@ -29,7 +29,7 @@ function RootComponent() {
 
 function NotFoundComponent() {
 	return (
-		<div className={styles.errorContainer}>
+		<div className={styles.container}>
 			<Heading size="8" color="gray">
 				404
 			</Heading>
@@ -51,7 +51,7 @@ function ErrorComponent({ error }: { error: unknown }) {
 		error instanceof Error ? error.message : String(error ?? "Unknown error");
 
 	return (
-		<div className={styles.errorContainer}>
+		<div className={styles.container}>
 			<Heading size="8" color="red">
 				Error
 			</Heading>

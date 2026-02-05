@@ -1,15 +1,22 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { useAuthStore } from "@/lib/auth";
+import { z } from "zod";
+import { authReady, sanitizeReturnTo, useAuthStore } from "@/lib/auth";
+
+const searchSchema = z.object({
+	returnTo: z.string().optional(),
+});
 
 /**
  * /auth 配下のレイアウトルート
- * ログイン済みユーザーはホームへリダイレクトする
+ * ログイン済みユーザーは returnTo (またはホーム) へリダイレクトする
  */
 export const Route = createFileRoute("/auth")({
-	beforeLoad: () => {
+	validateSearch: searchSchema,
+	beforeLoad: async ({ search }) => {
+		await authReady();
 		const { isLoggedIn } = useAuthStore.getState();
 		if (isLoggedIn) {
-			throw redirect({ to: "/" });
+			throw redirect({ to: sanitizeReturnTo(search.returnTo) });
 		}
 	},
 	component: AuthLayout,

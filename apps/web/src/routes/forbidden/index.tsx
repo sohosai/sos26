@@ -1,7 +1,7 @@
 import { Heading, Text } from "@radix-ui/themes";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/primitives";
-import styles from "./forbidden.module.scss";
+import styles from "../errorLayout.module.scss";
 
 export const Route = createFileRoute("/forbidden/")({
 	component: ForbiddenPage,

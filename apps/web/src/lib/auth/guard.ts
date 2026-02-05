@@ -48,9 +48,22 @@ export function sanitizeReturnTo(returnTo: string | undefined): string {
 		return "/";
 	}
 
-	// 内部パスのみ許可（/ で始まり、// で始まらない）
-	if (returnTo.startsWith("/") && !returnTo.startsWith("//")) {
-		return returnTo;
+	// URL エンコード・バックスラッシュを正規化してバイパス対策
+	let decoded: string;
+	try {
+		decoded = decodeURIComponent(returnTo).replace(/\\/g, "/");
+	} catch {
+		return "/";
+	}
+
+	// javascript: や data: スキームを除外
+	if (/^(javascript|data|vbscript)\s*:/i.test(decoded.trimStart())) {
+		return "/";
+	}
+
+	// 内部パスのみ許可（正規化後に / で始まり、// で始まらない）
+	if (decoded.startsWith("/") && !decoded.startsWith("//")) {
+		return decoded;
 	}
 
 	// 不正なパスはホームへ
