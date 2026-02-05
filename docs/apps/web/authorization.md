@@ -50,8 +50,8 @@
 ## 前提
 
 - ルーティング: TanStack Router（[ルーティングドキュメント](./routing.md)）
-- 認証状態管理: Zustand ストア（`useAuthStoreStore`）
-- `beforeLoad` では `authReady()` で初期化待機後、`useAuthStoreStore.getState()` から認証状態を取得（React Hook 不要）
+- 認証状態管理: Zustand ストア（`useAuthStore`）
+- `beforeLoad` では `authReady()` で初期化待機後、`useAuthStore.getState()` から認証状態を取得（React Hook 不要）
 
 ---
 
@@ -87,7 +87,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Zustand Store (useAuthStoreStore)                           │
+│  Zustand Store (useAuthStore)                           │
 │    - user, isLoggedIn, isLoading                        │
 │    - signOut(), refreshUser()                           │
 └───────────────┬─────────────────────┬───────────────────┘
@@ -125,19 +125,20 @@ export const Route = createFileRoute("/project")({
 
 ## ディレクトリ単位のアクセス制御
 
-| ディレクトリ | 認証 | UserStatus | 許可ロール |
-|-------------|------|------------|------------|
-| `/auth/*` | 不要 | - | - |
-| `/project/*` | 必須 | ACTIVE のみ | `PLANNER`, `COMMITTEE_MEMBER`, `COMMITTEE_ADMIN`, `SYSTEM_ADMIN` |
-| `/committee/*` | 必須 | ACTIVE のみ | `COMMITTEE_MEMBER`, `COMMITTEE_ADMIN`, `SYSTEM_ADMIN` |
-| `/dev/*` | 不要 | - | - |
-| `/forbidden` | 不要 | - | - |
+| ディレクトリ | 認証 | UserStatus | 許可ロール | 備考 |
+|-------------|------|------------|------------|------|
+| `/auth/*` | 不要 | - | - | ログイン済みは `/` へリダイレクト |
+| `/project/*` | 必須 | ACTIVE のみ | `PLANNER`, `COMMITTEE_MEMBER`, `COMMITTEE_ADMIN`, `SYSTEM_ADMIN` | |
+| `/committee/*` | 必須 | ACTIVE のみ | `COMMITTEE_MEMBER`, `COMMITTEE_ADMIN`, `SYSTEM_ADMIN` | |
+| `/dev/*` | 不要 | - | - | |
+| `/forbidden` | 不要 | - | - | |
 
 ### 分類
 
-- **public ディレクトリ**: `/auth`, `/dev`, `/forbidden` — 認証不要
+- **guest ディレクトリ**: `/auth` — 認証不要、ログイン済みユーザーはリダイレクト
+- **public ディレクトリ**: `/dev`, `/forbidden` — 認証不要
 - **保護ディレクトリ**: `/project`, `/committee` — 認証必須 + ロール制御
-- 保護ディレクトリ配下では、子ページに個別の認証処理を書かない
+- 各ディレクトリ配下では、子ページに個別の認証処理を書かない
 
 ---
 
@@ -195,8 +196,9 @@ throw redirect({ to: "/forbidden" });
 src/routes/
 ├── __root.tsx          # ルートレイアウト（authReady() で認証初期化）
 ├── auth/               # 未認証向けページ群（login, register 等）
+│   └── route.tsx       # guest: ログイン済みは "/" へリダイレクト
 ├── project/            # 企画者向けページ群
-│   └── route.tsx       # protected: PLANNER, COMMITTEE_ADMIN, SYSTEM_ADMIN
+│   └── route.tsx       # protected: PLANNER, COMMITTEE_MEMBER, COMMITTEE_ADMIN, SYSTEM_ADMIN
 ├── committee/          # 委員会向けページ群
 │   └── route.tsx       # protected: COMMITTEE_MEMBER, COMMITTEE_ADMIN, SYSTEM_ADMIN
 ├── forbidden/          # 403 エラーページ
@@ -293,6 +295,7 @@ const redirectTo = sanitizeReturnTo(returnTo); // 不正なURLは "/" に変換
 | `src/lib/auth/guard.ts` | `requireAuth`, `sanitizeReturnTo` 関数 |
 | `src/lib/auth/index.ts` | エクスポート |
 | `src/routes/__root.tsx` | `authReady()` で認証初期化を待機 |
+| `src/routes/auth/route.tsx` | `/auth/*` のゲストガード（ログイン済みリダイレクト） |
 | `src/routes/project/route.tsx` | `/project/*` のルートガード |
 | `src/routes/committee/route.tsx` | `/committee/*` のルートガード |
 | `src/routes/forbidden/index.tsx` | 403 Forbidden ページ |
