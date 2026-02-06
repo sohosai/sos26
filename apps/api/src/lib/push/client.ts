@@ -17,7 +17,7 @@ export function initPush() {
 	if (initialized) return;
 
 	webpush.setVapidDetails(
-		env.ADMIN_MAIL,
+		`mailto:${env.ADMIN_MAIL}`,
 		env.VAPID_PUBLIC_KEY,
 		env.VAPID_PRIVATE_KEY
 	);
