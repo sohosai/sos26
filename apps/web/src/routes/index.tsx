@@ -1,7 +1,7 @@
 import { Heading } from "@radix-ui/themes";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/primitives";
-import { useAuth } from "@/lib/auth";
+import { useAuthStore } from "@/lib/auth";
 import styles from "./index.module.scss";
 
 export const Route = createFileRoute("/")({
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-	const { signOut, isLoggedIn, user } = useAuth();
+	const { signOut, isLoggedIn, user } = useAuthStore();
 
 	return (
 		<div className={styles.container}>

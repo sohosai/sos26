@@ -1,0 +1,14 @@
+.container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 50vh;
+	padding: var(--space-6);
+	text-align: center;
+	gap: var(--space-4);
+}
+
+.actions {
+	margin-top: var(--space-4);
+}
