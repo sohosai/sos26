@@ -8,7 +8,8 @@ import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
 import { sendPush } from "../lib/push/send";
 import { requireAuth } from "../middlewares/auth";
-export const pushRoute = new Hono();
+import type { AuthEnv } from "../types/auth-env";
+export const pushRoute = new Hono<AuthEnv>();
 
 pushRoute.post("/subscribe", requireAuth, async c => {
 	const body = await c.req.json().catch(() => {
@@ -108,7 +109,7 @@ pushRoute.post("/send", async c => {
 					);
 				} catch (e: unknown) {
 					console.error("Push通知の送信に失敗しました:", e);
-					const status: number | undefined = getStatusCode(e);
+					const status: number | undefined = getStatusCodeFromWebpush(e);
 					const now = new Date();
 
 					// 404 または 410 はサブスクリプションが無効になっている可能性が高いため、DB上でも無効化する
@@ -138,7 +139,7 @@ pushRoute.post("/send", async c => {
 	return c.json({ ok: true });
 });
 
-function getStatusCode(error: unknown): number | undefined {
+function getStatusCodeFromWebpush(error: unknown): number | undefined {
 	if (
 		error !== null &&
 		typeof error === "object" &&
