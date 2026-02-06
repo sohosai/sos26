@@ -39,7 +39,7 @@ erDiagram
   String endpoint UK
   String p256dh
   String auth
-  Boolean isActive
+  DateTime deletedAt "nullable"
   DateTime expiresAt "nullable"
   DateTime createdAt
   DateTime updatedAt
@@ -98,7 +98,7 @@ Properties as follows:
 - `endpoint`:
 - `p256dh`:
 - `auth`:
-- `isActive`:
+- `deletedAt`:
 - `expiresAt`:
 - `createdAt`:
 - `updatedAt`:

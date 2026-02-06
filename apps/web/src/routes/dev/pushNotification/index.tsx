@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { getMe } from "@/lib/api/auth";
-import { enablePush, sendPush } from "../../lib/api/push";
+import { enablePush, sendPush } from "../../../lib/api/push";
 
-export const Route = createFileRoute("/pushNotification/")({
+export const Route = createFileRoute("/dev/pushNotification/")({
 	component: RouteComponent,
 });
 

@@ -32,7 +32,6 @@ pushRoute.post("/subscribe", requireAuth, async c => {
 				update: {
 					p256dh: subscription.keys.p256dh,
 					auth: subscription.keys.auth,
-					isActive: true,
 					expiresAt: expiresAt,
 				},
 				create: {
@@ -80,7 +79,7 @@ pushRoute.post("/send", async c => {
 
 	const subscriptions = await prisma.pushSubscription.findMany({
 		where: {
-			isActive: true,
+			deletedAt: null,
 			users: { some: { userId: { in: users } } },
 		},
 	});
@@ -127,9 +126,10 @@ pushRoute.post("/send", async c => {
 
 	if (inactiveIds.length > 0) {
 		try {
+			const now = new Date();
 			await prisma.pushSubscription.updateMany({
 				where: { id: { in: inactiveIds } },
-				data: { isActive: false },
+				data: { deletedAt: now },
 			});
 		} catch (e) {
 			console.error("PushSubscriptionの無効化に失敗しました:", e);

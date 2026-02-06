@@ -81,7 +81,7 @@ model PushSubscription {
   endpoint  String    @unique
   p256dh    String
   auth      String
-  isActive  Boolean   @default(true)
+  deletedAt DateTime?
   expiresAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

@@ -14,10 +14,10 @@ import { Route as CommitteeRouteRouteImport } from './routes/committee/route'
 import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SearchIndexRouteImport } from './routes/search/index'
-import { Route as PushNotificationIndexRouteImport } from './routes/pushNotification/index'
 import { Route as ProjectIndexRouteImport } from './routes/project/index'
 import { Route as ForbiddenIndexRouteImport } from './routes/forbidden/index'
 import { Route as CommitteeIndexRouteImport } from './routes/committee/index'
+import { Route as DevPushNotificationIndexRouteImport } from './routes/dev/pushNotification/index'
 import { Route as AuthResetPasswordIndexRouteImport } from './routes/auth/reset-password/index'
 import { Route as AuthRegisterIndexRouteImport } from './routes/auth/register/index'
 import { Route as AuthLoginIndexRouteImport } from './routes/auth/login/index'
@@ -50,11 +50,6 @@ const SearchIndexRoute = SearchIndexRouteImport.update({
   path: '/search/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PushNotificationIndexRoute = PushNotificationIndexRouteImport.update({
-  id: '/pushNotification/',
-  path: '/pushNotification/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ProjectIndexRoute = ProjectIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -70,6 +65,12 @@ const CommitteeIndexRoute = CommitteeIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CommitteeRouteRoute,
 } as any)
+const DevPushNotificationIndexRoute =
+  DevPushNotificationIndexRouteImport.update({
+    id: '/dev/pushNotification/',
+    path: '/dev/pushNotification/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthResetPasswordIndexRoute = AuthResetPasswordIndexRouteImport.update({
   id: '/reset-password/',
   path: '/reset-password/',
@@ -109,11 +110,11 @@ export interface FileRoutesByFullPath {
   '/committee/': typeof CommitteeIndexRoute
   '/forbidden/': typeof ForbiddenIndexRoute
   '/project/': typeof ProjectIndexRoute
-  '/pushNotification/': typeof PushNotificationIndexRoute
   '/search/': typeof SearchIndexRoute
   '/auth/login/': typeof AuthLoginIndexRoute
   '/auth/register/': typeof AuthRegisterIndexRoute
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
+  '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
   '/auth/register/setup/': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify/': typeof AuthRegisterVerifyIndexRoute
   '/dev/ui/components/': typeof DevUiComponentsIndexRoute
@@ -124,11 +125,11 @@ export interface FileRoutesByTo {
   '/committee': typeof CommitteeIndexRoute
   '/forbidden': typeof ForbiddenIndexRoute
   '/project': typeof ProjectIndexRoute
-  '/pushNotification': typeof PushNotificationIndexRoute
   '/search': typeof SearchIndexRoute
   '/auth/login': typeof AuthLoginIndexRoute
   '/auth/register': typeof AuthRegisterIndexRoute
   '/auth/reset-password': typeof AuthResetPasswordIndexRoute
+  '/dev/pushNotification': typeof DevPushNotificationIndexRoute
   '/auth/register/setup': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify': typeof AuthRegisterVerifyIndexRoute
   '/dev/ui/components': typeof DevUiComponentsIndexRoute
@@ -142,11 +143,11 @@ export interface FileRoutesById {
   '/committee/': typeof CommitteeIndexRoute
   '/forbidden/': typeof ForbiddenIndexRoute
   '/project/': typeof ProjectIndexRoute
-  '/pushNotification/': typeof PushNotificationIndexRoute
   '/search/': typeof SearchIndexRoute
   '/auth/login/': typeof AuthLoginIndexRoute
   '/auth/register/': typeof AuthRegisterIndexRoute
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
+  '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
   '/auth/register/setup/': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify/': typeof AuthRegisterVerifyIndexRoute
   '/dev/ui/components/': typeof DevUiComponentsIndexRoute
@@ -161,11 +162,11 @@ export interface FileRouteTypes {
     | '/committee/'
     | '/forbidden/'
     | '/project/'
-    | '/pushNotification/'
     | '/search/'
     | '/auth/login/'
     | '/auth/register/'
     | '/auth/reset-password/'
+    | '/dev/pushNotification/'
     | '/auth/register/setup/'
     | '/auth/register/verify/'
     | '/dev/ui/components/'
@@ -176,11 +177,11 @@ export interface FileRouteTypes {
     | '/committee'
     | '/forbidden'
     | '/project'
-    | '/pushNotification'
     | '/search'
     | '/auth/login'
     | '/auth/register'
     | '/auth/reset-password'
+    | '/dev/pushNotification'
     | '/auth/register/setup'
     | '/auth/register/verify'
     | '/dev/ui/components'
@@ -193,11 +194,11 @@ export interface FileRouteTypes {
     | '/committee/'
     | '/forbidden/'
     | '/project/'
-    | '/pushNotification/'
     | '/search/'
     | '/auth/login/'
     | '/auth/register/'
     | '/auth/reset-password/'
+    | '/dev/pushNotification/'
     | '/auth/register/setup/'
     | '/auth/register/verify/'
     | '/dev/ui/components/'
@@ -209,8 +210,8 @@ export interface RootRouteChildren {
   CommitteeRouteRoute: typeof CommitteeRouteRouteWithChildren
   ProjectRouteRoute: typeof ProjectRouteRouteWithChildren
   ForbiddenIndexRoute: typeof ForbiddenIndexRoute
-  PushNotificationIndexRoute: typeof PushNotificationIndexRoute
   SearchIndexRoute: typeof SearchIndexRoute
+  DevPushNotificationIndexRoute: typeof DevPushNotificationIndexRoute
   DevUiComponentsIndexRoute: typeof DevUiComponentsIndexRoute
 }
 
@@ -251,13 +252,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SearchIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/pushNotification/': {
-      id: '/pushNotification/'
-      path: '/pushNotification'
-      fullPath: '/pushNotification/'
-      preLoaderRoute: typeof PushNotificationIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/project/': {
       id: '/project/'
       path: '/'
@@ -278,6 +272,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/committee/'
       preLoaderRoute: typeof CommitteeIndexRouteImport
       parentRoute: typeof CommitteeRouteRoute
+    }
+    '/dev/pushNotification/': {
+      id: '/dev/pushNotification/'
+      path: '/dev/pushNotification'
+      fullPath: '/dev/pushNotification/'
+      preLoaderRoute: typeof DevPushNotificationIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/auth/reset-password/': {
       id: '/auth/reset-password/'
@@ -374,8 +375,8 @@ const rootRouteChildren: RootRouteChildren = {
   CommitteeRouteRoute: CommitteeRouteRouteWithChildren,
   ProjectRouteRoute: ProjectRouteRouteWithChildren,
   ForbiddenIndexRoute: ForbiddenIndexRoute,
-  PushNotificationIndexRoute: PushNotificationIndexRoute,
   SearchIndexRoute: SearchIndexRoute,
+  DevPushNotificationIndexRoute: DevPushNotificationIndexRoute,
   DevUiComponentsIndexRoute: DevUiComponentsIndexRoute,
 }
 export const routeTree = rootRouteImport
