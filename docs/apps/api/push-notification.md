@@ -22,8 +22,6 @@ API 側の責務は以下です。
 - Push 送信処理
   - `apps/api/src/lib/push/send.ts`
   - `apps/api/src/lib/push/client.ts`
-- 時刻変換ユーティリティ
-  - `apps/api/src/lib/push/timeConvert.ts`
 - Prisma schema
   - `apps/api/prisma/schema.prisma`
 - 共通 schema
@@ -114,7 +112,7 @@ Subscription は `PushSubscription` テーブル、`UserPushSubscription`テー�
 
 以下の環境変数が必要です。
 
-`ADMIN_MAIL=mailto:admin@example.com`
+`ADMIN_MAIL=admin@example.com`
 `VAPID_PUBLIC_KEY=xxxxxxxxxxxxxxxxxxxx`
 `VAPID_PRIVATE_KEY=xxxxxxxxxxxxxxxxxxxx`
 `PUSH_SEND_BATCH_SIZE=50`

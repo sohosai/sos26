@@ -14,7 +14,7 @@ export const pushSubscriptionKeysSchema = z.object({
 export const pushSubscriptionSchema = z.object({
 	endpoint: z.url(),
 	// Push API: Unix エポックからの絶対ミリ秒（DOMHighResTimeStamp）
-	expirationTime: z.coerce.date().nullable().optional(),
+	expirationTime: z.number().nullable().optional(),
 	keys: pushSubscriptionKeysSchema,
 });
 

@@ -5,7 +5,8 @@ const envSchema = z.object({
 		.string()
 		.regex(/^https?:\/\/.+/, "有効なURLである必要があります")
 		.default("http://localhost:3000"),
-	VITE_VAPID_PUBLIC_KEY: z.string(),
+
+	VITE_VAPID_PUBLIC_KEY: z.string().min(1),
 
 	// Firebase
 	VITE_FIREBASE_API_KEY: z.string().min(1),

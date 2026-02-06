@@ -38,8 +38,8 @@ const envSchema = z.object({
 
 	// push通知
 	ADMIN_MAIL: z.email(),
-	VAPID_PUBLIC_KEY: z.string(),
-	VAPID_PRIVATE_KEY: z.string(),
+	VAPID_PUBLIC_KEY: z.string().min(1),
+	VAPID_PRIVATE_KEY: z.string().min(1),
 	PUSH_SEND_BATCH_SIZE: z.coerce.number().default(50),
 });
 

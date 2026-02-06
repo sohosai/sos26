@@ -9,8 +9,10 @@ self.addEventListener("push", event => {
 	}
 
 	event.waitUntil(
-		self.registration.showNotification(data.title, {
-			body: data.body,
-		})
+		self.registration
+			.showNotification(data.title, {
+				body: data.body,
+			})
+			.catch(err => console.error("[SW] showNotification failed", err))
 	);
 });

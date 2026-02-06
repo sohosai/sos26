@@ -6,7 +6,6 @@ import { Hono } from "hono";
 import { env } from "../lib/env";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
-import { getStatusCode } from "../lib/push/getPushError";
 import { sendPush } from "../lib/push/send";
 import { requireAuth } from "../middlewares/auth";
 export const pushRoute = new Hono();
@@ -57,7 +56,8 @@ pushRoute.post("/subscribe", requireAuth, async c => {
 				},
 			});
 		});
-	} catch {
+	} catch (e) {
+		console.error("PushSubscription の保存に失敗しました:", e);
 		throw Errors.internal("PushSubscription の保存に失敗しました");
 	}
 
@@ -137,3 +137,15 @@ pushRoute.post("/send", async c => {
 
 	return c.json({ ok: true });
 });
+
+function getStatusCode(error: unknown): number | undefined {
+	if (
+		error !== null &&
+		typeof error === "object" &&
+		"statusCode" in error &&
+		typeof error.statusCode === "number"
+	) {
+		return error.statusCode;
+	}
+	return undefined;
+}
