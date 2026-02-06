@@ -8,23 +8,24 @@ import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
 import { getStatusCode } from "../lib/push/getPushError";
 import { sendPush } from "../lib/push/send";
+import { requireAuth } from "../middlewares/auth";
 export const pushRoute = new Hono();
 
-pushRoute.post("/subscribe", async c => {
+pushRoute.post("/subscribe", requireAuth, async c => {
 	const body = await c.req.json().catch(() => {
 		throw Errors.invalidRequest("JSON の形式が不正です");
 	});
 	const parsedBody = pushSubscribeRequestSchema.parse(body);
 	const subscription = parsedBody.subscription;
-	const userId = parsedBody.userId;
-	// expirationTime は「ページロードからの相対ミリ秒」
+	const userId = c.get("user").id;
+	// expirationTime は Unix エポックからの絶対ミリ秒（EpochTimeStamp）
 	const expiresAt = subscription.expirationTime
-		? new Date(Date.now() + subscription.expirationTime)
+		? new Date(subscription.expirationTime)
 		: null;
 
 	try {
 		await prisma.$transaction(async tx => {
-			const pushSub = await prisma.pushSubscription.upsert({
+			const pushSub = await tx.pushSubscription.upsert({
 				where: {
 					endpoint: subscription.endpoint,
 				},

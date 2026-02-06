@@ -16,9 +16,8 @@ function RouteComponent() {
 	const handleEnablePush = async () => {
 		setLoading(true);
 		setStatus(null);
-		const userID = (await getMe()).user.id;
 		try {
-			await enablePush(userID);
+			await enablePush();
 			setStatus("✅ Push通知を有効化しました");
 		} catch (error) {
 			console.error(error);

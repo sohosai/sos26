@@ -6,7 +6,7 @@ import { callBodyApi } from "./core";
 /**
  * Push通知を有効化
  */
-export async function enablePush(userId: string): Promise<void> {
+export async function enablePush(): Promise<void> {
 	const registration = await navigator.serviceWorker.register("/sw.js");
 
 	const subscription = await registration.pushManager.subscribe({
@@ -17,7 +17,6 @@ export async function enablePush(userId: string): Promise<void> {
 	const json = subscription.toJSON();
 
 	await callBodyApi(pushSubscribeEndpoint, {
-		userId: userId,
 		subscription: json as PushSubscription,
 	});
 }

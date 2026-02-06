@@ -13,8 +13,8 @@ export const pushSubscriptionKeysSchema = z.object({
  */
 export const pushSubscriptionSchema = z.object({
 	endpoint: z.url(),
-	// DOMHighResTimeStamp 型
-	expirationTime: z.number().nullable().optional(),
+	// Push API: Unix エポックからの絶対ミリ秒（DOMHighResTimeStamp）
+	expirationTime: z.coerce.date().nullable().optional(),
 	keys: pushSubscriptionKeysSchema,
 });
 
@@ -22,10 +22,8 @@ export type PushSubscription = z.infer<typeof pushSubscriptionSchema>;
 
 /**
  * Push通知登録リクエスト
- * userId と PushSubscription をまとめたもの
  */
 export const pushSubscribeRequestSchema = z.object({
-	userId: z.string(),
 	subscription: pushSubscriptionSchema,
 });
 
