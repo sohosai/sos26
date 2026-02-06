@@ -46,26 +46,87 @@ model RegTicket {
 // ユーザー
 // ─────────────────────────────────────────────────────────────
 
-enum UserStatus {
-  ACTIVE
-  DISABLED
-}
-
-enum UserRole {
-  PLANNER
-  COMMITTEE_MEMBER
-  COMMITTEE_ADMIN
-  SYSTEM_ADMIN
-}
-
 model User {
-  id          String     @id @default(cuid())
-  firebaseUid String     @unique
-  email       String     @unique
-  firstName   String
-  lastName    String
-  role        UserRole   @default(PLANNER)
-  status      UserStatus @default(ACTIVE)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id              String    @id @default(cuid())
+  firebaseUid     String
+  email           String
+  name            String
+  namePhonetic    String
+  telephoneNumber String
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  ownedProjects    Project[]       @relation("ProjectOwner")
+  subOwnedProjects Project[]       @relation("ProjectSubOwner")
+  projectMembers   ProjectMember[]
+
+  @@unique([firebaseUid, deletedAt])
+  @@unique([email, deletedAt])
+}
+
+enum ProjectType {
+  //ステージ企画
+  STAGE
+
+  //食品企画
+  FOOD
+
+  //普通企画
+  NORMAL
+}
+
+model Project {
+  id String @id @default(cuid())
+
+  //企画名
+  name         String @unique
+  namePhonetic String
+
+  //企画団体名
+  organizationName         String
+  organizationNamePhonetic String
+
+  //企画区分
+  type ProjectType
+
+  //責任者
+  ownerId String
+  owner   User   @relation("ProjectOwner", fields: [ownerId], references: [id])
+
+  //副責任者
+  subOwnerId String?
+  subOwner   User?   @relation("ProjectSubOwner", fields: [subOwnerId], references: [id])
+
+  //招待コード
+  inviteCode String @unique @db.Char(6)
+  //必要であればコードの期限切れを設定
+  //inviteCodeExpiresAt DateTime?
+
+  deletedAt      DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  projectMembers ProjectMember[]
+
+  @@index([ownerId])
+  @@index([subOwnerId])
+  @@index([deletedAt])
+}
+
+//プロジェクトに参加している責任者と副責任者以外のユーザーのTable
+//このTableに責任者と副責任者を登録する必要はない
+model ProjectMember {
+  id        String @id @default(cuid())
+  projectId String
+  userId    String
+
+  project Project @relation(fields: [projectId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  joinedAt  DateTime  @default(now())
+  deletedAt DateTime?
+
+  @@unique([projectId, userId, deletedAt])
+  @@index([projectId])
+  @@index([userId])
 }

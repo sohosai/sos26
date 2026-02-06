@@ -25,15 +25,39 @@ erDiagram
 }
 "User" {
   String id PK
-  String firebaseUid UK
-  String email UK
-  String firstName
-  String lastName
-  UserRole role
-  UserStatus status
+  String firebaseUid
+  String email
+  String name
+  String namePhonetic
+  String telephoneNumber
+  DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
+"Project" {
+  String id PK
+  String name UK
+  String namePhonetic
+  String organizationName
+  String organizationNamePhonetic
+  ProjectType type
+  String ownerId FK
+  String subOwnerId FK "nullable"
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectMember" {
+  String id PK
+  String projectId FK
+  String userId FK
+  DateTime joinedAt
+  DateTime deletedAt "nullable"
+}
+"Project" }o--|| "User" : owner
+"Project" }o--o| "User" : subOwner
+"ProjectMember" }o--|| "Project" : project
+"ProjectMember" }o--|| "User" : user
 ```
 
 ### `EmailVerification`
@@ -64,9 +88,35 @@ Properties as follows:
 - `id`:
 - `firebaseUid`:
 - `email`:
-- `firstName`:
-- `lastName`:
-- `role`:
-- `status`:
+- `name`:
+- `namePhonetic`:
+- `telephoneNumber`:
+- `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
+
+### `Project`
+
+Properties as follows:
+
+- `id`:
+- `name`:
+- `namePhonetic`:
+- `organizationName`:
+- `organizationNamePhonetic`:
+- `type`:
+- `ownerId`:
+- `subOwnerId`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectMember`
+
+Properties as follows:
+
+- `id`:
+- `projectId`:
+- `userId`:
+- `joinedAt`:
+- `deletedAt`:
