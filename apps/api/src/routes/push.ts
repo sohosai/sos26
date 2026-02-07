@@ -33,6 +33,7 @@ pushRoute.post("/subscribe", requireAuth, async c => {
 					p256dh: subscription.keys.p256dh,
 					auth: subscription.keys.auth,
 					expiresAt: expiresAt,
+					deletedAt: null,
 				},
 				create: {
 					endpoint: subscription.endpoint,
@@ -139,6 +140,10 @@ pushRoute.post("/send", async c => {
 	return c.json({ ok: true });
 });
 
+/**
+ * web-push ライブラリが返すエラーオブジェクトから
+ * HTTPステータスコードを抽出
+ */
 function getStatusCodeFromWebpush(error: unknown): number | undefined {
 	if (
 		error !== null &&
