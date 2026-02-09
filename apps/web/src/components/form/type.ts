@@ -6,12 +6,17 @@ export type FormItemType =
 	| "number"
 	| "file";
 
+export type FormItemOption = {
+	id: string;
+	label: string;
+};
+
 export type FormItem = {
 	id: string;
 	label: string;
 	type: FormItemType;
 	required: boolean;
-	options?: string[];
+	options?: FormItemOption[];
 };
 
 export type Form = {

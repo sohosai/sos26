@@ -1,4 +1,3 @@
-// FormEditor.tsx
 import { useState } from "react";
 import type { Form, FormItem } from "../type";
 import { FormItemList } from "./ItemList";

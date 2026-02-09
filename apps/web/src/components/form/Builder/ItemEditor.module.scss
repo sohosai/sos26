@@ -1,9 +1,14 @@
+.formLi {
+	list-style: none;
+}
+
 .card {
+	position: relative;
 	background: #fff;
 	border-radius: 8px;
 	padding: 16px;
 	margin-bottom: 12px;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 
 	display: flex;
 	flex-direction: column;
@@ -14,11 +19,37 @@
 	opacity: 0.5;
 }
 
+.dragOver::before {
+	content: "";
+	position: absolute;
+	top: -6px;
+	left: 0;
+	right: 0;
+	height: 4px;
+	background: #3a42b7;
+	border-radius: 2px;
+}
+
 .dragHandle {
 	cursor: grab;
-	color: #5f6368;
+	position: absolute;
+  top: 4px;
+  left: 50%;
 	font-size: 18px;
 	user-select: none;
+	rotate: 90deg;
+	background-color: transparent;
+	border: none;
+	width: fit-content;
+
+}
+
+.itemOperateButtons {
+	position: absolute;
+	top: 12px;
+	right: 16px;
+	display: flex;
+	gap: 16px;
 }
 
 .questionInput {
@@ -75,4 +106,69 @@
 	&:hover {
 		color: #d93025;
 	}
+}
+
+.selectWrapper {
+	flex: 1;
+	min-width: 0;
+}
+
+.trigger {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	padding: 0.5rem 0.75rem;
+	min-height: 2rem;
+	cursor: pointer;
+}
+
+.triggerContent {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	width: 100%;
+	min-width: 0;
+}
+
+.icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: 1.25rem;
+	height: 1.25rem;
+}
+
+.label {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-size: 0.875rem;
+	flex: 1;
+	min-width: 0;
+}
+
+.content {
+	border: 1px solid var(--gray-6);
+	border-radius: var(--radius-2);
+	box-shadow: var(--shadow-3);
+	z-index: 1000;
+	min-width: 200px;
+}
+
+.itemContent {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	width: 100%;
+	padding: 0 0.5rem;
+}
+
+.itemIcon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: 1.25rem;
+	height: 1.25rem;
 }

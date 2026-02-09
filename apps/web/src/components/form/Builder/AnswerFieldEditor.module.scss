@@ -1,0 +1,41 @@
+.preview {
+	margin-top: 12px;
+}
+
+.input,
+.textarea {
+	width: 100%;
+	border: none;
+	border-bottom: 1px solid #dadce0;
+	padding: 6px 4px;
+	background: transparent;
+}
+
+.textarea {
+	min-height: 60px;
+	resize: none;
+}
+
+.options {
+	margin-top: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.optionRow {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.addOption {
+	margin-top: 8px;
+	background: none;
+	border: none;
+	color: #673ab7;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}

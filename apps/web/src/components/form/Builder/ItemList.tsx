@@ -1,5 +1,3 @@
-// FormItemList.tsx
-
 import { useState } from "react";
 import type { FormItem } from "../type";
 import { FormItemEditor } from "./ItemEditor";
@@ -13,19 +11,22 @@ type Props = {
 
 export function FormItemList({ items, setItems, onUpdate, onRemove }: Props) {
 	const [dragIndex, setDragIndex] = useState<number | null>(null);
+	const [overIndex, setOverIndex] = useState<number | null>(null);
 
 	const handleDragStart = (index: number) => {
 		setDragIndex(index);
 	};
 
-	const handleDragOver = (e: React.DragEvent) => {
-		e.preventDefault(); // 必須
+	const handleDragOver = (index: number) => (e: React.DragEvent) => {
+		e.preventDefault();
+		setOverIndex(index);
 	};
 
 	const handleDrop = (dropIndex: number) => {
 		if (dragIndex === null || dragIndex === dropIndex) return;
 		setItems(arrayMove(items, dragIndex, dropIndex));
 		setDragIndex(null);
+		setOverIndex(null);
 	};
 
 	function arrayMove<T extends {}>(array: T[], from: number, to: number): T[] {
@@ -46,9 +47,10 @@ export function FormItemList({ items, setItems, onUpdate, onRemove }: Props) {
 					onUpdate={onUpdate}
 					onRemove={onRemove}
 					onDragStart={() => handleDragStart(index)}
-					onDragOver={handleDragOver}
+					onDragOver={handleDragOver(index)}
 					onDrop={() => handleDrop(index)}
 					isDragging={dragIndex === index}
+					isDragOver={overIndex === index && dragIndex !== index}
 				/>
 			))}
 		</ul>
