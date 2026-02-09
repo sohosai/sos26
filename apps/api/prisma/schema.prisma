@@ -57,11 +57,17 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  // リレーション: 企画関連
   ownedProjects    Project[]       @relation("ProjectOwner")
   subOwnedProjects Project[]       @relation("ProjectSubOwner")
   projectMembers   ProjectMember[]
-	committeeMember CommitteeMember?
 
+  // リレーション: 役割
+  committeeMember  CommitteeMember?
+
+  // リレーション: フォーム・お知らせ機能
+  formResponses    FormResponse[] // 自分が回答したフォーム
+  readNotices      NoticeRead[]   // 自分が既読にしたお知らせ
 
   @@unique([firebaseUid, deletedAt])
   @@unique([email, deletedAt])
@@ -102,12 +108,11 @@ model Project {
 
   //招待コード
   inviteCode String @unique @db.Char(6)
-  //必要であればコードの期限切れを設定
-  //inviteCodeExpiresAt DateTime?
 
-  deletedAt      DateTime?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   projectMembers ProjectMember[]
 
   @@index([ownerId])
@@ -116,7 +121,6 @@ model Project {
 }
 
 //プロジェクトに参加している責任者と副責任者以外のユーザーのTable
-//このTableに責任者と副責任者を登録する必要はない
 model ProjectMember {
   id        String @id @default(cuid())
   projectId String
@@ -145,17 +149,194 @@ enum Bureau {
   INFO_SYSTEM      // 情報メディアシステム局 (jsys)
   INFORMATION      // 案内所運営部会 (au)
 }
+
 //実委人の管理用Table
-model CommitteeMember{
-  id        String @id @default(cuid())
- userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id])
-	//委員長
-	isExecutive Boolean @default(false)
+model CommitteeMember {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
 
-	//所属局
-	Bureau Bureau
+  //委員長
+  isExecutive Boolean @default(false)
 
-	joinedAt  DateTime  @default(now())
+  //所属局
+  Bureau Bureau
+
+  // 作成物リレーション
+  createdForms   Form[]   // 作成したフォーム
+  createdNotices Notice[] // 作成したお知らせ
+
+  joinedAt  DateTime  @default(now())
   deletedAt DateTime?
+}
+
+// ─────────────────────────────────────────────────────────────
+// お知らせ (Notice) 機能
+// ─────────────────────────────────────────────────────────────
+
+model Notice {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   // Markdown形式の本文
+
+  // 作成者
+  createdById String
+  createdBy   CommitteeMember @relation(fields: [createdById], references: [id])
+
+  // 表示制御
+  isPublished Boolean  @default(true) // falseなら下書き
+  publishedAt DateTime @default(now()) // 配信日時（予約配信等にも利用可）
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  // 既読管理
+  readBy      NoticeRead[]
+
+  @@index([createdById])
+  @@index([publishedAt])
+}
+
+// お知らせの既読状態管理
+model NoticeRead {
+  noticeId String
+  userId   String
+
+  notice   Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  readAt   DateTime @default(now())
+
+  @@id([noticeId, userId]) // 複合主キー: 1ユーザー1記事につき1レコード
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 汎用フォーム機能：定義
+// ─────────────────────────────────────────────────────────────
+
+enum FormItemType {
+  TEXT            // 1行テキストまたは長文
+  NUMBER          // 数値
+  SINGLE_CHOICE   // 単一選択 (ラジオボタン/ドロップダウン)
+  MULTIPLE_CHOICE // 複数選択 (チェックボックス)
+  FILE            // ファイル添付 (S3のキーを保存)
+}
+
+// フォーム本体（タイトルや締め切りなど）
+model Form {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  // フォームの説明文
+
+  // 作成者
+  createdById String
+  createdBy   CommitteeMember @relation(fields: [createdById], references: [id])
+
+  // 受付期間
+  startsAt    DateTime? // 開始日時（nullなら即時）
+  endsAt      DateTime? // 終了日時（nullなら無期限）
+
+  // 公開状態
+  isPublic    Boolean   @default(true) // falseなら下書き
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  items       FormItem[]     // 質問項目
+  responses   FormResponse[] // 寄せられた回答
+
+  @@index([createdById])
+}
+
+// 質問項目
+model FormItem {
+  id          String       @id @default(cuid())
+  formId      String
+  form        Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  type        FormItemType // 質問の種類
+  title       String       // 質問文
+  description String?      // 補足説明
+  isRequired  Boolean      @default(false) // 必須かどうか
+  order       Int          // 表示順序
+
+  options     FormOption[] // 選択肢
+  answers     FormAnswer[] // 回答データ
+
+  @@index([formId])
+}
+
+// 選択肢
+model FormOption {
+  id         String   @id @default(cuid())
+  formItemId String
+  formItem   FormItem @relation(fields: [formItemId], references: [id], onDelete: Cascade)
+
+  label      String // 選択肢の表示名
+  order      Int    // 表示順序
+
+  selectedBy FormAnswerSelectedOption[]
+
+  @@index([formItemId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 汎用フォーム機能：回答データ
+// ─────────────────────────────────────────────────────────────
+
+// 1回のフォーム送信
+model FormResponse {
+  id        String   @id @default(cuid())
+  formId    String
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  answers   FormAnswer[]
+
+  @@index([formId])
+  @@index([userId])
+}
+
+// 個別の質問に対する回答値
+model FormAnswer {
+  id           String   @id @default(cuid())
+  responseId   String
+  response     FormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  formItemId   String
+  formItem     FormItem     @relation(fields: [formItemId], references: [id], onDelete: Cascade)
+
+  // 回答値
+  textValue    String?  // テキスト、S3キー
+  numberValue  Float?   // 数値
+  booleanValue Boolean? // 真偽値
+
+  selectedOptions FormAnswerSelectedOption[]
+
+  @@unique([responseId, formItemId])
+  @@index([responseId])
+  @@index([formItemId])
+}
+
+// 選択式回答の中間テーブル
+model FormAnswerSelectedOption {
+  id           String     @id @default(cuid())
+  answerId     String
+  answer       FormAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  optionId     String
+  option       FormOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([answerId, optionId])
+  @@index([answerId])
+  @@index([optionId])
 }
