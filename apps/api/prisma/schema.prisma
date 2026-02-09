@@ -63,7 +63,7 @@ model User {
   projectMembers   ProjectMember[]
 
   // リレーション: 役割
-  committeeMember  CommitteeMember?
+  committeeMember CommitteeMember?
 
   @@unique([firebaseUid, deletedAt])
   @@unique([email, deletedAt])
@@ -106,8 +106,8 @@ model Project {
   inviteCode String @unique @db.Char(6)
 
   deletedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   projectMembers ProjectMember[]
 
@@ -134,16 +134,16 @@ model ProjectMember {
 }
 
 enum Bureau {
-  FINANCE          // 財務局 (zai)
-  GENERAL_AFFAIRS  // 総務局 (som)
+  FINANCE // 財務局 (zai)
+  GENERAL_AFFAIRS // 総務局 (som)
   PUBLIC_RELATIONS // 広報宣伝局 (kosen)
-  EXTERNAL         // 渉外局 (sg)
-  PROMOTION        // 推進局 (ss)
-  PLANNING         // 総合計画局 (sok)
+  EXTERNAL // 渉外局 (sg)
+  PROMOTION // 推進局 (ss)
+  PLANNING // 総合計画局 (sok)
   STAGE_MANAGEMENT // ステージ管理局 (stage)
-  HQ_PLANNING      // 本部企画局 (honki)
-  INFO_SYSTEM      // 情報メディアシステム局 (jsys)
-  INFORMATION      // 案内所運営部会 (au)
+  HQ_PLANNING // 本部企画局 (honki)
+  INFO_SYSTEM // 情報メディアシステム局 (jsys)
+  INFORMATION // 案内所運営部会 (au)
 }
 
 //実委人の管理用Table
