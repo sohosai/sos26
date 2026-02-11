@@ -19,23 +19,22 @@ type AuthStore = {
 	refreshUser: () => Promise<void>;
 };
 
-export const useAuthStore = create<AuthStore>((set, get) => ({
+const UNAUTHENTICATED_STATE = {
 	user: null,
 	committeeMember: null,
-	firebaseUser: null,
-	isLoading: false,
 	isLoggedIn: false,
 	isCommitteeMember: false,
+} as const;
+
+export const useAuthStore = create<AuthStore>((set, get) => ({
+	...UNAUTHENTICATED_STATE,
+	firebaseUser: null,
+	isLoading: false,
 	isFirebaseAuthenticated: false,
 
 	signOut: async () => {
 		await firebaseSignOut(firebaseAuth);
-		set({
-			user: null,
-			committeeMember: null,
-			isLoggedIn: false,
-			isCommitteeMember: false,
-		});
+		set(UNAUTHENTICATED_STATE);
 	},
 
 	refreshUser: async () => {
@@ -55,12 +54,7 @@ async function fetchAndSetUser(fbUser: FirebaseUser | null): Promise<void> {
 	});
 
 	if (!fbUser) {
-		useAuthStore.setState({
-			user: null,
-			committeeMember: null,
-			isLoggedIn: false,
-			isCommitteeMember: false,
-		});
+		useAuthStore.setState(UNAUTHENTICATED_STATE);
 		return;
 	}
 
@@ -75,20 +69,10 @@ async function fetchAndSetUser(fbUser: FirebaseUser | null): Promise<void> {
 		});
 	} catch (err) {
 		if (isClientError(err) && err.code === ErrorCode.NOT_FOUND) {
-			useAuthStore.setState({
-				user: null,
-				committeeMember: null,
-				isLoggedIn: false,
-				isCommitteeMember: false,
-			});
+			useAuthStore.setState(UNAUTHENTICATED_STATE);
 		} else {
 			console.error("[AuthStore] getMe failed", err);
-			useAuthStore.setState({
-				user: null,
-				committeeMember: null,
-				isLoggedIn: false,
-				isCommitteeMember: false,
-			});
+			useAuthStore.setState(UNAUTHENTICATED_STATE);
 		}
 	} finally {
 		useAuthStore.setState({ isLoading: false });
