@@ -52,7 +52,6 @@ const sortIndicator: Record<string, string> = {
 	none: " ↑↓",
 };
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: feature-flag branching is inherently complex but straightforward
 export function DataTable<T extends RowData>({
 	data,
 	columns,
@@ -81,19 +80,13 @@ export function DataTable<T extends RowData>({
 	const table = useReactTable({
 		data,
 		columns,
-		state: {
-			...(f.sorting ? { sorting } : {}),
-			...(f.globalFilter ? { globalFilter } : {}),
-			...(f.columnVisibility ? { columnVisibility } : {}),
-		},
-		...(f.sorting ? { onSortingChange: setSorting } : {}),
-		...(f.globalFilter ? { onGlobalFilterChange: setGlobalFilter } : {}),
-		...(f.columnVisibility
-			? { onColumnVisibilityChange: setColumnVisibility }
-			: {}),
+		state: { sorting, globalFilter, columnVisibility },
+		onSortingChange: setSorting,
+		onGlobalFilterChange: setGlobalFilter,
+		onColumnVisibilityChange: setColumnVisibility,
 		getCoreRowModel: getCoreRowModel(),
-		...(f.globalFilter ? { getFilteredRowModel: getFilteredRowModel() } : {}),
-		...(f.sorting ? { getSortedRowModel: getSortedRowModel() } : {}),
+		getFilteredRowModel: f.globalFilter ? getFilteredRowModel() : undefined,
+		getSortedRowModel: f.sorting ? getSortedRowModel() : undefined,
 		meta: {
 			updateData: (row: T, columnId: string, value: unknown) => {
 				onCellEdit?.(row, columnId, value);
