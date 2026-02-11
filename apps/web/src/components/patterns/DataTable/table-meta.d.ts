@@ -6,7 +6,6 @@ declare module "@tanstack/react-table" {
 		updateData: (row: TData, columnId: string, value: unknown) => void;
 		clearSelection?: () => void;
 	}
-	// biome-ignore lint/correctness/noUnusedVariables: required by module augmentation signature
 	interface ColumnMeta<TData extends RowData, TValue> {
 		editable?: boolean;
 		type?: "text" | "number";
