@@ -94,7 +94,7 @@ function UserTable() {
 | `features` | `DataTableFeatures` | 全て `true` | 有効にする機能のフラグ |
 | `initialSorting` | `SortingState` | `[]` | 初期ソート状態 |
 | `initialGlobalFilter` | `string` | `""` | 初期検索文字列 |
-| `onCellEdit` | `(row: T, columnId, value) => void` | - | セル編集時のコールバック。`row` は編集された行の元データオブジェクト |
+| `onCellEdit` | `(row: T, columnId: string, value: unknown) => void` | - | セル編集時のコールバック。`row` は編集された行の元データオブジェクト |
 
 ### DataTableFeatures
 

@@ -1,29 +1,5 @@
 import type { Table } from "@tanstack/react-table";
-
-function formatDateForCsv(date: Date, format: "date" | "datetime"): string {
-	const y = date.getFullYear();
-	const m = String(date.getMonth() + 1).padStart(2, "0");
-	const d = String(date.getDate()).padStart(2, "0");
-
-	if (format === "datetime") {
-		const h = String(date.getHours()).padStart(2, "0");
-		const min = String(date.getMinutes()).padStart(2, "0");
-		return `${y}/${m}/${d} ${h}:${min}`;
-	}
-
-	return `${y}/${m}/${d}`;
-}
-
-function stringifyValue(
-	value: unknown,
-	dateFormat?: "date" | "datetime"
-): string {
-	if (value == null) return "";
-	if (value instanceof Date)
-		return formatDateForCsv(value, dateFormat ?? "date");
-	if (Array.isArray(value)) return value.join(" / ");
-	return String(value);
-}
+import { stringifyValue } from "./formatValue";
 
 function escapeCsvField(str: string): string {
 	if (/[,"\r\n]/.test(str)) {
@@ -36,17 +12,24 @@ export function downloadCsv<T>(table: Table<T>) {
 	const headerGroup = table.getHeaderGroups()[0];
 	if (!headerGroup) return;
 
-	const headers = headerGroup.headers.map(h =>
+	const dataHeaders = headerGroup.headers.filter(
+		h => h.column.accessorFn != null
+	);
+
+	const headers = dataHeaders.map(h =>
 		typeof h.column.columnDef.header === "string"
 			? h.column.columnDef.header
 			: h.column.id
 	);
 
 	const rows = table.getRowModel().rows.map(row =>
-		row.getVisibleCells().map(cell => {
-			const dateFormat = cell.column.columnDef.meta?.dateFormat;
-			return escapeCsvField(stringifyValue(cell.getValue(), dateFormat));
-		})
+		row
+			.getVisibleCells()
+			.filter(cell => cell.column.accessorFn != null)
+			.map(cell => {
+				const dateFormat = cell.column.columnDef.meta?.dateFormat;
+				return escapeCsvField(stringifyValue(cell.getValue(), dateFormat));
+			})
 	);
 
 	const csv =

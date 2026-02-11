@@ -2,6 +2,7 @@ import { Box, Flex, Popover, Table, Text, TextField } from "@radix-ui/themes";
 import { IconDownload, IconSearch, IconSettings } from "@tabler/icons-react";
 import {
 	type ColumnDef,
+	type FilterFn,
 	flexRender,
 	getCoreRowModel,
 	getFilteredRowModel,
@@ -17,6 +18,7 @@ import styles from "./DataTable.module.scss";
 import { useCopyToClipboard } from "./hooks/useCopyToClipboard";
 import { useSelection } from "./hooks/useSelection";
 import { downloadCsv } from "./lib/downloadCsv";
+import { stringifyValue } from "./lib/formatValue";
 
 export type DataTableFeatures = {
 	sorting?: boolean;
@@ -44,6 +46,15 @@ type DataTableProps<T> = {
 	initialSorting?: SortingState;
 	initialGlobalFilter?: string;
 	onCellEdit?: (row: T, columnId: string, value: unknown) => void;
+};
+
+// biome-ignore lint/suspicious/noExplicitAny: TanStack Table's FilterFn requires generic RowData
+const formattedGlobalFilter: FilterFn<any> = (row, columnId, filterValue) => {
+	const value = row.getValue(columnId);
+	const meta = row.getAllCells().find(c => c.column.id === columnId)?.column
+		.columnDef.meta;
+	const str = stringifyValue(value, meta?.dateFormat ?? "datetime");
+	return str.toLowerCase().includes(String(filterValue).toLowerCase());
 };
 
 const sortIndicator: Record<string, string> = {
@@ -85,6 +96,7 @@ export function DataTable<T extends RowData>({
 		onGlobalFilterChange: setGlobalFilter,
 		onColumnVisibilityChange: setColumnVisibility,
 		getCoreRowModel: getCoreRowModel(),
+		globalFilterFn: formattedGlobalFilter,
 		getFilteredRowModel: f.globalFilter ? getFilteredRowModel() : undefined,
 		getSortedRowModel: f.sorting ? getSortedRowModel() : undefined,
 		meta: {
