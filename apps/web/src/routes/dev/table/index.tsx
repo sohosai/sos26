@@ -1,9 +1,20 @@
-import { Box, Heading, Separator } from "@radix-ui/themes";
+import {
+	Box,
+	Button,
+	Dialog,
+	Flex,
+	Heading,
+	IconButton,
+	Separator,
+} from "@radix-ui/themes";
+import { IconPencil } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useState } from "react";
 import { z } from "zod";
 import {
+	CheckboxGroup,
+	CheckboxGroupItem,
 	DataTable,
 	DateCell,
 	EditableCell,
@@ -284,7 +295,7 @@ const taskColumns = [
 	taskColumnHelper.accessor("assignee", { header: "担当者" }),
 ];
 
-// ─── サンプル5: 日付表示 ─────────────────────────────────
+// ─── サンプル5: 日付表示・タグ編集 ───────────────────────
 
 type Event = {
 	id: number;
@@ -294,7 +305,25 @@ type Event = {
 	tags: string[];
 };
 
-const eventData: Event[] = [
+const ALL_TAGS = [
+	"式典",
+	"全体",
+	"ステージ",
+	"音楽",
+	"模擬店",
+	"表彰",
+] as const;
+
+const TAG_COLORS: Record<string, string> = {
+	式典: "blue",
+	全体: "green",
+	ステージ: "purple",
+	音楽: "violet",
+	模擬店: "orange",
+	表彰: "amber",
+};
+
+const defaultEvents: Event[] = [
 	{
 		id: 1,
 		title: "開会式",
@@ -327,40 +356,62 @@ const eventData: Event[] = [
 
 const eventColumnHelper = createColumnHelper<Event>();
 
-const eventColumns = [
-	eventColumnHelper.accessor("id", { header: "ID" }),
-	eventColumnHelper.accessor("title", { header: "イベント名" }),
-	eventColumnHelper.accessor("date", {
-		header: "開催日",
-		cell: DateCell,
-		meta: { dateFormat: "date" },
-	}),
-	eventColumnHelper.accessor("createdAt", {
-		header: "登録日時",
-		cell: DateCell,
-		meta: { dateFormat: "datetime" },
-	}),
-	eventColumnHelper.accessor("tags", {
-		header: "タグ",
-		cell: TagCell,
-		meta: {
-			tagColors: {
-				式典: "blue",
-				全体: "green",
-				ステージ: "purple",
-				音楽: "violet",
-				模擬店: "orange",
-				表彰: "amber",
-			},
-		},
-	}),
-];
-
 // ─── Page ────────────────────────────────────────────────
 
 function TableDemoPage() {
 	const [users, setUsers] = useState(defaultUsers);
 	const [products, setProducts] = useState(defaultProducts);
+	const [events, setEvents] = useState(defaultEvents);
+	const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+	const [editingTags, setEditingTags] = useState<string[]>([]);
+
+	const openTagEditor = (event: Event) => {
+		setEditingEvent(event);
+		setEditingTags([...event.tags]);
+	};
+
+	const saveTags = () => {
+		if (!editingEvent) return;
+		setEvents(prev =>
+			prev.map(e =>
+				e.id === editingEvent.id ? { ...e, tags: editingTags } : e
+			)
+		);
+		setEditingEvent(null);
+	};
+
+	const eventColumns = [
+		eventColumnHelper.accessor("id", { header: "ID" }),
+		eventColumnHelper.accessor("title", { header: "イベント名" }),
+		eventColumnHelper.accessor("date", {
+			header: "開催日",
+			cell: DateCell,
+			meta: { dateFormat: "date" },
+		}),
+		eventColumnHelper.accessor("createdAt", {
+			header: "登録日時",
+			cell: DateCell,
+			meta: { dateFormat: "datetime" },
+		}),
+		eventColumnHelper.accessor("tags", {
+			header: "タグ",
+			cell: TagCell,
+			meta: { tagColors: TAG_COLORS },
+		}),
+		eventColumnHelper.display({
+			id: "actions",
+			header: "",
+			cell: ({ row }) => (
+				<IconButton
+					variant="ghost"
+					size="1"
+					onClick={() => openTagEditor(row.original)}
+				>
+					<IconPencil size={16} />
+				</IconButton>
+			),
+		}),
+	];
 
 	return (
 		<Box p="5">
@@ -436,15 +487,49 @@ function TableDemoPage() {
 
 			<Separator my="6" size="4" />
 
-			{/* サンプル5: 日付表示・タグ表示 */}
+			{/* サンプル5: 日付表示・タグ表示・タグ編集 */}
 			<Heading size="4" mb="3">
-				イベント一覧（DateCell・TagCell）
+				イベント一覧（DateCell・TagCell・タグ編集）
 			</Heading>
 			<DataTable
-				data={eventData}
+				data={events}
 				columns={eventColumns}
 				features={{ selection: false, copy: false }}
 			/>
+
+			{/* タグ編集 Dialog */}
+			<Dialog.Root
+				open={editingEvent !== null}
+				onOpenChange={open => {
+					if (!open) setEditingEvent(null);
+				}}
+			>
+				<Dialog.Content maxWidth="400px">
+					<Dialog.Title>タグ編集</Dialog.Title>
+					<Dialog.Description size="2" color="gray" mb="4">
+						{editingEvent?.title}
+					</Dialog.Description>
+					<CheckboxGroup
+						label="タグ"
+						value={editingTags}
+						onValueChange={setEditingTags}
+					>
+						{ALL_TAGS.map(tag => (
+							<CheckboxGroupItem key={tag} value={tag}>
+								{tag}
+							</CheckboxGroupItem>
+						))}
+					</CheckboxGroup>
+					<Flex gap="3" justify="end" mt="4">
+						<Dialog.Close>
+							<Button variant="soft" color="gray">
+								キャンセル
+							</Button>
+						</Dialog.Close>
+						<Button onClick={saveTags}>保存</Button>
+					</Flex>
+				</Dialog.Content>
+			</Dialog.Root>
 		</Box>
 	);
 }
