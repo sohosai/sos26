@@ -1,12 +1,4 @@
-import {
-	Box,
-	Button,
-	Dialog,
-	Flex,
-	Heading,
-	IconButton,
-	Separator,
-} from "@radix-ui/themes";
+import { Box, Dialog, Heading, IconButton, Separator } from "@radix-ui/themes";
 import { IconPencil } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
@@ -22,6 +14,8 @@ import {
 	SelectCell,
 	TagCell,
 } from "@/components/patterns";
+import { Button } from "@/components/primitives";
+import styles from "./index.module.scss";
 
 export const Route = createFileRoute("/dev/table/")({
 	component: TableDemoPage,
@@ -520,14 +514,12 @@ function TableDemoPage() {
 							</CheckboxGroupItem>
 						))}
 					</CheckboxGroup>
-					<Flex gap="3" justify="end" mt="4">
+					<div className={styles.dialogActions}>
 						<Dialog.Close>
-							<Button variant="soft" color="gray">
-								キャンセル
-							</Button>
+							<Button intent="secondary">キャンセル</Button>
 						</Dialog.Close>
 						<Button onClick={saveTags}>保存</Button>
-					</Flex>
+					</div>
 				</Dialog.Content>
 			</Dialog.Root>
 		</Box>
