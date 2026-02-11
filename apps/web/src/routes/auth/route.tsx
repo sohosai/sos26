@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { Header } from "@/components/layout/Header/Header";
 import { useAuthStore } from "@/lib/auth";
 
 /**
@@ -16,5 +17,10 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthLayout() {
-	return <Outlet />;
+	return (
+		<>
+			<Header />
+			<Outlet />
+		</>
+	);
 }

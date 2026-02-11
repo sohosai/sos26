@@ -127,18 +127,18 @@ export interface FileRoutesByFullPath {
   '/dev': typeof DevRouteRouteWithChildren
   '/project': typeof ProjectRouteRouteWithChildren
   '/committee/': typeof CommitteeIndexRoute
-  '/forbidden/': typeof ForbiddenIndexRoute
+  '/forbidden': typeof ForbiddenIndexRoute
   '/project/': typeof ProjectIndexRoute
-  '/search/': typeof SearchIndexRoute
-  '/auth/login/': typeof AuthLoginIndexRoute
-  '/auth/register/': typeof AuthRegisterIndexRoute
-  '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
-  '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
-  '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
-  '/dev/table/': typeof DevTableIndexRoute
-  '/auth/register/setup/': typeof AuthRegisterSetupIndexRoute
-  '/auth/register/verify/': typeof AuthRegisterVerifyIndexRoute
-  '/dev/ui/components/': typeof DevUiComponentsIndexRoute
+  '/search': typeof SearchIndexRoute
+  '/auth/login': typeof AuthLoginIndexRoute
+  '/auth/register': typeof AuthRegisterIndexRoute
+  '/auth/reset-password': typeof AuthResetPasswordIndexRoute
+  '/dev/committeeMember': typeof DevCommitteeMemberIndexRoute
+  '/dev/pushNotification': typeof DevPushNotificationIndexRoute
+  '/dev/table': typeof DevTableIndexRoute
+  '/auth/register/setup': typeof AuthRegisterSetupIndexRoute
+  '/auth/register/verify': typeof AuthRegisterVerifyIndexRoute
+  '/dev/ui/components': typeof DevUiComponentsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -188,18 +188,18 @@ export interface FileRouteTypes {
     | '/dev'
     | '/project'
     | '/committee/'
-    | '/forbidden/'
+    | '/forbidden'
     | '/project/'
-    | '/search/'
-    | '/auth/login/'
-    | '/auth/register/'
-    | '/auth/reset-password/'
-    | '/dev/committeeMember/'
-    | '/dev/pushNotification/'
-    | '/dev/table/'
-    | '/auth/register/setup/'
-    | '/auth/register/verify/'
-    | '/dev/ui/components/'
+    | '/search'
+    | '/auth/login'
+    | '/auth/register'
+    | '/auth/reset-password'
+    | '/dev/committeeMember'
+    | '/dev/pushNotification'
+    | '/dev/table'
+    | '/auth/register/setup'
+    | '/auth/register/verify'
+    | '/dev/ui/components'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -290,7 +290,7 @@ declare module '@tanstack/react-router' {
     '/search/': {
       id: '/search/'
       path: '/search'
-      fullPath: '/search/'
+      fullPath: '/search'
       preLoaderRoute: typeof SearchIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -304,7 +304,7 @@ declare module '@tanstack/react-router' {
     '/forbidden/': {
       id: '/forbidden/'
       path: '/forbidden'
-      fullPath: '/forbidden/'
+      fullPath: '/forbidden'
       preLoaderRoute: typeof ForbiddenIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -318,63 +318,63 @@ declare module '@tanstack/react-router' {
     '/dev/table/': {
       id: '/dev/table/'
       path: '/table'
-      fullPath: '/dev/table/'
+      fullPath: '/dev/table'
       preLoaderRoute: typeof DevTableIndexRouteImport
       parentRoute: typeof DevRouteRoute
     }
     '/dev/pushNotification/': {
       id: '/dev/pushNotification/'
       path: '/pushNotification'
-      fullPath: '/dev/pushNotification/'
+      fullPath: '/dev/pushNotification'
       preLoaderRoute: typeof DevPushNotificationIndexRouteImport
       parentRoute: typeof DevRouteRoute
     }
     '/dev/committeeMember/': {
       id: '/dev/committeeMember/'
       path: '/committeeMember'
-      fullPath: '/dev/committeeMember/'
+      fullPath: '/dev/committeeMember'
       preLoaderRoute: typeof DevCommitteeMemberIndexRouteImport
       parentRoute: typeof DevRouteRoute
     }
     '/auth/reset-password/': {
       id: '/auth/reset-password/'
       path: '/reset-password'
-      fullPath: '/auth/reset-password/'
+      fullPath: '/auth/reset-password'
       preLoaderRoute: typeof AuthResetPasswordIndexRouteImport
       parentRoute: typeof AuthRouteRoute
     }
     '/auth/register/': {
       id: '/auth/register/'
       path: '/register'
-      fullPath: '/auth/register/'
+      fullPath: '/auth/register'
       preLoaderRoute: typeof AuthRegisterIndexRouteImport
       parentRoute: typeof AuthRouteRoute
     }
     '/auth/login/': {
       id: '/auth/login/'
       path: '/login'
-      fullPath: '/auth/login/'
+      fullPath: '/auth/login'
       preLoaderRoute: typeof AuthLoginIndexRouteImport
       parentRoute: typeof AuthRouteRoute
     }
     '/dev/ui/components/': {
       id: '/dev/ui/components/'
       path: '/ui/components'
-      fullPath: '/dev/ui/components/'
+      fullPath: '/dev/ui/components'
       preLoaderRoute: typeof DevUiComponentsIndexRouteImport
       parentRoute: typeof DevRouteRoute
     }
     '/auth/register/verify/': {
       id: '/auth/register/verify/'
       path: '/register/verify'
-      fullPath: '/auth/register/verify/'
+      fullPath: '/auth/register/verify'
       preLoaderRoute: typeof AuthRegisterVerifyIndexRouteImport
       parentRoute: typeof AuthRouteRoute
     }
     '/auth/register/setup/': {
       id: '/auth/register/setup/'
       path: '/register/setup'
-      fullPath: '/auth/register/setup/'
+      fullPath: '/auth/register/setup'
       preLoaderRoute: typeof AuthRegisterSetupIndexRouteImport
       parentRoute: typeof AuthRouteRoute
     }

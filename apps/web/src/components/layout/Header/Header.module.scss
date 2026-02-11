@@ -1,0 +1,14 @@
+.header {
+	display: flex;
+	align-items: center;
+	height: 56px;
+	padding: 0 var(--space-4);
+	border-bottom: 1px solid var(--gray-a5);
+}
+
+.logo {
+	font-weight: 700;
+	font-size: var(--font-size-4);
+	color: var(--gray-12);
+	text-decoration: none;
+}
