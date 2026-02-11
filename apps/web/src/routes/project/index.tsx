@@ -16,12 +16,11 @@ function ProjectIndexPage() {
 	const { user } = useAuthStore();
 
 	return (
-		<div style={{ padding: "2rem" }}>
+		<div>
 			<Heading size="6">企画一覧</Heading>
-			<Text as="p" color="gray">
+			<Text as="p" size="2" color="gray">
 				ようこそ、{user?.name} さん
 			</Text>
-			{/* ここに企画一覧を実装 */}
 		</div>
 	);
 }
