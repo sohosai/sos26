@@ -22,6 +22,7 @@ vi.mock("../lib/prisma", () => ({
 	prisma: {
 		user: {
 			findUnique: vi.fn(),
+			findFirst: vi.fn(),
 			create: vi.fn(),
 		},
 		emailVerification: {
@@ -77,10 +78,10 @@ const mockUser: User = {
 	id: "clxxxxxxxxxxxxxxxxx",
 	firebaseUid: "firebase-uid-123",
 	email: "s1234567@u.tsukuba.ac.jp",
-	firstName: "太郎",
-	lastName: "筑波",
-	role: "PLANNER",
-	status: "ACTIVE",
+	name: "筑波太郎",
+	namePhonetic: "ツクバタロウ",
+	telephoneNumber: "090-1234-5678",
+	deletedAt: null,
 	createdAt: new Date(),
 	updatedAt: new Date(),
 };
@@ -279,8 +280,9 @@ describe("POST /auth/register", () => {
 				Cookie: `reg_ticket=${regTicketToken}`,
 			},
 			body: JSON.stringify({
-				firstName: "太郎",
-				lastName: "筑波",
+				name: "筑波太郎",
+				namePhonetic: "ツクバタロウ",
+				telephoneNumber: "090-1234-5678",
 				password: "securepassword123",
 			}),
 		});
@@ -302,8 +304,9 @@ describe("POST /auth/register", () => {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
-				firstName: "太郎",
-				lastName: "筑波",
+				name: "筑波太郎",
+				namePhonetic: "ツクバタロウ",
+				telephoneNumber: "090-1234-5678",
 				password: "securepassword123",
 			}),
 		});
@@ -336,8 +339,9 @@ describe("POST /auth/register", () => {
 				Cookie: `reg_ticket=${regTicketToken}`,
 			},
 			body: JSON.stringify({
-				firstName: "太郎",
-				lastName: "筑波",
+				name: "筑波太郎",
+				namePhonetic: "ツクバタロウ",
+				telephoneNumber: "090-1234-5678",
 				password: "securepassword123",
 			}),
 		});
@@ -381,8 +385,9 @@ describe("POST /auth/register", () => {
 				Cookie: `reg_ticket=${regTicketToken}`,
 			},
 			body: JSON.stringify({
-				firstName: "太郎",
-				lastName: "筑波",
+				name: "筑波太郎",
+				namePhonetic: "ツクバタロウ",
+				telephoneNumber: "090-1234-5678",
 				password: "securepassword123",
 			}),
 		});
@@ -407,7 +412,7 @@ describe("GET /auth/me", () => {
 		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 			uid: "firebase-uid-123",
 		} as any);
-		mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 
 		// Act
 		const res = await app.request("/auth/me", {
@@ -460,38 +465,13 @@ describe("GET /auth/me", () => {
 		expect(body.error.code).toBe("UNAUTHORIZED");
 	});
 
-	it("無効化されたユーザーでエラー", async () => {
-		// Arrange
-		const app = makeApp();
-		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
-			uid: "firebase-uid-123",
-		} as any);
-		mockPrisma.user.findUnique.mockResolvedValue({
-			...mockUser,
-			status: "DISABLED",
-		});
-
-		// Act
-		const res = await app.request("/auth/me", {
-			method: "GET",
-			headers: {
-				Authorization: "Bearer valid-id-token",
-			},
-		});
-
-		// Assert
-		expect(res.status).toBe(403);
-		const body = await res.json();
-		expect(body.error.code).toBe("FORBIDDEN");
-	});
-
 	it("ユーザーが見つからない場合エラー", async () => {
 		// Arrange
 		const app = makeApp();
 		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 			uid: "firebase-uid-123",
 		} as any);
-		mockPrisma.user.findUnique.mockResolvedValue(null);
+		mockPrisma.user.findFirst.mockResolvedValue(null);
 
 		// Act
 		const res = await app.request("/auth/me", {

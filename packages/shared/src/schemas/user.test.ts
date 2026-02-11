@@ -1,31 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { userRoleSchema, userSchema, userStatusSchema } from "./user";
-
-describe("userStatusSchema", () => {
-	it("有効なステータスを受け入れる", () => {
-		expect(userStatusSchema.safeParse("ACTIVE").success).toBe(true);
-		expect(userStatusSchema.safeParse("DISABLED").success).toBe(true);
-	});
-
-	it("無効なステータスを拒否する", () => {
-		expect(userStatusSchema.safeParse("active").success).toBe(false);
-		expect(userStatusSchema.safeParse("INACTIVE").success).toBe(false);
-	});
-});
-
-describe("userRoleSchema", () => {
-	it("有効なロールを受け入れる", () => {
-		expect(userRoleSchema.safeParse("PLANNER").success).toBe(true);
-		expect(userRoleSchema.safeParse("COMMITTEE_MEMBER").success).toBe(true);
-		expect(userRoleSchema.safeParse("COMMITTEE_ADMIN").success).toBe(true);
-		expect(userRoleSchema.safeParse("SYSTEM_ADMIN").success).toBe(true);
-	});
-
-	it("無効なロールを拒否する", () => {
-		expect(userRoleSchema.safeParse("admin").success).toBe(false);
-		expect(userRoleSchema.safeParse("USER").success).toBe(false);
-	});
-});
+import { userSchema } from "./user";
 
 describe("userSchema", () => {
 	const now = new Date();
@@ -36,10 +10,10 @@ describe("userSchema", () => {
 		id: validCuid,
 		firebaseUid: "firebase-uid-123",
 		email: "s1234567@u.tsukuba.ac.jp",
-		firstName: "太郎",
-		lastName: "筑波",
-		role: "PLANNER",
-		status: "ACTIVE",
+		name: "筑波太郎",
+		namePhonetic: "ツクバタロウ",
+		telephoneNumber: "090-1234-5678",
+		deletedAt: null,
 		createdAt: now,
 		updatedAt: now,
 		...overrides,
@@ -101,6 +75,31 @@ describe("userSchema", () => {
 		});
 	});
 
+	describe("name", () => {
+		it("空の名前を拒否する", () => {
+			const result = userSchema.safeParse(createValidUser({ name: "" }));
+			expect(result.success).toBe(false);
+		});
+	});
+
+	describe("namePhonetic", () => {
+		it("空のフリガナを拒否する", () => {
+			const result = userSchema.safeParse(
+				createValidUser({ namePhonetic: "" })
+			);
+			expect(result.success).toBe(false);
+		});
+	});
+
+	describe("telephoneNumber", () => {
+		it("空の電話番号を拒否する", () => {
+			const result = userSchema.safeParse(
+				createValidUser({ telephoneNumber: "" })
+			);
+			expect(result.success).toBe(false);
+		});
+	});
+
 	it("必須フィールドが欠けている場合は拒否する", () => {
 		const invalidUser = {
 			id: validCuid,
@@ -111,17 +110,17 @@ describe("userSchema", () => {
 		expect(result.success).toBe(false);
 	});
 
-	it("無効なロールを拒否する", () => {
-		const result = userSchema.safeParse(
-			createValidUser({ role: "INVALID_ROLE" })
-		);
-		expect(result.success).toBe(false);
-	});
+	describe("deletedAt", () => {
+		it("nullを受け入れる", () => {
+			const result = userSchema.safeParse(createValidUser({ deletedAt: null }));
+			expect(result.success).toBe(true);
+		});
 
-	it("無効なステータスを拒否する", () => {
-		const result = userSchema.safeParse(
-			createValidUser({ status: "INVALID_STATUS" })
-		);
-		expect(result.success).toBe(false);
+		it("有効な日付を受け入れる", () => {
+			const result = userSchema.safeParse(
+				createValidUser({ deletedAt: new Date() })
+			);
+			expect(result.success).toBe(true);
+		});
 	});
 });

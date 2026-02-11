@@ -11,8 +11,7 @@ import type { AuthEnv } from "../types/auth-env";
  *
  * - Authorization: Bearer <token> ヘッダーから ID Token を取得
  * - Firebase Admin SDK で検証
- * - firebaseUid から User を取得
- * - status == ACTIVE を確認
+ * - firebaseUid から User を取得（deletedAt が null のもの）
  */
 export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
 	const authHeader = c.req.header("Authorization");
@@ -24,16 +23,12 @@ export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
 
 	try {
 		const decodedToken = await auth.verifyIdToken(idToken);
-		const user = await prisma.user.findUnique({
-			where: { firebaseUid: decodedToken.uid },
+		const user = await prisma.user.findFirst({
+			where: { firebaseUid: decodedToken.uid, deletedAt: null },
 		});
 
 		if (!user) {
 			throw Errors.notFound("ユーザーが見つかりません");
-		}
-
-		if (user.status !== "ACTIVE") {
-			throw Errors.forbidden("このアカウントは無効化されています");
 		}
 
 		c.set("user", user);

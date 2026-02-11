@@ -67,9 +67,9 @@
 | 層 | 役割 | 管理する情報 |
 |----|------|-------------|
 | Firebase Authentication | 認証基盤 | メールアドレス、パスワード、ID トークン |
-| 自前 DB（User テーブル） | アプリ固有情報 | 氏名、役割（role）、ステータス、作成日時 |
+| 自前 DB（User テーブル） | アプリ固有情報 | 名前、フリガナ、電話番号、作成日時 |
 
-Firebase はユーザー認証のみを担当し、アプリケーション固有のユーザー情報（氏名、権限など）は自前の DB で管理します。
+Firebase はユーザー認証のみを担当し、アプリケーション固有のユーザー情報（名前、電話番号など）は自前の DB で管理します。
 
 ### 認証状態の定義
 
@@ -120,9 +120,8 @@ function DashboardPage() {
 
   return (
     <div>
-      <h1>ようこそ、{user.lastName} {user.firstName} さん</h1>
+      <h1>ようこそ、{user.name} さん</h1>
       <p>メール: {user.email}</p>
-      <p>役割: {user.role}</p>
     </div>
   );
 }
@@ -156,7 +155,7 @@ export const Route = createRootRoute({
        └─→ POST /auth/email/verify
            └─→ reg_ticket Cookie 発行
 
-3. パスワード・氏名入力
+3. 名前・電話番号・パスワード入力
    └─→ POST /auth/register (Cookie: reg_ticket)
        └─→ Firebase ユーザー作成
        └─→ DB ユーザー作成
@@ -195,7 +194,7 @@ export const Route = createRootRoute({
 |------|---------------|------|
 | `startEmailVerification({ email })` | POST /auth/email/start | メール検証を開始 |
 | `verifyEmail({ token })` | POST /auth/email/verify | メール検証を確定、reg_ticket 発行 |
-| `register({ firstName, lastName, password })` | POST /auth/register | 本登録（要 reg_ticket Cookie） |
+| `register({ name, namePhonetic, telephoneNumber, password })` | POST /auth/register | 本登録（要 reg_ticket Cookie） |
 | `getMe()` | GET /auth/me | 現在のユーザーを取得（要認証） |
 
 ## UI バリデーション
@@ -210,8 +209,9 @@ export const Route = createRootRoute({
 | 関数/スキーマ | 用途 | 使用箇所 |
 |--------------|------|---------|
 | `isTsukubaEmail(email)` | 筑波大学メールアドレス形式チェック | `/auth/register` |
-| `firstNameSchema` | 名のバリデーション | `/auth/register/setup` |
-| `lastNameSchema` | 姓のバリデーション | `/auth/register/setup` |
+| `nameSchema` | 名前のバリデーション | `/auth/register/setup` |
+| `namePhoneticSchema` | 名前（フリガナ）のバリデーション | `/auth/register/setup` |
+| `telephoneNumberSchema` | 電話番号のバリデーション | `/auth/register/setup` |
 | `passwordSchema` | パスワード要件チェック（8文字以上） | `/auth/register/setup` |
 
 ### 実装例
@@ -258,7 +258,7 @@ function DashboardPage() {
   // beforeLoad で認証状態は確定済み
   return (
     <div>
-      <h1>ようこそ、{user?.lastName} {user?.firstName} さん</h1>
+      <h1>ようこそ、{user?.name} さん</h1>
     </div>
   );
 }

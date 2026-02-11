@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { tsukubaEmailSchema } from "../lib/email";
 import { verificationTokenSchema } from "../lib/token";
-import { firstNameSchema, lastNameSchema, userSchema } from "./user";
+import {
+	namePhoneticSchema,
+	nameSchema,
+	telephoneNumberSchema,
+	userSchema,
+} from "./user";
 
 // ─────────────────────────────────────────────────────────────
 // POST /auth/email/start
@@ -66,8 +71,9 @@ export const passwordSchema = z
  * 本登録リクエスト
  */
 export const registerRequestSchema = z.object({
-	firstName: firstNameSchema,
-	lastName: lastNameSchema,
+	name: nameSchema,
+	namePhonetic: namePhoneticSchema,
+	telephoneNumber: telephoneNumberSchema,
 	password: passwordSchema,
 });
 export type RegisterRequest = z.infer<typeof registerRequestSchema>;
