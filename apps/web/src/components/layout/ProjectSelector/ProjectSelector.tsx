@@ -51,7 +51,7 @@ export function ProjectSelector({
 
 	const trigger = (
 		<button type="button" className={styles.trigger}>
-			<span className={styles.triggerIcon}>
+			<span className={styles.icon}>
 				{selectedProject ? (
 					<Avatar size={26} name={selectedProject.name} variant="beam" />
 				) : (
@@ -60,10 +60,10 @@ export function ProjectSelector({
 			</span>
 			{!collapsed && (
 				<>
-					<Text size="2" truncate className={styles.triggerLabel}>
+					<Text size="2" truncate className={styles.label}>
 						{selectedProject ? selectedProject.name : "企画を選択"}
 					</Text>
-					<IconChevronDown size={14} className={styles.triggerChevron} />
+					<IconChevronDown size={14} className={styles.chevron} />
 				</>
 			)}
 		</button>

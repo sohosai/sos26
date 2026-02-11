@@ -17,9 +17,7 @@ export const Route = createFileRoute("/project")({
 
 function ProjectLayout() {
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-	const [projects] = useState<Project[]>([
-		{ id: "demo-1", name: "模擬店グルメフェス" },
-	]);
+	const projects: Project[] = [{ id: "demo-1", name: "模擬店グルメフェス" }];
 	const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
 		"demo-1"
 	);
