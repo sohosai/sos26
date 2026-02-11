@@ -27,7 +27,7 @@ export function Header() {
 					rel="noopener noreferrer"
 				>
 					<Text size="2">
-						サポートフォーム <IconExternalLink size={14} />
+						不具合報告 <IconExternalLink size={14} />
 					</Text>
 				</RadixLink>
 			</nav>
