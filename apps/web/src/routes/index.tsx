@@ -26,9 +26,7 @@ function Index() {
 		<div className={styles.container}>
 			{isLoggedIn ? (
 				<>
-					<Heading size="6">
-						Welcome, {user?.lastName} {user?.firstName}
-					</Heading>
+					<Heading size="6">Welcome, {user?.name}</Heading>
 					<Button onClick={signOut}>ログアウト</Button>
 				</>
 			) : (

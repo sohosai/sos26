@@ -90,9 +90,9 @@ export const registerEndpoint: BodyEndpoint<
  *
  * - Authorization: Bearer <Firebase ID Token> ヘッダーが必要
  * - Firebase ID Token を検証
- * - firebaseUid から User を取得
- * - status == ACTIVE のみ許可
- * - エラー: UNAUTHORIZED, FORBIDDEN, NOT_FOUND
+ * - firebaseUid から User を取得（deletedAt が null のもの）
+ * - committeeMember 情報も含めて返す（未登録なら null）
+ * - エラー: UNAUTHORIZED, NOT_FOUND
  */
 export const getMeEndpoint: GetEndpoint<
 	"/auth/me",

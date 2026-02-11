@@ -1,0 +1,108 @@
+import { z } from "zod";
+import {
+	createCommitteeMemberRequestSchema,
+	createCommitteeMemberResponseSchema,
+	deleteCommitteeMemberResponseSchema,
+	listCommitteeMembersResponseSchema,
+	updateCommitteeMemberRequestSchema,
+	updateCommitteeMemberResponseSchema,
+} from "../schemas/committee-member";
+import type { BodyEndpoint, GetEndpoint, NoBodyEndpoint } from "./types";
+
+const committeeMemberPathParamsSchema = z.object({
+	id: z.cuid(),
+});
+
+/**
+ * GET /committee-members
+ * 委員メンバー一覧を取得
+ *
+ * - 認証が必要
+ * - deletedAt が null のメンバーのみ返す
+ * - user 情報を含む
+ */
+export const listCommitteeMembersEndpoint: GetEndpoint<
+	"/committee-members",
+	undefined,
+	undefined,
+	typeof listCommitteeMembersResponseSchema
+> = {
+	method: "GET",
+	path: "/committee-members",
+	pathParams: undefined,
+	query: undefined,
+	request: undefined,
+	response: listCommitteeMembersResponseSchema,
+} as const;
+
+/**
+ * POST /committee-members
+ * 委員メンバーを作成
+ *
+ * - 認証が必要
+ * - userId のユーザーが存在することを確認
+ * - 既にメンバーの場合は ALREADY_EXISTS エラー
+ * - ソフトデリート済みの場合は再有効化
+ */
+export const createCommitteeMemberEndpoint: BodyEndpoint<
+	"POST",
+	"/committee-members",
+	undefined,
+	undefined,
+	typeof createCommitteeMemberRequestSchema,
+	typeof createCommitteeMemberResponseSchema
+> = {
+	method: "POST",
+	path: "/committee-members",
+	pathParams: undefined,
+	query: undefined,
+	request: createCommitteeMemberRequestSchema,
+	response: createCommitteeMemberResponseSchema,
+} as const;
+
+/**
+ * PATCH /committee-members/:id
+ * 委員メンバーを更新
+ *
+ * - 認証が必要
+ * - Bureau, isExecutive を部分更新可能
+ * - エラー: NOT_FOUND
+ */
+export const updateCommitteeMemberEndpoint: BodyEndpoint<
+	"PATCH",
+	"/committee-members/:id",
+	typeof committeeMemberPathParamsSchema,
+	undefined,
+	typeof updateCommitteeMemberRequestSchema,
+	typeof updateCommitteeMemberResponseSchema
+> = {
+	method: "PATCH",
+	path: "/committee-members/:id",
+	pathParams: committeeMemberPathParamsSchema,
+	query: undefined,
+	request: updateCommitteeMemberRequestSchema,
+	response: updateCommitteeMemberResponseSchema,
+} as const;
+
+/**
+ * DELETE /committee-members/:id
+ * 委員メンバーをソフトデリート
+ *
+ * - 認証が必要
+ * - deletedAt を設定
+ * - エラー: NOT_FOUND
+ */
+export const deleteCommitteeMemberEndpoint: NoBodyEndpoint<
+	"DELETE",
+	"/committee-members/:id",
+	typeof committeeMemberPathParamsSchema,
+	undefined,
+	typeof deleteCommitteeMemberResponseSchema
+> = {
+	method: "DELETE",
+	path: "/committee-members/:id",
+	pathParams: committeeMemberPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: deleteCommitteeMemberResponseSchema,
+} as const;

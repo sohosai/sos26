@@ -1,9 +1,10 @@
 import { Heading, Link as RadixLink, Text } from "@radix-ui/themes";
 import {
 	ErrorCode,
-	firstNameSchema,
-	lastNameSchema,
+	namePhoneticSchema,
+	nameSchema,
 	passwordSchema,
+	telephoneNumberSchema,
 } from "@sos26/shared";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -30,8 +31,9 @@ function SetupPage() {
 	const navigate = useNavigate();
 	const { refreshUser } = useAuthStore();
 
-	const [firstName, setFirstName] = useState("");
-	const [lastName, setLastName] = useState("");
+	const [name, setName] = useState("");
+	const [namePhonetic, setNamePhonetic] = useState("");
+	const [telephoneNumber, setTelephoneNumber] = useState("");
 	const [password, setPassword] = useState("");
 	const [passwordConfirm, setPasswordConfirm] = useState("");
 	const [error, setError] = useState<string | null>(null);
@@ -39,14 +41,26 @@ function SetupPage() {
 	const [sessionExpired, setSessionExpired] = useState(false);
 
 	const validate = (): string | null => {
-		const lastNameResult = lastNameSchema.safeParse(lastName);
-		if (!lastNameResult.success) {
-			return lastNameResult.error.issues[0]?.message ?? "姓を入力してください";
+		const nameResult = nameSchema.safeParse(name);
+		if (!nameResult.success) {
+			return nameResult.error.issues[0]?.message ?? "名前を入力してください";
 		}
 
-		const firstNameResult = firstNameSchema.safeParse(firstName);
-		if (!firstNameResult.success) {
-			return firstNameResult.error.issues[0]?.message ?? "名を入力してください";
+		const namePhoneticResult = namePhoneticSchema.safeParse(namePhonetic);
+		if (!namePhoneticResult.success) {
+			return (
+				namePhoneticResult.error.issues[0]?.message ??
+				"名前（フリガナ）を入力してください"
+			);
+		}
+
+		const telephoneNumberResult =
+			telephoneNumberSchema.safeParse(telephoneNumber);
+		if (!telephoneNumberResult.success) {
+			return (
+				telephoneNumberResult.error.issues[0]?.message ??
+				"電話番号を入力してください"
+			);
 		}
 
 		const passwordResult = passwordSchema.safeParse(password);
@@ -98,8 +112,9 @@ function SetupPage() {
 
 		try {
 			const result = await register({
-				firstName,
-				lastName,
+				name,
+				namePhonetic,
+				telephoneNumber,
 				password,
 			});
 
@@ -132,19 +147,27 @@ function SetupPage() {
 
 			<form className={styles.form} onSubmit={handleSubmit}>
 				<TextField
-					label="姓"
-					value={lastName}
-					onChange={setLastName}
+					label="名前"
+					value={name}
+					onChange={setName}
 					required
-					autoComplete="family-name"
+					autoComplete="name"
 				/>
 
 				<TextField
-					label="名"
-					value={firstName}
-					onChange={setFirstName}
+					label="名前（フリガナ）"
+					value={namePhonetic}
+					onChange={setNamePhonetic}
 					required
-					autoComplete="given-name"
+				/>
+
+				<TextField
+					label="電話番号"
+					type="tel"
+					value={telephoneNumber}
+					onChange={setTelephoneNumber}
+					required
+					autoComplete="tel"
 				/>
 
 				<TextField

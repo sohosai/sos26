@@ -19,7 +19,7 @@ function CommitteeIndexPage() {
 		<div style={{ padding: "2rem" }}>
 			<Heading size="6">委員会ダッシュボード</Heading>
 			<Text as="p" color="gray">
-				ようこそ、{user?.lastName} {user?.firstName} さん（{user?.role}）
+				ようこそ、{user?.name} さん
 			</Text>
 			{/* ここに委員会向け機能を実装 */}
 		</div>

@@ -99,7 +99,7 @@ Firebase Authentication を IdP として利用しつつ、**ユーザー作成�
 │     │ reg_ticket Cookie 発行（短命） │
 │     ▼                               │
 │ /auth/register/setup                │
-│     │ password入力                  │
+│     │ 名前・電話番号・password入力  │
 │     ▼                               │
 │ POST /auth/register                 │
 │     │ Firebase Admin createUser     │
@@ -119,7 +119,7 @@ Firebase Authentication を IdP として利用しつつ、**ユーザー作成�
 | `/auth/login` | ログイン | - |
 | `/auth/register` | メールアドレス入力 | どの端末でも可 |
 | `/auth/register/verify#token` | メール確認ページ（ボタン押下で確定） | **ここから同一ブラウザ（同一Cookieストア）** |
-| `/auth/register/setup` | パスワード設定・本登録 | verify と同一ブラウザ（同一Cookieストア） |
+| `/auth/register/setup` | 名前・電話番号・パスワード設定・本登録 | verify と同一ブラウザ（同一Cookieストア） |
 
 ※ メールリンクを開く端末から `reg_ticket` Cookie が発行されるため、**verify 以降は同一ブラウザ（同一Cookieストア）が必須**。
 
@@ -171,37 +171,26 @@ model EmailVerification {
 
 ### User
 
-アプリケーション上のユーザー。Firebase UID と結合し、**利用可否はここで制御**する。
-
-> **Note**: 既存の `User` モデルを拡張する形で実装する。
+アプリケーション上のユーザー。Firebase UID と結合する。
 
 ```prisma
-enum UserStatus {
-  ACTIVE
-  DISABLED
-}
-
-enum UserRole {
-  PLANNER           // 企画者
-  COMMITTEE_MEMBER  // 委員会メンバー
-  COMMITTEE_ADMIN   // 委員会管理者
-  SYSTEM_ADMIN      // システム管理者
-}
-
 model User {
-  id          String     @id @default(cuid())
-  firebaseUid String     @unique
-  email       String     @unique
-  firstName   String
-  lastName    String
-  role        UserRole   @default(PLANNER)
-  status      UserStatus @default(ACTIVE)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id              String    @id @default(cuid())
+  firebaseUid     String
+  email           String    @unique
+  name            String
+  namePhonetic    String
+  telephoneNumber String
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  @@map("users")
+  @@unique([firebaseUid, deletedAt])
+  @@unique([email, deletedAt])
 }
 ```
+
+> **Note**: ソフトデリート（`deletedAt`）を採用。`firebaseUid` と `email` は `deletedAt` との複合ユニーク制約。
 
 ### RegTicket
 
@@ -324,7 +313,7 @@ Content-Type: application/json
 Cookie: reg_ticket=<opaque>
 
 Request:
-  { firstName: string; lastName: string; password: string }
+  { name: string; namePhonetic: string; telephoneNumber: string; password: string }
 
 Response:
   200: { user: User }
@@ -366,12 +355,10 @@ Response:
 
 **処理**
 1. ID Token検証（Firebase Admin SDK）
-2. `User` 取得（firebaseUid で検索）
-3. `status == ACTIVE` を確認
+2. `User` 取得（`firebaseUid` + `deletedAt: null` で検索）
 
 **エラー**
 - `UNAUTHORIZED`: ID Token が不正
-- `FORBIDDEN`: ユーザーが無効化されている
 - `NOT_FOUND`: ユーザーが存在しない
 
 ---
@@ -391,8 +378,7 @@ Response:
 
 1. クライアントが `signInWithEmailAndPassword` でログイン
 2. Firebase ID Token を `Authorization: Bearer` ヘッダーで API に送信
-3. バックエンドは **`User` テーブルのみ**で利用可否判断
-4. `status == ACTIVE` のユーザーのみ API アクセスを許可
+3. バックエンドは **`User` テーブル**で利用可否判断（`deletedAt: null` のユーザーのみ）
 
 ```
 [Client]                    [Backend]               [Firebase]
@@ -404,7 +390,7 @@ Response:
     |   Authorization: Bearer   |-- verifyIdToken ------>|
     |                           |<-- decoded token ------|
     |                           |                        |
-    |                           |-- User.findUnique ---->|
+    |                           |-- User.findFirst ----->|
     |<-- { user } -------------|                        |
 ```
 
@@ -419,7 +405,7 @@ Response:
 | HttpOnly | `reg_ticket` は HttpOnly Cookie で保存 |
 | パスワード保護 | パスワードは永続化・ログ出力禁止 |
 | レート制限 | `/auth/*` 系は IP・メールアドレス単位でレート制限 |
-| 二重検証 | Firebase UID と `User` テーブルを必ず突合 |
+| 二重検証 | Firebase UID と `User` テーブル（`deletedAt: null`）を必ず突合 |
 
 ---
 

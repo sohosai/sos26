@@ -12,9 +12,6 @@
 	- [目次](#目次)
 	- [目的](#目的)
 	- [前提](#前提)
-	- [ユーザーモデル](#ユーザーモデル)
-		- [UserRole](#userrole)
-		- [UserStatus](#userstatus)
 	- [認証状態の管理](#認証状態の管理)
 		- [アーキテクチャ](#アーキテクチャ)
 		- [コンポーネントでの使用](#コンポーネントでの使用)
@@ -23,8 +20,6 @@
 		- [分類](#分類)
 	- [ルートガードの判定フロー](#ルートガードの判定フロー)
 	- [拒否時の挙動](#拒否時の挙動)
-		- [未ログイン](#未ログイン)
-		- [権限不足 / DISABLED](#権限不足--disabled)
 	- [ルート構成](#ルート構成)
 	- [ガード用コンポーネント](#ガード用コンポーネント)
 		- [目的](#目的-1)
@@ -40,9 +35,8 @@
 
 ## 目的
 
-- 各ページで個別に認可チェックを書かず、**ディレクトリ（親ルート）単位でアクセス制御**を行う
-- 認証・認可の実装漏れを**構造的に防止**する
-- 将来のロール追加・権限再編に耐えられる設計にする
+- 各ページで個別に認証チェックを書かず、**ディレクトリ（親ルート）単位でアクセス制御**を行う
+- 認証の実装漏れを**構造的に防止**する
 - ページ内の一部表示制御にも対応できるよう、**ガード用コンポーネント**を用意する
 
 ---
@@ -52,36 +46,13 @@
 - ルーティング: TanStack Router（[ルーティングドキュメント](./routing.md)）
 - 認証状態管理: Zustand ストア（`useAuthStore`）
 - `beforeLoad` では `authReady()` で初期化待機後、`useAuthStore.getState()` から認証状態を取得（React Hook 不要）
+- User モデルにはロール（role）やステータス（status）フィールドは存在しない。委員会メンバーの役割管理は `CommitteeMember` テーブルで行う
 
 ---
 
-## ユーザーモデル
+## 認証・認可状態の管理
 
-### UserRole
-
-ロール間の上下関係は **仕様として定義しない**。各機能・画面ごとに「許可されるロール集合」を明示する。
-
-| ロール | 説明 |
-|--------|------|
-| `PLANNER` | 企画者 |
-| `COMMITTEE_MEMBER` | 委員会メンバー |
-| `COMMITTEE_ADMIN` | 委員会管理者 |
-| `SYSTEM_ADMIN` | システム管理者 |
-
-### UserStatus
-
-| ステータス | 説明 |
-|------------|------|
-| `ACTIVE` | 利用可 |
-| `DISABLED` | すべての保護対象リソースで拒否 |
-
-> **Note**: `DISABLED` ユーザーはログイン済みであっても保護リソースへのアクセスを許可しない。
-
----
-
-## 認証状態の管理
-
-認証状態は **Zustand ストア**で管理する。React コンポーネントからも `beforeLoad` からも同じストアにアクセスできる。
+認証・認可状態は **Zustand ストア**で管理する。React コンポーネントからも `beforeLoad` からも同じストアにアクセスできる。
 
 ### アーキテクチャ
 
@@ -89,6 +60,7 @@
 ┌─────────────────────────────────────────────────────────┐
 │  Zustand Store (useAuthStore)                           │
 │    - user, isLoggedIn, isLoading                        │
+│    - committeeMember, isCommitteeMember                 │
 │    - signOut(), refreshUser()                           │
 └───────────────┬─────────────────────┬───────────────────┘
                 │                     │
@@ -96,6 +68,8 @@
         React コンポーネント      beforeLoad
           useAuthStore()              await authReady()
 ```
+
+`GET /auth/me` のレスポンスに `committeeMember` が含まれるため、追加の API 呼び出しなしで認可判定が可能。
 
 ### コンポーネントでの使用
 
@@ -111,12 +85,24 @@ function MyComponent() {
 ### beforeLoad での使用
 
 ```tsx
+// 認証のみ
 import { requireAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/project")({
   beforeLoad: async ({ location }) => {
-    // authReady() で初期化を待機し、store から認証状態を取得
-    await requireAuth(ALLOWED_ROLES, location.pathname);
+    await requireAuth(location.pathname);
+  },
+});
+```
+
+```tsx
+// 認証 + 委員メンバー限定
+import { requireAuth, requireCommitteeMember } from "@/lib/auth";
+
+export const Route = createFileRoute("/committee")({
+  beforeLoad: async ({ location }) => {
+    await requireAuth(location.pathname);
+    await requireCommitteeMember();
   },
 });
 ```
@@ -125,26 +111,29 @@ export const Route = createFileRoute("/project")({
 
 ## ディレクトリ単位のアクセス制御
 
-| ディレクトリ | 認証 | UserStatus | 許可ロール | 備考 |
-|-------------|------|------------|------------|------|
-| `/auth/*` | 不要 | - | - | ログイン済みは `/` へリダイレクト |
-| `/project/*` | 必須 | ACTIVE のみ | `PLANNER`, `COMMITTEE_MEMBER`, `COMMITTEE_ADMIN`, `SYSTEM_ADMIN` | |
-| `/committee/*` | 必須 | ACTIVE のみ | `COMMITTEE_MEMBER`, `COMMITTEE_ADMIN`, `SYSTEM_ADMIN` | |
-| `/dev/*` | 不要 | - | - | |
-| `/forbidden` | 不要 | - | - | |
+| ディレクトリ | 認証 | 認可 | 備考 |
+|-------------|------|------|------|
+| `/auth/*` | 不要 | — | ログイン済みは `/` へリダイレクト |
+| `/project/*` | 必須 | — | |
+| `/committee/*` | 必須 | 委員メンバーのみ | 非委員は `/forbidden` へリダイレクト |
+| `/dev/*` | 不要 | — | |
+| `/forbidden` | 不要 | — | |
 
 ### 分類
 
 - **guest ディレクトリ**: `/auth` — 認証不要、ログイン済みユーザーはリダイレクト
 - **public ディレクトリ**: `/dev`, `/forbidden` — 認証不要
-- **保護ディレクトリ**: `/project`, `/committee` — 認証必須 + ロール制御
-- 各ディレクトリ配下では、子ページに個別の認証処理を書かない
+- **認証のみ保護**: `/project` — ログイン済みであればアクセス可
+- **認証＋認可保護**: `/committee` — ログイン済み、かつ委員メンバーのみアクセス可
+- 各ディレクトリ配下では、子ページに個別の認証・認可処理を書かない
 
 ---
 
 ## ルートガードの判定フロー
 
-各保護ディレクトリの親ルート（layout route）の `beforeLoad` で `requireAuth()` を呼び出す。
+各保護ディレクトリの親ルート（layout route）の `beforeLoad` でガード関数を呼び出す。
+
+### 認証のみ（`/project` など）
 
 ```
 1. 認証初期化待ち
@@ -154,39 +143,44 @@ export const Route = createFileRoute("/project")({
    └─ isLoggedIn === false → /auth/login にリダイレクト
       └─ returnTo クエリに元のパスを付与
 
-3. UserStatus 判定
-   └─ user.status !== "ACTIVE" → 拒否（403）
-
-4. UserRole 判定
-   └─ user.role が許可ロール集合に含まれない → 拒否（403）
-
-5. すべて通過 → 子ルートを表示
+3. すべて通過 → 子ルートを表示
 ```
+
+### 認証＋認可（`/committee`）
+
+```
+1. requireAuth() — 上記と同じ認証チェック
+
+2. requireCommitteeMember()
+   └─ isCommitteeMember === false → /forbidden にリダイレクト
+
+3. すべて通過 → 子ルートを表示
+```
+
+> **Note**: `isCommitteeMember` は `GET /auth/me` のレスポンスから設定される。
+> `committeeMember` が `null` でなければ `true`。
 
 ---
 
 ## 拒否時の挙動
 
-### 未ログイン
-
-`/auth/login?returnTo=<元のパス>` へリダイレクト
+| 条件 | リダイレクト先 |
+|------|---------------|
+| 未ログイン | `/auth/login?returnTo=<元のパス>` |
+| ログイン済みだが委員メンバーでない | `/forbidden` |
 
 ```tsx
+// 未ログイン
 throw redirect({
   to: "/auth/login",
   search: { returnTo: location.pathname },
 });
+
+// 非委員メンバー
+throw redirect({
+  to: "/forbidden",
+});
 ```
-
-### 権限不足 / DISABLED
-
-`/forbidden` ページへリダイレクト
-
-```tsx
-throw redirect({ to: "/forbidden" });
-```
-
-> **Note**: 権限不足時にログインページへ戻す挙動は行わない。
 
 ---
 
@@ -198,15 +192,15 @@ src/routes/
 ├── auth/               # 未認証向けページ群（login, register 等）
 │   └── route.tsx       # guest: ログイン済みは "/" へリダイレクト
 ├── project/            # 企画者向けページ群
-│   └── route.tsx       # protected: PLANNER, COMMITTEE_MEMBER, COMMITTEE_ADMIN, SYSTEM_ADMIN
+│   └── route.tsx       # protected: 認証必須
 ├── committee/          # 委員会向けページ群
-│   └── route.tsx       # protected: COMMITTEE_MEMBER, COMMITTEE_ADMIN, SYSTEM_ADMIN
+│   └── route.tsx       # protected: 認証必須 + 委員メンバー限定
 ├── forbidden/          # 403 エラーページ
 │   └── index.tsx
 └── dev/                # 開発・検証用ページ群
 ```
 
-> **Note**: 認証・認可ロジックは **layout route の `beforeLoad` のみ**に置く。
+> **Note**: 認証ロジックは **layout route の `beforeLoad` のみ**に置く。
 > 末端ページには認証処理を書かない。
 
 ---
@@ -222,21 +216,18 @@ src/routes/
 
 **ファイル**: `src/components/auth/RoleGuard/RoleGuard.tsx`
 
-特定のロールを持つユーザーにのみ UI を表示する。
+認証済みユーザーにのみ UI を表示する。
 
 ```tsx
 import { RoleGuard } from "@/components/auth";
 
-// 管理者のみに表示
-<RoleGuard allowedRoles={["COMMITTEE_ADMIN", "SYSTEM_ADMIN"]}>
-  <AdminActions />
+// 認証済みユーザーのみに表示
+<RoleGuard>
+  <UserActions />
 </RoleGuard>
 
-// 権限がない場合にメッセージを表示
-<RoleGuard
-  allowedRoles={["SYSTEM_ADMIN"]}
-  fallback={<p>この機能を利用する権限がありません</p>}
->
+// 未認証時にメッセージを表示
+<RoleGuard fallback={<p>ログインが必要です</p>}>
   <SystemSettings />
 </RoleGuard>
 ```
@@ -245,9 +236,8 @@ import { RoleGuard } from "@/components/auth";
 
 | プロパティ | 型 | 説明 |
 |-----------|-----|------|
-| `allowedRoles` | `UserRole[]` | 表示を許可するロール |
 | `fallback` | `ReactNode` | 条件を満たさない場合の代替表示（省略時は `null`） |
-| `children` | `ReactNode` | 条件を満たす場合に表示する内容 |
+| `children` | `ReactNode` | 認証済みの場合に表示する内容 |
 
 ### 注意事項
 
@@ -261,16 +251,31 @@ import { RoleGuard } from "@/components/auth";
 
 ### requireAuth
 
-保護ルートの `beforeLoad` で使用する認可チェック関数。`authReady()` で初期化を待機し、store から認証状態を取得する。
+保護ルートの `beforeLoad` で使用する認証チェック関数。`authReady()` で初期化を待機し、store から認証状態を取得する。
 
 ```tsx
 import { requireAuth } from "@/lib/auth";
 
-const ALLOWED_ROLES: UserRole[] = ["PLANNER", "COMMITTEE_ADMIN", "SYSTEM_ADMIN"];
-
 export const Route = createFileRoute("/project")({
   beforeLoad: async ({ location }) => {
-    await requireAuth(ALLOWED_ROLES, location.pathname);
+    await requireAuth(location.pathname);
+  },
+});
+```
+
+### requireCommitteeMember
+
+委員メンバー限定ルートの `beforeLoad` で使用する認可チェック関数。`requireAuth` の**後に**呼び出すこと。
+
+store の `isCommitteeMember` が `false` の場合、`/forbidden` にリダイレクトする。
+
+```tsx
+import { requireAuth, requireCommitteeMember } from "@/lib/auth";
+
+export const Route = createFileRoute("/committee")({
+  beforeLoad: async ({ location }) => {
+    await requireAuth(location.pathname);
+    await requireCommitteeMember();
   },
 });
 ```
@@ -291,13 +296,13 @@ const redirectTo = sanitizeReturnTo(returnTo); // 不正なURLは "/" に変換
 
 | ファイル | 説明 |
 |---------|------|
-| `src/lib/auth/store.ts` | Zustand ストア（認証状態管理）、`authReady()` |
-| `src/lib/auth/guard.ts` | `requireAuth`, `sanitizeReturnTo` 関数 |
+| `src/lib/auth/store.ts` | Zustand ストア（認証・認可状態管理）、`authReady()` |
+| `src/lib/auth/guard.ts` | `requireAuth`, `requireCommitteeMember`, `sanitizeReturnTo` 関数 |
 | `src/lib/auth/index.ts` | エクスポート |
 | `src/routes/__root.tsx` | `authReady()` で認証初期化を待機 |
 | `src/routes/auth/route.tsx` | `/auth/*` のゲストガード（ログイン済みリダイレクト） |
-| `src/routes/project/route.tsx` | `/project/*` のルートガード |
-| `src/routes/committee/route.tsx` | `/committee/*` のルートガード |
+| `src/routes/project/route.tsx` | `/project/*` のルートガード（認証のみ） |
+| `src/routes/committee/route.tsx` | `/committee/*` のルートガード（認証＋委員メンバー限定） |
 | `src/routes/forbidden/index.tsx` | 403 Forbidden ページ |
 | `src/components/auth/RoleGuard/RoleGuard.tsx` | RoleGuard コンポーネント |
 | `src/routes/auth/login/index.tsx` | `returnTo` クエリパラメータ対応 |

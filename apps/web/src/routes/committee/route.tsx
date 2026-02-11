@@ -1,20 +1,10 @@
-import type { UserRole } from "@sos26/shared";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { requireAuth } from "@/lib/auth";
-
-/**
- * /committee 配下で許可されるロール
- * @see docs/apps/web/authorization.md
- */
-const ALLOWED_ROLES: UserRole[] = [
-	"COMMITTEE_MEMBER",
-	"COMMITTEE_ADMIN",
-	"SYSTEM_ADMIN",
-];
+import { requireAuth, requireCommitteeMember } from "@/lib/auth";
 
 export const Route = createFileRoute("/committee")({
 	beforeLoad: async ({ location }) => {
-		await requireAuth(ALLOWED_ROLES, location.pathname);
+		await requireAuth(location.pathname);
+		await requireCommitteeMember();
 	},
 	component: CommitteeLayout,
 });
