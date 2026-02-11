@@ -61,7 +61,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 			disabled = false,
 			type = "button",
 			onClick,
-			...rest
 		},
 		ref
 	) {
@@ -69,7 +68,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
 		return (
 			<RadixButton
-				{...rest}
 				ref={ref}
 				className={styles.button}
 				variant={variant}
