@@ -35,6 +35,9 @@ vi.mock("../lib/prisma", () => ({
 			findFirst: vi.fn(),
 			delete: vi.fn(),
 		},
+		committeeMember: {
+			findFirst: vi.fn(),
+		},
 		$transaction: vi.fn(),
 	},
 }));
@@ -406,13 +409,14 @@ describe("GET /auth/me", () => {
 		vi.clearAllMocks();
 	});
 
-	it("正常系: ユーザー取得", async () => {
+	it("正常系: ユーザー取得（委員メンバーなし）", async () => {
 		// Arrange
 		const app = makeApp();
 		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 			uid: "firebase-uid-123",
 		} as any);
 		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		mockPrisma.committeeMember.findFirst.mockResolvedValue(null);
 
 		// Act
 		const res = await app.request("/auth/me", {
@@ -427,6 +431,40 @@ describe("GET /auth/me", () => {
 		const body = await res.json();
 		expect(body.user).toBeDefined();
 		expect(body.user.email).toBe("s1234567@u.tsukuba.ac.jp");
+		expect(body.committeeMember).toBeNull();
+	});
+
+	it("正常系: ユーザー取得（委員メンバーあり）", async () => {
+		// Arrange
+		const app = makeApp();
+		const mockCommitteeMember = {
+			id: "clyyyyyyyyyyyyyyyyy",
+			userId: mockUser.id,
+			isExecutive: false,
+			Bureau: "INFO_SYSTEM",
+			joinedAt: new Date(),
+			deletedAt: null,
+		};
+		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
+			uid: "firebase-uid-123",
+		} as any);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+
+		// Act
+		const res = await app.request("/auth/me", {
+			method: "GET",
+			headers: {
+				Authorization: "Bearer valid-id-token",
+			},
+		});
+
+		// Assert
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.user).toBeDefined();
+		expect(body.committeeMember).toBeDefined();
+		expect(body.committeeMember.Bureau).toBe("INFO_SYSTEM");
 	});
 
 	it("認証ヘッダーなしでエラー", async () => {

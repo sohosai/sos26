@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { tsukubaEmailSchema } from "../lib/email";
 import { verificationTokenSchema } from "../lib/token";
+import { committeeMemberSchema } from "./committee-member";
 import {
 	namePhoneticSchema,
 	nameSchema,
@@ -95,5 +96,6 @@ export type RegisterResponse = z.infer<typeof registerResponseSchema>;
  */
 export const getMeResponseSchema = z.object({
 	user: userSchema,
+	committeeMember: committeeMemberSchema.nullable(),
 });
 export type GetMeResponse = z.infer<typeof getMeResponseSchema>;
