@@ -6,6 +6,7 @@
     "postinstall": "prisma generate",
     "dev": "bun run --hot src/index.ts",
     "build": "bun run typecheck && bun build src/index.ts --outdir dist --target bun",
+    "preview": "bun run dist/index.js",
     "typecheck": "tsc -b",
     "clean": "rm -rf dist .turbo",
     "test:run": "vitest run",

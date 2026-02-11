@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProjectRouteRouteImport } from './routes/project/route'
+import { Route as DevRouteRouteImport } from './routes/dev/route'
 import { Route as CommitteeRouteRouteImport } from './routes/committee/route'
 import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -30,6 +31,11 @@ import { Route as AuthRegisterSetupIndexRouteImport } from './routes/auth/regist
 const ProjectRouteRoute = ProjectRouteRouteImport.update({
   id: '/project',
   path: '/project',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevRouteRoute = DevRouteRouteImport.update({
+  id: '/dev',
+  path: '/dev',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommitteeRouteRoute = CommitteeRouteRouteImport.update({
@@ -68,20 +74,20 @@ const CommitteeIndexRoute = CommitteeIndexRouteImport.update({
   getParentRoute: () => CommitteeRouteRoute,
 } as any)
 const DevTableIndexRoute = DevTableIndexRouteImport.update({
-  id: '/dev/table/',
-  path: '/dev/table/',
-  getParentRoute: () => rootRouteImport,
+  id: '/table/',
+  path: '/table/',
+  getParentRoute: () => DevRouteRoute,
 } as any)
 const DevPushNotificationIndexRoute =
   DevPushNotificationIndexRouteImport.update({
-    id: '/dev/pushNotification/',
-    path: '/dev/pushNotification/',
-    getParentRoute: () => rootRouteImport,
+    id: '/pushNotification/',
+    path: '/pushNotification/',
+    getParentRoute: () => DevRouteRoute,
   } as any)
 const DevCommitteeMemberIndexRoute = DevCommitteeMemberIndexRouteImport.update({
-  id: '/dev/committeeMember/',
-  path: '/dev/committeeMember/',
-  getParentRoute: () => rootRouteImport,
+  id: '/committeeMember/',
+  path: '/committeeMember/',
+  getParentRoute: () => DevRouteRoute,
 } as any)
 const AuthResetPasswordIndexRoute = AuthResetPasswordIndexRouteImport.update({
   id: '/reset-password/',
@@ -99,9 +105,9 @@ const AuthLoginIndexRoute = AuthLoginIndexRouteImport.update({
   getParentRoute: () => AuthRouteRoute,
 } as any)
 const DevUiComponentsIndexRoute = DevUiComponentsIndexRouteImport.update({
-  id: '/dev/ui/components/',
-  path: '/dev/ui/components/',
-  getParentRoute: () => rootRouteImport,
+  id: '/ui/components/',
+  path: '/ui/components/',
+  getParentRoute: () => DevRouteRoute,
 } as any)
 const AuthRegisterVerifyIndexRoute = AuthRegisterVerifyIndexRouteImport.update({
   id: '/register/verify/',
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteRouteWithChildren
   '/committee': typeof CommitteeRouteRouteWithChildren
+  '/dev': typeof DevRouteRouteWithChildren
   '/project': typeof ProjectRouteRouteWithChildren
   '/committee/': typeof CommitteeIndexRoute
   '/forbidden/': typeof ForbiddenIndexRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteRouteWithChildren
+  '/dev': typeof DevRouteRouteWithChildren
   '/committee': typeof CommitteeIndexRoute
   '/forbidden': typeof ForbiddenIndexRoute
   '/project': typeof ProjectIndexRoute
@@ -155,6 +163,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteRouteWithChildren
   '/committee': typeof CommitteeRouteRouteWithChildren
+  '/dev': typeof DevRouteRouteWithChildren
   '/project': typeof ProjectRouteRouteWithChildren
   '/committee/': typeof CommitteeIndexRoute
   '/forbidden/': typeof ForbiddenIndexRoute
@@ -176,6 +185,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/committee'
+    | '/dev'
     | '/project'
     | '/committee/'
     | '/forbidden/'
@@ -194,6 +204,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/dev'
     | '/committee'
     | '/forbidden'
     | '/project'
@@ -212,6 +223,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/committee'
+    | '/dev'
     | '/project'
     | '/committee/'
     | '/forbidden/'
@@ -232,13 +244,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
   CommitteeRouteRoute: typeof CommitteeRouteRouteWithChildren
+  DevRouteRoute: typeof DevRouteRouteWithChildren
   ProjectRouteRoute: typeof ProjectRouteRouteWithChildren
   ForbiddenIndexRoute: typeof ForbiddenIndexRoute
   SearchIndexRoute: typeof SearchIndexRoute
-  DevCommitteeMemberIndexRoute: typeof DevCommitteeMemberIndexRoute
-  DevPushNotificationIndexRoute: typeof DevPushNotificationIndexRoute
-  DevTableIndexRoute: typeof DevTableIndexRoute
-  DevUiComponentsIndexRoute: typeof DevUiComponentsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -248,6 +257,13 @@ declare module '@tanstack/react-router' {
       path: '/project'
       fullPath: '/project'
       preLoaderRoute: typeof ProjectRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev': {
+      id: '/dev'
+      path: '/dev'
+      fullPath: '/dev'
+      preLoaderRoute: typeof DevRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/committee': {
@@ -301,24 +317,24 @@ declare module '@tanstack/react-router' {
     }
     '/dev/table/': {
       id: '/dev/table/'
-      path: '/dev/table'
+      path: '/table'
       fullPath: '/dev/table/'
       preLoaderRoute: typeof DevTableIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DevRouteRoute
     }
     '/dev/pushNotification/': {
       id: '/dev/pushNotification/'
-      path: '/dev/pushNotification'
+      path: '/pushNotification'
       fullPath: '/dev/pushNotification/'
       preLoaderRoute: typeof DevPushNotificationIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DevRouteRoute
     }
     '/dev/committeeMember/': {
       id: '/dev/committeeMember/'
-      path: '/dev/committeeMember'
+      path: '/committeeMember'
       fullPath: '/dev/committeeMember/'
       preLoaderRoute: typeof DevCommitteeMemberIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DevRouteRoute
     }
     '/auth/reset-password/': {
       id: '/auth/reset-password/'
@@ -343,10 +359,10 @@ declare module '@tanstack/react-router' {
     }
     '/dev/ui/components/': {
       id: '/dev/ui/components/'
-      path: '/dev/ui/components'
+      path: '/ui/components'
       fullPath: '/dev/ui/components/'
       preLoaderRoute: typeof DevUiComponentsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DevRouteRoute
     }
     '/auth/register/verify/': {
       id: '/auth/register/verify/'
@@ -397,6 +413,24 @@ const CommitteeRouteRouteWithChildren = CommitteeRouteRoute._addFileChildren(
   CommitteeRouteRouteChildren,
 )
 
+interface DevRouteRouteChildren {
+  DevCommitteeMemberIndexRoute: typeof DevCommitteeMemberIndexRoute
+  DevPushNotificationIndexRoute: typeof DevPushNotificationIndexRoute
+  DevTableIndexRoute: typeof DevTableIndexRoute
+  DevUiComponentsIndexRoute: typeof DevUiComponentsIndexRoute
+}
+
+const DevRouteRouteChildren: DevRouteRouteChildren = {
+  DevCommitteeMemberIndexRoute: DevCommitteeMemberIndexRoute,
+  DevPushNotificationIndexRoute: DevPushNotificationIndexRoute,
+  DevTableIndexRoute: DevTableIndexRoute,
+  DevUiComponentsIndexRoute: DevUiComponentsIndexRoute,
+}
+
+const DevRouteRouteWithChildren = DevRouteRoute._addFileChildren(
+  DevRouteRouteChildren,
+)
+
 interface ProjectRouteRouteChildren {
   ProjectIndexRoute: typeof ProjectIndexRoute
 }
@@ -413,13 +447,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRouteRoute: AuthRouteRouteWithChildren,
   CommitteeRouteRoute: CommitteeRouteRouteWithChildren,
+  DevRouteRoute: DevRouteRouteWithChildren,
   ProjectRouteRoute: ProjectRouteRouteWithChildren,
   ForbiddenIndexRoute: ForbiddenIndexRoute,
   SearchIndexRoute: SearchIndexRoute,
-  DevCommitteeMemberIndexRoute: DevCommitteeMemberIndexRoute,
-  DevPushNotificationIndexRoute: DevPushNotificationIndexRoute,
-  DevTableIndexRoute: DevTableIndexRoute,
-  DevUiComponentsIndexRoute: DevUiComponentsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

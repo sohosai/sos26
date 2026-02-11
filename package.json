@@ -13,6 +13,7 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
+    "preview": "turbo preview",
     "test:run": "bun --filter './apps/*' --filter './packages/*' test:run",
     "test:watch": "bun --filter './apps/*' --filter './packages/*' test:watch",
     "typecheck": "tsc -b",
