@@ -20,6 +20,7 @@
 		- [EditableCell](#editablecell)
 		- [NameCell](#namecell)
 		- [SelectCell](#selectcell)
+		- [TagCell](#tagcell)
 	- [ユースケース別の設定例](#ユースケース別の設定例)
 		- [フル機能テーブル](#フル機能テーブル)
 		- [読み取り専用テーブル](#読み取り専用テーブル)
@@ -45,6 +46,7 @@ import {
 	EditableCell,
 	NameCell,
 	SelectCell,
+	TagCell,
 } from "@/components/patterns";
 ```
 
@@ -148,6 +150,7 @@ TanStack Table の `meta` フィールドでセルの振る舞いを制御する
 | `options` | `string[]` | SelectCell で使う選択肢リスト |
 | `schema` | `ZodType` | EditableCell でのバリデーションスキーマ |
 | `dateFormat` | `"date" \| "datetime"` | DateCell の表示形式（デフォルト: `"date"`） |
+| `tagColors` | `Record<string, string>` | TagCell のタグ→Radix カラー名マッピング |
 
 ## セルコンポーネント
 
@@ -226,6 +229,24 @@ columnHelper.accessor("department", {
 ```
 
 `editable: false` の場合はテキスト表示のみになる。
+
+### TagCell
+
+タグ表示セル。`string[]` を受け取り、Radix Badge で複数のタグを表示する。読み取り専用。`meta.tagColors` でタグごとの色を指定できる（未指定のタグは `"gray"`）。色には [Radix Colors](https://www.radix-ui.com/colors) のカラー名（`"blue"`, `"green"`, `"red"`, `"orange"`, `"purple"` など）を使用する。
+
+```tsx
+columnHelper.accessor("tags", {
+	header: "タグ",
+	cell: TagCell,
+	meta: {
+		tagColors: {
+			式典: "blue",
+			全体: "green",
+			ステージ: "purple",
+		},
+	},
+}),
+```
 
 ## ユースケース別の設定例
 
@@ -351,4 +372,4 @@ meta: {
 2. 商品一覧 - 編集可能、選択・コピー無効
 3. ログ - 読み取り専用（ソート・検索のみ）
 4. タスク一覧 - 初期ソート・検索付き
-5. イベント一覧 - DateCell による日付・日時表示
+5. イベント一覧 - DateCell による日付・日時表示、TagCell によるタグ表示

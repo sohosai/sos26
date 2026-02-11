@@ -14,5 +14,6 @@ declare module "@tanstack/react-table" {
 		options?: string[];
 		schema?: ZodType;
 		dateFormat?: "date" | "datetime";
+		tagColors?: Record<string, string>;
 	}
 }

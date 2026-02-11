@@ -9,6 +9,7 @@ import {
 	EditableCell,
 	NameCell,
 	SelectCell,
+	TagCell,
 } from "@/components/patterns";
 
 export const Route = createFileRoute("/dev/table/")({
@@ -290,6 +291,7 @@ type Event = {
 	title: string;
 	date: Date;
 	createdAt: Date;
+	tags: string[];
 };
 
 const eventData: Event[] = [
@@ -298,24 +300,28 @@ const eventData: Event[] = [
 		title: "開会式",
 		date: new Date(2026, 10, 1),
 		createdAt: new Date(2026, 8, 15, 10, 30),
+		tags: ["式典", "全体"],
 	},
 	{
 		id: 2,
 		title: "ステージ発表",
 		date: new Date(2026, 10, 1),
 		createdAt: new Date(2026, 8, 20, 14, 0),
+		tags: ["ステージ", "音楽"],
 	},
 	{
 		id: 3,
 		title: "模擬店営業",
 		date: new Date(2026, 10, 2),
 		createdAt: new Date(2026, 9, 1, 9, 15),
+		tags: ["模擬店"],
 	},
 	{
 		id: 4,
 		title: "閉会式",
 		date: new Date(2026, 10, 2),
 		createdAt: new Date(2026, 9, 5, 16, 45),
+		tags: ["式典", "全体", "表彰"],
 	},
 ];
 
@@ -333,6 +339,20 @@ const eventColumns = [
 		header: "登録日時",
 		cell: DateCell,
 		meta: { dateFormat: "datetime" },
+	}),
+	eventColumnHelper.accessor("tags", {
+		header: "タグ",
+		cell: TagCell,
+		meta: {
+			tagColors: {
+				式典: "blue",
+				全体: "green",
+				ステージ: "purple",
+				音楽: "violet",
+				模擬店: "orange",
+				表彰: "amber",
+			},
+		},
 	}),
 ];
 
@@ -416,9 +436,9 @@ function TableDemoPage() {
 
 			<Separator my="6" size="4" />
 
-			{/* サンプル5: 日付表示 */}
+			{/* サンプル5: 日付表示・タグ表示 */}
 			<Heading size="4" mb="3">
-				イベント一覧（DateCell）
+				イベント一覧（DateCell・TagCell）
 			</Heading>
 			<DataTable
 				data={eventData}

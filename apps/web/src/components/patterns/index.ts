@@ -6,5 +6,6 @@ export {
 	EditableCell,
 	NameCell,
 	SelectCell,
+	TagCell,
 } from "./DataTable";
 export { RadioGroup, RadioGroupItem } from "./RadioGroup";
