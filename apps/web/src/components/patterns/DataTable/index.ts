@@ -1,3 +1,4 @@
+export { DateCell } from "./cells/DateCell";
 export { EditableCell } from "./cells/EditableCell";
 export { NameCell } from "./cells/NameCell";
 export { SelectCell } from "./cells/SelectCell";

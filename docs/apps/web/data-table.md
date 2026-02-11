@@ -16,6 +16,7 @@
 		- [基本のカラム](#基本のカラム)
 		- [ColumnMeta](#columnmeta)
 	- [セルコンポーネント](#セルコンポーネント)
+		- [DateCell](#datecell)
 		- [EditableCell](#editablecell)
 		- [NameCell](#namecell)
 		- [SelectCell](#selectcell)
@@ -40,6 +41,7 @@
 ```tsx
 import {
 	DataTable,
+	DateCell,
 	EditableCell,
 	NameCell,
 	SelectCell,
@@ -145,8 +147,28 @@ TanStack Table の `meta` フィールドでセルの振る舞いを制御する
 | `type` | `"text" \| "number"` | 入力の型（デフォルト: `"text"`） |
 | `options` | `string[]` | SelectCell で使う選択肢リスト |
 | `schema` | `ZodType` | EditableCell でのバリデーションスキーマ |
+| `dateFormat` | `"date" \| "datetime"` | DateCell の表示形式（デフォルト: `"date"`） |
 
 ## セルコンポーネント
+
+### DateCell
+
+日付表示セル。`Date` オブジェクトを `YYYY/MM/DD` または `YYYY/MM/DD HH:mm` 形式で表示する。読み取り専用。
+
+```tsx
+// 日付のみ（デフォルト）
+columnHelper.accessor("date", {
+	header: "開催日",
+	cell: DateCell,
+}),
+
+// 日時
+columnHelper.accessor("createdAt", {
+	header: "登録日時",
+	cell: DateCell,
+	meta: { dateFormat: "datetime" },
+}),
+```
 
 ### EditableCell
 
@@ -323,9 +345,10 @@ meta: {
 
 ## デモページ
 
-開発環境で `/dev/table/` にアクセスすると、4種類のサンプルテーブルを確認できる。
+開発環境で `/dev/table/` にアクセスすると、5種類のサンプルテーブルを確認できる。
 
 1. ユーザー管理 - フル機能（ソート、検索、編集、カラム表示切替、CSV出力）
 2. 商品一覧 - 編集可能、選択・コピー無効
 3. ログ - 読み取り専用（ソート・検索のみ）
 4. タスク一覧 - 初期ソート・検索付き
+5. イベント一覧 - DateCell による日付・日時表示

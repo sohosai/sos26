@@ -5,6 +5,7 @@ import { useState } from "react";
 import { z } from "zod";
 import {
 	DataTable,
+	DateCell,
 	EditableCell,
 	NameCell,
 	SelectCell,
@@ -282,6 +283,59 @@ const taskColumns = [
 	taskColumnHelper.accessor("assignee", { header: "担当者" }),
 ];
 
+// ─── サンプル5: 日付表示 ─────────────────────────────────
+
+type Event = {
+	id: number;
+	title: string;
+	date: Date;
+	createdAt: Date;
+};
+
+const eventData: Event[] = [
+	{
+		id: 1,
+		title: "開会式",
+		date: new Date(2026, 10, 1),
+		createdAt: new Date(2026, 8, 15, 10, 30),
+	},
+	{
+		id: 2,
+		title: "ステージ発表",
+		date: new Date(2026, 10, 1),
+		createdAt: new Date(2026, 8, 20, 14, 0),
+	},
+	{
+		id: 3,
+		title: "模擬店営業",
+		date: new Date(2026, 10, 2),
+		createdAt: new Date(2026, 9, 1, 9, 15),
+	},
+	{
+		id: 4,
+		title: "閉会式",
+		date: new Date(2026, 10, 2),
+		createdAt: new Date(2026, 9, 5, 16, 45),
+	},
+];
+
+const eventColumnHelper = createColumnHelper<Event>();
+
+const eventColumns = [
+	eventColumnHelper.accessor("id", { header: "ID" }),
+	eventColumnHelper.accessor("title", { header: "イベント名" }),
+	eventColumnHelper.accessor("date", {
+		header: "開催日",
+		cell: DateCell,
+		meta: { dateFormat: "date" },
+	}),
+	eventColumnHelper.accessor("createdAt", {
+		header: "登録日時",
+		cell: DateCell,
+		meta: { dateFormat: "datetime" },
+	}),
+];
+
 // ─── Page ────────────────────────────────────────────────
 
 function TableDemoPage() {
@@ -357,6 +411,18 @@ function TableDemoPage() {
 				columns={taskColumns}
 				initialSorting={[{ id: "priority", desc: true }]}
 				initialGlobalFilter="進行中"
+				features={{ selection: false, copy: false }}
+			/>
+
+			<Separator my="6" size="4" />
+
+			{/* サンプル5: 日付表示 */}
+			<Heading size="4" mb="3">
+				イベント一覧（DateCell）
+			</Heading>
+			<DataTable
+				data={eventData}
+				columns={eventColumns}
 				features={{ selection: false, copy: false }}
 			/>
 		</Box>
