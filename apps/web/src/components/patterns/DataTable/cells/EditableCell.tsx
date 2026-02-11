@@ -1,6 +1,7 @@
 import type { CellContext, RowData } from "@tanstack/react-table";
 import { useEffect, useRef, useState } from "react";
 import type { ZodType } from "zod";
+import styles from "./EditableCell.module.scss";
 
 declare module "@tanstack/react-table" {
 	// biome-ignore lint/correctness/noUnusedVariables: required by module augmentation signature
@@ -68,12 +69,16 @@ export function EditableCell<TData extends RowData>({
 	};
 
 	return (
-		<div style={{ position: "relative" }}>
+		<div className={styles.wrapper}>
 			<input
 				ref={inputRef}
+				className={styles.input}
 				inputMode={inputType === "number" ? "numeric" : undefined}
 				value={value as string}
 				size={Math.max(String(value).length, 1)}
+				data-editing={isEditing}
+				data-focused={isFocused}
+				data-error={!!validationError}
 				onChange={e => {
 					if (isEditingRef.current) {
 						setValue(e.target.value);
@@ -129,40 +134,9 @@ export function EditableCell<TData extends RowData>({
 						setValue("");
 					}
 				}}
-				style={{
-					all: "unset",
-					display: "block",
-					width: "100%",
-					padding: "var(--table-cell-padding)",
-					margin: "calc(var(--table-cell-padding) * -1)",
-					cursor: isEditing ? "text" : "default",
-					caretColor: isEditing ? undefined : "transparent",
-					userSelect: isEditing ? undefined : "none",
-					boxShadow: isFocused
-						? isEditing
-							? validationError
-								? "inset 0 0 0 2px var(--red-9)"
-								: "inset 0 0 0 2px var(--accent-9)"
-							: "inset 0 0 0 2px var(--accent-7)"
-						: undefined,
-				}}
 			/>
 			{validationError && (
-				<div
-					style={{
-						position: "absolute",
-						left: 0,
-						top: "100%",
-						fontSize: "11px",
-						lineHeight: 1.2,
-						color: "var(--red-11)",
-						padding: "2px 4px",
-						whiteSpace: "nowrap",
-						zIndex: 10,
-					}}
-				>
-					{validationError}
-				</div>
+				<div className={styles.errorMessage}>{validationError}</div>
 			)}
 		</div>
 	);

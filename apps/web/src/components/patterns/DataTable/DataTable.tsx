@@ -1,13 +1,4 @@
-import {
-	Box,
-	Button,
-	Checkbox,
-	Flex,
-	Popover,
-	Table,
-	Text,
-	TextField,
-} from "@radix-ui/themes";
+import { Box, Flex, Popover, Table, Text, TextField } from "@radix-ui/themes";
 import { IconDownload, IconSearch, IconSettings } from "@tabler/icons-react";
 import {
 	type ColumnDef,
@@ -21,7 +12,8 @@ import {
 	type VisibilityState,
 } from "@tanstack/react-table";
 import { useEffect, useRef, useState } from "react";
-import "./DataTable.css";
+import { Button, Checkbox } from "@/components/primitives";
+import styles from "./DataTable.module.scss";
 import { useCopyToClipboard } from "./hooks/useCopyToClipboard";
 import { useSelection } from "./hooks/useSelection";
 import { downloadCsv } from "./lib/downloadCsv";
@@ -163,7 +155,7 @@ export function DataTable<T extends RowData>({
 				{f.columnVisibility && (
 					<Popover.Root>
 						<Popover.Trigger>
-							<Button variant="soft">
+							<Button intent="secondary">
 								<IconSettings size={16} /> 表示カラム
 							</Button>
 						</Popover.Trigger>
@@ -173,26 +165,26 @@ export function DataTable<T extends RowData>({
 									.getAllColumns()
 									.filter(column => column.getCanHide())
 									.map(column => (
-										<Text as="label" size="2" key={column.id}>
-											<Flex gap="2" align="center">
-												<Checkbox
-													checked={column.getIsVisible()}
-													onCheckedChange={value =>
-														column.toggleVisibility(!!value)
-													}
-												/>
-												{typeof column.columnDef.header === "string"
+										<Checkbox
+											key={column.id}
+											label={
+												typeof column.columnDef.header === "string"
 													? column.columnDef.header
-													: column.id}
-											</Flex>
-										</Text>
+													: column.id
+											}
+											size="1"
+											checked={column.getIsVisible()}
+											onCheckedChange={value =>
+												column.toggleVisibility(!!value)
+											}
+										/>
 									))}
 							</Flex>
 						</Popover.Content>
 					</Popover.Root>
 				)}
 				{f.csvExport && (
-					<Button variant="soft" onClick={() => downloadCsv(table)}>
+					<Button intent="secondary" onClick={() => downloadCsv(table)}>
 						<IconDownload size={16} /> CSV出力
 					</Button>
 				)}
@@ -200,7 +192,7 @@ export function DataTable<T extends RowData>({
 			<Table.Root
 				ref={tableRef}
 				variant="surface"
-				className={f.selection && isDragging ? "selecting" : undefined}
+				className={`${styles.root}${f.selection && isDragging ? ` ${styles.selecting}` : ""}`}
 				style={{ overflowX: "auto" }}
 			>
 				<Table.Header>
@@ -243,7 +235,7 @@ export function DataTable<T extends RowData>({
 									key={cell.id}
 									className={
 										f.selection && isSelected(ri, ci)
-											? "cell-selected"
+											? styles.cellSelected
 											: undefined
 									}
 									style={{ whiteSpace: "nowrap" }}

@@ -1,9 +1,11 @@
-.rt-TableRootTable {
-	width: max-content;
-	min-width: 100%;
+.root {
+	:global(.rt-TableRootTable) {
+		width: max-content;
+		min-width: 100%;
+	}
 }
 
-.cell-selected {
+.cellSelected {
 	background-color: var(--accent-a3);
 	box-shadow: inset 0 0 0 1px var(--accent-7);
 }
