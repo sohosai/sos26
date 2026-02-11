@@ -19,6 +19,7 @@ import { Route as ForbiddenIndexRouteImport } from './routes/forbidden/index'
 import { Route as CommitteeIndexRouteImport } from './routes/committee/index'
 import { Route as DevTableIndexRouteImport } from './routes/dev/table/index'
 import { Route as DevPushNotificationIndexRouteImport } from './routes/dev/pushNotification/index'
+import { Route as DevCommitteeMemberIndexRouteImport } from './routes/dev/committeeMember/index'
 import { Route as AuthResetPasswordIndexRouteImport } from './routes/auth/reset-password/index'
 import { Route as AuthRegisterIndexRouteImport } from './routes/auth/register/index'
 import { Route as AuthLoginIndexRouteImport } from './routes/auth/login/index'
@@ -77,6 +78,11 @@ const DevPushNotificationIndexRoute =
     path: '/dev/pushNotification/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DevCommitteeMemberIndexRoute = DevCommitteeMemberIndexRouteImport.update({
+  id: '/dev/committeeMember/',
+  path: '/dev/committeeMember/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthResetPasswordIndexRoute = AuthResetPasswordIndexRouteImport.update({
   id: '/reset-password/',
   path: '/reset-password/',
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/auth/login/': typeof AuthLoginIndexRoute
   '/auth/register/': typeof AuthRegisterIndexRoute
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
+  '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
   '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
   '/dev/table/': typeof DevTableIndexRoute
   '/auth/register/setup/': typeof AuthRegisterSetupIndexRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByTo {
   '/auth/login': typeof AuthLoginIndexRoute
   '/auth/register': typeof AuthRegisterIndexRoute
   '/auth/reset-password': typeof AuthResetPasswordIndexRoute
+  '/dev/committeeMember': typeof DevCommitteeMemberIndexRoute
   '/dev/pushNotification': typeof DevPushNotificationIndexRoute
   '/dev/table': typeof DevTableIndexRoute
   '/auth/register/setup': typeof AuthRegisterSetupIndexRoute
@@ -155,6 +163,7 @@ export interface FileRoutesById {
   '/auth/login/': typeof AuthLoginIndexRoute
   '/auth/register/': typeof AuthRegisterIndexRoute
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
+  '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
   '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
   '/dev/table/': typeof DevTableIndexRoute
   '/auth/register/setup/': typeof AuthRegisterSetupIndexRoute
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
     | '/auth/login/'
     | '/auth/register/'
     | '/auth/reset-password/'
+    | '/dev/committeeMember/'
     | '/dev/pushNotification/'
     | '/dev/table/'
     | '/auth/register/setup/'
@@ -191,6 +201,7 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/register'
     | '/auth/reset-password'
+    | '/dev/committeeMember'
     | '/dev/pushNotification'
     | '/dev/table'
     | '/auth/register/setup'
@@ -209,6 +220,7 @@ export interface FileRouteTypes {
     | '/auth/login/'
     | '/auth/register/'
     | '/auth/reset-password/'
+    | '/dev/committeeMember/'
     | '/dev/pushNotification/'
     | '/dev/table/'
     | '/auth/register/setup/'
@@ -223,6 +235,7 @@ export interface RootRouteChildren {
   ProjectRouteRoute: typeof ProjectRouteRouteWithChildren
   ForbiddenIndexRoute: typeof ForbiddenIndexRoute
   SearchIndexRoute: typeof SearchIndexRoute
+  DevCommitteeMemberIndexRoute: typeof DevCommitteeMemberIndexRoute
   DevPushNotificationIndexRoute: typeof DevPushNotificationIndexRoute
   DevTableIndexRoute: typeof DevTableIndexRoute
   DevUiComponentsIndexRoute: typeof DevUiComponentsIndexRoute
@@ -298,6 +311,13 @@ declare module '@tanstack/react-router' {
       path: '/dev/pushNotification'
       fullPath: '/dev/pushNotification/'
       preLoaderRoute: typeof DevPushNotificationIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/committeeMember/': {
+      id: '/dev/committeeMember/'
+      path: '/dev/committeeMember'
+      fullPath: '/dev/committeeMember/'
+      preLoaderRoute: typeof DevCommitteeMemberIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/reset-password/': {
@@ -396,6 +416,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectRouteRoute: ProjectRouteRouteWithChildren,
   ForbiddenIndexRoute: ForbiddenIndexRoute,
   SearchIndexRoute: SearchIndexRoute,
+  DevCommitteeMemberIndexRoute: DevCommitteeMemberIndexRoute,
   DevPushNotificationIndexRoute: DevPushNotificationIndexRoute,
   DevTableIndexRoute: DevTableIndexRoute,
   DevUiComponentsIndexRoute: DevUiComponentsIndexRoute,
