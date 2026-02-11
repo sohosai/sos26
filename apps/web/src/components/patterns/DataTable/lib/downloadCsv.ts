@@ -1,7 +1,31 @@
 import type { Table } from "@tanstack/react-table";
 
-function escapeCsvField(value: unknown): string {
-	const str = String(value ?? "");
+function formatDateForCsv(date: Date, format: "date" | "datetime"): string {
+	const y = date.getFullYear();
+	const m = String(date.getMonth() + 1).padStart(2, "0");
+	const d = String(date.getDate()).padStart(2, "0");
+
+	if (format === "datetime") {
+		const h = String(date.getHours()).padStart(2, "0");
+		const min = String(date.getMinutes()).padStart(2, "0");
+		return `${y}/${m}/${d} ${h}:${min}`;
+	}
+
+	return `${y}/${m}/${d}`;
+}
+
+function stringifyValue(
+	value: unknown,
+	dateFormat?: "date" | "datetime"
+): string {
+	if (value == null) return "";
+	if (value instanceof Date)
+		return formatDateForCsv(value, dateFormat ?? "date");
+	if (Array.isArray(value)) return value.join(" / ");
+	return String(value);
+}
+
+function escapeCsvField(str: string): string {
 	if (/[,"\r\n]/.test(str)) {
 		return `"${str.replace(/"/g, '""')}"`;
 	}
@@ -18,11 +42,12 @@ export function downloadCsv<T>(table: Table<T>) {
 			: h.column.id
 	);
 
-	const rows = table
-		.getRowModel()
-		.rows.map(row =>
-			row.getVisibleCells().map(cell => escapeCsvField(cell.getValue()))
-		);
+	const rows = table.getRowModel().rows.map(row =>
+		row.getVisibleCells().map(cell => {
+			const dateFormat = cell.column.columnDef.meta?.dateFormat;
+			return escapeCsvField(stringifyValue(cell.getValue(), dateFormat));
+		})
+	);
 
 	const csv =
 		"\uFEFF" +
