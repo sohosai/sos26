@@ -1,5 +1,5 @@
 import type { CellContext, RowData } from "@tanstack/react-table";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./EditableCell.module.scss";
 
 export function EditableCell<TData extends RowData>({
@@ -10,23 +10,22 @@ export function EditableCell<TData extends RowData>({
 }: CellContext<TData, unknown>) {
 	const initialValue = getValue();
 	const [value, setValue] = useState(initialValue);
-	const [isEditing, setIsEditing] = useState(false);
 	const [validationError, setValidationError] = useState<string | null>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const editable = column.columnDef.meta?.editable ?? false;
 	const inputType = column.columnDef.meta?.type ?? "text";
 	const schema = column.columnDef.meta?.schema;
 	const isEditingRef = useRef(false);
+	const [, rerender] = useState(0);
+
+	const setIsEditing = useCallback((editing: boolean) => {
+		isEditingRef.current = editing;
+		rerender(c => c + 1);
+	}, []);
 
 	useEffect(() => {
 		setValue(initialValue);
 	}, [initialValue]);
-
-	useEffect(() => {
-		if (isEditing) {
-			inputRef.current?.focus();
-		}
-	}, [isEditing]);
 
 	const [isFocused, setIsFocused] = useState(false);
 
@@ -46,7 +45,6 @@ export function EditableCell<TData extends RowData>({
 
 		setValidationError(null);
 		setIsEditing(false);
-		isEditingRef.current = false;
 		setIsFocused(false);
 		table.options.meta?.updateData(row.original, column.id, committed);
 		return true;
@@ -60,7 +58,7 @@ export function EditableCell<TData extends RowData>({
 				inputMode={inputType === "number" ? "numeric" : undefined}
 				value={String(value)}
 				size={Math.max(String(value).length, 1)}
-				data-editing={isEditing}
+				data-editing={isEditingRef.current}
 				data-focused={isFocused}
 				data-error={!!validationError}
 				onChange={e => {
@@ -70,7 +68,7 @@ export function EditableCell<TData extends RowData>({
 					}
 				}}
 				onMouseDown={e => {
-					if (!isEditing) {
+					if (!isEditingRef.current) {
 						e.preventDefault();
 						inputRef.current?.focus();
 					}
@@ -80,7 +78,7 @@ export function EditableCell<TData extends RowData>({
 					if (editable) {
 						table.options.meta?.clearSelection?.();
 						setIsEditing(true);
-						isEditingRef.current = true;
+						inputRef.current?.focus();
 					}
 				}}
 				onBlur={() => {
@@ -98,7 +96,6 @@ export function EditableCell<TData extends RowData>({
 						setValue(initialValue);
 						setValidationError(null);
 						setIsEditing(false);
-						isEditingRef.current = false;
 						inputRef.current?.blur();
 					} else if (e.key === "Enter") {
 						e.preventDefault();
@@ -106,7 +103,7 @@ export function EditableCell<TData extends RowData>({
 							inputRef.current?.blur();
 						}
 					} else if (
-						!isEditing &&
+						!isEditingRef.current &&
 						editable &&
 						e.key.length === 1 &&
 						!e.ctrlKey &&
@@ -114,7 +111,6 @@ export function EditableCell<TData extends RowData>({
 					) {
 						table.options.meta?.clearSelection?.();
 						setIsEditing(true);
-						isEditingRef.current = true;
 						setValue("");
 					}
 				}}
