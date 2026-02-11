@@ -35,6 +35,7 @@
 		- [CSV出力](#csv出力)
 		- [インライン編集](#インライン編集)
 		- [バリデーション](#バリデーション)
+	- [アクションカラム（display カラム）](#アクションカラムdisplay-カラム)
 	- [デモページ](#デモページ)
 
 ## インポート
@@ -364,6 +365,45 @@ meta: {
 }
 ```
 
+## アクションカラム（display カラム）
+
+TagCell や DateCell は読み取り専用のため、編集が必要な場合はテーブル外の UI（Dialog など）で対応する。
+`columnHelper.display()` で表示専用のカラムを追加し、行ごとのアクションボタンを配置するパターンが使える。
+
+```tsx
+const eventColumnHelper = createColumnHelper<Event>();
+
+const eventColumns = [
+	eventColumnHelper.accessor("title", { header: "イベント名" }),
+	eventColumnHelper.accessor("tags", {
+		header: "タグ",
+		cell: TagCell,
+		meta: { tagColors: TAG_COLORS },
+	}),
+	// アクションカラム
+	eventColumnHelper.display({
+		id: "actions",
+		header: "",
+		cell: ({ row }) => (
+			<IconButton
+				variant="ghost"
+				size="1"
+				onClick={() => openEditor(row.original)}
+			>
+				<IconPencil size={16} />
+			</IconButton>
+		),
+	}),
+];
+```
+
+**ポイント:**
+
+- `display()` はデータに紐づかない表示専用カラム（ソート・フィルタの対象外）
+- 編集ロジックはテーブルの外（親コンポーネント側）で管理する
+- セルコンポーネント自体に編集責務を持たせず、関心を分離する
+- `/dev/table/` のサンプル5（イベント一覧）で Dialog によるタグ編集の実装例を確認できる
+
 ## デモページ
 
 開発環境で `/dev/table/` にアクセスすると、5種類のサンプルテーブルを確認できる。
@@ -372,4 +412,4 @@ meta: {
 2. 商品一覧 - 編集可能、選択・コピー無効
 3. ログ - 読み取り専用（ソート・検索のみ）
 4. タスク一覧 - 初期ソート・検索付き
-5. イベント一覧 - DateCell による日付・日時表示、TagCell によるタグ表示
+5. イベント一覧 - DateCell・TagCell・アクションカラムによるタグ編集 Dialog

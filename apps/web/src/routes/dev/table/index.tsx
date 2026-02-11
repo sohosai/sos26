@@ -24,7 +24,7 @@ export const Route = createFileRoute("/dev/table/")({
 	}),
 });
 
-// ─── サンプル1: ユーザー管理 ─────────────────────────────
+// ─── サンプル1: ユーザー管理（フル機能） ────────────────
 
 type User = {
 	id: number;
@@ -34,7 +34,7 @@ type User = {
 	department: string;
 };
 
-const defaultUsers: User[] = [
+const userData: User[] = [
 	{
 		id: 1,
 		name: "田中太郎",
@@ -111,7 +111,7 @@ const userColumns = [
 	}),
 ];
 
-// ─── サンプル2: 商品一覧 ─────────────────────────────────
+// ─── サンプル2: 商品一覧（編集可能・選択コピー無効） ────
 
 type Product = {
 	sku: string;
@@ -121,7 +121,7 @@ type Product = {
 	category: string;
 };
 
-const defaultProducts: Product[] = [
+const productData: Product[] = [
 	{
 		sku: "A-001",
 		productName: "ワイヤレスマウス",
@@ -189,7 +189,7 @@ const productColumns = [
 	}),
 ];
 
-// ─── サンプル3: 読み取り専用テーブル ──────────────────────
+// ─── サンプル3: ログ（読み取り専用・ソート検索のみ） ────
 
 type Log = {
 	timestamp: string;
@@ -224,7 +224,7 @@ const logColumns = [
 	logColumnHelper.accessor("message", { header: "メッセージ" }),
 ];
 
-// ─── サンプル4: タスク一覧（初期ソート・検索） ──────────
+// ─── サンプル4: タスク一覧（初期ソート・検索付き） ──────
 
 type Task = {
 	taskId: string;
@@ -289,7 +289,7 @@ const taskColumns = [
 	taskColumnHelper.accessor("assignee", { header: "担当者" }),
 ];
 
-// ─── サンプル5: 日付表示・タグ編集 ───────────────────────
+// ─── サンプル5: イベント一覧（DateCell・TagCell・タグ編集）
 
 type Event = {
 	id: number;
@@ -317,7 +317,7 @@ const TAG_COLORS: Record<string, string> = {
 	表彰: "amber",
 };
 
-const defaultEvents: Event[] = [
+const eventData: Event[] = [
 	{
 		id: 1,
 		title: "開会式",
@@ -350,12 +350,32 @@ const defaultEvents: Event[] = [
 
 const eventColumnHelper = createColumnHelper<Event>();
 
+const eventBaseColumns = [
+	eventColumnHelper.accessor("id", { header: "ID" }),
+	eventColumnHelper.accessor("title", { header: "イベント名" }),
+	eventColumnHelper.accessor("date", {
+		header: "開催日",
+		cell: DateCell,
+		meta: { dateFormat: "date" },
+	}),
+	eventColumnHelper.accessor("createdAt", {
+		header: "登録日時",
+		cell: DateCell,
+		meta: { dateFormat: "datetime" },
+	}),
+	eventColumnHelper.accessor("tags", {
+		header: "タグ",
+		cell: TagCell,
+		meta: { tagColors: TAG_COLORS },
+	}),
+];
+
 // ─── Page ────────────────────────────────────────────────
 
 function TableDemoPage() {
-	const [users, setUsers] = useState(defaultUsers);
-	const [products, setProducts] = useState(defaultProducts);
-	const [events, setEvents] = useState(defaultEvents);
+	const [users, setUsers] = useState(userData);
+	const [products, setProducts] = useState(productData);
+	const [events, setEvents] = useState(eventData);
 	const [editingEvent, setEditingEvent] = useState<Event | null>(null);
 	const [editingTags, setEditingTags] = useState<string[]>([]);
 
@@ -375,23 +395,7 @@ function TableDemoPage() {
 	};
 
 	const eventColumns = [
-		eventColumnHelper.accessor("id", { header: "ID" }),
-		eventColumnHelper.accessor("title", { header: "イベント名" }),
-		eventColumnHelper.accessor("date", {
-			header: "開催日",
-			cell: DateCell,
-			meta: { dateFormat: "date" },
-		}),
-		eventColumnHelper.accessor("createdAt", {
-			header: "登録日時",
-			cell: DateCell,
-			meta: { dateFormat: "datetime" },
-		}),
-		eventColumnHelper.accessor("tags", {
-			header: "タグ",
-			cell: TagCell,
-			meta: { tagColors: TAG_COLORS },
-		}),
+		...eventBaseColumns,
 		eventColumnHelper.display({
 			id: "actions",
 			header: "",
@@ -413,7 +417,7 @@ function TableDemoPage() {
 				DataTable サンプル
 			</Heading>
 
-			{/* サンプル1: フル機能 */}
+			{/* サンプル1: ユーザー管理（フル機能） */}
 			<Heading size="4" mb="3">
 				ユーザー管理（フル機能）
 			</Heading>
@@ -431,9 +435,9 @@ function TableDemoPage() {
 
 			<Separator my="6" size="4" />
 
-			{/* サンプル2: 編集可能、選択なし */}
+			{/* サンプル2: 商品一覧（編集可能・選択コピー無効） */}
 			<Heading size="4" mb="3">
-				商品一覧（選択・コピー無効）
+				商品一覧（編集可能・選択コピー無効）
 			</Heading>
 			<DataTable
 				data={products}
@@ -450,9 +454,9 @@ function TableDemoPage() {
 
 			<Separator my="6" size="4" />
 
-			{/* サンプル3: 読み取り専用 */}
+			{/* サンプル3: ログ（読み取り専用・ソート検索のみ） */}
 			<Heading size="4" mb="3">
-				ログ（読み取り専用、ソート・検索のみ）
+				ログ（読み取り専用・ソート検索のみ）
 			</Heading>
 			<DataTable
 				data={logData}
@@ -467,7 +471,7 @@ function TableDemoPage() {
 
 			<Separator my="6" size="4" />
 
-			{/* サンプル4: 初期ソート・検索 */}
+			{/* サンプル4: タスク一覧（初期ソート・検索付き） */}
 			<Heading size="4" mb="3">
 				タスク一覧（初期ソート・検索付き）
 			</Heading>
@@ -481,7 +485,7 @@ function TableDemoPage() {
 
 			<Separator my="6" size="4" />
 
-			{/* サンプル5: 日付表示・タグ表示・タグ編集 */}
+			{/* サンプル5: イベント一覧（DateCell・TagCell・タグ編集） */}
 			<Heading size="4" mb="3">
 				イベント一覧（DateCell・TagCell・タグ編集）
 			</Heading>
