@@ -217,7 +217,7 @@ Set-Cookie: reg_ticket=<opaque>; HttpOnly; Path=/auth; SameSite=Lax; Max-Age=900
 
 ### GET /auth/me
 
-現在のログインユーザーを取得します。
+現在のログインユーザーと委員メンバー情報を取得します。
 
 **リクエスト**:
 ```
@@ -237,9 +237,19 @@ Authorization: Bearer <Firebase ID Token>
     "deletedAt": null,
     "createdAt": "...",
     "updatedAt": "..."
+  },
+  "committeeMember": {
+    "id": "...",
+    "userId": "...",
+    "isExecutive": false,
+    "Bureau": "INFO_SYSTEM",
+    "joinedAt": "...",
+    "deletedAt": null
   }
 }
 ```
+
+`committeeMember` は委員メンバー未登録の場合 `null` を返します。
 
 **エラー**:
 | 条件 | エラーコード |

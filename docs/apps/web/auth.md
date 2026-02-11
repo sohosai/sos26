@@ -92,7 +92,9 @@ Firebase はユーザー認証のみを担当し、アプリケーション固�
 | プロパティ | 型 | 説明 |
 |-----------|-----|------|
 | `user` | `User \| null` | ログイン中のユーザー（本登録完了済み） |
+| `committeeMember` | `CommitteeMember \| null` | 委員メンバー情報（未登録なら `null`） |
 | `isLoggedIn` | `boolean` | ログイン中か（`user` が存在するか） |
+| `isCommitteeMember` | `boolean` | 委員メンバーか（`committeeMember` が存在するか） |
 | `isLoading` | `boolean` | 認証状態の読み込み中か |
 | `signOut` | `() => Promise<void>` | ログアウト |
 | `refreshUser` | `() => Promise<void>` | ユーザー情報を再取得 |
@@ -195,7 +197,7 @@ export const Route = createRootRoute({
 | `startEmailVerification({ email })` | POST /auth/email/start | メール検証を開始 |
 | `verifyEmail({ token })` | POST /auth/email/verify | メール検証を確定、reg_ticket 発行 |
 | `register({ name, namePhonetic, telephoneNumber, password })` | POST /auth/register | 本登録（要 reg_ticket Cookie） |
-| `getMe()` | GET /auth/me | 現在のユーザーを取得（要認証） |
+| `getMe()` | GET /auth/me | 現在のユーザーと委員メンバー情報を取得（要認証） |
 
 ## UI バリデーション
 
