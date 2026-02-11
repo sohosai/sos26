@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Form, FormItem } from "../type";
+import styles from "./Editor.module.scss";
 import { FormItemList } from "./ItemList";
 
 type Props = {
@@ -33,21 +34,23 @@ export function FormEditor({ initialForm }: Props) {
 	};
 
 	return (
-		<div>
+		<div className={styles.root}>
 			<input
+				className={styles.titleInput}
 				value={formName}
 				onChange={e => setFormName(e.target.value)}
 				placeholder="フォーム名"
 			/>
+			<div className={styles.items}>
+				<FormItemList
+					items={items}
+					setItems={setItems}
+					onUpdate={updateItem}
+					onRemove={removeItem}
+				/>
+			</div>
 
-			<FormItemList
-				items={items}
-				setItems={setItems}
-				onUpdate={updateItem}
-				onRemove={removeItem}
-			/>
-
-			<button type="button" onClick={addItem}>
+			<button className={styles.addButton} type="button" onClick={addItem}>
 				＋ 項目を追加
 			</button>
 		</div>

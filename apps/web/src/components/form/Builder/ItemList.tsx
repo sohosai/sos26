@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FormItem } from "../type";
 import { FormItemEditor } from "./ItemEditor";
+import styles from "./ItemList.module.scss";
 
 type Props = {
 	items: FormItem[];
@@ -38,7 +39,7 @@ export function FormItemList({ items, setItems, onUpdate, onRemove }: Props) {
 	}
 
 	return (
-		<ul>
+		<ul className={styles.list}>
 			{items.map((item, index) => (
 				<FormItemEditor
 					key={item.id}
