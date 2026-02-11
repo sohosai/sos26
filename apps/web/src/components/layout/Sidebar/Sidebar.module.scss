@@ -1,42 +1,96 @@
-.container {
-	display: flex;
-	min-height: 100dvh;
-}
-
 .sidebar {
-	width: 240px;
-	flex-shrink: 0;
-	border-right: 1px solid var(--gray-a5);
-	padding: var(--space-4);
-}
-
-.nav {
 	display: flex;
 	flex-direction: column;
-	gap: var(--space-1);
-}
+	width: 240px;
+	min-height: 100vh;
+	background-color: var(--gray-1);
+	border-right: 1px solid var(--gray-a5);
+	transition: width 0.3s ease;
+	overflow: hidden;
 
-.link {
-	display: block;
-	padding: var(--space-2) var(--space-3);
-	border-radius: var(--radius-2);
-	color: var(--gray-11);
-	text-decoration: none;
-	font-size: var(--font-size-2);
+	&.collapsed {
+		width: 64px;
 
-	&:hover {
-		background-color: var(--gray-a3);
+		.item {
+			justify-content: center;
+			padding: var(--space-2);
+		}
+
+		.header {
+			justify-content: center;
+		}
 	}
-}
 
-.active {
-	background-color: var(--gray-a4);
-	color: var(--gray-12);
-	font-weight: 500;
-}
+	.header {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		padding: var(--space-4);
+		border-bottom: 1px solid var(--gray-a5);
+		min-height: 64px;
+	}
 
-.main {
-	flex: 1;
-	padding: var(--space-5);
-	overflow-y: auto;
+	.logo {
+		margin-left: var(--space-2);
+		height: 42px;
+	}
+
+	.nav {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+		padding: var(--space-3);
+	}
+
+	.footer {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+		padding: var(--space-3);
+		border-top: 1px solid var(--gray-a5);
+		margin-top: auto;
+	}
+
+	.link {
+		all: unset;
+		box-sizing: border-box;
+		display: block;
+		width: 100%;
+		cursor: pointer;
+		color: inherit;
+	}
+
+	.item {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		padding: var(--space-2) var(--space-3);
+		border-radius: var(--radius-2);
+		color: var(--gray-11);
+		white-space: nowrap;
+		transition: background-color 0.15s ease;
+
+		&:hover {
+			background-color: var(--gray-a4);
+		}
+
+		&.active {
+			background-color: var(--accent-a3);
+			color: var(--accent-11);
+
+			&:hover {
+				background-color: var(--accent-a4);
+			}
+		}
+	}
+
+	.icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 20px;
+		height: 20px;
+		flex-shrink: 0;
+	}
 }

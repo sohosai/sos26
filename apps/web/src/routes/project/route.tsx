@@ -1,8 +1,8 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Sidebar } from "@/components/layout/Sidebar/Sidebar";
+import { useState } from "react";
+import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { requireAuth } from "@/lib/auth";
-
-const projectNav = [{ label: "ダッシュボード", to: "/project" }];
+import styles from "./route.module.scss";
 
 export const Route = createFileRoute("/project")({
 	beforeLoad: async ({ location }) => {
@@ -12,9 +12,18 @@ export const Route = createFileRoute("/project")({
 });
 
 function ProjectLayout() {
+	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
 	return (
-		<Sidebar items={projectNav}>
-			<Outlet />
-		</Sidebar>
+		<div className={styles.layout}>
+			<Sidebar
+				collapsed={sidebarCollapsed}
+				onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+				menuItems={projectMenuItems}
+			/>
+			<main className={styles.main}>
+				<Outlet />
+			</main>
+		</div>
 	);
 }

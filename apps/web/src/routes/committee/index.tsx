@@ -16,12 +16,11 @@ function CommitteeIndexPage() {
 	const { user } = useAuthStore();
 
 	return (
-		<div style={{ padding: "2rem" }}>
+		<div>
 			<Heading size="6">委員会ダッシュボード</Heading>
-			<Text as="p" color="gray">
+			<Text as="p" size="2" color="gray">
 				ようこそ、{user?.name} さん
 			</Text>
-			{/* ここに委員会向け機能を実装 */}
 		</div>
 	);
 }
