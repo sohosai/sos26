@@ -17,6 +17,7 @@ import { Route as SearchIndexRouteImport } from './routes/search/index'
 import { Route as ProjectIndexRouteImport } from './routes/project/index'
 import { Route as ForbiddenIndexRouteImport } from './routes/forbidden/index'
 import { Route as CommitteeIndexRouteImport } from './routes/committee/index'
+import { Route as DevTableIndexRouteImport } from './routes/dev/table/index'
 import { Route as DevPushNotificationIndexRouteImport } from './routes/dev/pushNotification/index'
 import { Route as AuthResetPasswordIndexRouteImport } from './routes/auth/reset-password/index'
 import { Route as AuthRegisterIndexRouteImport } from './routes/auth/register/index'
@@ -64,6 +65,11 @@ const CommitteeIndexRoute = CommitteeIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CommitteeRouteRoute,
+} as any)
+const DevTableIndexRoute = DevTableIndexRouteImport.update({
+  id: '/dev/table/',
+  path: '/dev/table/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DevPushNotificationIndexRoute =
   DevPushNotificationIndexRouteImport.update({
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/auth/register/': typeof AuthRegisterIndexRoute
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
   '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
+  '/dev/table/': typeof DevTableIndexRoute
   '/auth/register/setup/': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify/': typeof AuthRegisterVerifyIndexRoute
   '/dev/ui/components/': typeof DevUiComponentsIndexRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/auth/register': typeof AuthRegisterIndexRoute
   '/auth/reset-password': typeof AuthResetPasswordIndexRoute
   '/dev/pushNotification': typeof DevPushNotificationIndexRoute
+  '/dev/table': typeof DevTableIndexRoute
   '/auth/register/setup': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify': typeof AuthRegisterVerifyIndexRoute
   '/dev/ui/components': typeof DevUiComponentsIndexRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/auth/register/': typeof AuthRegisterIndexRoute
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
   '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
+  '/dev/table/': typeof DevTableIndexRoute
   '/auth/register/setup/': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify/': typeof AuthRegisterVerifyIndexRoute
   '/dev/ui/components/': typeof DevUiComponentsIndexRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/auth/register/'
     | '/auth/reset-password/'
     | '/dev/pushNotification/'
+    | '/dev/table/'
     | '/auth/register/setup/'
     | '/auth/register/verify/'
     | '/dev/ui/components/'
@@ -182,6 +192,7 @@ export interface FileRouteTypes {
     | '/auth/register'
     | '/auth/reset-password'
     | '/dev/pushNotification'
+    | '/dev/table'
     | '/auth/register/setup'
     | '/auth/register/verify'
     | '/dev/ui/components'
@@ -199,6 +210,7 @@ export interface FileRouteTypes {
     | '/auth/register/'
     | '/auth/reset-password/'
     | '/dev/pushNotification/'
+    | '/dev/table/'
     | '/auth/register/setup/'
     | '/auth/register/verify/'
     | '/dev/ui/components/'
@@ -212,6 +224,7 @@ export interface RootRouteChildren {
   ForbiddenIndexRoute: typeof ForbiddenIndexRoute
   SearchIndexRoute: typeof SearchIndexRoute
   DevPushNotificationIndexRoute: typeof DevPushNotificationIndexRoute
+  DevTableIndexRoute: typeof DevTableIndexRoute
   DevUiComponentsIndexRoute: typeof DevUiComponentsIndexRoute
 }
 
@@ -272,6 +285,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/committee/'
       preLoaderRoute: typeof CommitteeIndexRouteImport
       parentRoute: typeof CommitteeRouteRoute
+    }
+    '/dev/table/': {
+      id: '/dev/table/'
+      path: '/dev/table'
+      fullPath: '/dev/table/'
+      preLoaderRoute: typeof DevTableIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/dev/pushNotification/': {
       id: '/dev/pushNotification/'
@@ -377,6 +397,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForbiddenIndexRoute: ForbiddenIndexRoute,
   SearchIndexRoute: SearchIndexRoute,
   DevPushNotificationIndexRoute: DevPushNotificationIndexRoute,
+  DevTableIndexRoute: DevTableIndexRoute,
   DevUiComponentsIndexRoute: DevUiComponentsIndexRoute,
 }
 export const routeTree = rootRouteImport

@@ -1,0 +1,44 @@
+.wrapper {
+	position: relative;
+}
+
+.input {
+	all: unset;
+	display: block;
+	width: 100%;
+	padding: var(--table-cell-padding);
+	margin: calc(var(--table-cell-padding) * -1);
+	cursor: default;
+	caret-color: transparent;
+	user-select: none;
+
+	&[data-editing="true"] {
+		cursor: text;
+		caret-color: auto;
+		user-select: auto;
+	}
+
+	&[data-focused="true"] {
+		box-shadow: inset 0 0 0 2px var(--accent-7);
+
+		&[data-editing="true"] {
+			box-shadow: inset 0 0 0 2px var(--accent-9);
+
+			&[data-error="true"] {
+				box-shadow: inset 0 0 0 2px var(--red-9);
+			}
+		}
+	}
+}
+
+.errorMessage {
+	position: absolute;
+	left: 0;
+	top: 100%;
+	font-size: var(--font-size-1);
+	line-height: 1.2;
+	color: var(--red-11);
+	padding: var(--space-1);
+	white-space: nowrap;
+	z-index: 10;
+}
