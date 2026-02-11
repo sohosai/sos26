@@ -74,7 +74,7 @@ export function EditableCell<TData extends RowData>({
 				ref={inputRef}
 				className={styles.input}
 				inputMode={inputType === "number" ? "numeric" : undefined}
-				value={value as string}
+				value={String(value)}
 				size={Math.max(String(value).length, 1)}
 				data-editing={isEditing}
 				data-focused={isFocused}

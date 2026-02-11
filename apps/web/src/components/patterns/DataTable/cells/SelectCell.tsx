@@ -8,7 +8,7 @@ export function SelectCell<TData extends RowData>({
 	table,
 }: CellContext<TData, unknown>) {
 	const initialValue = getValue() as string;
-	const editable = column.columnDef.meta?.editable ?? true;
+	const editable = column.columnDef.meta?.editable ?? false;
 	const options = column.columnDef.meta?.options ?? [];
 
 	if (!editable) {

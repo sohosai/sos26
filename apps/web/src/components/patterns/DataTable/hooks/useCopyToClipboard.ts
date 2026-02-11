@@ -81,7 +81,7 @@ export function useCopyToClipboard<TData extends RowData>(
 			const selectedColIndices = collectColumnIndices(rowCols);
 			const tsv = buildTsv(table, rowCols, selectedColIndices);
 
-			navigator.clipboard.writeText(tsv);
+			navigator.clipboard.writeText(tsv).catch(() => {});
 		};
 
 		document.addEventListener("keydown", handleKeyDown);

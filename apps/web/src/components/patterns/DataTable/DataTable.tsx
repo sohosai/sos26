@@ -256,14 +256,7 @@ export function DataTable<T extends RowData>({
 				</Table.Body>
 			</Table.Root>
 			{f.selection && selected.size > 0 && (
-				<Box
-					mt="3"
-					p="3"
-					style={{
-						background: "var(--gray-a3)",
-						borderRadius: "var(--radius-2)",
-					}}
-				>
+				<Box mt="3" p="3" className={styles.selectionInfo}>
 					<Text size="2" weight="bold">
 						選択中: {selected.size}セル
 					</Text>

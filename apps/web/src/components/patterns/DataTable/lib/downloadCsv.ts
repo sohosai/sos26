@@ -36,5 +36,5 @@ export function downloadCsv<T>(table: Table<T>) {
 	a.href = url;
 	a.download = "table.csv";
 	a.click();
-	URL.revokeObjectURL(url);
+	setTimeout(() => URL.revokeObjectURL(url), 10000);
 }

@@ -97,7 +97,10 @@ const userColumns = [
 	userColumnHelper.accessor("department", {
 		header: "部署",
 		cell: SelectCell,
-		meta: { options: ["営業部", "開発部", "人事部", "総務部", "経理部"] },
+		meta: {
+			editable: true,
+			options: ["営業部", "開発部", "人事部", "総務部", "経理部"],
+		},
 	}),
 ];
 
@@ -175,7 +178,7 @@ const productColumns = [
 	productColumnHelper.accessor("category", {
 		header: "カテゴリ",
 		cell: SelectCell,
-		meta: { options: ["家電", "文房具", "家具", "食品"] },
+		meta: { editable: true, options: ["家電", "文房具", "家具", "食品"] },
 	}),
 ];
 
