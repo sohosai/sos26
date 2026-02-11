@@ -14,7 +14,10 @@
   "dependencies": {
     "@radix-ui/themes": "^3.2.1",
     "@sos26/shared": "workspace:*",
+    "@tabler/icons-react": "^3.36.1",
     "@tanstack/react-router": "^1.147.1",
+    "@tanstack/react-table": "^8.21.3",
+    "boring-avatars": "^1.11.2",
     "firebase": "^12.8.0",
     "ky": "^1.14.2",
     "react": "^19.2.0",
