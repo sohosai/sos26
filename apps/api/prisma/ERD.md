@@ -25,14 +25,43 @@ erDiagram
 }
 "User" {
   String id PK
-  String firebaseUid UK
+  String firebaseUid
   String email UK
-  String firstName
-  String lastName
-  UserRole role
-  UserStatus status
+  String name
+  String namePhonetic
+  String telephoneNumber
+  DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
+}
+"Project" {
+  String id PK
+  String name UK
+  String namePhonetic
+  String organizationName
+  String organizationNamePhonetic
+  ProjectType type
+  String ownerId FK
+  String subOwnerId FK "nullable"
+  String(6) inviteCode UK
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectMember" {
+  String id PK
+  String projectId FK
+  String userId FK
+  DateTime joinedAt
+  DateTime deletedAt "nullable"
+}
+"CommitteeMember" {
+  String id PK
+  String userId FK,UK
+  Boolean isExecutive
+  Bureau Bureau
+  DateTime joinedAt
+  DateTime deletedAt "nullable"
 }
 "PushSubscription" {
   String id PK
@@ -51,6 +80,11 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"Project" }o--|| "User" : owner
+"Project" }o--o| "User" : subOwner
+"ProjectMember" }o--|| "Project" : project
+"ProjectMember" }o--|| "User" : user
+"CommitteeMember" |o--|| "User" : user
 "UserPushSubscription" }o--|| "User" : user
 "UserPushSubscription" }o--|| "PushSubscription" : pushSubscription
 ```
@@ -83,12 +117,50 @@ Properties as follows:
 - `id`:
 - `firebaseUid`:
 - `email`:
-- `firstName`:
-- `lastName`:
-- `role`:
-- `status`:
+- `name`:
+- `namePhonetic`:
+- `telephoneNumber`:
+- `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
+
+### `Project`
+
+Properties as follows:
+
+- `id`:
+- `name`:
+- `namePhonetic`:
+- `organizationName`:
+- `organizationNamePhonetic`:
+- `type`:
+- `ownerId`:
+- `subOwnerId`:
+- `inviteCode`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectMember`
+
+Properties as follows:
+
+- `id`:
+- `projectId`:
+- `userId`:
+- `joinedAt`:
+- `deletedAt`:
+
+### `CommitteeMember`
+
+Properties as follows:
+
+- `id`:
+- `userId`:
+- `isExecutive`:
+- `Bureau`:
+- `joinedAt`:
+- `deletedAt`:
 
 ### `PushSubscription`
 
