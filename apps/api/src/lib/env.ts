@@ -16,6 +16,7 @@ const envSchema = z.object({
 			origins => origins.every(o => /^https?:\/\/.+/.test(o)),
 			"各オリジンは有効なURL（http://またはhttps://で始まる）である必要があります"
 		),
+
 	// SendGrid
 	SENDGRID_API_KEY: z.string().min(1),
 	EMAIL_FROM: z.email(),
@@ -34,6 +35,12 @@ const envSchema = z.object({
 
 	// 認証リンク用のアプリURL
 	APP_URL: z.url(),
+
+	// push通知
+	ADMIN_MAIL: z.email(),
+	VAPID_PUBLIC_KEY: z.string().min(1),
+	VAPID_PRIVATE_KEY: z.string().min(1),
+	PUSH_SEND_BATCH_SIZE: z.coerce.number().min(1).default(50),
 });
 
 export const env = envSchema.parse({
@@ -46,6 +53,10 @@ export const env = envSchema.parse({
 	FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
 	FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
 	APP_URL: process.env.APP_URL,
+	ADMIN_MAIL: process.env.ADMIN_MAIL,
+	VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
+	VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+	PUSH_SEND_BATCH_SIZE: process.env.PUSH_SEND_BATCH_SIZE,
 });
 
 export type Env = z.infer<typeof envSchema>;
