@@ -131,11 +131,7 @@ export function Sidebar({ collapsed, onToggle, menuItems }: SidebarProps) {
 				</IconButton>
 				{!collapsed && (
 					<Link to="/">
-						<img
-							src="/sos.svg"
-							alt="雙峰祭オンラインシステム"
-							className={styles.logo}
-						/>
+						<img src="/sos.svg" alt="雙峰祭オンラインシステム" height={42} />
 					</Link>
 				)}
 			</div>

@@ -24,15 +24,10 @@
 	.header {
 		display: flex;
 		align-items: center;
-		gap: var(--space-3);
+		gap: var(--space-4);
 		padding: var(--space-4);
 		border-bottom: 1px solid var(--gray-a5);
 		min-height: 64px;
-	}
-
-	.logo {
-		margin-left: var(--space-2);
-		height: 42px;
 	}
 
 	.nav {
