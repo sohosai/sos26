@@ -1,7 +1,8 @@
 .dialogContent {
-	max-width: 900px;
-	max-height: 90vh;
-	display: flex;
-	flex-direction: column;
-	padding: 50px;
+  max-width: 900px;
+  max-height: 90vh;
+
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-7);
 }

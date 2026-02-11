@@ -24,10 +24,11 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 		case "textarea":
 			return (
 				<div className={styles.preview}>
-					<textarea
+					{/* 入力用では textarea だが、こちらでは入力を行はないため、見た目のみ */}
+					<input
 						disabled
 						placeholder="回答欄（長文）"
-						className={styles.textarea}
+						className={styles.input}
 					/>
 				</div>
 			);

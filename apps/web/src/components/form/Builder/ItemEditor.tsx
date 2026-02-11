@@ -5,9 +5,9 @@ import {
 	CubeIcon,
 	DragHandleDots2Icon,
 	FileIcon,
+	InputIcon,
 	RadiobuttonIcon,
 	TextAlignLeftIcon,
-	TextIcon,
 	TrashIcon,
 } from "@radix-ui/react-icons";
 // import { DragHandleDots2Icon, CaretUpIcon, CaretDownIcon, TrashIcon, ChevronDownIcon } from "@radix-ui/react-icons";
@@ -19,10 +19,10 @@ import { AnswerFieldEditor } from "./AnswerFieldEditor";
 import styles from "./ItemEditor.module.scss";
 
 const FIELD_TYPES = [
-	{ value: "text", label: "記述式（短文）", icon: <TextIcon /> },
-	{ value: "textarea", label: "記述式（長文）", icon: <TextAlignLeftIcon /> },
-	{ value: "select", label: "ラジオボタン", icon: <RadiobuttonIcon /> },
-	{ value: "checkbox", label: "チェックボックス", icon: <CheckIcon /> },
+	{ value: "text", label: "テキスト（短文）", icon: <InputIcon /> },
+	{ value: "textarea", label: "テキスト（長文）", icon: <TextAlignLeftIcon /> },
+	{ value: "select", label: "単一選択", icon: <RadiobuttonIcon /> },
+	{ value: "checkbox", label: "複数選択", icon: <CheckIcon /> },
 	{ value: "number", label: "数値", icon: <CubeIcon /> },
 	{ value: "file", label: "ファイル", icon: <FileIcon /> },
 ] as const;
@@ -109,42 +109,55 @@ export function FormItemEditor({
 				<option value="number">数値</option>
 				<option value="file">ファイルのアップロード</option>
 			</select> */}
-				<div className={styles.selectWrapper}>
-					<Select.Root
-						value={item.type}
-						onValueChange={value =>
-							onUpdate(item.id, { type: value as FormItem["type"] })
-						}
-						open={isOpen}
-						onOpenChange={setIsOpen}
-					>
-						<Select.Trigger className={styles.trigger}>
-							<div className={styles.triggerContent}>
-								<span className={styles.icon}>{currentType?.icon}</span>
+				<div className={styles.formItemSetting}>
+					<div className={styles.selectWrapper}>
+						<Select.Root
+							value={item.type}
+							onValueChange={value =>
+								onUpdate(item.id, { type: value as FormItem["type"] })
+							}
+							open={isOpen}
+							onOpenChange={setIsOpen}
+						>
+							<Select.Trigger className={styles.trigger}>
+								<div className={styles.triggerContent}>
+									{/* 閉じている時にアイコンのみ */}
+									{/* <span className={styles.icon}>{currentType?.icon}</span>
 								{isOpen && (
 									<span className={styles.label}>{currentType?.label}</span>
-								)}
-							</div>
-						</Select.Trigger>
+								)} */}
+									{/* 閉じていてもテキストも表示 */}
+									<span className={styles.icon}>{currentType?.icon}</span>
+									<span className={styles.label}>{currentType?.label}</span>
+								</div>
+							</Select.Trigger>
 
-						<Select.Content
-							position="popper"
-							side="bottom"
-							align="start"
-							className={styles.content}
-						>
-							<Select.Group>
-								{FIELD_TYPES.map(type => (
-									<Select.Item key={type.value} value={type.value}>
-										<div className={styles.itemContent}>
-											<span className={styles.itemIcon}>{type.icon}</span>
-											<span>{type.label}</span>
-										</div>
-									</Select.Item>
-								))}
-							</Select.Group>
-						</Select.Content>
-					</Select.Root>
+							<Select.Content
+								position="popper"
+								side="bottom"
+								align="start"
+								className={styles.content}
+							>
+								<Select.Group>
+									{FIELD_TYPES.map(type => (
+										<Select.Item key={type.value} value={type.value}>
+											<div className={styles.itemContent}>
+												<span className={styles.itemIcon}>{type.icon}</span>
+												<span>{type.label}</span>
+											</div>
+										</Select.Item>
+									))}
+								</Select.Group>
+							</Select.Content>
+						</Select.Root>
+					</div>
+
+					<Switch
+						label={"必須"}
+						onCheckedChange={checked =>
+							onUpdate(item.id, { required: checked })
+						}
+					/>
 				</div>
 
 				{/* 解答欄 */}
@@ -154,14 +167,14 @@ export function FormItemEditor({
 				/>
 
 				{/* フッター */}
-				<div className={styles.footer}>
+				{/* <div className={styles.footer}>
 					<Switch
 						label={"必須"}
 						onCheckedChange={checked =>
 							onUpdate(item.id, { required: checked })
 						}
 					/>
-				</div>
+				</div> */}
 			</div>
 		</li>
 	);

@@ -1,41 +1,38 @@
 .preview {
-	margin-top: 12px;
+  margin-top: var(--space-3);
 }
 
-.input,
-.textarea {
-	width: 100%;
-	border: none;
-	border-bottom: 1px solid #dadce0;
-	padding: 6px 4px;
-	background: transparent;
-}
-
-.textarea {
-	min-height: 60px;
-	resize: none;
+.input{
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--gray-6);
+  padding: var(--space-2) var(--space-1);
+  background-color: transparent;
+  font-size: var(--font-size-3);
+  color: var(--gray-12);
 }
 
 .options {
-	margin-top: 12px;
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
+  margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .optionRow {
-	display: flex;
-	align-items: center;
-	gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .addOption {
-	margin-top: 8px;
-	background: none;
-	border: none;
-	color: #673ab7;
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	gap: 4px;
+  margin-top: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--accent-9);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-3);
 }
