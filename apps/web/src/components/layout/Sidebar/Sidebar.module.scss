@@ -30,6 +30,11 @@
 		min-height: 64px;
 	}
 
+	.projectSelector {
+		padding: var(--space-3);
+		border-bottom: 1px solid var(--gray-a5);
+	}
+
 	.nav {
 		flex: 1;
 		display: flex;

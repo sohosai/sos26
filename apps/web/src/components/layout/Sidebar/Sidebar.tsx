@@ -22,6 +22,7 @@ type SidebarProps = {
 	collapsed: boolean;
 	onToggle: () => void;
 	menuItems: MenuItem[];
+	projectSelector?: ReactNode;
 };
 
 const commonItems: MenuItem[] = [
@@ -56,7 +57,12 @@ function getRoleSwitchItem(pathname: string): MenuItem | null {
 	return null;
 }
 
-export function Sidebar({ collapsed, onToggle, menuItems }: SidebarProps) {
+export function Sidebar({
+	collapsed,
+	onToggle,
+	menuItems,
+	projectSelector,
+}: SidebarProps) {
 	const { location } = useRouterState();
 	const navigate = useNavigate();
 	const { signOut } = useAuthStore();
@@ -135,6 +141,10 @@ export function Sidebar({ collapsed, onToggle, menuItems }: SidebarProps) {
 					</Link>
 				)}
 			</div>
+
+			{projectSelector && (
+				<div className={styles.projectSelector}>{projectSelector}</div>
+			)}
 
 			<nav className={styles.nav}>{menuItems.map(renderItem)}</nav>
 

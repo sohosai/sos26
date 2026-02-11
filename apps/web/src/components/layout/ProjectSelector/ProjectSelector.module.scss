@@ -1,0 +1,104 @@
+.trigger {
+	all: unset;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	width: 100%;
+	padding: var(--space-2) var(--space-3);
+	border-radius: var(--radius-2);
+	cursor: pointer;
+	color: var(--gray-11);
+	transition: background-color 0.15s ease;
+
+	&:hover {
+		background-color: var(--gray-a4);
+	}
+}
+
+.triggerIcon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	flex-shrink: 0;
+}
+
+.triggerLabel {
+	flex: 1;
+	min-width: 0;
+	text-align: left;
+}
+
+.triggerChevron {
+	flex-shrink: 0;
+	color: var(--gray-9);
+}
+
+.content {
+	min-width: 220px;
+}
+
+.sectionLabel {
+	display: block;
+	padding: var(--space-1) var(--space-2);
+}
+
+.projectList {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	padding-bottom: var(--space-2);
+}
+
+.projectItem {
+	all: unset;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	width: 100%;
+	padding: var(--space-2);
+	border-radius: var(--radius-2);
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+
+	&:hover {
+		background-color: var(--gray-a4);
+	}
+
+	&.selected {
+		background-color: var(--accent-a3);
+		color: var(--accent-11);
+
+		&:hover {
+			background-color: var(--accent-a4);
+		}
+	}
+}
+
+.actions {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	padding-top: var(--space-2);
+}
+
+.actionItem {
+	all: unset;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	width: 100%;
+	padding: var(--space-2);
+	border-radius: var(--radius-2);
+	cursor: pointer;
+	color: var(--gray-11);
+	transition: background-color 0.15s ease;
+
+	&:hover {
+		background-color: var(--gray-a4);
+	}
+}
