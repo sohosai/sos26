@@ -48,7 +48,7 @@ export function EditableCell<TData extends RowData>({
 		setIsEditing(false);
 		isEditingRef.current = false;
 		setIsFocused(false);
-		table.options.meta?.updateData(row.index, column.id, committed);
+		table.options.meta?.updateData(row.original, column.id, committed);
 		return true;
 	};
 

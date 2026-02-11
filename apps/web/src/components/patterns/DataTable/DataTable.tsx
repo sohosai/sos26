@@ -43,7 +43,7 @@ type DataTableProps<T> = {
 	features?: DataTableFeatures;
 	initialSorting?: SortingState;
 	initialGlobalFilter?: string;
-	onCellEdit?: (rowIndex: number, columnId: string, value: unknown) => void;
+	onCellEdit?: (row: T, columnId: string, value: unknown) => void;
 };
 
 const sortIndicator: Record<string, string> = {
@@ -95,8 +95,8 @@ export function DataTable<T extends RowData>({
 		...(f.globalFilter ? { getFilteredRowModel: getFilteredRowModel() } : {}),
 		...(f.sorting ? { getSortedRowModel: getSortedRowModel() } : {}),
 		meta: {
-			updateData: (rowIndex: number, columnId: string, value: unknown) => {
-				onCellEdit?.(rowIndex, columnId, value);
+			updateData: (row: T, columnId: string, value: unknown) => {
+				onCellEdit?.(row, columnId, value);
 			},
 			clearSelection: f.selection ? clearSelection : undefined,
 		},

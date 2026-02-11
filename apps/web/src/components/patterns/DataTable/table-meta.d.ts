@@ -4,7 +4,7 @@ import type { ZodType } from "zod";
 declare module "@tanstack/react-table" {
 	// biome-ignore lint/correctness/noUnusedVariables: required by module augmentation signature
 	interface TableMeta<TData extends RowData> {
-		updateData: (rowIndex: number, columnId: string, value: unknown) => void;
+		updateData: (row: TData, columnId: string, value: unknown) => void;
 		clearSelection?: () => void;
 	}
 	// biome-ignore lint/correctness/noUnusedVariables: required by module augmentation signature

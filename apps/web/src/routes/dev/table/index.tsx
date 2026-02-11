@@ -424,11 +424,9 @@ function TableDemoPage() {
 			<DataTable
 				data={users}
 				columns={userColumns}
-				onCellEdit={(rowIndex, columnId, value) => {
+				onCellEdit={(row, columnId, value) => {
 					setUsers(prev =>
-						prev.map((row, i) =>
-							i === rowIndex ? { ...row, [columnId]: value } : row
-						)
+						prev.map(r => (r === row ? { ...r, [columnId]: value } : r))
 					);
 				}}
 			/>
@@ -443,11 +441,9 @@ function TableDemoPage() {
 				data={products}
 				columns={productColumns}
 				features={{ selection: false, copy: false }}
-				onCellEdit={(rowIndex, columnId, value) => {
+				onCellEdit={(row, columnId, value) => {
 					setProducts(prev =>
-						prev.map((row, i) =>
-							i === rowIndex ? { ...row, [columnId]: value } : row
-						)
+						prev.map(r => (r === row ? { ...r, [columnId]: value } : r))
 					);
 				}}
 			/>

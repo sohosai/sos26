@@ -22,7 +22,7 @@ export function SelectCell<TData extends RowData>({
 			options={options.map(o => ({ value: o, label: o }))}
 			value={initialValue}
 			onValueChange={val => {
-				table.options.meta?.updateData(row.index, column.id, val);
+				table.options.meta?.updateData(row.original, column.id, val);
 			}}
 		/>
 	);

@@ -94,7 +94,7 @@ function UserTable() {
 | `features` | `DataTableFeatures` | 全て `true` | 有効にする機能のフラグ |
 | `initialSorting` | `SortingState` | `[]` | 初期ソート状態 |
 | `initialGlobalFilter` | `string` | `""` | 初期検索文字列 |
-| `onCellEdit` | `(rowIndex, columnId, value) => void` | - | セル編集時のコールバック |
+| `onCellEdit` | `(row: T, columnId, value) => void` | - | セル編集時のコールバック。`row` は編集された行の元データオブジェクト |
 
 ### DataTableFeatures
 
@@ -259,11 +259,9 @@ columnHelper.accessor("tags", {
 <DataTable
 	data={users}
 	columns={userColumns}
-	onCellEdit={(rowIndex, columnId, value) => {
+	onCellEdit={(row, columnId, value) => {
 		setUsers(prev =>
-			prev.map((row, i) =>
-				i === rowIndex ? { ...row, [columnId]: value } : row
-			)
+			prev.map(r => (r === row ? { ...r, [columnId]: value } : r))
 		);
 	}}
 />
@@ -293,11 +291,9 @@ columnHelper.accessor("tags", {
 	data={products}
 	columns={productColumns}
 	features={{ selection: false, copy: false }}
-	onCellEdit={(rowIndex, columnId, value) => {
+	onCellEdit={(row, columnId, value) => {
 		setProducts(prev =>
-			prev.map((row, i) =>
-				i === rowIndex ? { ...row, [columnId]: value } : row
-			)
+			prev.map(r => (r === row ? { ...r, [columnId]: value } : r))
 		);
 	}}
 />
