@@ -1,14 +1,23 @@
 .header {
 	display: flex;
+	justify-content: space-between;
 	align-items: center;
-	height: 56px;
-	padding: 0 var(--space-4);
+	padding: var(--space-3) var(--space-5);
 	border-bottom: 1px solid var(--gray-a5);
 }
 
 .logo {
-	font-weight: 700;
-	font-size: var(--font-size-4);
-	color: var(--gray-12);
-	text-decoration: none;
+	display: flex;
+	align-items: center;
+}
+
+.nav {
+	display: flex;
+	gap: var(--space-4);
+
+	a {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1);
+	}
 }

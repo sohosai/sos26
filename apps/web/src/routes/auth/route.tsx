@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { Header } from "@/components/layout/Header/Header";
 import { useAuthStore } from "@/lib/auth";
+import styles from "./route.module.scss";
 
 /**
  * /auth 配下のレイアウトルート
@@ -18,9 +19,11 @@ export const Route = createFileRoute("/auth")({
 
 function AuthLayout() {
 	return (
-		<>
+		<div className={styles.layout}>
 			<Header />
-			<Outlet />
-		</>
+			<main className={styles.main}>
+				<Outlet />
+			</main>
+		</div>
 	);
 }

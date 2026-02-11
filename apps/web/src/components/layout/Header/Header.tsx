@@ -1,12 +1,36 @@
+import { Link as RadixLink, Text } from "@radix-ui/themes";
+import { IconExternalLink } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 import styles from "./Header.module.scss";
 
 export function Header() {
 	return (
 		<header className={styles.header}>
-			<Link to="/" className={styles.logo}>
-				sos26
-			</Link>
+			<div className={styles.logo}>
+				<Link to="/">
+					<img src="/sos.svg" alt="雙峰祭オンラインシステム" height={42} />
+				</Link>
+			</div>
+			<nav className={styles.nav}>
+				<RadixLink
+					href="https://docs.sohosai.com"
+					target="_blank"
+					rel="noopener noreferrer"
+				>
+					<Text size="2">
+						説明書 <IconExternalLink size={14} />
+					</Text>
+				</RadixLink>
+				<RadixLink
+					href="https://forms.sohosai.com/support"
+					target="_blank"
+					rel="noopener noreferrer"
+				>
+					<Text size="2">
+						サポートフォーム <IconExternalLink size={14} />
+					</Text>
+				</RadixLink>
+			</nav>
 		</header>
 	);
 }
