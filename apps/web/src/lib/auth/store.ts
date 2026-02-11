@@ -1,4 +1,4 @@
-import type { User } from "@sos26/shared";
+import type { CommitteeMember, User } from "@sos26/shared";
 import { ErrorCode } from "@sos26/shared";
 import type { User as FirebaseUser } from "firebase/auth";
 import { signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
@@ -9,9 +9,11 @@ import { isClientError } from "../http/error";
 
 type AuthStore = {
 	user: User | null;
+	committeeMember: CommitteeMember | null;
 	firebaseUser: FirebaseUser | null;
 	isLoading: boolean;
 	isLoggedIn: boolean;
+	isCommitteeMember: boolean;
 	isFirebaseAuthenticated: boolean;
 	signOut: () => Promise<void>;
 	refreshUser: () => Promise<void>;
@@ -19,14 +21,21 @@ type AuthStore = {
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
 	user: null,
+	committeeMember: null,
 	firebaseUser: null,
 	isLoading: false,
 	isLoggedIn: false,
+	isCommitteeMember: false,
 	isFirebaseAuthenticated: false,
 
 	signOut: async () => {
 		await firebaseSignOut(firebaseAuth);
-		set({ user: null, isLoggedIn: false });
+		set({
+			user: null,
+			committeeMember: null,
+			isLoggedIn: false,
+			isCommitteeMember: false,
+		});
 	},
 
 	refreshUser: async () => {
@@ -46,20 +55,40 @@ async function fetchAndSetUser(fbUser: FirebaseUser | null): Promise<void> {
 	});
 
 	if (!fbUser) {
-		useAuthStore.setState({ user: null, isLoggedIn: false });
+		useAuthStore.setState({
+			user: null,
+			committeeMember: null,
+			isLoggedIn: false,
+			isCommitteeMember: false,
+		});
 		return;
 	}
 
 	useAuthStore.setState({ isLoading: true });
 	try {
 		const response = await getMe();
-		useAuthStore.setState({ user: response.user, isLoggedIn: true });
+		useAuthStore.setState({
+			user: response.user,
+			committeeMember: response.committeeMember,
+			isLoggedIn: true,
+			isCommitteeMember: !!response.committeeMember,
+		});
 	} catch (err) {
 		if (isClientError(err) && err.code === ErrorCode.NOT_FOUND) {
-			useAuthStore.setState({ user: null, isLoggedIn: false });
+			useAuthStore.setState({
+				user: null,
+				committeeMember: null,
+				isLoggedIn: false,
+				isCommitteeMember: false,
+			});
 		} else {
 			console.error("[AuthStore] getMe failed", err);
-			useAuthStore.setState({ user: null, isLoggedIn: false });
+			useAuthStore.setState({
+				user: null,
+				committeeMember: null,
+				isLoggedIn: false,
+				isCommitteeMember: false,
+			});
 		}
 	} finally {
 		useAuthStore.setState({ isLoading: false });

@@ -1,2 +1,2 @@
-export { requireAuth, sanitizeReturnTo } from "./guard";
+export { requireAuth, requireCommitteeMember, sanitizeReturnTo } from "./guard";
 export { authReady, useAuthStore } from "./store";

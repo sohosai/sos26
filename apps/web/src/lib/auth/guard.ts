@@ -22,6 +22,22 @@ export async function requireAuth(pathname: string): Promise<void> {
 }
 
 /**
+ * 委員メンバー専用ルートの beforeLoad で使用する認可チェック関数
+ * requireAuth の後に呼び出すこと
+ *
+ * @throws redirect - 委員メンバーでない場合
+ */
+export async function requireCommitteeMember(): Promise<void> {
+	const { isCommitteeMember } = useAuthStore.getState();
+
+	if (!isCommitteeMember) {
+		throw redirect({
+			to: "/forbidden",
+		});
+	}
+}
+
+/**
  * returnTo パラメータのバリデーション
  * オープンリダイレクト脆弱性を防ぐため、内部パスのみ許可
  *
