@@ -14,7 +14,6 @@
 	height: 100vh;
 	background-color: var(--gray-1);
 	border-right: 1px solid var(--gray-a5);
-	overflow-y: auto;
 }
 
 .header {
@@ -24,6 +23,7 @@
 	padding: var(--space-4);
 	border-bottom: 1px solid var(--gray-a5);
 	min-height: 64px;
+	flex-shrink: 0;
 }
 
 .nav {
@@ -31,6 +31,8 @@
 	flex-direction: column;
 	gap: var(--space-4);
 	padding: var(--space-3);
+	overflow-y: auto;
+	flex: 1;
 }
 
 .section {
@@ -84,9 +86,8 @@
 }
 
 .main {
-	flex: 1;
 	margin-left: 240px;
 	padding: var(--space-6) var(--space-8);
 	min-height: 100vh;
-	max-width: calc(800px + 240px);
+	max-width: 800px;
 }
