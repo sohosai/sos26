@@ -1,4 +1,5 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { Heading, Text } from "@radix-ui/themes";
+import { createFileRoute } from "@tanstack/react-router";
 import { MarkdownRenderer } from "@/components/docs/MarkdownRenderer";
 import { getArticleBySlug } from "@/content/docs";
 
@@ -23,7 +24,16 @@ function DocArticlePage() {
 	const article = getArticleBySlug(slug);
 
 	if (!article) {
-		throw notFound();
+		return (
+			<div>
+				<Heading size="5" mb="2">
+					記事が見つかりません
+				</Heading>
+				<Text color="gray">
+					お探しの記事は存在しないか、移動した可能性があります。
+				</Text>
+			</div>
+		);
 	}
 
 	return <MarkdownRenderer content={article.content} />;
