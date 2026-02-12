@@ -6,7 +6,11 @@ import {
 	Outlet,
 	useRouterState,
 } from "@tanstack/react-router";
-import { articles } from "@/content/docs";
+import {
+	categoryLabels,
+	categoryOrder,
+	getArticlesByCategory,
+} from "@/content/docs";
 import styles from "./route.module.scss";
 
 export const Route = createFileRoute("/docs")({
@@ -25,25 +29,33 @@ function DocsLayout() {
 					</Link>
 				</div>
 				<nav className={styles.nav}>
-					<Text size="1" weight="bold" className={styles.navLabel}>
-						ドキュメント
-					</Text>
-					{articles.map(article => {
-						const active = location.pathname === `/docs/${article.slug}`;
+					{categoryOrder.map(category => {
+						const categoryArticles = getArticlesByCategory(category);
+						if (categoryArticles.length === 0) return null;
 						return (
-							<Link
-								key={article.slug}
-								to="/docs/$slug"
-								params={{ slug: article.slug }}
-								className={styles.link}
-							>
-								<div
-									className={`${styles.item} ${active ? styles.active : ""}`}
-								>
-									<IconFileText size={16} />
-									<Text size="2">{article.title}</Text>
-								</div>
-							</Link>
+							<div key={category} className={styles.section}>
+								<Text size="1" weight="bold" className={styles.navLabel}>
+									{categoryLabels[category]}
+								</Text>
+								{categoryArticles.map(article => {
+									const active = location.pathname === `/docs/${article.slug}`;
+									return (
+										<Link
+											key={article.slug}
+											to="/docs/$slug"
+											params={{ slug: article.slug }}
+											className={styles.link}
+										>
+											<div
+												className={`${styles.item} ${active ? styles.active : ""}`}
+											>
+												<IconFileText size={16} />
+												<Text size="2">{article.title}</Text>
+											</div>
+										</Link>
+									);
+								})}
+							</div>
 						);
 					})}
 				</nav>
