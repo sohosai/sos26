@@ -22,6 +22,7 @@ export type FormItem = {
 export type Form = {
 	id: string;
 	name: string;
+	description?: string;
 	items: FormItem[];
 	settings?: {
 		scheduledSendAt?: string;

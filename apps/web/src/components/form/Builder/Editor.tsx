@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TextArea } from "@/components/primitives";
 import type { Form, FormItem } from "../type";
 import styles from "./Editor.module.scss";
 import { FormItemList } from "./ItemList";
@@ -9,6 +10,10 @@ type Props = {
 
 export function FormEditor({ initialForm }: Props) {
 	const [formName, setFormName] = useState(initialForm.name);
+	const [formDescription, setFormDescription] = useState(
+		initialForm.description ?? ""
+	);
+
 	const [items, setItems] = useState<FormItem[]>(initialForm.items);
 
 	const addItem = () => {
@@ -40,6 +45,15 @@ export function FormEditor({ initialForm }: Props) {
 				value={formName}
 				onChange={e => setFormName(e.target.value)}
 				placeholder="フォーム名"
+			/>
+			<TextArea
+				label="フォームの説明"
+				placeholder="このフォームの目的や注意事項を記入してください"
+				value={formDescription}
+				onChange={setFormDescription}
+				rows={3}
+				resize="none"
+				autoGrow
 			/>
 			<div className={styles.items}>
 				<FormItemList
