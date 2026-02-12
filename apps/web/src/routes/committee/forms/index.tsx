@@ -40,7 +40,7 @@ function CommitteeIndexPage() {
 		<div style={{ padding: "2rem" }}>
 			<Heading size="6">申請</Heading>
 			<Text as="p" color="gray">
-				ようこそ、{user?.lastName} {user?.firstName} さん（{user?.role}）
+				ようこそ、{user?.name} さん
 			</Text>
 			{/* ここに申請を実装 */}
 			<Button onClick={handleCreate}>フォームを追加</Button>

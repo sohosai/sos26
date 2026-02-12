@@ -1,18 +1,13 @@
-import type { UserRole } from "@sos26/shared";
 import { redirect } from "@tanstack/react-router";
 import { authReady, useAuthStore } from "./store";
 
 /**
- * 保護ルートの beforeLoad で使用する認可チェック関数
+ * 保護ルートの beforeLoad で使用する認証チェック関数
  *
- * @param allowedRoles - 許可するロールの配列
  * @param pathname - 現在のパス（returnTo 用）
- * @throws redirect - 認証・認可に失敗した場合
+ * @throws redirect - 認証に失敗した場合
  */
-export async function requireAuth(
-	allowedRoles: readonly UserRole[],
-	pathname: string
-): Promise<void> {
+export async function requireAuth(pathname: string): Promise<void> {
 	await authReady();
 
 	const { user, isLoggedIn } = useAuthStore.getState();
@@ -24,15 +19,21 @@ export async function requireAuth(
 			search: { returnTo: pathname },
 		});
 	}
+}
 
-	// DISABLED ユーザー → 403
-	if (user.status !== "ACTIVE") {
-		throw redirect({ to: "/forbidden" });
-	}
+/**
+ * 委員メンバー専用ルートの beforeLoad で使用する認可チェック関数
+ * requireAuth の後に呼び出すこと
+ *
+ * @throws redirect - 委員メンバーでない場合
+ */
+export async function requireCommitteeMember(): Promise<void> {
+	const { isCommitteeMember } = useAuthStore.getState();
 
-	// ロール不足 → 403
-	if (!allowedRoles.includes(user.role)) {
-		throw redirect({ to: "/forbidden" });
+	if (!isCommitteeMember) {
+		throw redirect({
+			to: "/forbidden",
+		});
 	}
 }
 

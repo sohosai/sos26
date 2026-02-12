@@ -46,9 +46,8 @@ Firebase ID Token を検証し、ユーザー情報を Context に格納する�
 **処理フロー**:
 1. `Authorization: Bearer <token>` ヘッダーから ID Token を取得
 2. Firebase Admin SDK で検証
-3. `firebaseUid` から `User` テーブルを検索
-4. `status == ACTIVE` を確認
-5. ユーザー情報を `c.set("user", user)` に格納
+3. `firebaseUid` + `deletedAt: null` で `User` テーブルを検索
+4. ユーザー情報を `c.set("user", user)` に格納
 
 **使用例**:
 
@@ -66,8 +65,7 @@ route.get("/protected", requireAuth, async c => {
 |------|-------------|
 | Authorization ヘッダーがない | `UNAUTHORIZED` |
 | トークンが無効 | `UNAUTHORIZED` |
-| ユーザーが存在しない | `NOT_FOUND` |
-| ユーザーが無効化されている | `FORBIDDEN` |
+| ユーザーが存在しない（または削除済み） | `NOT_FOUND` |
 
 ### requireRegTicket
 
@@ -174,8 +172,9 @@ Set-Cookie: reg_ticket=<opaque>; HttpOnly; Path=/auth; SameSite=Lax; Max-Age=900
 **リクエスト**:
 ```json
 {
-  "firstName": "太郎",
-  "lastName": "筑波",
+  "name": "筑波太郎",
+  "namePhonetic": "ツクバタロウ",
+  "telephoneNumber": "090-1234-5678",
   "password": "password123"
 }
 ```
@@ -187,11 +186,12 @@ Set-Cookie: reg_ticket=<opaque>; HttpOnly; Path=/auth; SameSite=Lax; Max-Age=900
 {
   "user": {
     "id": "...",
+    "firebaseUid": "...",
     "email": "s1234567@u.tsukuba.ac.jp",
-    "firstName": "太郎",
-    "lastName": "筑波",
-    "role": "PLANNER",
-    "status": "ACTIVE",
+    "name": "筑波太郎",
+    "namePhonetic": "ツクバタロウ",
+    "telephoneNumber": "090-1234-5678",
+    "deletedAt": null,
     "createdAt": "...",
     "updatedAt": "..."
   }
@@ -217,7 +217,7 @@ Set-Cookie: reg_ticket=<opaque>; HttpOnly; Path=/auth; SameSite=Lax; Max-Age=900
 
 ### GET /auth/me
 
-現在のログインユーザーを取得します。
+現在のログインユーザーと委員メンバー情報を取得します。
 
 **リクエスト**:
 ```
@@ -229,23 +229,33 @@ Authorization: Bearer <Firebase ID Token>
 {
   "user": {
     "id": "...",
+    "firebaseUid": "...",
     "email": "s1234567@u.tsukuba.ac.jp",
-    "firstName": "太郎",
-    "lastName": "筑波",
-    "role": "PLANNER",
-    "status": "ACTIVE",
+    "name": "筑波太郎",
+    "namePhonetic": "ツクバタロウ",
+    "telephoneNumber": "090-1234-5678",
+    "deletedAt": null,
     "createdAt": "...",
     "updatedAt": "..."
+  },
+  "committeeMember": {
+    "id": "...",
+    "userId": "...",
+    "isExecutive": false,
+    "Bureau": "INFO_SYSTEM",
+    "joinedAt": "...",
+    "deletedAt": null
   }
 }
 ```
+
+`committeeMember` は委員メンバー未登録の場合 `null` を返します。
 
 **エラー**:
 | 条件 | エラーコード |
 |------|-------------|
 | ID Token が不正 | `UNAUTHORIZED` |
-| ユーザーが存在しない | `NOT_FOUND` |
-| ユーザーが無効化されている | `FORBIDDEN` |
+| ユーザーが存在しない（または削除済み） | `NOT_FOUND` |
 
 ---
 
@@ -256,8 +266,7 @@ Authorization: Bearer <Firebase ID Token>
 | コード | ステータス | 用途 |
 |--------|-----------|------|
 | `UNAUTHORIZED` | 401 | 認証が必要、ID Token が無効 |
-| `FORBIDDEN` | 403 | アカウントが無効化されている |
-| `NOT_FOUND` | 404 | ユーザーが存在しない |
+| `NOT_FOUND` | 404 | ユーザーが存在しない（または削除済み） |
 | `ALREADY_EXISTS` | 409 | Firebase に同一メールのアカウントが既存 |
 | `VALIDATION_ERROR` | 400 | 入力値が不正 |
 | `TOKEN_INVALID` | 400 | 検証トークン / reg_ticket が不正または期限切れ |

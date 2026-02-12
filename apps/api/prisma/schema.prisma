@@ -46,26 +46,154 @@ model RegTicket {
 // ユーザー
 // ─────────────────────────────────────────────────────────────
 
-enum UserStatus {
-  ACTIVE
-  DISABLED
-}
-
-enum UserRole {
-  PLANNER
-  COMMITTEE_MEMBER
-  COMMITTEE_ADMIN
-  SYSTEM_ADMIN
-}
-
 model User {
-  id          String     @id @default(cuid())
-  firebaseUid String     @unique
-  email       String     @unique
-  firstName   String
-  lastName    String
-  role        UserRole   @default(PLANNER)
-  status      UserStatus @default(ACTIVE)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id              String    @id @default(cuid())
+  firebaseUid     String
+  email           String    @unique
+  name            String
+  namePhonetic    String
+  telephoneNumber String
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // リレーション: 企画関連
+  ownedProjects    Project[]       @relation("ProjectOwner")
+  subOwnedProjects Project[]       @relation("ProjectSubOwner")
+  projectMembers   ProjectMember[]
+
+  // リレーション: 役割
+  committeeMember       CommitteeMember?
+  userPushSubscriptions UserPushSubscription[]
+
+  @@unique([firebaseUid, deletedAt])
+  @@unique([email, deletedAt])
+}
+
+enum ProjectType {
+  //ステージ企画
+  STAGE
+
+  //食品企画
+  FOOD
+
+  //普通企画
+  NORMAL
+}
+
+model Project {
+  id String @id @default(cuid())
+
+  //企画名
+  name         String @unique
+  namePhonetic String
+
+  //企画団体名
+  organizationName         String
+  organizationNamePhonetic String
+
+  //企画区分
+  type ProjectType
+
+  //責任者
+  ownerId String
+  owner   User   @relation("ProjectOwner", fields: [ownerId], references: [id])
+
+  //副責任者
+  subOwnerId String?
+  subOwner   User?   @relation("ProjectSubOwner", fields: [subOwnerId], references: [id])
+
+  //招待コード
+  inviteCode String @unique @db.Char(6)
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  projectMembers ProjectMember[]
+
+  @@index([ownerId])
+  @@index([subOwnerId])
+  @@index([deletedAt])
+}
+
+//プロジェクトに参加している責任者と副責任者以外のユーザーのTable
+model ProjectMember {
+  id        String @id @default(cuid())
+  projectId String
+  userId    String
+
+  project Project @relation(fields: [projectId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  joinedAt  DateTime  @default(now())
+  deletedAt DateTime?
+
+  @@unique([projectId, userId, deletedAt])
+  @@index([projectId])
+  @@index([userId])
+}
+
+enum Bureau {
+  FINANCE // 財務局 (zai)
+  GENERAL_AFFAIRS // 総務局 (som)
+  PUBLIC_RELATIONS // 広報宣伝局 (kosen)
+  EXTERNAL // 渉外局 (sg)
+  PROMOTION // 推進局 (ss)
+  PLANNING // 総合計画局 (sok)
+  STAGE_MANAGEMENT // ステージ管理局 (stage)
+  HQ_PLANNING // 本部企画局 (honki)
+  INFO_SYSTEM // 情報メディアシステム局 (jsys)
+  INFORMATION // 案内所運営部会 (au)
+}
+
+//実委人の管理用Table
+model CommitteeMember {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  //委員長
+  isExecutive Boolean @default(false)
+
+  //所属局
+  Bureau Bureau
+
+  joinedAt  DateTime  @default(now())
+  deletedAt DateTime?
+}
+
+// ─────────────────────────────────────────────────────────────
+// Push通知
+// ─────────────────────────────────────────────────────────────
+
+model PushSubscription {
+  id        String    @id @default(cuid())
+  endpoint  String    @unique
+  p256dh    String
+  auth      String
+  deletedAt DateTime?
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  users UserPushSubscription[]
+}
+
+// ─────────────────────────────────────────────────────────────
+// User と PushSubscription の中間テーブル
+// ─────────────────────────────────────────────────────────────
+
+model UserPushSubscription {
+  id                 String @id @default(cuid())
+  userId             String
+  pushSubscriptionId String
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pushSubscription PushSubscription @relation(fields: [pushSubscriptionId], references: [id], onDelete: Cascade)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@unique([userId, pushSubscriptionId])
+  @@index([userId])
 }

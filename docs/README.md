@@ -14,6 +14,7 @@
   - ルーティング: `docs/apps/web/routing.md`
   - API クライアント: `docs/apps/web/api-client.md`
   - コンポーネント: `docs/apps/web/components.md`
+  - DataTable: `docs/apps/web/data-table.md`
   - スタイリング: `docs/apps/web/styling.md`
   - 環境変数: `docs/apps/web/environment-variables.md`
 - API 開発
@@ -29,6 +30,7 @@
 - How-to
   - エンドポイント追加手順: `docs/how-to/add-endpoint.md`
   - エラーハンドリング: `docs/how-to/error-handling.md`
+  - ドキュメント記事追加: `docs/how-to/add-docs-article.md`
 - 設定・運用
   - Web 設定: `docs/apps/web/configuration.md`
 - コントリビュート: `CONTRIBUTING.md`

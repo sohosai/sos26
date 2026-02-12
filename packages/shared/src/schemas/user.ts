@@ -2,39 +2,31 @@ import { z } from "zod";
 import { tsukubaEmailSchema } from "../lib/email";
 
 /**
- * 名スキーマ
+ * 名前スキーマ
  */
-export const firstNameSchema = z.string().min(1, "名を入力してください");
-export type FirstName = z.infer<typeof firstNameSchema>;
+export const nameSchema = z.string().min(1, "名前を入力してください");
+export type Name = z.infer<typeof nameSchema>;
 
 /**
- * 姓スキーマ
+ * 名前（フリガナ）スキーマ
  */
-export const lastNameSchema = z.string().min(1, "姓を入力してください");
-export type LastName = z.infer<typeof lastNameSchema>;
+export const namePhoneticSchema = z
+	.string()
+	.min(1, "名前（フリガナ）を入力してください");
+export type NamePhonetic = z.infer<typeof namePhoneticSchema>;
 
 /**
- * ユーザーステータス
- * - ACTIVE: 有効
- * - DISABLED: 無効化
+ * 電話番号スキーマ
  */
-export const userStatusSchema = z.enum(["ACTIVE", "DISABLED"]);
-export type UserStatus = z.infer<typeof userStatusSchema>;
-
-/**
- * ユーザーロール
- * - PLANNER: 企画者
- * - COMMITTEE_MEMBER: 委員会メンバー
- * - COMMITTEE_ADMIN: 委員会管理者
- * - SYSTEM_ADMIN: システム管理者
- */
-export const userRoleSchema = z.enum([
-	"PLANNER",
-	"COMMITTEE_MEMBER",
-	"COMMITTEE_ADMIN",
-	"SYSTEM_ADMIN",
-]);
-export type UserRole = z.infer<typeof userRoleSchema>;
+export const telephoneNumberSchema = z
+	.string()
+	.min(10, "電話番号を正しく入力してください")
+	.max(15, "電話番号を正しく入力してください")
+	.regex(
+		/^\+?\d{1,4}?[-.\s]?\d{1,4}[-.\s]?\d{4,10}$/,
+		"電話番号の形式が不正です"
+	);
+export type TelephoneNumber = z.infer<typeof telephoneNumberSchema>;
 
 /**
  * ユーザースキーマ
@@ -44,10 +36,10 @@ export const userSchema = z.object({
 	id: z.cuid(),
 	firebaseUid: z.string().min(1).max(128),
 	email: tsukubaEmailSchema,
-	firstName: firstNameSchema,
-	lastName: lastNameSchema,
-	role: userRoleSchema,
-	status: userStatusSchema,
+	name: nameSchema,
+	namePhonetic: namePhoneticSchema,
+	telephoneNumber: telephoneNumberSchema,
+	deletedAt: z.coerce.date().nullable(),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 });

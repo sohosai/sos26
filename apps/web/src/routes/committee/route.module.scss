@@ -1,0 +1,10 @@
+.layout {
+	display: flex;
+	min-height: 100vh;
+}
+
+.main {
+	flex: 1;
+	padding: var(--space-6);
+	background-color: var(--gray-2);
+}

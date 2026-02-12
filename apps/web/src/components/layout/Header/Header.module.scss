@@ -1,0 +1,23 @@
+.header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: var(--space-3) var(--space-5);
+	border-bottom: 1px solid var(--gray-a5);
+}
+
+.logo {
+	display: flex;
+	align-items: center;
+}
+
+.nav {
+	display: flex;
+	gap: var(--space-4);
+
+	a {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1);
+	}
+}

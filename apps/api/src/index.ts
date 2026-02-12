@@ -2,7 +2,13 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { env } from "./lib/env";
 import { errorHandler } from "./lib/error-handler";
+import { initPush } from "./lib/push/client";
 import { authRoute } from "./routes/auth";
+import { committeeMemberRoute } from "./routes/committee-member";
+import { pushRoute } from "./routes/push";
+
+// Push 初期化
+initPush();
 
 const app = new Hono();
 
@@ -27,6 +33,8 @@ app.get("/", c => {
 
 // Mount routes
 app.route("/auth", authRoute);
+app.route("/committee-members", committeeMemberRoute);
+app.route("/push", pushRoute);
 
 export { app };
 

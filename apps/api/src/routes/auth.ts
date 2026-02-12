@@ -141,7 +141,8 @@ authRoute.post("/email/verify", async c => {
 // ─────────────────────────────────────────────────────────────
 authRoute.post("/register", requireRegTicket, async c => {
 	const body = await c.req.json().catch(() => ({}));
-	const { firstName, lastName, password } = registerRequestSchema.parse(body);
+	const { name, namePhonetic, telephoneNumber, password } =
+		registerRequestSchema.parse(body);
 	const regTicketRaw = c.get("regTicketRaw");
 
 	const tokenHash = hashToken(regTicketRaw);
@@ -219,10 +220,9 @@ authRoute.post("/register", requireRegTicket, async c => {
 			data: {
 				firebaseUid,
 				email,
-				firstName,
-				lastName,
-				role: "PLANNER",
-				status: "ACTIVE",
+				name,
+				namePhonetic,
+				telephoneNumber,
 			},
 		});
 
@@ -248,7 +248,12 @@ authRoute.post("/register", requireRegTicket, async c => {
 // ─────────────────────────────────────────────────────────────
 authRoute.get("/me", requireAuth, async c => {
 	const user = c.get("user");
-	return c.json({ user });
+
+	const committeeMember = await prisma.committeeMember.findFirst({
+		where: { userId: user.id, deletedAt: null },
+	});
+
+	return c.json({ user, committeeMember: committeeMember ?? null });
 });
 
 export { authRoute };

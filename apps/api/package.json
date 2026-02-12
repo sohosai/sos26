@@ -6,6 +6,7 @@
     "postinstall": "prisma generate",
     "dev": "bun run --hot src/index.ts",
     "build": "bun run typecheck && bun build src/index.ts --outdir dist --target bun",
+    "preview": "bun run dist/index.js",
     "typecheck": "tsc -b",
     "clean": "rm -rf dist .turbo",
     "test:run": "vitest run",
@@ -24,9 +25,11 @@
     "@sendgrid/mail": "^8.1.6",
     "@sos26/shared": "workspace:*",
     "firebase-admin": "^13.6.0",
-    "hono": "^4.11.3"
+    "hono": "^4.11.3",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@types/web-push": "^3.6.4",
     "prisma": "^6.8.2",
     "prisma-markdown": "^4.0.0"
   }

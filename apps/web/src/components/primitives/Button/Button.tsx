@@ -1,5 +1,10 @@
 import { Button as RadixButton } from "@radix-ui/themes";
-import type { ComponentProps, MouseEvent, ReactNode } from "react";
+import {
+	type ComponentProps,
+	forwardRef,
+	type MouseEvent,
+	type ReactNode,
+} from "react";
 import styles from "./Button.module.scss";
 
 /**
@@ -14,6 +19,7 @@ import styles from "./Button.module.scss";
  *
  * ## 付加している振る舞い
  * - type: デフォルト "button"（フォーム誤送信防止）
+ * - ref 転送対応（Radix の Popover.Trigger 等と合成可能）
  *
  * ## 例外を許す場合
  * - アイコンのみのボタンは IconButton を使う
@@ -45,29 +51,35 @@ type ButtonProps = {
 	onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
 };
 
-export function Button({
-	children,
-	intent = "primary",
-	size = "2",
-	loading = false,
-	disabled = false,
-	type = "button",
-	onClick,
-}: ButtonProps) {
-	const { variant, color } = intentMap[intent];
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+	function Button(
+		{
+			children,
+			intent = "primary",
+			size = "2",
+			loading = false,
+			disabled = false,
+			type = "button",
+			onClick,
+		},
+		ref
+	) {
+		const { variant, color } = intentMap[intent];
 
-	return (
-		<RadixButton
-			className={styles.button}
-			variant={variant}
-			color={color}
-			size={size}
-			loading={loading}
-			disabled={disabled}
-			type={type}
-			onClick={onClick}
-		>
-			{children}
-		</RadixButton>
-	);
-}
+		return (
+			<RadixButton
+				ref={ref}
+				className={styles.button}
+				variant={variant}
+				color={color}
+				size={size}
+				loading={loading}
+				disabled={disabled}
+				type={type}
+				onClick={onClick}
+			>
+				{children}
+			</RadixButton>
+		);
+	}
+);
