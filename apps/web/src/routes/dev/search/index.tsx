@@ -6,7 +6,7 @@ const searchSchema = z.object({
 	page: z.number().int().positive().default(1).catch(1),
 });
 
-export const Route = createFileRoute("/search/")({
+export const Route = createFileRoute("/dev/search/")({
 	validateSearch: searchSchema,
 	component: RouteComponent,
 });
@@ -24,7 +24,7 @@ function RouteComponent() {
 			<ul>
 				{/* 検索パラメータを直接指定 */}
 				<li>
-					<Link to="/search" search={{ q: "test", page: 2 }}>
+					<Link to="/dev/search" search={{ q: "test", page: 2 }}>
 						固定値: q=test, page=2
 					</Link>
 				</li>
@@ -32,7 +32,7 @@ function RouteComponent() {
 				{/* 前の値を引き継いで page だけ更新 */}
 				<li>
 					<Link
-						to="/search"
+						to="/dev/search"
 						search={prev => ({ ...prev, page: (prev.page ?? 1) + 1 })}
 					>
 						次のページへ (page={page} → {(page ?? 1) + 1})
@@ -42,7 +42,7 @@ function RouteComponent() {
 				{/* 前の値を引き継いで page だけ更新 */}
 				<li>
 					<Link
-						to="/search"
+						to="/dev/search"
 						search={prev => ({
 							...prev,
 							page: Math.max(1, (prev.page ?? 1) - 1),
@@ -54,7 +54,7 @@ function RouteComponent() {
 
 				{/* 検索キーワードをリセット */}
 				<li>
-					<Link to="/search" search={{ q: undefined, page: 1 }}>
+					<Link to="/dev/search" search={{ q: undefined, page: 1 }}>
 						検索をリセット
 					</Link>
 				</li>
