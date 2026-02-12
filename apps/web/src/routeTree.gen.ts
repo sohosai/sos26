@@ -10,13 +10,16 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProjectRouteRouteImport } from './routes/project/route'
+import { Route as DocsRouteRouteImport } from './routes/docs/route'
 import { Route as DevRouteRouteImport } from './routes/dev/route'
 import { Route as CommitteeRouteRouteImport } from './routes/committee/route'
 import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectIndexRouteImport } from './routes/project/index'
 import { Route as ForbiddenIndexRouteImport } from './routes/forbidden/index'
+import { Route as DocsIndexRouteImport } from './routes/docs/index'
 import { Route as CommitteeIndexRouteImport } from './routes/committee/index'
+import { Route as DocsSlugRouteImport } from './routes/docs/$slug'
 import { Route as DevTableIndexRouteImport } from './routes/dev/table/index'
 import { Route as DevSearchIndexRouteImport } from './routes/dev/search/index'
 import { Route as DevPushNotificationIndexRouteImport } from './routes/dev/pushNotification/index'
@@ -31,6 +34,11 @@ import { Route as AuthRegisterSetupIndexRouteImport } from './routes/auth/regist
 const ProjectRouteRoute = ProjectRouteRouteImport.update({
   id: '/project',
   path: '/project',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsRouteRoute = DocsRouteRouteImport.update({
+  id: '/docs',
+  path: '/docs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DevRouteRoute = DevRouteRouteImport.update({
@@ -63,10 +71,20 @@ const ForbiddenIndexRoute = ForbiddenIndexRouteImport.update({
   path: '/forbidden/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocsIndexRoute = DocsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DocsRouteRoute,
+} as any)
 const CommitteeIndexRoute = CommitteeIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CommitteeRouteRoute,
+} as any)
+const DocsSlugRoute = DocsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => DocsRouteRoute,
 } as any)
 const DevTableIndexRoute = DevTableIndexRouteImport.update({
   id: '/table/',
@@ -125,8 +143,11 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteRouteWithChildren
   '/committee': typeof CommitteeRouteRouteWithChildren
   '/dev': typeof DevRouteRouteWithChildren
+  '/docs': typeof DocsRouteRouteWithChildren
   '/project': typeof ProjectRouteRouteWithChildren
+  '/docs/$slug': typeof DocsSlugRoute
   '/committee/': typeof CommitteeIndexRoute
+  '/docs/': typeof DocsIndexRoute
   '/forbidden/': typeof ForbiddenIndexRoute
   '/project/': typeof ProjectIndexRoute
   '/auth/login/': typeof AuthLoginIndexRoute
@@ -144,7 +165,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteRouteWithChildren
   '/dev': typeof DevRouteRouteWithChildren
+  '/docs/$slug': typeof DocsSlugRoute
   '/committee': typeof CommitteeIndexRoute
+  '/docs': typeof DocsIndexRoute
   '/forbidden': typeof ForbiddenIndexRoute
   '/project': typeof ProjectIndexRoute
   '/auth/login': typeof AuthLoginIndexRoute
@@ -164,8 +187,11 @@ export interface FileRoutesById {
   '/auth': typeof AuthRouteRouteWithChildren
   '/committee': typeof CommitteeRouteRouteWithChildren
   '/dev': typeof DevRouteRouteWithChildren
+  '/docs': typeof DocsRouteRouteWithChildren
   '/project': typeof ProjectRouteRouteWithChildren
+  '/docs/$slug': typeof DocsSlugRoute
   '/committee/': typeof CommitteeIndexRoute
+  '/docs/': typeof DocsIndexRoute
   '/forbidden/': typeof ForbiddenIndexRoute
   '/project/': typeof ProjectIndexRoute
   '/auth/login/': typeof AuthLoginIndexRoute
@@ -186,8 +212,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/committee'
     | '/dev'
+    | '/docs'
     | '/project'
+    | '/docs/$slug'
     | '/committee/'
+    | '/docs/'
     | '/forbidden/'
     | '/project/'
     | '/auth/login/'
@@ -205,7 +234,9 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dev'
+    | '/docs/$slug'
     | '/committee'
+    | '/docs'
     | '/forbidden'
     | '/project'
     | '/auth/login'
@@ -224,8 +255,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/committee'
     | '/dev'
+    | '/docs'
     | '/project'
+    | '/docs/$slug'
     | '/committee/'
+    | '/docs/'
     | '/forbidden/'
     | '/project/'
     | '/auth/login/'
@@ -245,6 +279,7 @@ export interface RootRouteChildren {
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
   CommitteeRouteRoute: typeof CommitteeRouteRouteWithChildren
   DevRouteRoute: typeof DevRouteRouteWithChildren
+  DocsRouteRoute: typeof DocsRouteRouteWithChildren
   ProjectRouteRoute: typeof ProjectRouteRouteWithChildren
   ForbiddenIndexRoute: typeof ForbiddenIndexRoute
 }
@@ -256,6 +291,13 @@ declare module '@tanstack/react-router' {
       path: '/project'
       fullPath: '/project'
       preLoaderRoute: typeof ProjectRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs': {
+      id: '/docs'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof DocsRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dev': {
@@ -300,12 +342,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ForbiddenIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/docs/': {
+      id: '/docs/'
+      path: '/'
+      fullPath: '/docs/'
+      preLoaderRoute: typeof DocsIndexRouteImport
+      parentRoute: typeof DocsRouteRoute
+    }
     '/committee/': {
       id: '/committee/'
       path: '/'
       fullPath: '/committee/'
       preLoaderRoute: typeof CommitteeIndexRouteImport
       parentRoute: typeof CommitteeRouteRoute
+    }
+    '/docs/$slug': {
+      id: '/docs/$slug'
+      path: '/$slug'
+      fullPath: '/docs/$slug'
+      preLoaderRoute: typeof DocsSlugRouteImport
+      parentRoute: typeof DocsRouteRoute
     }
     '/dev/table/': {
       id: '/dev/table/'
@@ -432,6 +488,20 @@ const DevRouteRouteWithChildren = DevRouteRoute._addFileChildren(
   DevRouteRouteChildren,
 )
 
+interface DocsRouteRouteChildren {
+  DocsSlugRoute: typeof DocsSlugRoute
+  DocsIndexRoute: typeof DocsIndexRoute
+}
+
+const DocsRouteRouteChildren: DocsRouteRouteChildren = {
+  DocsSlugRoute: DocsSlugRoute,
+  DocsIndexRoute: DocsIndexRoute,
+}
+
+const DocsRouteRouteWithChildren = DocsRouteRoute._addFileChildren(
+  DocsRouteRouteChildren,
+)
+
 interface ProjectRouteRouteChildren {
   ProjectIndexRoute: typeof ProjectIndexRoute
 }
@@ -449,6 +519,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRouteRoute: AuthRouteRouteWithChildren,
   CommitteeRouteRoute: CommitteeRouteRouteWithChildren,
   DevRouteRoute: DevRouteRouteWithChildren,
+  DocsRouteRoute: DocsRouteRouteWithChildren,
   ProjectRouteRoute: ProjectRouteRouteWithChildren,
   ForbiddenIndexRoute: ForbiddenIndexRoute,
 }

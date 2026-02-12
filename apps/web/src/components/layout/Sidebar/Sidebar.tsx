@@ -30,7 +30,7 @@ const commonItems: MenuItem[] = [
 	{
 		label: "説明書",
 		icon: <IconHelp size={18} />,
-		to: "https://docs.sohosai.com",
+		to: "/docs",
 	},
 	{
 		label: "不具合報告",

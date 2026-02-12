@@ -1,0 +1,93 @@
+.layout {
+	display: flex;
+	min-height: 100vh;
+	background-color: var(--gray-2);
+}
+
+.sidebar {
+	position: fixed;
+	top: 0;
+	left: 0;
+	display: flex;
+	flex-direction: column;
+	width: 240px;
+	height: 100vh;
+	background-color: var(--gray-1);
+	border-right: 1px solid var(--gray-a5);
+
+	.header {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: var(--space-4);
+		border-bottom: 1px solid var(--gray-a5);
+		min-height: 64px;
+		flex-shrink: 0;
+	}
+
+	.nav {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-4);
+		padding: var(--space-3);
+		overflow-y: auto;
+		flex: 1;
+	}
+
+	.section {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+	}
+
+	.navLabel {
+		color: var(--gray-9);
+		padding: var(--space-2) var(--space-3);
+		letter-spacing: 0.05em;
+	}
+
+	.link {
+		all: unset;
+		box-sizing: border-box;
+		display: block;
+		width: 100%;
+		cursor: pointer;
+		color: inherit;
+
+		&:focus-visible > .item {
+			outline: 2px solid var(--accent-8);
+			outline-offset: -2px;
+		}
+	}
+
+	.item {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		padding: var(--space-2) var(--space-3);
+		border-radius: var(--radius-2);
+		color: var(--gray-11);
+		white-space: nowrap;
+		transition: background-color 0.15s ease;
+
+		&:hover {
+			background-color: var(--gray-a4);
+		}
+
+		&.active {
+			background-color: var(--accent-a3);
+			color: var(--accent-11);
+
+			&:hover {
+				background-color: var(--accent-a4);
+			}
+		}
+	}
+}
+
+.main {
+	margin-left: 240px;
+	padding: var(--space-6) var(--space-8);
+	min-height: 100vh;
+	max-width: 800px;
+}

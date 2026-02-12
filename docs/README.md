@@ -30,6 +30,7 @@
 - How-to
   - エンドポイント追加手順: `docs/how-to/add-endpoint.md`
   - エラーハンドリング: `docs/how-to/error-handling.md`
+  - ドキュメント記事追加: `docs/how-to/add-docs-article.md`
 - 設定・運用
   - Web 設定: `docs/apps/web/configuration.md`
 - コントリビュート: `CONTRIBUTING.md`

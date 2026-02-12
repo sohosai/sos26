@@ -12,14 +12,10 @@ export function Header() {
 				</Link>
 			</div>
 			<nav className={styles.nav}>
-				<RadixLink
-					href="https://docs.sohosai.com"
-					target="_blank"
-					rel="noopener noreferrer"
-				>
-					<Text size="2">
-						説明書 <IconExternalLink size={14} />
-					</Text>
+				<RadixLink asChild>
+					<Link to="/docs">
+						<Text size="2">説明書</Text>
+					</Link>
 				</RadixLink>
 				<RadixLink
 					href="https://forms.sohosai.com/support"
