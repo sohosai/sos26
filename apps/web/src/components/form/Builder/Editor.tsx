@@ -1,16 +1,17 @@
 import { Text } from "@radix-ui/themes";
 import { IconPlus } from "@tabler/icons-react";
 import { useState } from "react";
-import { TextArea } from "@/components/primitives";
+import { Button, TextArea } from "@/components/primitives";
 import type { Form, FormItem } from "../type";
 import styles from "./Editor.module.scss";
 import { FormItemList } from "./ItemList";
 
 type Props = {
 	initialForm: Form;
+	onSubmit?: (form: Form) => void;
 };
 
-export function FormEditor({ initialForm }: Props) {
+export function FormEditor({ initialForm, onSubmit }: Props) {
 	const [formName, setFormName] = useState(initialForm.name);
 	const [formDescription, setFormDescription] = useState(
 		initialForm.description ?? ""
@@ -51,6 +52,17 @@ export function FormEditor({ initialForm }: Props) {
 		setItems(prev => prev.filter(item => item.id !== id));
 	};
 
+	const handleSubmit = () => {
+		const form: Form = {
+			id: initialForm.id,
+			name: formName.trim(),
+			description: formDescription.trim() || undefined,
+			items,
+		};
+
+		onSubmit?.(form);
+	};
+
 	return (
 		<div className={styles.root}>
 			<input
@@ -83,6 +95,9 @@ export function FormEditor({ initialForm }: Props) {
 					項目を追加
 				</Text>
 			</button>
+			<Button type="button" onClick={handleSubmit}>
+				保存
+			</Button>
 		</div>
 	);
 }

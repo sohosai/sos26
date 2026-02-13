@@ -7,9 +7,10 @@ type Props = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	form: Form | null;
+	onSubmit?: (form: Form) => void;
 };
 
-export function FormEditDialog({ open, onOpenChange, form }: Props) {
+export function FormEditDialog({ open, onOpenChange, form, onSubmit }: Props) {
 	if (!form) return null;
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -18,7 +19,7 @@ export function FormEditDialog({ open, onOpenChange, form }: Props) {
 			</Dialog.Title>
 			<Dialog.Content className={styles.dialogContent}>
 				<div className={styles.scrollArea}>
-					<FormEditor initialForm={form} />
+					<FormEditor initialForm={form} onSubmit={onSubmit} />
 				</div>
 			</Dialog.Content>
 		</Dialog.Root>
