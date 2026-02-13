@@ -276,10 +276,10 @@ function addInquiry(params: {
 	projectAssignees: Person[];
 	committeeAssignees: Person[];
 }): Inquiry {
-	const hasProjectAssignee = params.projectAssignees.length > 0;
-	const hasCommitteeAssignee = params.committeeAssignees.length > 0;
 	const status: InquiryStatus =
-		hasProjectAssignee && hasCommitteeAssignee ? "in_progress" : "new";
+		params.committeeAssignees.length > 0 && params.projectAssignees.length > 0
+			? "in_progress"
+			: "new";
 
 	const inquiry: Inquiry = {
 		id: `inq-${nextId++}`,
@@ -335,11 +335,11 @@ function addAssignee(
 		const key = side === "project" ? "projectAssignees" : "committeeAssignees";
 		if (inq[key].some(p => p.id === person.id)) return inq;
 		const updated = { ...inq, [key]: [...inq[key], person] };
-		// 両方に担当者がいて新規なら対応中に
+		// 両方に担当者が揃ったら対応中に
 		if (
 			updated.status === "new" &&
-			updated.projectAssignees.length > 0 &&
-			updated.committeeAssignees.length > 0
+			updated.committeeAssignees.length > 0 &&
+			updated.projectAssignees.length > 0
 		) {
 			updated.status = "in_progress";
 		}
@@ -356,7 +356,16 @@ function removeAssignee(
 	inquiries = inquiries.map(inq => {
 		if (inq.id !== inquiryId) return inq;
 		const key = side === "project" ? "projectAssignees" : "committeeAssignees";
-		return { ...inq, [key]: inq[key].filter(p => p.id !== personId) };
+		const updated = { ...inq, [key]: inq[key].filter(p => p.id !== personId) };
+		// どちらかの担当者が空になったら新規に戻す（解決済み以外）
+		if (
+			updated.status !== "resolved" &&
+			(updated.committeeAssignees.length === 0 ||
+				updated.projectAssignees.length === 0)
+		) {
+			updated.status = "new";
+		}
+		return updated;
 	});
 	emitChange();
 }

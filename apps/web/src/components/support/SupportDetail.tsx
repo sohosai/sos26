@@ -173,7 +173,10 @@ export function SupportDetail({
 							この問い合わせは解決済みのため、コメントを追加できません。
 						</Text>
 						{viewerRole === "project" && (
-							<Button intent="secondary" onClick={() => onUpdateStatus("new")}>
+							<Button
+								intent="secondary"
+								onClick={() => onUpdateStatus("in_progress")}
+							>
 								再オープンする
 							</Button>
 						)}
@@ -397,15 +400,6 @@ export function SupportDetail({
 				{viewerRole === "committee" && (
 					<>
 						<Separator size="4" />
-						{inquiry.status === "new" && (
-							<Button
-								intent="secondary"
-								onClick={() => onUpdateStatus("in_progress")}
-							>
-								<IconLoader size={16} />
-								対応中にする
-							</Button>
-						)}
 						{inquiry.status !== "resolved" && (
 							<Button
 								intent="secondary"
@@ -416,8 +410,10 @@ export function SupportDetail({
 							</Button>
 						)}
 						{inquiry.status === "resolved" && (
-							<Button intent="secondary" onClick={() => onUpdateStatus("new")}>
-								<IconAlertCircle size={16} />
+							<Button
+								intent="secondary"
+								onClick={() => onUpdateStatus("in_progress")}
+							>
 								再オープンする
 							</Button>
 						)}
