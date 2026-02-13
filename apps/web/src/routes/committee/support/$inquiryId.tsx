@@ -47,13 +47,17 @@ function CommitteeSupportDetailPage() {
 			basePath="/committee/support"
 			committeeMembers={committeMembers}
 			projectMembers={projectMembers}
-			onUpdateStatus={status => updateStatus(inquiry.id, status)}
+			onUpdateStatus={status =>
+				updateStatus(inquiry.id, status, currentCommitteeUser)
+			}
 			onAddMessage={body =>
 				addMessage(inquiry.id, body, currentCommitteeUser, null)
 			}
-			onAddAssignee={(person, side) => addAssignee(inquiry.id, person, side)}
+			onAddAssignee={(person, side) =>
+				addAssignee(inquiry.id, person, side, currentCommitteeUser)
+			}
 			onRemoveAssignee={(personId, side) =>
-				removeAssignee(inquiry.id, personId, side)
+				removeAssignee(inquiry.id, personId, side, currentCommitteeUser)
 			}
 		/>
 	);

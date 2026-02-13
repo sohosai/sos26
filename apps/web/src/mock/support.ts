@@ -25,6 +25,21 @@ export type Message = {
 	parentId: string | null;
 };
 
+export type ActivityType =
+	| "assignee_added"
+	| "assignee_removed"
+	| "status_resolved"
+	| "status_reopened";
+
+export type Activity = {
+	id: string;
+	type: ActivityType;
+	createdAt: Date;
+	actor: Person;
+	target?: Person;
+	targetSide?: "project" | "committee";
+};
+
 export type Inquiry = {
 	id: string;
 	title: string;
@@ -37,6 +52,7 @@ export type Inquiry = {
 	committeeAssignees: Person[];
 	relatedForm: Form | null;
 	messages: Message[];
+	activities: Activity[];
 };
 
 // ─── マスタデータ ───
@@ -137,6 +153,16 @@ const initialInquiries: Inquiry[] = [
 				parentId: "msg-2",
 			},
 		],
+		activities: [
+			{
+				id: "act-1",
+				type: "assignee_added",
+				createdAt: new Date("2025-10-01T10:00:00"),
+				actor: cm1,
+				target: cm1,
+				targetSide: "committee",
+			},
+		],
 	},
 	{
 		id: "inq-2",
@@ -150,6 +176,7 @@ const initialInquiries: Inquiry[] = [
 		committeeAssignees: [],
 		relatedForm: form2,
 		messages: [],
+		activities: [],
 	},
 	{
 		id: "inq-3",
@@ -169,6 +196,16 @@ const initialInquiries: Inquiry[] = [
 				createdAt: new Date("2025-10-04T09:00:00"),
 				createdBy: cm2,
 				parentId: null,
+			},
+		],
+		activities: [
+			{
+				id: "act-2",
+				type: "assignee_added",
+				createdAt: new Date("2025-10-03T17:00:00"),
+				actor: cm2,
+				target: cm2,
+				targetSide: "committee",
 			},
 		],
 	},
@@ -192,6 +229,7 @@ const initialInquiries: Inquiry[] = [
 				parentId: null,
 			},
 		],
+		activities: [],
 	},
 	{
 		id: "inq-5",
@@ -227,6 +265,22 @@ const initialInquiries: Inquiry[] = [
 				parentId: "msg-7",
 			},
 		],
+		activities: [
+			{
+				id: "act-3",
+				type: "assignee_added",
+				createdAt: new Date("2025-09-25T14:00:00"),
+				actor: cm3,
+				target: cm3,
+				targetSide: "committee",
+			},
+			{
+				id: "act-4",
+				type: "status_resolved",
+				createdAt: new Date("2025-09-29T10:00:00"),
+				actor: cm3,
+			},
+		],
 	},
 	{
 		id: "inq-6",
@@ -240,6 +294,7 @@ const initialInquiries: Inquiry[] = [
 		committeeAssignees: [],
 		relatedForm: null,
 		messages: [],
+		activities: [],
 	},
 ];
 
@@ -248,6 +303,7 @@ const initialInquiries: Inquiry[] = [
 let inquiries = structuredClone(initialInquiries);
 let nextId = 7;
 let nextMsgId = 9;
+let nextActId = 5;
 const listeners = new Set<() => void>();
 
 function emitChange() {
@@ -293,16 +349,28 @@ function addInquiry(params: {
 		committeeAssignees: params.committeeAssignees,
 		relatedForm: params.relatedForm,
 		messages: [],
+		activities: [],
 	};
 	inquiries = [inquiry, ...inquiries];
 	emitChange();
 	return inquiry;
 }
 
-function updateStatus(inquiryId: string, status: InquiryStatus) {
-	inquiries = inquiries.map(inq =>
-		inq.id === inquiryId ? { ...inq, status } : inq
-	);
+function updateStatus(inquiryId: string, status: InquiryStatus, actor: Person) {
+	inquiries = inquiries.map(inq => {
+		if (inq.id !== inquiryId) return inq;
+		const activity: Activity = {
+			id: `act-${nextActId++}`,
+			type: status === "resolved" ? "status_resolved" : "status_reopened",
+			createdAt: new Date(),
+			actor,
+		};
+		return {
+			...inq,
+			status,
+			activities: [...inq.activities, activity],
+		};
+	});
 	emitChange();
 }
 
@@ -328,13 +396,26 @@ function addMessage(
 function addAssignee(
 	inquiryId: string,
 	person: Person,
-	side: "project" | "committee"
+	side: "project" | "committee",
+	actor: Person
 ) {
 	inquiries = inquiries.map(inq => {
 		if (inq.id !== inquiryId) return inq;
 		const key = side === "project" ? "projectAssignees" : "committeeAssignees";
 		if (inq[key].some(p => p.id === person.id)) return inq;
-		const updated = { ...inq, [key]: [...inq[key], person] };
+		const activity: Activity = {
+			id: `act-${nextActId++}`,
+			type: "assignee_added",
+			createdAt: new Date(),
+			actor,
+			target: person,
+			targetSide: side,
+		};
+		const updated = {
+			...inq,
+			[key]: [...inq[key], person],
+			activities: [...inq.activities, activity],
+		};
 		// 両方に担当者が揃ったら対応中に
 		if (
 			updated.status === "new" &&
@@ -351,12 +432,31 @@ function addAssignee(
 function removeAssignee(
 	inquiryId: string,
 	personId: string,
-	side: "project" | "committee"
+	side: "project" | "committee",
+	actor: Person
 ) {
 	inquiries = inquiries.map(inq => {
 		if (inq.id !== inquiryId) return inq;
 		const key = side === "project" ? "projectAssignees" : "committeeAssignees";
-		const updated = { ...inq, [key]: inq[key].filter(p => p.id !== personId) };
+		const removed = inq[key].find(p => p.id === personId);
+		const activities = removed
+			? [
+					...inq.activities,
+					{
+						id: `act-${nextActId++}`,
+						type: "assignee_removed" as const,
+						createdAt: new Date(),
+						actor,
+						target: removed,
+						targetSide: side,
+					},
+				]
+			: inq.activities;
+		const updated = {
+			...inq,
+			[key]: inq[key].filter(p => p.id !== personId),
+			activities,
+		};
 		// どちらかの担当者が空になったら新規に戻す（解決済み以外）
 		if (
 			updated.status !== "resolved" &&

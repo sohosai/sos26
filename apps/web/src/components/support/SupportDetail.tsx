@@ -22,7 +22,7 @@ import { useNavigate } from "@tanstack/react-router";
 import Avatar from "boring-avatars";
 import { useState } from "react";
 import { Button, TextArea } from "@/components/primitives";
-import type { Inquiry, InquiryStatus, Person } from "@/mock/support";
+import type { Activity, Inquiry, InquiryStatus, Person } from "@/mock/support";
 import styles from "./SupportDetail.module.scss";
 
 type SupportDetailProps = {
@@ -90,10 +90,15 @@ export function SupportDetail({
 		}
 	};
 
-	// 時系列で全メッセージをフラットに表示（GitHub issue 風）
-	const sortedMessages = [...inquiry.messages].sort(
-		(a, b) => a.createdAt.getTime() - b.createdAt.getTime()
-	);
+	// メッセージとアクティビティを時系列で統合（GitHub issue 風）
+	type TimelineEntry =
+		| { kind: "message"; data: (typeof inquiry.messages)[number] }
+		| { kind: "activity"; data: Activity };
+
+	const timelineEntries: TimelineEntry[] = [
+		...inquiry.messages.map(m => ({ kind: "message" as const, data: m })),
+		...inquiry.activities.map(a => ({ kind: "activity" as const, data: a })),
+	].sort((a, b) => a.data.createdAt.getTime() - b.data.createdAt.getTime());
 
 	return (
 		<div className={styles.layout}>
@@ -134,18 +139,23 @@ export function SupportDetail({
 						body={inquiry.body}
 					/>
 
-					{sortedMessages.map(msg => (
-						<TimelineItem
-							key={msg.id}
-							name={msg.createdBy.name}
-							role={msg.createdBy.role}
-							affiliation={
-								msg.createdBy.projectName ?? msg.createdBy.department
-							}
-							date={msg.createdAt}
-							body={msg.body}
-						/>
-					))}
+					{timelineEntries.map(entry =>
+						entry.kind === "message" ? (
+							<TimelineItem
+								key={entry.data.id}
+								name={entry.data.createdBy.name}
+								role={entry.data.createdBy.role}
+								affiliation={
+									entry.data.createdBy.projectName ??
+									entry.data.createdBy.department
+								}
+								date={entry.data.createdAt}
+								body={entry.data.body}
+							/>
+						) : (
+							<ActivityItem key={entry.data.id} activity={entry.data} />
+						)
+					)}
 				</div>
 
 				<Separator size="4" />
@@ -469,6 +479,42 @@ function TimelineItem({
 					{body}
 				</Text>
 			</div>
+		</div>
+	);
+}
+
+function getActivityText(activity: Activity): string {
+	const actor = activity.actor.name;
+	switch (activity.type) {
+		case "assignee_added": {
+			const side =
+				activity.targetSide === "committee" ? "実行委員会" : "企画側";
+			const target = activity.target?.name ?? "";
+			return actor === target
+				? `${actor} が ${side}の担当者になりました`
+				: `${actor} が ${target} を${side}の担当者に設定しました`;
+		}
+		case "assignee_removed": {
+			const side =
+				activity.targetSide === "committee" ? "実行委員会" : "企画側";
+			const target = activity.target?.name ?? "";
+			return actor === target
+				? `${actor} が ${side}の担当者から外れました`
+				: `${actor} が ${target} を${side}の担当者から外しました`;
+		}
+		case "status_resolved":
+			return `${actor} がこのお問い合わせを解決済みにしました`;
+		case "status_reopened":
+			return `${actor} がこのお問い合わせを再オープンしました`;
+	}
+}
+
+function ActivityItem({ activity }: { activity: Activity }) {
+	return (
+		<div className={styles.activityItem}>
+			<Text size="1" color="gray">
+				{getActivityText(activity)} — {formatDateTime(activity.createdAt)}
+			</Text>
 		</div>
 	);
 }
