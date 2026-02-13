@@ -1,3 +1,4 @@
+import { IconPlus } from "@tabler/icons-react";
 import { useState } from "react";
 import { TextArea } from "@/components/primitives";
 import type { Form, FormItem } from "../type";
@@ -65,7 +66,7 @@ export function FormEditor({ initialForm }: Props) {
 			</div>
 
 			<button className={styles.addButton} type="button" onClick={addItem}>
-				＋ 項目を追加
+				<IconPlus size={16} stroke={1.5} /> 項目を追加
 			</button>
 		</div>
 	);

@@ -1,5 +1,5 @@
-import { Cross1Icon, PlusIcon } from "@radix-ui/react-icons";
 import { IconButton, TextField } from "@radix-ui/themes";
+import { IconPlus, IconX } from "@tabler/icons-react";
 import type { FormItem } from "../type";
 import styles from "./AnswerFieldEditor.module.scss";
 
@@ -84,7 +84,7 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 									});
 								}}
 							>
-								<Cross1Icon />
+								<IconX size={16} stroke={1.5} />
 							</IconButton>
 						</div>
 					))}
@@ -104,7 +104,7 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 							})
 						}
 					>
-						<PlusIcon /> 選択肢を追加
+						<IconPlus size={16} stroke={1.5} /> 選択肢を追加
 					</button>
 				</div>
 			);

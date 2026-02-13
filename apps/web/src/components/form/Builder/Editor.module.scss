@@ -126,6 +126,9 @@
 }
 
 .addButton {
+	display: inline-flex;
+  align-items: center;
+	justify-content: center;
 	align-self: stretch;
 	padding: var(--space-3);
 	border-radius: var(--radius-3);

@@ -1,17 +1,16 @@
-import {
-	CaretDownIcon,
-	CaretUpIcon,
-	CheckIcon,
-	CubeIcon,
-	DragHandleDots2Icon,
-	FileIcon,
-	InputIcon,
-	RadiobuttonIcon,
-	TextAlignLeftIcon,
-	TrashIcon,
-} from "@radix-ui/react-icons";
-// import { DragHandleDots2Icon, CaretUpIcon, CaretDownIcon, TrashIcon, ChevronDownIcon } from "@radix-ui/react-icons";
 import { IconButton, Select } from "@radix-ui/themes";
+import {
+	IconAlignLeft,
+	IconCheckbox,
+	IconChevronDown,
+	IconChevronUp,
+	IconCircleDot,
+	IconFile,
+	IconGripHorizontal,
+	IconNumbers,
+	IconTextSize,
+	IconTrash,
+} from "@tabler/icons-react";
 import { useState } from "react";
 import { Switch } from "@/components/primitives";
 import type { FormItem } from "../type";
@@ -19,12 +18,20 @@ import { AnswerFieldEditor } from "./AnswerFieldEditor";
 import styles from "./ItemEditor.module.scss";
 
 const FIELD_TYPES = [
-	{ value: "text", label: "テキスト（短文）", icon: <InputIcon /> },
-	{ value: "textarea", label: "テキスト（長文）", icon: <TextAlignLeftIcon /> },
-	{ value: "select", label: "単一選択", icon: <RadiobuttonIcon /> },
-	{ value: "checkbox", label: "複数選択", icon: <CheckIcon /> },
-	{ value: "number", label: "数値", icon: <CubeIcon /> },
-	{ value: "file", label: "ファイル", icon: <FileIcon /> },
+	{
+		value: "text",
+		label: "テキスト（短文）",
+		icon: <IconTextSize size={18} />,
+	},
+	{
+		value: "textarea",
+		label: "テキスト（長文）",
+		icon: <IconAlignLeft size={18} />,
+	},
+	{ value: "select", label: "単一選択", icon: <IconCircleDot size={18} /> },
+	{ value: "checkbox", label: "複数選択", icon: <IconCheckbox size={18} /> },
+	{ value: "number", label: "数値", icon: <IconNumbers size={18} /> },
+	{ value: "file", label: "ファイル", icon: <IconFile size={18} /> },
 ] as const;
 
 type Props = {
@@ -68,20 +75,20 @@ export function FormItemEditor({
 					draggable
 					onDragStart={onDragStart}
 				>
-					<DragHandleDots2Icon />
+					<IconGripHorizontal size={18} />
 				</button>
 
 				<div className={styles.itemOperateButtons}>
 					<IconButton variant="ghost">
-						<CaretUpIcon />
+						<IconChevronUp size={18} />
 					</IconButton>
 
 					<IconButton variant="ghost">
-						<CaretDownIcon />
+						<IconChevronDown size={18} />
 					</IconButton>
 
 					<IconButton variant="ghost" onClick={() => onRemove(item.id)}>
-						<TrashIcon />
+						<IconTrash size={18} />
 					</IconButton>
 				</div>
 				{/* 質問 */}
@@ -93,22 +100,6 @@ export function FormItemEditor({
 				/>
 
 				{/* タイプ選択 */}
-				{/* <select
-				className={styles.typeSelect}
-				value={item.type}
-				onChange={e =>
-					onUpdate(item.id, {
-						type: e.target.value as FormItem["type"],
-					})
-				}
-			>
-				<option value="text">記述式（短文）</option>
-				<option value="textarea">記述式（長文）</option>
-				<option value="select">ラジオボタン</option>
-				<option value="checkbox">チェックボックス</option>
-				<option value="number">数値</option>
-				<option value="file">ファイルのアップロード</option>
-			</select> */}
 				<div className={styles.formItemSetting}>
 					<div className={styles.selectWrapper}>
 						<Select.Root
