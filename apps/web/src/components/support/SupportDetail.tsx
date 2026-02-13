@@ -336,7 +336,7 @@ function TimelineItem({
 					>
 						{role === "committee" ? "実行委員" : "企画者"}
 					</Badge>
-					<Text size="1" color="gray">
+					<Text size="1" color="gray" className={styles.timelineHeaderMeta}>
 						{formatDateTime(date)}
 					</Text>
 				</div>

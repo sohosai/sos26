@@ -75,12 +75,11 @@ function useFilteredInquiries(
 					return inq.status === "resolved";
 				});
 
-	const newCount = visible.filter(inq => inq.status === "new").length;
 	const myCount = visible.filter(
 		inq => inq.status !== "resolved" && isAssignedToMe(inq)
 	).length;
 
-	return { filtered, isAssignedToMe, newCount, myCount };
+	return { filtered, isAssignedToMe, myCount };
 }
 
 export function SupportList({
@@ -93,7 +92,7 @@ export function SupportList({
 	const [activeTab, setActiveTab] = useState<FilterTab>("mine");
 	const [searchQuery, setSearchQuery] = useState("");
 
-	const { filtered, isAssignedToMe, newCount, myCount } = useFilteredInquiries(
+	const { filtered, isAssignedToMe, myCount } = useFilteredInquiries(
 		inquiries,
 		currentUser,
 		viewerRole,
@@ -128,8 +127,6 @@ export function SupportList({
 						: "実行委員会への問い合わせを管理します"}
 				</Text>
 			</div>
-
-			{isCommittee && <CommitteeStats newCount={newCount} myCount={myCount} />}
 
 			<div className={styles.toolbar}>
 				{isCommittee && (
@@ -169,31 +166,6 @@ export function SupportList({
 }
 
 /* ─── サブコンポーネント ─── */
-
-function CommitteeStats({
-	newCount,
-	myCount,
-}: {
-	newCount: number;
-	myCount: number;
-}) {
-	return (
-		<div className={styles.statsRow}>
-			<div
-				className={`${styles.statCard} ${newCount > 0 ? styles.statNew : ""}`}
-			>
-				<IconAlertCircle size={18} />
-				<span className={styles.statLabel}>未対応</span>
-				<span className={styles.statValue}>{newCount}</span>
-			</div>
-			<div className={styles.statCard}>
-				<IconStarFilled size={18} />
-				<span className={styles.statLabel}>自分の担当</span>
-				<span className={styles.statValue}>{myCount}</span>
-			</div>
-		</div>
-	);
-}
 
 function CommitteeTabs({
 	activeTab,
