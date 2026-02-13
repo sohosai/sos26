@@ -21,7 +21,7 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import Avatar from "boring-avatars";
 import { useState } from "react";
-import { Button, Select, TextArea } from "@/components/primitives";
+import { Button, TextArea } from "@/components/primitives";
 import type { Inquiry, InquiryStatus, Person } from "@/mock/support";
 import styles from "./SupportDetail.module.scss";
 
@@ -168,9 +168,16 @@ export function SupportDetail({
 						</div>
 					</section>
 				) : (
-					<Text size="2" color="gray">
-						この問い合わせは解決済みのため、コメントを追加できません。
-					</Text>
+					<section className={styles.replySection}>
+						<Text size="2" color="gray">
+							この問い合わせは解決済みのため、コメントを追加できません。
+						</Text>
+						{viewerRole === "project" && (
+							<Button intent="secondary" onClick={() => onUpdateStatus("new")}>
+								再オープンする
+							</Button>
+						)}
+					</section>
 				)}
 			</div>
 
@@ -180,16 +187,10 @@ export function SupportDetail({
 					<Text size="2" weight="medium" color="gray">
 						対応状況
 					</Text>
-					<Select
-						options={[
-							{ value: "new", label: "新規" },
-							{ value: "in_progress", label: "対応中" },
-							{ value: "resolved", label: "解決済み" },
-						]}
-						value={inquiry.status}
-						onValueChange={v => onUpdateStatus(v as InquiryStatus)}
-						aria-label="対応状況"
-					/>
+					<Badge color={config.color} size="2" variant="soft">
+						<StatusIcon size={14} />
+						{config.label}
+					</Badge>
 				</div>
 
 				<Separator size="4" />
@@ -393,16 +394,33 @@ export function SupportDetail({
 					)}
 				</div>
 
-				{inquiry.status !== "resolved" && (
+				{viewerRole === "committee" && (
 					<>
 						<Separator size="4" />
-						<Button
-							intent="secondary"
-							onClick={() => onUpdateStatus("resolved")}
-						>
-							<IconCheck size={16} />
-							解決済みにする
-						</Button>
+						{inquiry.status === "new" && (
+							<Button
+								intent="secondary"
+								onClick={() => onUpdateStatus("in_progress")}
+							>
+								<IconLoader size={16} />
+								対応中にする
+							</Button>
+						)}
+						{inquiry.status !== "resolved" && (
+							<Button
+								intent="secondary"
+								onClick={() => onUpdateStatus("resolved")}
+							>
+								<IconCheck size={16} />
+								解決済みにする
+							</Button>
+						)}
+						{inquiry.status === "resolved" && (
+							<Button intent="secondary" onClick={() => onUpdateStatus("new")}>
+								<IconAlertCircle size={16} />
+								再オープンする
+							</Button>
+						)}
 					</>
 				)}
 			</aside>
