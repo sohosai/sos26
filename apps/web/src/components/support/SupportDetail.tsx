@@ -115,8 +115,10 @@ export function SupportDetail({
 						<Heading size="5">{inquiry.title}</Heading>
 					</div>
 					<Text size="2" color="gray">
-						{inquiry.createdBy.name} が {formatDateTime(inquiry.createdAt)}{" "}
-						に作成
+						{inquiry.createdBy.name}
+						{(inquiry.createdBy.projectName || inquiry.createdBy.department) &&
+							`（${inquiry.createdBy.projectName ?? inquiry.createdBy.department}）`}{" "}
+						が {formatDateTime(inquiry.createdAt)} に作成
 					</Text>
 				</header>
 
@@ -125,6 +127,9 @@ export function SupportDetail({
 					<TimelineItem
 						name={inquiry.createdBy.name}
 						role={inquiry.creatorRole}
+						affiliation={
+							inquiry.createdBy.projectName ?? inquiry.createdBy.department
+						}
 						date={inquiry.createdAt}
 						body={inquiry.body}
 					/>
@@ -134,6 +139,9 @@ export function SupportDetail({
 							key={msg.id}
 							name={msg.createdBy.name}
 							role={msg.createdBy.role}
+							affiliation={
+								msg.createdBy.projectName ?? msg.createdBy.department
+							}
 							date={msg.createdAt}
 							body={msg.body}
 						/>
@@ -293,6 +301,11 @@ export function SupportDetail({
 								>
 									<Avatar size={20} name={person.name} variant="beam" />
 									<Text size="2">{person.name}</Text>
+									{(person.projectName || person.department) && (
+										<Text size="1" color="gray">
+											{person.projectName ?? person.department}
+										</Text>
+									)}
 								</button>
 							))
 						)}
@@ -311,11 +324,13 @@ export function SupportDetail({
 function TimelineItem({
 	name,
 	role,
+	affiliation,
 	date,
 	body,
 }: {
 	name: string;
 	role: "project" | "committee";
+	affiliation?: string;
 	date: Date;
 	body: string;
 }) {
@@ -329,6 +344,11 @@ function TimelineItem({
 					<Text size="2" weight="medium">
 						{name}
 					</Text>
+					{affiliation && (
+						<Text size="1" color="gray">
+							{affiliation}
+						</Text>
+					)}
 					<Badge
 						size="1"
 						variant="soft"
@@ -374,7 +394,14 @@ function AssigneeList({
 					<span className={styles.sidebarAvatar} data-variant={variant}>
 						<Avatar size={20} name={p.name} variant="beam" />
 					</span>
-					<Text size="2">{p.name}</Text>
+					<div>
+						<Text size="2">{p.name}</Text>
+						{(p.projectName || p.department) && (
+							<Text size="1" color="gray" as="p">
+								{p.projectName ?? p.department}
+							</Text>
+						)}
+					</div>
 					{canEdit && (
 						<IconButton
 							variant="ghost"

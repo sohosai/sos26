@@ -6,6 +6,8 @@ export type Person = {
 	id: string;
 	name: string;
 	role: "project" | "committee";
+	projectName?: string;
+	department?: string;
 };
 
 export type Form = {
@@ -39,14 +41,49 @@ export type Inquiry = {
 
 // ─── マスタデータ ───
 
-const cm1: Person = { id: "cm-1", name: "田中 太郎", role: "committee" };
-const cm2: Person = { id: "cm-2", name: "佐藤 次郎", role: "committee" };
-const cm3: Person = { id: "cm-3", name: "鈴木 三郎", role: "committee" };
-const cm4: Person = { id: "cm-4", name: "高橋 四郎", role: "committee" };
+const cm1: Person = {
+	id: "cm-1",
+	name: "田中 太郎",
+	role: "committee",
+	department: "総務局",
+};
+const cm2: Person = {
+	id: "cm-2",
+	name: "佐藤 次郎",
+	role: "committee",
+	department: "推進局",
+};
+const cm3: Person = {
+	id: "cm-3",
+	name: "鈴木 三郎",
+	role: "committee",
+	department: "総合計画局",
+};
+const cm4: Person = {
+	id: "cm-4",
+	name: "高橋 四郎",
+	role: "committee",
+	department: "総務局",
+};
 
-const pm1: Person = { id: "pm-1", name: "山田 花子", role: "project" };
-const pm2: Person = { id: "pm-2", name: "中村 美咲", role: "project" };
-const pm3: Person = { id: "pm-3", name: "小林 健太", role: "project" };
+const pm1: Person = {
+	id: "pm-1",
+	name: "山田 花子",
+	role: "project",
+	projectName: "やきとり屋",
+};
+const pm2: Person = {
+	id: "pm-2",
+	name: "中村 美咲",
+	role: "project",
+	projectName: "クレープ工房",
+};
+const pm3: Person = {
+	id: "pm-3",
+	name: "小林 健太",
+	role: "project",
+	projectName: "写真部展示",
+};
 
 const form1: Form = { id: "form-1", name: "出展申請書" };
 const form2: Form = { id: "form-2", name: "電力使用申請" };

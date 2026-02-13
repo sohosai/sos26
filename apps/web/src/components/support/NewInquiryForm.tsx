@@ -197,6 +197,11 @@ export function NewInquiryForm({
 										>
 											<Avatar size={20} name={person.name} variant="beam" />
 											<Text size="2">{person.name}</Text>
+											{person.projectName && (
+												<Text size="1" color="gray">
+													{person.projectName}
+												</Text>
+											)}
 											{isSelected && <IconCheck size={14} />}
 										</button>
 									);
@@ -231,6 +236,11 @@ export function NewInquiryForm({
 											>
 												<Avatar size={20} name={person.name} variant="beam" />
 												<Text size="2">{person.name}</Text>
+												{person.department && (
+													<Text size="1" color="gray">
+														{person.department}
+													</Text>
+												)}
 												{isSelected && <IconCheck size={14} />}
 											</button>
 										);

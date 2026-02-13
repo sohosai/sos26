@@ -385,7 +385,14 @@ function InquiryCard({
 									.concat(inquiry.projectAssignees)
 									.slice(0, 3)
 									.map(p => (
-										<Tooltip key={p.id} content={p.name}>
+										<Tooltip
+											key={p.id}
+											content={
+												p.projectName || p.department
+													? `${p.name}（${p.projectName ?? p.department}）`
+													: p.name
+											}
+										>
 											<span className={styles.avatar}>
 												<Avatar size={20} name={p.name} variant="beam" />
 											</span>
