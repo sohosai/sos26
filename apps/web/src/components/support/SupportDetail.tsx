@@ -1,20 +1,21 @@
 import {
 	Badge,
-	Dialog,
 	Heading,
 	IconButton,
+	Popover,
+	TextField as RadixTextField,
 	Separator,
 	Text,
-	Tooltip,
 } from "@radix-ui/themes";
 import {
 	IconAlertCircle,
 	IconArrowLeft,
 	IconCheck,
+	IconChevronDown,
 	IconCircleCheck,
 	IconFileText,
 	IconLoader,
-	IconPlus,
+	IconSearch,
 	IconTrash,
 } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
@@ -62,10 +63,10 @@ export function SupportDetail({
 }: SupportDetailProps) {
 	const navigate = useNavigate();
 	const [replyText, setReplyText] = useState("");
-	const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-	const [assignDialogSide, setAssignDialogSide] = useState<
-		"project" | "committee"
-	>("committee");
+	const [committeePopoverOpen, setCommitteePopoverOpen] = useState(false);
+	const [projectPopoverOpen, setProjectPopoverOpen] = useState(false);
+	const [committeeSearchQuery, setCommitteeSearchQuery] = useState("");
+	const [projectSearchQuery, setProjectSearchQuery] = useState("");
 
 	const config = statusConfig[inquiry.status];
 	const StatusIcon = config.icon;
@@ -76,19 +77,18 @@ export function SupportDetail({
 		setReplyText("");
 	};
 
-	const openAssignDialog = (side: "project" | "committee") => {
-		setAssignDialogSide(side);
-		setAssignDialogOpen(true);
+	const toggleAssignee = (person: Person, side: "project" | "committee") => {
+		const assignees =
+			side === "committee"
+				? inquiry.committeeAssignees
+				: inquiry.projectAssignees;
+		const isAssigned = assignees.some(a => a.id === person.id);
+		if (isAssigned) {
+			onRemoveAssignee(person.id, side);
+		} else {
+			onAddAssignee(person, side);
+		}
 	};
-
-	const availableForAssign =
-		assignDialogSide === "committee"
-			? committeeMembers.filter(
-					m => !inquiry.committeeAssignees.some(a => a.id === m.id)
-				)
-			: projectMembers.filter(
-					m => !inquiry.projectAssignees.some(a => a.id === m.id)
-				);
 
 	// 時系列で全メッセージをフラットに表示（GitHub issue 風）
 	const sortedMessages = [...inquiry.messages].sort(
@@ -190,56 +190,182 @@ export function SupportDetail({
 
 				{/* 実行委員担当者 */}
 				<div className={styles.sidebarSection}>
-					<div className={styles.sidebarSectionHeader}>
-						<Text size="2" weight="medium" color="gray">
-							実行委員 担当者
-						</Text>
-						{viewerRole === "committee" && (
-							<Tooltip content="担当者を追加">
-								<IconButton
-									variant="ghost"
-									size="1"
-									onClick={() => openAssignDialog("committee")}
-								>
-									<IconPlus size={14} />
-								</IconButton>
-							</Tooltip>
-						)}
-					</div>
+					<Text size="2" weight="medium" color="gray">
+						実行委員 担当者
+					</Text>
 					<AssigneeList
 						assignees={inquiry.committeeAssignees}
 						variant="committee"
 						canEdit={viewerRole === "committee"}
 						onRemove={id => onRemoveAssignee(id, "committee")}
 					/>
+					{viewerRole === "committee" && (
+						<Popover.Root
+							open={committeePopoverOpen}
+							onOpenChange={o => {
+								setCommitteePopoverOpen(o);
+								if (!o) setCommitteeSearchQuery("");
+							}}
+						>
+							<Popover.Trigger>
+								<button type="button" className={styles.assignTrigger}>
+									<Text size="1" color="gray">
+										担当者を変更...
+									</Text>
+									<IconChevronDown size={14} />
+								</button>
+							</Popover.Trigger>
+							<Popover.Content
+								className={styles.assignPopover}
+								side="bottom"
+								align="start"
+							>
+								<div className={styles.assignSearch}>
+									<RadixTextField.Root
+										placeholder="検索..."
+										size="1"
+										value={committeeSearchQuery}
+										onChange={e => setCommitteeSearchQuery(e.target.value)}
+									>
+										<RadixTextField.Slot>
+											<IconSearch size={14} />
+										</RadixTextField.Slot>
+									</RadixTextField.Root>
+								</div>
+								<div className={styles.assignList}>
+									{committeeMembers
+										.filter(person => {
+											const q = committeeSearchQuery.toLowerCase();
+											if (!q) return true;
+											return (
+												person.name.toLowerCase().includes(q) ||
+												(person.department?.toLowerCase().includes(q) ?? false)
+											);
+										})
+										.map(person => {
+											const isAssigned = inquiry.committeeAssignees.some(
+												a => a.id === person.id
+											);
+											return (
+												<button
+													key={person.id}
+													type="button"
+													className={`${styles.assignDropdownOption} ${isAssigned ? styles.assignDropdownOptionSelected : ""}`}
+													onClick={() => toggleAssignee(person, "committee")}
+												>
+													<Avatar size={20} name={person.name} variant="beam" />
+													<div className={styles.assignDropdownOptionText}>
+														<Text size="2">{person.name}</Text>
+														{person.department && (
+															<Text size="1" color="gray">
+																{person.department}
+															</Text>
+														)}
+													</div>
+													{isAssigned && (
+														<IconCheck
+															size={14}
+															className={styles.assignDropdownOptionCheck}
+														/>
+													)}
+												</button>
+											);
+										})}
+								</div>
+							</Popover.Content>
+						</Popover.Root>
+					)}
 				</div>
 
 				<Separator size="4" />
 
 				{/* 企画側担当者 */}
 				<div className={styles.sidebarSection}>
-					<div className={styles.sidebarSectionHeader}>
-						<Text size="2" weight="medium" color="gray">
-							企画側 担当者
-						</Text>
-						{viewerRole === "committee" && (
-							<Tooltip content="担当者を追加">
-								<IconButton
-									variant="ghost"
-									size="1"
-									onClick={() => openAssignDialog("project")}
-								>
-									<IconPlus size={14} />
-								</IconButton>
-							</Tooltip>
-						)}
-					</div>
+					<Text size="2" weight="medium" color="gray">
+						企画側 担当者
+					</Text>
 					<AssigneeList
 						assignees={inquiry.projectAssignees}
 						variant="project"
 						canEdit={viewerRole === "committee"}
 						onRemove={id => onRemoveAssignee(id, "project")}
 					/>
+					{viewerRole === "committee" && (
+						<Popover.Root
+							open={projectPopoverOpen}
+							onOpenChange={o => {
+								setProjectPopoverOpen(o);
+								if (!o) setProjectSearchQuery("");
+							}}
+						>
+							<Popover.Trigger>
+								<button type="button" className={styles.assignTrigger}>
+									<Text size="1" color="gray">
+										担当者を変更...
+									</Text>
+									<IconChevronDown size={14} />
+								</button>
+							</Popover.Trigger>
+							<Popover.Content
+								className={styles.assignPopover}
+								side="bottom"
+								align="start"
+							>
+								<div className={styles.assignSearch}>
+									<RadixTextField.Root
+										placeholder="検索..."
+										size="1"
+										value={projectSearchQuery}
+										onChange={e => setProjectSearchQuery(e.target.value)}
+									>
+										<RadixTextField.Slot>
+											<IconSearch size={14} />
+										</RadixTextField.Slot>
+									</RadixTextField.Root>
+								</div>
+								<div className={styles.assignList}>
+									{projectMembers
+										.filter(person => {
+											const q = projectSearchQuery.toLowerCase();
+											if (!q) return true;
+											return (
+												person.name.toLowerCase().includes(q) ||
+												(person.projectName?.toLowerCase().includes(q) ?? false)
+											);
+										})
+										.map(person => {
+											const isAssigned = inquiry.projectAssignees.some(
+												a => a.id === person.id
+											);
+											return (
+												<button
+													key={person.id}
+													type="button"
+													className={`${styles.assignDropdownOption} ${isAssigned ? styles.assignDropdownOptionSelected : ""}`}
+													onClick={() => toggleAssignee(person, "project")}
+												>
+													<Avatar size={20} name={person.name} variant="beam" />
+													<div className={styles.assignDropdownOptionText}>
+														<Text size="2">{person.name}</Text>
+														{person.projectName && (
+															<Text size="1" color="gray">
+																{person.projectName}
+															</Text>
+														)}
+													</div>
+													{isAssigned && (
+														<IconCheck
+															size={14}
+															className={styles.assignDropdownOptionCheck}
+														/>
+													)}
+												</button>
+											);
+										})}
+								</div>
+							</Popover.Content>
+						</Popover.Root>
+					)}
 				</div>
 
 				<Separator size="4" />
@@ -274,47 +400,6 @@ export function SupportDetail({
 					</>
 				)}
 			</aside>
-
-			{/* 担当者追加ダイアログ */}
-			<Dialog.Root open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-				<Dialog.Content maxWidth="400px">
-					<Dialog.Title>
-						{assignDialogSide === "committee"
-							? "実行委員の担当者を追加"
-							: "企画側の担当者を追加"}
-					</Dialog.Title>
-					<div className={styles.assignDialog}>
-						{availableForAssign.length === 0 ? (
-							<Text size="2" color="gray">
-								追加できるメンバーがいません
-							</Text>
-						) : (
-							availableForAssign.map(person => (
-								<button
-									key={person.id}
-									type="button"
-									className={styles.assignOption}
-									onClick={() => {
-										onAddAssignee(person, assignDialogSide);
-										setAssignDialogOpen(false);
-									}}
-								>
-									<Avatar size={20} name={person.name} variant="beam" />
-									<Text size="2">{person.name}</Text>
-									{(person.projectName || person.department) && (
-										<Text size="1" color="gray">
-											{person.projectName ?? person.department}
-										</Text>
-									)}
-								</button>
-							))
-						)}
-					</div>
-					<Button intent="ghost" onClick={() => setAssignDialogOpen(false)}>
-						閉じる
-					</Button>
-				</Dialog.Content>
-			</Dialog.Root>
 		</div>
 	);
 }

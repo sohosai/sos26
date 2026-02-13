@@ -1,5 +1,16 @@
-import { Dialog, Text } from "@radix-ui/themes";
-import { IconCheck, IconFileText, IconX } from "@tabler/icons-react";
+import {
+	Dialog,
+	Popover,
+	TextField as RadixTextField,
+	Text,
+} from "@radix-ui/themes";
+import {
+	IconCheck,
+	IconChevronDown,
+	IconFileText,
+	IconSearch,
+	IconX,
+} from "@tabler/icons-react";
 import Avatar from "boring-avatars";
 import { useState } from "react";
 import { Button, TextArea, TextField } from "@/components/primitives";
@@ -42,6 +53,10 @@ export function NewInquiryForm({
 	const [selectedCommitteeAssignees, setSelectedCommitteeAssignees] = useState<
 		Person[]
 	>([]);
+	const [projectSearchQuery, setProjectSearchQuery] = useState("");
+	const [committeeSearchQuery, setCommitteeSearchQuery] = useState("");
+	const [projectPopoverOpen, setProjectPopoverOpen] = useState(false);
+	const [committeePopoverOpen, setCommitteePopoverOpen] = useState(false);
 
 	const reset = () => {
 		setTitle("");
@@ -49,6 +64,8 @@ export function NewInquiryForm({
 		setSelectedForm(null);
 		setSelectedProjectAssignees([]);
 		setSelectedCommitteeAssignees([]);
+		setProjectSearchQuery("");
+		setCommitteeSearchQuery("");
 	};
 
 	const handleSubmit = () => {
@@ -183,30 +200,102 @@ export function NewInquiryForm({
 							<Text size="1" color="gray">
 								この問い合わせに対応する企画側のメンバーを選択してください
 							</Text>
-							<div className={styles.assignGrid}>
-								{projectMembers.map(person => {
-									const isSelected = selectedProjectAssignees.some(
-										p => p.id === person.id
-									);
-									return (
-										<button
-											key={person.id}
-											type="button"
-											className={`${styles.assignCard} ${isSelected ? styles.assignCardSelected : ""}`}
-											onClick={() => toggleProjectAssignee(person)}
+							<Popover.Root
+								open={projectPopoverOpen}
+								onOpenChange={o => {
+									setProjectPopoverOpen(o);
+									if (!o) setProjectSearchQuery("");
+								}}
+							>
+								<Popover.Trigger>
+									<button type="button" className={styles.assignTrigger}>
+										<Text size="2" color="gray">
+											担当者を選択...
+										</Text>
+										<IconChevronDown size={16} />
+									</button>
+								</Popover.Trigger>
+								<Popover.Content
+									className={styles.assignPopover}
+									side="bottom"
+									align="start"
+								>
+									<div className={styles.assignSearch}>
+										<RadixTextField.Root
+											placeholder="検索..."
+											size="2"
+											value={projectSearchQuery}
+											onChange={e => setProjectSearchQuery(e.target.value)}
 										>
-											<Avatar size={20} name={person.name} variant="beam" />
-											<Text size="2">{person.name}</Text>
-											{person.projectName && (
-												<Text size="1" color="gray">
-													{person.projectName}
-												</Text>
-											)}
-											{isSelected && <IconCheck size={14} />}
-										</button>
-									);
-								})}
-							</div>
+											<RadixTextField.Slot>
+												<IconSearch size={14} />
+											</RadixTextField.Slot>
+										</RadixTextField.Root>
+									</div>
+									<div className={styles.assignList}>
+										{projectMembers
+											.filter(person => {
+												const q = projectSearchQuery.toLowerCase();
+												if (!q) return true;
+												return (
+													person.name.toLowerCase().includes(q) ||
+													(person.projectName?.toLowerCase().includes(q) ??
+														false)
+												);
+											})
+											.map(person => {
+												const isSelected = selectedProjectAssignees.some(
+													p => p.id === person.id
+												);
+												return (
+													<button
+														key={person.id}
+														type="button"
+														className={`${styles.assignOption} ${isSelected ? styles.assignOptionSelected : ""}`}
+														onClick={() => toggleProjectAssignee(person)}
+													>
+														<Avatar
+															size={20}
+															name={person.name}
+															variant="beam"
+														/>
+														<div className={styles.assignOptionText}>
+															<Text size="2">{person.name}</Text>
+															{person.projectName && (
+																<Text size="1" color="gray">
+																	{person.projectName}
+																</Text>
+															)}
+														</div>
+														{isSelected && (
+															<IconCheck
+																size={14}
+																className={styles.assignOptionCheck}
+															/>
+														)}
+													</button>
+												);
+											})}
+									</div>
+								</Popover.Content>
+							</Popover.Root>
+							{selectedProjectAssignees.length > 0 && (
+								<div className={styles.assignChips}>
+									{selectedProjectAssignees.map(person => (
+										<span key={person.id} className={styles.assignChip}>
+											<Avatar size={16} name={person.name} variant="beam" />
+											<Text size="1">{person.name}</Text>
+											<button
+												type="button"
+												className={styles.assignChipRemove}
+												onClick={() => toggleProjectAssignee(person)}
+											>
+												<IconX size={12} />
+											</button>
+										</span>
+									))}
+								</div>
+							)}
 						</div>
 					)}
 
@@ -220,32 +309,103 @@ export function NewInquiryForm({
 								あなた（{currentUser.name}
 								）は自動的に担当者になります
 							</Text>
-							<div className={styles.assignGrid}>
-								{committeeMembers
-									.filter(m => m.id !== currentUser.id)
-									.map(person => {
-										const isSelected = selectedCommitteeAssignees.some(
-											p => p.id === person.id
-										);
-										return (
+							<Popover.Root
+								open={committeePopoverOpen}
+								onOpenChange={o => {
+									setCommitteePopoverOpen(o);
+									if (!o) setCommitteeSearchQuery("");
+								}}
+							>
+								<Popover.Trigger>
+									<button type="button" className={styles.assignTrigger}>
+										<Text size="2" color="gray">
+											担当者を選択...
+										</Text>
+										<IconChevronDown size={16} />
+									</button>
+								</Popover.Trigger>
+								<Popover.Content
+									className={styles.assignPopover}
+									side="bottom"
+									align="start"
+								>
+									<div className={styles.assignSearch}>
+										<RadixTextField.Root
+											placeholder="検索..."
+											size="2"
+											value={committeeSearchQuery}
+											onChange={e => setCommitteeSearchQuery(e.target.value)}
+										>
+											<RadixTextField.Slot>
+												<IconSearch size={14} />
+											</RadixTextField.Slot>
+										</RadixTextField.Root>
+									</div>
+									<div className={styles.assignList}>
+										{committeeMembers
+											.filter(m => m.id !== currentUser.id)
+											.filter(person => {
+												const q = committeeSearchQuery.toLowerCase();
+												if (!q) return true;
+												return (
+													person.name.toLowerCase().includes(q) ||
+													(person.department?.toLowerCase().includes(q) ??
+														false)
+												);
+											})
+											.map(person => {
+												const isSelected = selectedCommitteeAssignees.some(
+													p => p.id === person.id
+												);
+												return (
+													<button
+														key={person.id}
+														type="button"
+														className={`${styles.assignOption} ${isSelected ? styles.assignOptionSelected : ""}`}
+														onClick={() => toggleCommitteeAssignee(person)}
+													>
+														<Avatar
+															size={20}
+															name={person.name}
+															variant="beam"
+														/>
+														<div className={styles.assignOptionText}>
+															<Text size="2">{person.name}</Text>
+															{person.department && (
+																<Text size="1" color="gray">
+																	{person.department}
+																</Text>
+															)}
+														</div>
+														{isSelected && (
+															<IconCheck
+																size={14}
+																className={styles.assignOptionCheck}
+															/>
+														)}
+													</button>
+												);
+											})}
+									</div>
+								</Popover.Content>
+							</Popover.Root>
+							{selectedCommitteeAssignees.length > 0 && (
+								<div className={styles.assignChips}>
+									{selectedCommitteeAssignees.map(person => (
+										<span key={person.id} className={styles.assignChip}>
+											<Avatar size={16} name={person.name} variant="beam" />
+											<Text size="1">{person.name}</Text>
 											<button
-												key={person.id}
 												type="button"
-												className={`${styles.assignCard} ${isSelected ? styles.assignCardSelected : ""}`}
+												className={styles.assignChipRemove}
 												onClick={() => toggleCommitteeAssignee(person)}
 											>
-												<Avatar size={20} name={person.name} variant="beam" />
-												<Text size="2">{person.name}</Text>
-												{person.department && (
-													<Text size="1" color="gray">
-														{person.department}
-													</Text>
-												)}
-												{isSelected && <IconCheck size={14} />}
+												<IconX size={12} />
 											</button>
-										);
-									})}
-							</div>
+										</span>
+									))}
+								</div>
+							)}
 						</div>
 					)}
 
