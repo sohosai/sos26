@@ -1,5 +1,6 @@
 export * from "./endpoints/auth";
 export * from "./endpoints/committee-member";
+export * from "./endpoints/file";
 export * from "./endpoints/push";
 export * from "./endpoints/types";
 export * from "./errors";
@@ -7,5 +8,6 @@ export * from "./lib/email";
 export * from "./lib/token";
 export * from "./schemas/auth";
 export * from "./schemas/committee-member";
+export * from "./schemas/file";
 export * from "./schemas/push";
 export * from "./schemas/user";

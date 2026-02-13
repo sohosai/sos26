@@ -80,6 +80,19 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"File" {
+  String id PK
+  String key UK
+  String fileName
+  String mimeType
+  Int size
+  Boolean isPublic
+  FileStatus status
+  String uploadedById FK
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
 "Project" }o--|| "User" : owner
 "Project" }o--o| "User" : subOwner
 "ProjectMember" }o--|| "Project" : project
@@ -87,6 +100,7 @@ erDiagram
 "CommitteeMember" |o--|| "User" : user
 "UserPushSubscription" }o--|| "User" : user
 "UserPushSubscription" }o--|| "PushSubscription" : pushSubscription
+"File" }o--|| "User" : uploadedBy
 ```
 
 ### `EmailVerification`
@@ -182,5 +196,21 @@ Properties as follows:
 - `id`:
 - `userId`:
 - `pushSubscriptionId`:
+- `createdAt`:
+- `updatedAt`:
+
+### `File`
+
+Properties as follows:
+
+- `id`:
+- `key`:
+- `fileName`:
+- `mimeType`:
+- `size`:
+- `isPublic`:
+- `status`:
+- `uploadedById`:
+- `deletedAt`:
 - `createdAt`:
 - `updatedAt`:

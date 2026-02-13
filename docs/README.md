@@ -26,6 +26,7 @@
   - Shared パッケージ: `packages/shared/README.md`
 - テスト全般: `docs/testing.md`
 - データベース: `docs/database.md`
+- ストレージ（ファイル管理）: `docs/storage.md`
 - 筑波大学メールアドレス仕様: `docs/university-email.md`
 - How-to
   - エンドポイント追加手順: `docs/how-to/add-endpoint.md`
