@@ -1,5 +1,7 @@
-import { IconButton, TextField } from "@radix-ui/themes";
+import { Checkbox, IconButton, Radio, Text } from "@radix-ui/themes";
 import { IconPlus, IconX } from "@tabler/icons-react";
+import { TextField } from "@/components/primitives";
+import { FileUploadField } from "../EachField/FileUploadField";
 import type { FormItem } from "../type";
 import styles from "./AnswerFieldEditor.module.scss";
 
@@ -13,10 +15,11 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 		case "text":
 			return (
 				<div className={styles.preview}>
-					<input
+					<TextField
 						disabled
 						placeholder="回答欄（短文）"
-						className={styles.input}
+						label={""}
+						aria-label="回答欄（短文）"
 					/>
 				</div>
 			);
@@ -24,11 +27,12 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 		case "textarea":
 			return (
 				<div className={styles.preview}>
-					{/* 入力用では textarea だが、こちらでは入力を行はないため、見た目のみ */}
-					<input
+					{/* 入力用では textarea だが、こちらでは入力を行わないため、見た目のみ */}
+					<TextField
 						disabled
 						placeholder="回答欄（長文）"
-						className={styles.input}
+						label={""}
+						aria-label="回答欄（長文）"
 					/>
 				</div>
 			);
@@ -36,14 +40,25 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 		case "number":
 			return (
 				<div className={styles.preview}>
-					<input type="number" disabled className={styles.input} />
+					<TextField
+						disabled
+						placeholder="回答欄（数値）"
+						label={""}
+						aria-label="回答欄（数値）"
+					/>
 				</div>
 			);
 
 		case "file":
 			return (
 				<div className={styles.preview}>
-					<input type="file" disabled />
+					<FileUploadField
+						label={""}
+						value={null}
+						onChange={() => {}}
+						required={false}
+						disabled
+					/>
 				</div>
 			);
 
@@ -51,28 +66,28 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 		case "checkbox":
 			return (
 				<div className={styles.options}>
-					{/* <Text size="2" weight="medium">
-						選択肢
-					</Text> */}
-
 					{(item.options ?? []).map((option, index) => (
 						<div key={option.id} className={styles.optionRow}>
-							<input
-								type={item.type === "select" ? "radio" : "checkbox"}
-								disabled
-							/>
-							<TextField.Root
+							{item.type === "select" ? (
+								<Radio disabled value={""} />
+							) : (
+								<Checkbox disabled />
+							)}
+							<TextField
 								value={option.label}
 								placeholder={`選択肢 ${index + 1}`}
-								onChange={e => {
+								onChange={value => {
 									const newOptions = [...(item.options ?? [])];
 									newOptions[index] = {
 										...option,
-										label: e.target.value,
+										label: value,
 									};
 									onUpdate({ options: newOptions });
 								}}
+								label={""}
+								aria-label={`選択肢 ${index + 1}`}
 							/>
+
 							<IconButton
 								variant="ghost"
 								color="red"
@@ -104,11 +119,11 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 							})
 						}
 					>
-						<IconPlus size={16} stroke={1.5} /> 選択肢を追加
+						<IconPlus size={16} stroke={1.5} />
+						<Text size="2">選択肢を追加</Text>
 					</button>
 				</div>
 			);
-
 		default:
 			return null;
 	}

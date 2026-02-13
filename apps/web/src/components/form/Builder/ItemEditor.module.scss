@@ -44,10 +44,10 @@
 }
 
 .questionInput {
-  font-size: var(--font-size-4);
+  font-size: var(--font-size-3);
   border: none;
   border-bottom: 1px solid var(--gray-6);
-  padding: var(--space-2) var(--space-1);
+  padding: var(--space-1);
   outline: none;
 
   &:focus {
@@ -69,15 +69,15 @@
   }
 }
 
-.footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-4);
-  margin-top: var(--space-2);
-  border-top: 1px solid var(--gray-5);
-  padding-top: var(--space-2);
-}
+// .footer {
+//   display: flex;
+//   align-items: center;
+//   justify-content: flex-end;
+//   gap: var(--space-4);
+//   margin-top: var(--space-2);
+//   border-top: 1px solid var(--gray-5);
+//   padding-top: var(--space-2);
+// }
 
 .required {
   display: flex;
@@ -139,7 +139,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: var(--font-size-3);
   flex: 1;
   min-width: 0;
 }

@@ -1,4 +1,4 @@
-import { Dialog } from "@radix-ui/themes";
+import { Dialog, VisuallyHidden } from "@radix-ui/themes";
 import type { Form } from "../type";
 import styles from "./EditDialog.module.scss";
 import { FormEditor } from "./Editor";
@@ -13,9 +13,13 @@ export function FormEditDialog({ open, onOpenChange, form }: Props) {
 	if (!form) return null;
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
+			<Dialog.Title>
+				<VisuallyHidden>Form Editor</VisuallyHidden>
+			</Dialog.Title>
 			<Dialog.Content className={styles.dialogContent}>
-				<Dialog.Title>フォーム編集</Dialog.Title>
-				<FormEditor initialForm={form} />
+				<div className={styles.scrollArea}>
+					<FormEditor initialForm={form} />
+				</div>
 			</Dialog.Content>
 		</Dialog.Root>
 	);

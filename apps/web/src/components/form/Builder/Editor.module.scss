@@ -6,7 +6,7 @@
 }
 
 .titleInput {
-	font-size: var(--font-size-6);
+	font-size: var(--font-size-5);
 	font-weight: var(--font-weight-medium);
 	padding: var(--space-3) var(--space-4);
 	border-radius: var(--radius-3);
@@ -80,7 +80,6 @@
 	border: 1px solid var(--gray-6);
 	background-color: var(--gray-1);
 	color: var(--gray-12);
-	font-size: var(--font-size-3);
 
 	&::placeholder {
 		color: var(--gray-9);
@@ -94,14 +93,12 @@
 	border: 1px solid var(--gray-6);
 	background-color: var(--gray-1);
 	color: var(--gray-12);
-	font-size: var(--font-size-2);
 }
 
 .required {
 	display: flex;
 	align-items: center;
 	gap: var(--space-1);
-	font-size: var(--font-size-1);
 	color: var(--gray-10);
 	white-space: nowrap;
 }
@@ -135,7 +132,6 @@
 	border: 1px dashed var(--gray-7);
 	background-color: var(--gray-1);
 	color: var(--accent-9);
-	font-size: var(--font-size-2);
 	cursor: pointer;
 
 	&:hover {

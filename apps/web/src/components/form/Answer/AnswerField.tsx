@@ -4,9 +4,9 @@ import {
 } from "@/components/patterns/CheckboxGroup";
 import { RadioGroup, RadioGroupItem } from "@/components/patterns/RadioGroup";
 import { TextArea, TextField } from "@/components/primitives";
+import { FileUploadField } from "../EachField/FileUploadField";
+import { NumberField } from "../EachField/NumberField";
 import type { FormAnswerValue, FormItem } from "../type";
-import { FileUploadField } from "./EachField/FileUploadField";
-import { NumberField } from "./EachField/NumberField";
 
 type FieldProps = {
 	item: FormItem;

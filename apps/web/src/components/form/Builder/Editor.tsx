@@ -1,3 +1,4 @@
+import { Text } from "@radix-ui/themes";
 import { IconPlus } from "@tabler/icons-react";
 import { useState } from "react";
 import { TextArea } from "@/components/primitives";
@@ -15,7 +16,18 @@ export function FormEditor({ initialForm }: Props) {
 		initialForm.description ?? ""
 	);
 
-	const [items, setItems] = useState<FormItem[]>(initialForm.items);
+	const [items, setItems] = useState<FormItem[]>(
+		initialForm.items && initialForm.items.length > 0
+			? initialForm.items
+			: [
+					{
+						id: crypto.randomUUID(),
+						label: "",
+						type: "text",
+						required: false,
+					},
+				]
+	);
 
 	const addItem = () => {
 		setItems(prev => [
@@ -45,7 +57,7 @@ export function FormEditor({ initialForm }: Props) {
 				className={styles.titleInput}
 				value={formName}
 				onChange={e => setFormName(e.target.value)}
-				placeholder="フォーム名"
+				placeholder="フォーム名を入力してください"
 			/>
 			<TextArea
 				label="フォームの説明"
@@ -66,7 +78,10 @@ export function FormEditor({ initialForm }: Props) {
 			</div>
 
 			<button className={styles.addButton} type="button" onClick={addItem}>
-				<IconPlus size={16} stroke={1.5} /> 項目を追加
+				<IconPlus size={16} stroke={1.5} />
+				<Text as="p" size="2">
+					項目を追加
+				</Text>
 			</button>
 		</div>
 	);

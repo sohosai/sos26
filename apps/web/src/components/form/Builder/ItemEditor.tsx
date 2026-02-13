@@ -1,4 +1,4 @@
-import { IconButton, Select } from "@radix-ui/themes";
+import { IconButton, Select, Text } from "@radix-ui/themes";
 import {
 	IconAlignLeft,
 	IconCheckbox,
@@ -119,7 +119,11 @@ export function FormItemEditor({
 								)} */}
 									{/* 閉じていてもテキストも表示 */}
 									<span className={styles.icon}>{currentType?.icon}</span>
-									<span className={styles.label}>{currentType?.label}</span>
+									<span className={styles.label}>
+										<Text as="span" size="2">
+											{currentType?.label}
+										</Text>
+									</span>
 								</div>
 							</Select.Trigger>
 
@@ -134,7 +138,9 @@ export function FormItemEditor({
 										<Select.Item key={type.value} value={type.value}>
 											<div className={styles.itemContent}>
 												<span className={styles.itemIcon}>{type.icon}</span>
-												<span>{type.label}</span>
+												<Text as="span" size="2">
+													{type.label}
+												</Text>
 											</div>
 										</Select.Item>
 									))}
