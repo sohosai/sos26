@@ -5,7 +5,6 @@ import {
 	IconCircleDot,
 	IconFileText,
 	IconLoader,
-	IconPlus,
 	IconSearch,
 	IconStar,
 	IconStarFilled,
@@ -116,10 +115,7 @@ export function SupportList({
 			<div className={styles.header}>
 				<div className={styles.titleRow}>
 					<Heading size="6">問い合わせ</Heading>
-					<Button onClick={onNewInquiry}>
-						<IconPlus size={16} />
-						新しい問い合わせ
-					</Button>
+					<Button onClick={onNewInquiry}>新しい問い合わせ</Button>
 				</div>
 				<Text size="2" color="gray">
 					{isCommittee
