@@ -1,0 +1,136 @@
+.form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-5);
+	margin-top: var(--space-4);
+}
+
+.formSection {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.formSectionHeader {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--space-2);
+	color: var(--gray-11);
+
+	div {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+	}
+}
+
+.formGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: var(--space-2);
+}
+
+.formCard {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-3);
+	border: 1px solid var(--gray-6);
+	border-radius: var(--radius-3);
+	background-color: var(--gray-1);
+	cursor: pointer;
+	color: var(--gray-12);
+	transition: border-color 0.15s, background-color 0.15s;
+	text-align: left;
+
+	&:hover {
+		border-color: var(--accent-7);
+		background-color: var(--accent-2);
+	}
+}
+
+.formCardSelected {
+	border-color: var(--accent-9);
+	background-color: var(--accent-3);
+}
+
+.formCardCheck {
+	margin-left: auto;
+	color: var(--accent-9);
+}
+
+.selectedFormBanner {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-3);
+	background-color: var(--accent-3);
+	border-radius: var(--radius-2);
+	color: var(--accent-11);
+}
+
+.clearForm {
+	margin-left: auto;
+	display: inline-flex;
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--gray-9);
+	padding: var(--space-1);
+	border-radius: var(--radius-2);
+
+	&:hover {
+		background-color: var(--gray-4);
+	}
+}
+
+.assignSection {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.assignGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	gap: var(--space-2);
+}
+
+.assignCard {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-3);
+	border: 1px solid var(--gray-6);
+	border-radius: var(--radius-2);
+	background: none;
+	cursor: pointer;
+	color: var(--gray-12);
+	text-align: left;
+	transition: border-color 0.15s, background-color 0.15s;
+
+	&:hover {
+		border-color: var(--accent-7);
+		background-color: var(--accent-2);
+	}
+}
+
+.assignCardSelected {
+	border-color: var(--accent-9);
+	background-color: var(--accent-3);
+}
+
+.infoBox {
+	padding: var(--space-3);
+	background-color: var(--gray-3);
+	border-radius: var(--radius-2);
+	border-left: 3px solid var(--gray-7);
+}
+
+.actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: var(--space-3);
+	margin-top: var(--space-4);
+}
