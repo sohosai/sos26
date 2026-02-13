@@ -151,21 +151,27 @@ export function SupportDetail({
 				<Separator size="4" />
 
 				{/* 返信フォーム */}
-				<section className={styles.replySection}>
-					<Heading size="3">コメントを追加</Heading>
-					<TextArea
-						label="返信内容"
-						placeholder="返信内容を入力..."
-						value={replyText}
-						onChange={setReplyText}
-						rows={3}
-					/>
-					<div className={styles.replyActions}>
-						<Button onClick={handleSubmitReply} disabled={!replyText.trim()}>
-							送信
-						</Button>
-					</div>
-				</section>
+				{inquiry.status !== "resolved" ? (
+					<section className={styles.replySection}>
+						<Heading size="3">コメントを追加</Heading>
+						<TextArea
+							label="返信内容"
+							placeholder="返信内容を入力..."
+							value={replyText}
+							onChange={setReplyText}
+							rows={3}
+						/>
+						<div className={styles.replyActions}>
+							<Button onClick={handleSubmitReply} disabled={!replyText.trim()}>
+								送信
+							</Button>
+						</div>
+					</section>
+				) : (
+					<Text size="2" color="gray">
+						この問い合わせは解決済みのため、コメントを追加できません。
+					</Text>
+				)}
 			</div>
 
 			{/* サイドバー */}
