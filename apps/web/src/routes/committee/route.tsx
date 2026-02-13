@@ -22,7 +22,9 @@ function CommitteeLayout() {
 				onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
 				menuItems={committeeMenuItems}
 			/>
-			<main className={styles.main}>
+			<main
+				className={`${styles.main} ${sidebarCollapsed ? styles.collapsed : ""}`}
+			>
 				<Outlet />
 			</main>
 		</div>

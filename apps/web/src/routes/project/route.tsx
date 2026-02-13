@@ -39,7 +39,9 @@ function ProjectLayout() {
 					/>
 				}
 			/>
-			<main className={styles.main}>
+			<main
+				className={`${styles.main} ${sidebarCollapsed ? styles.collapsed : ""}`}
+			>
 				<Outlet />
 			</main>
 		</div>
