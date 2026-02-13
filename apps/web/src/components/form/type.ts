@@ -6,6 +6,12 @@ export type FormItemType =
 	| "number"
 	| "file";
 
+export type FormAnswerValue = string | number | string[] | File | null;
+
+export type FormAnswers = {
+	[itemId: string]: FormAnswerValue;
+};
+
 export type FormItemOption = {
 	id: string;
 	label: string;
