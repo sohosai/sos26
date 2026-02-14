@@ -19,7 +19,7 @@ const FIELD_TYPES = [
 	{ value: "checkbox", label: "複数選択" },
 	{ value: "number", label: "数値" },
 	{ value: "file", label: "ファイル" },
-] as const;
+];
 
 type Props = {
 	item: FormItem;
@@ -79,46 +79,14 @@ export function FormItemEditor({
 
 						{/* タイプ選択 */}
 						<div className={styles.formItemSetting}>
-							<div className={styles.selectWrapper}>
-								<Select.Root
-									value={item.type}
-									onValueChange={value =>
-										onUpdate(item.id, { type: value as FormItem["type"] })
-									}
-									open={isOpen}
-									onOpenChange={setIsOpen}
-								>
-									<Select.Trigger className={styles.trigger}>
-										<div className={styles.triggerContent}>
-											<span className={styles.icon}>{currentType?.icon}</span>
-											<span className={styles.label}>
-												<Text as="span" size="2">
-													{currentType?.label}
-												</Text>
-											</span>
-										</div>
-									</Select.Trigger>
-									<Select.Content
-										position="popper"
-										side="bottom"
-										align="start"
-										className={styles.content}
-									>
-										<Select.Group>
-											{FIELD_TYPES.map(type => (
-												<Select.Item key={type.value} value={type.value}>
-													<div className={styles.itemContent}>
-														<span className={styles.itemIcon}>{type.icon}</span>
-														<Text as="span" size="2">
-															{type.label}
-														</Text>
-													</div>
-												</Select.Item>
-											))}
-										</Select.Group>
-									</Select.Content>
-								</Select.Root>
-							</div>
+							<Select
+								options={FIELD_TYPES}
+								value={item.type}
+								onValueChange={value =>
+									onUpdate(item.id, { type: value as FormItem["type"] })
+								}
+								aria-label="フィールドタイプ"
+							/>
 
 							<Switch
 								label="必須"
