@@ -1,4 +1,4 @@
-import { Dialog, Text } from "@radix-ui/themes";
+import { Dialog, Text, VisuallyHidden } from "@radix-ui/themes";
 import { IconCheck } from "@tabler/icons-react";
 import { useState } from "react";
 import { Button } from "@/components/primitives";
@@ -66,6 +66,9 @@ export function FormViewer({ form, onSubmit, onClose }: Props) {
 				}}
 			>
 				<Dialog.Content>
+					<VisuallyHidden>
+						<Dialog.Title>送信完了</Dialog.Title>
+					</VisuallyHidden>
 					<div className={styles.complete}>
 						<span className={styles.completeHeader}>
 							<IconCheck size={24} />
@@ -93,25 +96,6 @@ export function FormViewer({ form, onSubmit, onClose }: Props) {
 			<ul className={styles.itemList}>
 				{form.items.map(item => (
 					<li key={item.id} className={styles.itemCard}>
-						{/* labelを見て勝手についてくる説明とこっちどっちがいいかを考える必要がある */}
-						{/* <label htmlFor={item.id} className={styles.label}>
-							<Text size="3" weight="medium">
-								{item.label || `質問 ${index + 1}`}
-							</Text>
-							{item.required ? (
-								<span className={styles.required}>
-									<Text size="2" color="red" weight="medium">
-										必須
-									</Text>
-								</span>
-							) : (
-								<span className={styles.optional}>
-									<Text size="2" color="gray">
-										任意
-									</Text>
-								</span>
-							)}
-						</label> */}
 						<AnswerField
 							item={item}
 							value={answers[item.id]}

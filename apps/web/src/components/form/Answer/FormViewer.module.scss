@@ -32,21 +32,6 @@
   box-shadow: var(--shadow-2);
 }
 
-.label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.required {
-  display: inline-flex;
-  align-items: center;
-  padding: var(--space-1);
-  border-radius: var(--radius-1);
-  background-color: var(--red-3);
-  flex-shrink: 0;
-}
-
 .footer {
   display: flex;
   justify-content: flex-end;

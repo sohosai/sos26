@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { FormEditDialog } from "@/components/form/Builder/EditDialog";
 import type { Form } from "@/components/form/type";
-import { Button } from "@/components/primitives/Button";
+import { Button } from "@/components/primitives";
 import { useAuthStore } from "@/lib/auth";
 import styles from "./index.module.scss";
 
