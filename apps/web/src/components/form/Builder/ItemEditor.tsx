@@ -2,9 +2,15 @@ import { Draggable } from "@hello-pangea/dnd";
 // IconButton: wrapper 未作成のため直接 import
 import { IconButton } from "@radix-ui/themes";
 import {
+	IconAlignLeft,
 	IconChevronDown,
 	IconChevronUp,
+	IconCircleDot,
+	IconFile,
 	IconGripHorizontal,
+	IconNumbers,
+	IconSquareCheck,
+	IconTextSize,
 	IconTrash,
 } from "@tabler/icons-react";
 import { Select, Switch, TextField } from "@/components/primitives";
@@ -12,13 +18,31 @@ import type { FormItem } from "../type";
 import { AnswerFieldEditor } from "./AnswerFieldEditor";
 import styles from "./ItemEditor.module.scss";
 
+const ICON_SIZE = 16;
+
 const FIELD_TYPES = [
-	{ value: "text", label: "テキスト（短文）" },
-	{ value: "textarea", label: "テキスト（長文）" },
-	{ value: "select", label: "単一選択" },
-	{ value: "checkbox", label: "複数選択" },
-	{ value: "number", label: "数値" },
-	{ value: "file", label: "ファイル" },
+	{
+		value: "text",
+		label: "テキスト（短文）",
+		icon: <IconTextSize size={ICON_SIZE} />,
+	},
+	{
+		value: "textarea",
+		label: "テキスト（長文）",
+		icon: <IconAlignLeft size={ICON_SIZE} />,
+	},
+	{
+		value: "select",
+		label: "単一選択",
+		icon: <IconCircleDot size={ICON_SIZE} />,
+	},
+	{
+		value: "checkbox",
+		label: "複数選択",
+		icon: <IconSquareCheck size={ICON_SIZE} />,
+	},
+	{ value: "number", label: "数値", icon: <IconNumbers size={ICON_SIZE} /> },
+	{ value: "file", label: "ファイル", icon: <IconFile size={ICON_SIZE} /> },
 ];
 
 type Props = {
