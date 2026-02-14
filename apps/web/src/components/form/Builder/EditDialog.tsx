@@ -18,9 +18,7 @@ export function FormEditDialog({ open, onOpenChange, form, onSubmit }: Props) {
 				<VisuallyHidden>
 					<Dialog.Title>Form Editor</Dialog.Title>
 				</VisuallyHidden>
-				<div className={styles.scrollArea}>
-					<FormEditor initialForm={form} onSubmit={onSubmit} />
-				</div>
+				<FormEditor initialForm={form} onSubmit={onSubmit} />
 			</Dialog.Content>
 		</Dialog.Root>
 	);

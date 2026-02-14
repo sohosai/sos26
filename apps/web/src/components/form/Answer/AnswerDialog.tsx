@@ -23,15 +23,13 @@ export function FormAnswerDialog({
 				<VisuallyHidden>
 					<Dialog.Title>Form Viewer</Dialog.Title>
 				</VisuallyHidden>
-				<div className={styles.scrollArea}>
-					<FormViewer
-						form={form}
-						onSubmit={answers => {
-							onSubmit?.(answers);
-						}}
-						onClose={() => onOpenChange(false)}
-					/>
-				</div>
+				<FormViewer
+					form={form}
+					onSubmit={answers => {
+						onSubmit?.(answers);
+					}}
+					onClose={() => onOpenChange(false)}
+				/>
 			</Dialog.Content>
 		</Dialog.Root>
 	);
