@@ -1,37 +1,23 @@
-import { IconButton, Select, Text } from "@radix-ui/themes";
+// IconButton: wrapper 未作成のため直接 import
+import { IconButton } from "@radix-ui/themes";
 import {
-	IconAlignLeft,
-	IconCheckbox,
 	IconChevronDown,
 	IconChevronUp,
-	IconCircleDot,
-	IconFile,
 	IconGripHorizontal,
-	IconNumbers,
-	IconTextSize,
 	IconTrash,
 } from "@tabler/icons-react";
-import { useState } from "react";
-import { Switch } from "@/components/primitives";
+import { Select, Switch, TextField } from "@/components/primitives";
 import type { FormItem } from "../type";
 import { AnswerFieldEditor } from "./AnswerFieldEditor";
 import styles from "./ItemEditor.module.scss";
 
 const FIELD_TYPES = [
-	{
-		value: "text",
-		label: "テキスト（短文）",
-		icon: <IconTextSize size={18} />,
-	},
-	{
-		value: "textarea",
-		label: "テキスト（長文）",
-		icon: <IconAlignLeft size={18} />,
-	},
-	{ value: "select", label: "単一選択", icon: <IconCircleDot size={18} /> },
-	{ value: "checkbox", label: "複数選択", icon: <IconCheckbox size={18} /> },
-	{ value: "number", label: "数値", icon: <IconNumbers size={18} /> },
-	{ value: "file", label: "ファイル", icon: <IconFile size={18} /> },
+	{ value: "text", label: "テキスト（短文）" },
+	{ value: "textarea", label: "テキスト（長文）" },
+	{ value: "select", label: "単一選択" },
+	{ value: "checkbox", label: "複数選択" },
+	{ value: "number", label: "数値" },
+	{ value: "file", label: "ファイル" },
 ] as const;
 
 type Props = {
@@ -57,18 +43,13 @@ export function FormItemEditor({
 	isDragging,
 	isDragOver,
 }: Props) {
-	const [isOpen, setIsOpen] = useState(false);
-	const currentType = FIELD_TYPES.find(f => f.value === item.type);
-
 	return (
 		<li
 			className={`${styles.formLi} ${isDragging ? styles.dragging : ""} ${isDragOver ? styles.dragOver : ""}`}
 		>
-			{/* ドラッグを広い範囲で受け取るためのイベントを置くためのdiv、biomeの無視は後で直す */}
 			{/* biome-ignore lint: ドラッグとドロップの範囲の違いの表現のため */}
 			<div className={styles.card} onDragOver={onDragOver} onDrop={onDrop}>
-				{/* ドラッグハンドル */}
-				{/* IconButtonにすると、ドラッグがうごかなくなる */}
+				{/* ドラッグハンドル — draggable 属性の特殊な動作要件のため生 button を使用 */}
 				<button
 					type="button"
 					className={styles.dragHandle}
@@ -91,63 +72,29 @@ export function FormItemEditor({
 						<IconTrash size={18} />
 					</IconButton>
 				</div>
+
 				{/* 質問 */}
-				<input
-					className={styles.questionInput}
+				<TextField
+					label=""
+					aria-label={`質問 ${index + 1}`}
 					value={item.label}
-					onChange={e => onUpdate(item.id, { label: e.target.value })}
+					onChange={value => onUpdate(item.id, { label: value })}
 					placeholder={`質問 ${index + 1}`}
 				/>
 
 				{/* タイプ選択 */}
 				<div className={styles.formItemSetting}>
-					<div className={styles.selectWrapper}>
-						<Select.Root
-							value={item.type}
-							onValueChange={value =>
-								onUpdate(item.id, { type: value as FormItem["type"] })
-							}
-							open={isOpen}
-							onOpenChange={setIsOpen}
-						>
-							<Select.Trigger className={styles.trigger}>
-								<div className={styles.triggerContent}>
-									{/* 閉じている時にアイコンのみ */}
-									{/* <span className={styles.icon}>{currentType?.icon}</span>
-								{isOpen && (
-									<span className={styles.label}>{currentType?.label}</span>
-								)} */}
-									{/* 閉じていてもテキストも表示 */}
-									<span className={styles.icon}>{currentType?.icon}</span>
-									<span className={styles.label}>
-										<Text as="span" size="2">
-											{currentType?.label}
-										</Text>
-									</span>
-								</div>
-							</Select.Trigger>
-
-							<Select.Content
-								position="popper"
-								side="bottom"
-								align="start"
-								className={styles.content}
-							>
-								<Select.Group>
-									{FIELD_TYPES.map(type => (
-										<Select.Item key={type.value} value={type.value}>
-											<div className={styles.itemContent}>
-												<span className={styles.itemIcon}>{type.icon}</span>
-												<Text as="span" size="2">
-													{type.label}
-												</Text>
-											</div>
-										</Select.Item>
-									))}
-								</Select.Group>
-							</Select.Content>
-						</Select.Root>
-					</div>
+					<Select
+						options={FIELD_TYPES.map(t => ({
+							value: t.value,
+							label: t.label,
+						}))}
+						value={item.type}
+						onValueChange={value =>
+							onUpdate(item.id, { type: value as FormItem["type"] })
+						}
+						aria-label="フィールドタイプ"
+					/>
 
 					<Switch
 						label={"必須"}
@@ -162,16 +109,6 @@ export function FormItemEditor({
 					item={item}
 					onUpdate={(update: Partial<FormItem>) => onUpdate(item.id, update)}
 				/>
-
-				{/* フッター */}
-				{/* <div className={styles.footer}>
-					<Switch
-						label={"必須"}
-						onCheckedChange={checked =>
-							onUpdate(item.id, { required: checked })
-						}
-					/>
-				</div> */}
 			</div>
 		</li>
 	);

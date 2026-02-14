@@ -1,7 +1,6 @@
-import { Text } from "@radix-ui/themes";
 import { IconPlus } from "@tabler/icons-react";
 import { useState } from "react";
-import { Button, TextArea } from "@/components/primitives";
+import { Button, TextArea, TextField } from "@/components/primitives";
 import type { Form, FormItem } from "../type";
 import styles from "./Editor.module.scss";
 import { FormItemList } from "./ItemList";
@@ -65,10 +64,10 @@ export function FormEditor({ initialForm, onSubmit }: Props) {
 
 	return (
 		<div className={styles.root}>
-			<input
-				className={styles.titleInput}
+			<TextField
+				label="フォーム名"
 				value={formName}
-				onChange={e => setFormName(e.target.value)}
+				onChange={setFormName}
 				placeholder="フォーム名を入力してください"
 			/>
 			<TextArea
@@ -89,12 +88,10 @@ export function FormEditor({ initialForm, onSubmit }: Props) {
 				/>
 			</div>
 
-			<button className={styles.addButton} type="button" onClick={addItem}>
+			<Button intent="secondary" onClick={addItem}>
 				<IconPlus size={16} stroke={1.5} />
-				<Text as="p" size="2">
-					項目を追加
-				</Text>
-			</button>
+				項目を追加
+			</Button>
 			<Button type="button" onClick={handleSubmit}>
 				保存
 			</Button>

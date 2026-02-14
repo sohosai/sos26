@@ -50,7 +50,7 @@
 .required {
   display: inline-flex;
   align-items: center;
-  padding: 2px var(--space-1);
+  padding: var(--space-1);
   border-radius: var(--radius-1);
   background-color: var(--red-3);
   flex-shrink: 0;

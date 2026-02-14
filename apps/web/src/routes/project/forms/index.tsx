@@ -6,6 +6,7 @@ import { projectRegisterMockForm } from "@/components/form/projectInitFormMock";
 import type { Form } from "@/components/form/type";
 import { Button } from "@/components/primitives";
 import { useAuthStore } from "@/lib/auth";
+import styles from "./index.module.scss";
 
 export const Route = createFileRoute("/project/forms/")({
 	component: RouteComponent,
@@ -23,7 +24,7 @@ function RouteComponent() {
 	};
 
 	return (
-		<div style={{ padding: "2rem" }}>
+		<div className={styles.page}>
 			<Heading size="6">申請回答</Heading>
 			<Text as="p" color="gray">
 				ようこそ、{user?.name} さん

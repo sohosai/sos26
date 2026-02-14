@@ -5,6 +5,7 @@ import { FormEditDialog } from "@/components/form/Builder/EditDialog";
 import type { Form } from "@/components/form/type";
 import { Button } from "@/components/primitives/Button";
 import { useAuthStore } from "@/lib/auth";
+import styles from "./index.module.scss";
 
 export const Route = createFileRoute("/committee/forms/")({
 	component: CommitteeIndexPage,
@@ -64,14 +65,14 @@ function CommitteeIndexPage() {
 	};
 
 	return (
-		<div style={{ padding: "2rem" }}>
+		<div className={styles.page}>
 			<Heading size="6">申請</Heading>
 			<Text as="p" color="gray">
 				ようこそ、{user?.name} さん
 			</Text>
 			{/* ここに申請を実装 */}
 			{forms.map(form => (
-				<div key={form.id} style={{ marginBottom: "1rem" }}>
+				<div key={form.id} className={styles.formRow}>
 					<Text size="2">{form.name}</Text>
 					<Button onClick={() => handleEdit(form)}>編集</Button>
 				</div>

@@ -19,10 +19,10 @@ export function FormAnswerDialog({
 	if (!form) return null;
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
-			<Dialog.Title>
-				<VisuallyHidden>Form Viewer</VisuallyHidden>
-			</Dialog.Title>
 			<Dialog.Content className={styles.dialogContent}>
+				<VisuallyHidden>
+					<Dialog.Title>Form Viewer</Dialog.Title>
+				</VisuallyHidden>
 				<div className={styles.scrollArea}>
 					<FormViewer
 						form={form}
