@@ -11,14 +11,6 @@ type Props = {
 };
 
 export function FormItemList({ items, setItems, onUpdate, onRemove }: Props) {
-	function arrayMove<T extends {}>(array: T[], from: number, to: number): T[] {
-		const newArray = [...array];
-		const [moved] = newArray.splice(from, 1);
-		if (moved === undefined) return newArray;
-		newArray.splice(to, 0, moved);
-		return newArray;
-	}
-
 	const moveUp = (index: number) => {
 		if (index === 0) return;
 		setItems(arrayMove(items, index, index - 1));
@@ -64,4 +56,12 @@ export function FormItemList({ items, setItems, onUpdate, onRemove }: Props) {
 			</Droppable>
 		</DragDropContext>
 	);
+}
+
+function arrayMove<T extends {}>(array: T[], from: number, to: number): T[] {
+	const newArray = [...array];
+	const [moved] = newArray.splice(from, 1);
+	if (moved === undefined) return newArray;
+	newArray.splice(to, 0, moved);
+	return newArray;
 }
