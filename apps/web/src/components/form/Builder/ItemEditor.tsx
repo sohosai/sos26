@@ -1,6 +1,4 @@
 import { Draggable } from "@hello-pangea/dnd";
-// IconButton: wrapper 未作成のため直接 import
-import { IconButton } from "@radix-ui/themes";
 import {
 	IconAlignLeft,
 	IconChevronDown,
@@ -13,7 +11,7 @@ import {
 	IconTextSize,
 	IconTrash,
 } from "@tabler/icons-react";
-import { Select, Switch, TextField } from "@/components/primitives";
+import { IconButton, Select, Switch, TextField } from "@/components/primitives";
 import type { FormItem } from "../type";
 import { AnswerFieldEditor } from "./AnswerFieldEditor";
 import styles from "./ItemEditor.module.scss";
@@ -85,17 +83,13 @@ export function FormItemEditor({
 						</button>
 
 						<div className={styles.itemOperateButtons}>
-							<IconButton variant="ghost" onClick={onMoveUp} disabled={isFirst}>
+							<IconButton onClick={onMoveUp} disabled={isFirst}>
 								<IconChevronUp size={18} />
 							</IconButton>
-							<IconButton
-								variant="ghost"
-								onClick={onMoveDown}
-								disabled={isLast}
-							>
+							<IconButton onClick={onMoveDown} disabled={isLast}>
 								<IconChevronDown size={18} />
 							</IconButton>
-							<IconButton variant="ghost" onClick={() => onRemove(item.id)}>
+							<IconButton onClick={() => onRemove(item.id)}>
 								<IconTrash size={18} />
 							</IconButton>
 						</div>

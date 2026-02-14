@@ -1,8 +1,7 @@
 // Radio/Checkbox: 装飾的使用のため wrapper ではなく直接 import
-// IconButton: wrapper 未作成のため直接 import
-import { Checkbox, IconButton, Radio } from "@radix-ui/themes";
+import { Checkbox, Radio } from "@radix-ui/themes";
 import { IconPlus, IconX } from "@tabler/icons-react";
-import { Button, TextField } from "@/components/primitives";
+import { Button, IconButton, TextField } from "@/components/primitives";
 import { FileUploadField } from "../EachField/FileUploadField";
 import type { FormItem } from "../type";
 import styles from "./AnswerFieldEditor.module.scss";
@@ -91,8 +90,7 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 							/>
 
 							<IconButton
-								variant="ghost"
-								color="red"
+								intent="danger"
 								onClick={() => {
 									onUpdate({
 										options: (item.options ?? []).filter(
