@@ -5,6 +5,7 @@ import { errorHandler } from "./lib/error-handler";
 import { initPush } from "./lib/push/client";
 import { authRoute } from "./routes/auth";
 import { committeeMemberRoute } from "./routes/committee-member";
+import { projectRoute } from "./routes/project";
 import { pushRoute } from "./routes/push";
 
 // Push 初期化
@@ -34,6 +35,7 @@ app.get("/", c => {
 // Mount routes
 app.route("/auth", authRoute);
 app.route("/committee-members", committeeMemberRoute);
+app.route("/project", projectRoute);
 app.route("/push", pushRoute);
 
 export { app };

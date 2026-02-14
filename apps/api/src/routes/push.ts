@@ -9,7 +9,8 @@ import { prisma } from "../lib/prisma";
 import { sendPush } from "../lib/push/send";
 import { requireAuth } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
-export const pushRoute = new Hono<AuthEnv>();
+
+const pushRoute = new Hono<AuthEnv>();
 
 pushRoute.post("/subscribe", requireAuth, async c => {
 	const body = await c.req.json().catch(() => {
@@ -155,3 +156,5 @@ function getStatusCodeFromWebpush(error: unknown): number | undefined {
 	}
 	return undefined;
 }
+
+export { pushRoute };
