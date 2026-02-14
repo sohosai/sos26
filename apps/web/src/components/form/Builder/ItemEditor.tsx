@@ -1,3 +1,4 @@
+import { Draggable } from "@hello-pangea/dnd";
 import { IconButton, Select, Text } from "@radix-ui/themes";
 import {
 	IconAlignLeft,
@@ -39,11 +40,8 @@ type Props = {
 	index: number;
 	onUpdate: (id: string, update: Partial<FormItem>) => void;
 	onRemove: (id: string) => void;
-	onDragStart: () => void;
-	onDragOver: (e: React.DragEvent) => void;
-	onDrop: () => void;
-	isDragging: boolean;
-	isDragOver: boolean;
+	onMoveUp: () => void;
+	onMoveDown: () => void;
 };
 
 export function FormItemEditor({
@@ -51,128 +49,111 @@ export function FormItemEditor({
 	index,
 	onUpdate,
 	onRemove,
-	onDragStart,
-	onDragOver,
-	onDrop,
-	isDragging,
-	isDragOver,
+	onMoveUp,
+	onMoveDown,
 }: Props) {
 	const [isOpen, setIsOpen] = useState(false);
 	const currentType = FIELD_TYPES.find(f => f.value === item.type);
 
 	return (
-		<li
-			className={`${styles.formLi} ${isDragging ? styles.dragging : ""} ${isDragOver ? styles.dragOver : ""}`}
-		>
-			{/* ドラッグを広い範囲で受け取るためのイベントを置くためのdiv、biomeの無視は後で直す */}
-			{/* biome-ignore lint: ドラッグとドロップの範囲の違いの表現のため */}
-			<div className={styles.card} onDragOver={onDragOver} onDrop={onDrop}>
-				{/* ドラッグハンドル */}
-				{/* IconButtonにすると、ドラッグがうごかなくなる */}
-				<button
-					type="button"
-					className={styles.dragHandle}
-					draggable
-					onDragStart={onDragStart}
+		<Draggable draggableId={item.id} index={index}>
+			{(provided, snapshot) => (
+				<li
+					ref={provided.innerRef}
+					{...provided.draggableProps}
+					className={`${styles.formLi} ${snapshot.isDragging ? styles.dragging : ""}`}
 				>
-					<IconGripHorizontal size={18} />
-				</button>
-
-				<div className={styles.itemOperateButtons}>
-					<IconButton variant="ghost">
-						<IconChevronUp size={18} />
-					</IconButton>
-
-					<IconButton variant="ghost">
-						<IconChevronDown size={18} />
-					</IconButton>
-
-					<IconButton variant="ghost" onClick={() => onRemove(item.id)}>
-						<IconTrash size={18} />
-					</IconButton>
-				</div>
-				{/* 質問 */}
-				<input
-					className={styles.questionInput}
-					value={item.label}
-					onChange={e => onUpdate(item.id, { label: e.target.value })}
-					placeholder={`質問 ${index + 1}`}
-				/>
-
-				{/* タイプ選択 */}
-				<div className={styles.formItemSetting}>
-					<div className={styles.selectWrapper}>
-						<Select.Root
-							value={item.type}
-							onValueChange={value =>
-								onUpdate(item.id, { type: value as FormItem["type"] })
-							}
-							open={isOpen}
-							onOpenChange={setIsOpen}
+					<div className={styles.card}>
+						{/* ドラッグハンドル */}
+						<button
+							type="button"
+							className={styles.dragHandle}
+							{...provided.dragHandleProps}
 						>
-							<Select.Trigger className={styles.trigger}>
-								<div className={styles.triggerContent}>
-									{/* 閉じている時にアイコンのみ */}
-									{/* <span className={styles.icon}>{currentType?.icon}</span>
-								{isOpen && (
-									<span className={styles.label}>{currentType?.label}</span>
-								)} */}
-									{/* 閉じていてもテキストも表示 */}
-									<span className={styles.icon}>{currentType?.icon}</span>
-									<span className={styles.label}>
-										<Text as="span" size="2">
-											{currentType?.label}
-										</Text>
-									</span>
-								</div>
-							</Select.Trigger>
+							<IconGripHorizontal size={18} />
+						</button>
 
-							<Select.Content
-								position="popper"
-								side="bottom"
-								align="start"
-								className={styles.content}
-							>
-								<Select.Group>
-									{FIELD_TYPES.map(type => (
-										<Select.Item key={type.value} value={type.value}>
-											<div className={styles.itemContent}>
-												<span className={styles.itemIcon}>{type.icon}</span>
+						<div className={styles.itemOperateButtons}>
+							<IconButton variant="ghost" onClick={onMoveUp}>
+								<IconChevronUp size={18} />
+							</IconButton>
+							<IconButton variant="ghost" onClick={onMoveDown}>
+								<IconChevronDown size={18} />
+							</IconButton>
+							<IconButton variant="ghost" onClick={() => onRemove(item.id)}>
+								<IconTrash size={18} />
+							</IconButton>
+						</div>
+
+						{/* 質問 */}
+						<input
+							className={styles.questionInput}
+							value={item.label}
+							onChange={e => onUpdate(item.id, { label: e.target.value })}
+							placeholder={`質問 ${index + 1}`}
+						/>
+
+						{/* タイプ選択 */}
+						<div className={styles.formItemSetting}>
+							<div className={styles.selectWrapper}>
+								<Select.Root
+									value={item.type}
+									onValueChange={value =>
+										onUpdate(item.id, { type: value as FormItem["type"] })
+									}
+									open={isOpen}
+									onOpenChange={setIsOpen}
+								>
+									<Select.Trigger className={styles.trigger}>
+										<div className={styles.triggerContent}>
+											<span className={styles.icon}>{currentType?.icon}</span>
+											<span className={styles.label}>
 												<Text as="span" size="2">
-													{type.label}
+													{currentType?.label}
 												</Text>
-											</div>
-										</Select.Item>
-									))}
-								</Select.Group>
-							</Select.Content>
-						</Select.Root>
+											</span>
+										</div>
+									</Select.Trigger>
+									<Select.Content
+										position="popper"
+										side="bottom"
+										align="start"
+										className={styles.content}
+									>
+										<Select.Group>
+											{FIELD_TYPES.map(type => (
+												<Select.Item key={type.value} value={type.value}>
+													<div className={styles.itemContent}>
+														<span className={styles.itemIcon}>{type.icon}</span>
+														<Text as="span" size="2">
+															{type.label}
+														</Text>
+													</div>
+												</Select.Item>
+											))}
+										</Select.Group>
+									</Select.Content>
+								</Select.Root>
+							</div>
+
+							<Switch
+								label="必須"
+								onCheckedChange={checked =>
+									onUpdate(item.id, { required: checked })
+								}
+							/>
+						</div>
+
+						{/* 解答欄 */}
+						<AnswerFieldEditor
+							item={item}
+							onUpdate={(update: Partial<FormItem>) =>
+								onUpdate(item.id, update)
+							}
+						/>
 					</div>
-
-					<Switch
-						label={"必須"}
-						onCheckedChange={checked =>
-							onUpdate(item.id, { required: checked })
-						}
-					/>
-				</div>
-
-				{/* 解答欄 */}
-				<AnswerFieldEditor
-					item={item}
-					onUpdate={(update: Partial<FormItem>) => onUpdate(item.id, update)}
-				/>
-
-				{/* フッター */}
-				{/* <div className={styles.footer}>
-					<Switch
-						label={"必須"}
-						onCheckedChange={checked =>
-							onUpdate(item.id, { required: checked })
-						}
-					/>
-				</div> */}
-			</div>
-		</li>
+				</li>
+			)}
+		</Draggable>
 	);
 }

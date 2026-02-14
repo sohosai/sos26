@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { DragDropContext, Droppable, type DropResult } from "@hello-pangea/dnd";
 import type { FormItem } from "../type";
 import { FormItemEditor } from "./ItemEditor";
 import styles from "./ItemList.module.scss";
@@ -11,25 +11,6 @@ type Props = {
 };
 
 export function FormItemList({ items, setItems, onUpdate, onRemove }: Props) {
-	const [dragIndex, setDragIndex] = useState<number | null>(null);
-	const [overIndex, setOverIndex] = useState<number | null>(null);
-
-	const handleDragStart = (index: number) => {
-		setDragIndex(index);
-	};
-
-	const handleDragOver = (index: number) => (e: React.DragEvent) => {
-		e.preventDefault();
-		setOverIndex(index);
-	};
-
-	const handleDrop = (dropIndex: number) => {
-		if (dragIndex === null || dragIndex === dropIndex) return;
-		setItems(arrayMove(items, dragIndex, dropIndex));
-		setDragIndex(null);
-		setOverIndex(null);
-	};
-
 	function arrayMove<T extends {}>(array: T[], from: number, to: number): T[] {
 		const newArray = [...array];
 		const [moved] = newArray.splice(from, 1);
@@ -38,22 +19,47 @@ export function FormItemList({ items, setItems, onUpdate, onRemove }: Props) {
 		return newArray;
 	}
 
+	const moveUp = (index: number) => {
+		if (index === 0) return;
+		setItems(arrayMove(items, index, index - 1));
+	};
+
+	const moveDown = (index: number) => {
+		if (index === items.length - 1) return;
+		setItems(arrayMove(items, index, index + 1));
+	};
+
+	const handleDragEnd = (result: DropResult) => {
+		if (!result.destination) return;
+		if (result.destination.index === result.source.index) return;
+
+		setItems(arrayMove(items, result.source.index, result.destination.index));
+	};
+
 	return (
-		<ul className={styles.list}>
-			{items.map((item, index) => (
-				<FormItemEditor
-					key={item.id}
-					item={item}
-					index={index}
-					onUpdate={onUpdate}
-					onRemove={onRemove}
-					onDragStart={() => handleDragStart(index)}
-					onDragOver={handleDragOver(index)}
-					onDrop={() => handleDrop(index)}
-					isDragging={dragIndex === index}
-					isDragOver={overIndex === index && dragIndex !== index}
-				/>
-			))}
-		</ul>
+		<DragDropContext onDragEnd={handleDragEnd}>
+			<Droppable droppableId="form-items">
+				{provided => (
+					<ul
+						className={styles.list}
+						ref={provided.innerRef}
+						{...provided.droppableProps}
+					>
+						{items.map((item, index) => (
+							<FormItemEditor
+								key={item.id}
+								item={item}
+								index={index}
+								onUpdate={onUpdate}
+								onRemove={onRemove}
+								onMoveUp={() => moveUp(index)}
+								onMoveDown={() => moveDown(index)}
+							/>
+						))}
+						{provided.placeholder}
+					</ul>
+				)}
+			</Droppable>
+		</DragDropContext>
 	);
 }
