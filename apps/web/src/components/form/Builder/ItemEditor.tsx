@@ -52,6 +52,8 @@ type Props = {
 	onRemove: (id: string) => void;
 	onMoveUp: () => void;
 	onMoveDown: () => void;
+	isFirst: boolean;
+	isLast: boolean;
 };
 
 export function FormItemEditor({
@@ -61,6 +63,8 @@ export function FormItemEditor({
 	onRemove,
 	onMoveUp,
 	onMoveDown,
+	isFirst,
+	isLast,
 }: Props) {
 	return (
 		<Draggable draggableId={item.id} index={index}>
@@ -81,10 +85,14 @@ export function FormItemEditor({
 						</button>
 
 						<div className={styles.itemOperateButtons}>
-							<IconButton variant="ghost" onClick={onMoveUp} disabled>
+							<IconButton variant="ghost" onClick={onMoveUp} disabled={isFirst}>
 								<IconChevronUp size={18} />
 							</IconButton>
-							<IconButton variant="ghost" onClick={onMoveDown} disabled>
+							<IconButton
+								variant="ghost"
+								onClick={onMoveDown}
+								disabled={isLast}
+							>
 								<IconChevronDown size={18} />
 							</IconButton>
 							<IconButton variant="ghost" onClick={() => onRemove(item.id)}>

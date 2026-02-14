@@ -54,6 +54,8 @@ export function FormItemList({ items, setItems, onUpdate, onRemove }: Props) {
 								onRemove={onRemove}
 								onMoveUp={() => moveUp(index)}
 								onMoveDown={() => moveDown(index)}
+								isFirst={index === 0}
+								isLast={index === items.length - 1}
 							/>
 						))}
 						{provided.placeholder}
