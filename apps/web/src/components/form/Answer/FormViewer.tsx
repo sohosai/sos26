@@ -1,4 +1,4 @@
-import { Dialog, Text, VisuallyHidden } from "@radix-ui/themes";
+import { Text } from "@radix-ui/themes";
 import { IconCheck } from "@tabler/icons-react";
 import { useState } from "react";
 import { Button } from "@/components/primitives";
@@ -16,12 +16,6 @@ export function FormViewer({ form, onSubmit, onClose }: Props) {
 	const [answers, setAnswers] = useState<FormAnswers>({});
 	const [errors, setErrors] = useState<Record<string, string>>({});
 	const [submitted, setSubmitted] = useState(false);
-	const [completeOpen, setCompleteOpen] = useState(false);
-
-	const handleCompleteClose = () => {
-		setCompleteOpen(false);
-		onClose?.();
-	};
 
 	const updateAnswer = (itemId: string, value: FormAnswerValue) => {
 		setAnswers(prev => ({ ...prev, [itemId]: value }));
@@ -57,34 +51,21 @@ export function FormViewer({ form, onSubmit, onClose }: Props) {
 		e.preventDefault();
 		if (!validate()) return;
 		setSubmitted(true);
-		setCompleteOpen(true);
 		onSubmit?.(answers);
 	};
 
 	if (submitted) {
 		return (
-			<Dialog.Root
-				open={completeOpen}
-				onOpenChange={open => {
-					if (!open) handleCompleteClose();
-				}}
-			>
-				<Dialog.Content>
-					<VisuallyHidden>
-						<Dialog.Title>送信完了</Dialog.Title>
-					</VisuallyHidden>
-					<div className={styles.complete}>
-						<span className={styles.completeHeader}>
-							<IconCheck size={24} />
-							<Text size="5" weight="bold">
-								送信しました
-							</Text>
-						</span>
-						<Text size="2">ご回答ありがとうございました。</Text>
-						<Button onClick={handleCompleteClose}>閉じる</Button>
-					</div>
-				</Dialog.Content>
-			</Dialog.Root>
+			<div className={styles.complete}>
+				<span className={styles.completeHeader}>
+					<IconCheck size={24} />
+					<Text size="5" weight="bold">
+						送信しました
+					</Text>
+				</span>
+				<Text size="2">ご回答ありがとうございました。</Text>
+				<Button onClick={onClose}>閉じる</Button>
+			</div>
 		);
 	}
 
