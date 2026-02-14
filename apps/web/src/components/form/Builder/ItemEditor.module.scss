@@ -20,10 +20,6 @@
   opacity: 0.5;
 }
 
-.dragOver {
-  border: 2px dashed var(--accent-8);
-}
-
 .dragHandle {
   cursor: grab;
   position: absolute;
@@ -45,52 +41,6 @@
   right: var(--space-4);
   display: flex;
   gap: var(--space-4);
-}
-
-.questionInput {
-  font-size: var(--font-size-3);
-  border: none;
-  border-bottom: 1px solid var(--gray-6);
-  padding: var(--space-1);
-  outline: none;
-
-  &:focus {
-    border-bottom: 2px solid var(--accent-9);
-  }
-}
-
-.typeSelect {
-  align-self: flex-end;
-  font-size: var(--font-size-3);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-2);
-  border: 1px solid var(--gray-6);
-  background-color: var(--gray-1);
-
-  &:focus {
-    outline: none;
-    border-color: var(--accent-9);
-  }
-}
-
-.required {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--font-size-3);
-  color: var(--gray-11);
-}
-
-.deleteButton {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: var(--font-size-4);
-  color: var(--gray-10);
-
-  &:hover {
-    color: var(--red-9);
-  }
 }
 
 .formItemSetting {
