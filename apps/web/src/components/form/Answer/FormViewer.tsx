@@ -111,7 +111,9 @@ export function FormViewer({ form, onSubmit, onClose }: Props) {
 			</ul>
 
 			<div className={styles.footer}>
-				<Button type="submit">下書きを保存</Button>
+				<Button intent="secondary" type="submit">
+					下書きを保存
+				</Button>
 				<Button type="submit">送信する</Button>
 			</div>
 		</form>

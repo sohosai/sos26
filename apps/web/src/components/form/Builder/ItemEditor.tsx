@@ -60,11 +60,11 @@ export function FormItemEditor({
 				</button>
 
 				<div className={styles.itemOperateButtons}>
-					<IconButton variant="ghost">
+					<IconButton variant="ghost" disabled>
 						<IconChevronUp size={18} />
 					</IconButton>
 
-					<IconButton variant="ghost">
+					<IconButton variant="ghost" disabled>
 						<IconChevronDown size={18} />
 					</IconButton>
 

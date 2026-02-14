@@ -40,6 +40,7 @@ export function FileUploadField({
 
 			<div className={styles.fileLabel}>
 				<input
+					id={id}
 					ref={inputRef}
 					type="file"
 					className={styles.fileInput}

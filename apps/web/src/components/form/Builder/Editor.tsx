@@ -92,9 +92,7 @@ export function FormEditor({ initialForm, onSubmit }: Props) {
 				<IconPlus size={16} stroke={1.5} />
 				項目を追加
 			</Button>
-			<Button type="button" onClick={handleSubmit}>
-				保存
-			</Button>
+			<Button onClick={handleSubmit}>保存</Button>
 		</div>
 	);
 }
