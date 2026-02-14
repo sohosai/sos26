@@ -1,3 +1,4 @@
+import { Draggable } from "@hello-pangea/dnd";
 // IconButton: wrapper 未作成のため直接 import
 import { IconButton } from "@radix-ui/themes";
 import {
@@ -25,11 +26,8 @@ type Props = {
 	index: number;
 	onUpdate: (id: string, update: Partial<FormItem>) => void;
 	onRemove: (id: string) => void;
-	onDragStart: () => void;
-	onDragOver: (e: React.DragEvent) => void;
-	onDrop: () => void;
-	isDragging: boolean;
-	isDragOver: boolean;
+	onMoveUp: () => void;
+	onMoveDown: () => void;
 };
 
 export function FormItemEditor({
@@ -37,79 +35,109 @@ export function FormItemEditor({
 	index,
 	onUpdate,
 	onRemove,
-	onDragStart,
-	onDragOver,
-	onDrop,
-	isDragging,
-	isDragOver,
+	onMoveUp,
+	onMoveDown,
 }: Props) {
 	return (
-		<li
-			className={`${styles.formLi} ${isDragging ? styles.dragging : ""} ${isDragOver ? styles.dragOver : ""}`}
-		>
-			{/* biome-ignore lint: ドラッグとドロップの範囲の違いの表現のため */}
-			<div className={styles.card} onDragOver={onDragOver} onDrop={onDrop}>
-				{/* ドラッグハンドル — draggable 属性の特殊な動作要件のため生 button を使用 */}
-				<button
-					type="button"
-					className={styles.dragHandle}
-					draggable
-					onDragStart={onDragStart}
+		<Draggable draggableId={item.id} index={index}>
+			{(provided, snapshot) => (
+				<li
+					ref={provided.innerRef}
+					{...provided.draggableProps}
+					className={`${styles.formLi} ${snapshot.isDragging ? styles.dragging : ""}`}
 				>
-					<IconGripHorizontal size={18} />
-				</button>
+					<div className={styles.card}>
+						{/* ドラッグハンドル */}
+						<button
+							type="button"
+							className={styles.dragHandle}
+							{...provided.dragHandleProps}
+						>
+							<IconGripHorizontal size={18} />
+						</button>
 
-				<div className={styles.itemOperateButtons}>
-					<IconButton variant="ghost" disabled>
-						<IconChevronUp size={18} />
-					</IconButton>
+						<div className={styles.itemOperateButtons}>
+							<IconButton variant="ghost" onClick={onMoveUp} disabled>
+								<IconChevronUp size={18} />
+							</IconButton>
+							<IconButton variant="ghost" onClick={onMoveDown} disabled>
+								<IconChevronDown size={18} />
+							</IconButton>
+							<IconButton variant="ghost" onClick={() => onRemove(item.id)}>
+								<IconTrash size={18} />
+							</IconButton>
+						</div>
 
-					<IconButton variant="ghost" disabled>
-						<IconChevronDown size={18} />
-					</IconButton>
+						{/* 質問 */}
+						<TextField
+							label=""
+							aria-label={`質問 ${index + 1}`}
+							value={item.label}
+							onChange={value => onUpdate(item.id, { label: value })}
+							placeholder={`質問 ${index + 1}`}
+						/>
 
-					<IconButton variant="ghost" onClick={() => onRemove(item.id)}>
-						<IconTrash size={18} />
-					</IconButton>
-				</div>
+						{/* タイプ選択 */}
+						<div className={styles.formItemSetting}>
+							<div className={styles.selectWrapper}>
+								<Select.Root
+									value={item.type}
+									onValueChange={value =>
+										onUpdate(item.id, { type: value as FormItem["type"] })
+									}
+									open={isOpen}
+									onOpenChange={setIsOpen}
+								>
+									<Select.Trigger className={styles.trigger}>
+										<div className={styles.triggerContent}>
+											<span className={styles.icon}>{currentType?.icon}</span>
+											<span className={styles.label}>
+												<Text as="span" size="2">
+													{currentType?.label}
+												</Text>
+											</span>
+										</div>
+									</Select.Trigger>
+									<Select.Content
+										position="popper"
+										side="bottom"
+										align="start"
+										className={styles.content}
+									>
+										<Select.Group>
+											{FIELD_TYPES.map(type => (
+												<Select.Item key={type.value} value={type.value}>
+													<div className={styles.itemContent}>
+														<span className={styles.itemIcon}>{type.icon}</span>
+														<Text as="span" size="2">
+															{type.label}
+														</Text>
+													</div>
+												</Select.Item>
+											))}
+										</Select.Group>
+									</Select.Content>
+								</Select.Root>
+							</div>
 
-				{/* 質問 */}
-				<TextField
-					label=""
-					aria-label={`質問 ${index + 1}`}
-					value={item.label}
-					onChange={value => onUpdate(item.id, { label: value })}
-					placeholder={`質問 ${index + 1}`}
-				/>
+							<Switch
+								label="必須"
+								onCheckedChange={checked =>
+									onUpdate(item.id, { required: checked })
+								}
+							/>
+						</div>
 
-				{/* タイプ選択 */}
-				<div className={styles.formItemSetting}>
-					<Select
-						options={FIELD_TYPES.map(t => ({
-							value: t.value,
-							label: t.label,
-						}))}
-						value={item.type}
-						onValueChange={value =>
-							onUpdate(item.id, { type: value as FormItem["type"] })
-						}
-						aria-label="フィールドタイプ"
-					/>
-
-					<Switch
-						label={"必須"}
-						onCheckedChange={checked =>
-							onUpdate(item.id, { required: checked })
-						}
-					/>
-				</div>
-
-				{/* 解答欄 */}
-				<AnswerFieldEditor
-					item={item}
-					onUpdate={(update: Partial<FormItem>) => onUpdate(item.id, update)}
-				/>
-			</div>
-		</li>
+						{/* 解答欄 */}
+						<AnswerFieldEditor
+							item={item}
+							onUpdate={(update: Partial<FormItem>) =>
+								onUpdate(item.id, update)
+							}
+						/>
+					</div>
+				</li>
+			)}
+		</Draggable>
 	);
 }
