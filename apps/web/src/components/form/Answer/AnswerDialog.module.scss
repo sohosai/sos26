@@ -1,5 +1,12 @@
 .dialogContent {
 	max-width: 600px;
 	max-height: 90dvh;
+	overflow: hidden;
+	padding: 0;
+}
+
+.dialogInner {
 	overflow-y: auto;
+	max-height: 90dvh;
+	padding: var(--dialog-padding);
 }
