@@ -49,6 +49,10 @@ export function FormViewer({ form, onSubmit, onClose }: Props) {
 		return Object.keys(newErrors).length === 0;
 	};
 
+	const handleSaveDraft = () => {
+		// TODO: 下書きを保存する処理を実装
+	};
+
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!validate()) return;
@@ -111,7 +115,7 @@ export function FormViewer({ form, onSubmit, onClose }: Props) {
 			</ul>
 
 			<div className={styles.footer}>
-				<Button intent="secondary" type="submit">
+				<Button intent="secondary" type="button" onClick={handleSaveDraft}>
 					下書きを保存
 				</Button>
 				<Button type="submit">送信する</Button>
