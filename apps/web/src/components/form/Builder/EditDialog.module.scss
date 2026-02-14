@@ -1,0 +1,15 @@
+.dialogContent {
+	max-width: 600px;
+	max-height: 90dvh;
+	overflow: hidden;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.dialogInner {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding: var(--space-5);
+}

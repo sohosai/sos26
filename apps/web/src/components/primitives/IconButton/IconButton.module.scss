@@ -1,0 +1,7 @@
+.iconButton {
+	cursor: pointer;
+
+	&:disabled {
+		cursor: not-allowed;
+	}
+}

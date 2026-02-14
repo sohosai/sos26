@@ -145,6 +145,8 @@ src/components/
 ├── primitives/          # Radix UI Themes のラッパー（単一責務）
 │   ├── Button/
 │   ├── Checkbox/
+│   ├── IconButton/
+│   ├── Select/
 │   ├── Switch/
 │   ├── TextField/
 │   ├── TextArea/
@@ -160,7 +162,7 @@ src/components/
 
 | 種類           | 役割                                                 | 例                                    |
 | -------------- | ---------------------------------------------------- | ------------------------------------- |
-| **primitives** | Radix の単一コンポーネントをラップ。制約と付加を行う | Button, TextField, Checkbox, Switch   |
+| **primitives** | Radix の単一コンポーネントをラップ。制約と付加を行う | Button, IconButton, TextField, Select, Checkbox, Switch |
 | **patterns**   | 複数の primitives を組み合わせた複合コンポーネント   | RadioGroup, CheckboxGroup, FormDialog |
 
 patterns は以下の場合に作成する：
@@ -175,7 +177,7 @@ patterns は以下の場合に作成する：
 
 以下は**必ず Wrapper 経由**で使用する。
 
-- Button
+- Button / IconButton
 - TextField / TextArea
 - Select
 - Checkbox / Switch
@@ -305,6 +307,51 @@ export function Button({
 - `variant` と `color` を `intent` に集約し、意味のある選択肢だけを提供
 - `loading` は Radix の組み込み機能を使用（スピナー表示と disabled を自動処理）
 - CSS Modules でカスタムスタイルを適用
+
+---
+
+### 例: IconButton
+
+Radix の `IconButton` を Button と同じ intent ベースで制約する。アイコンのみのボタンに使用する。
+
+```tsx
+// src/components/primitives/IconButton/IconButton.tsx
+
+/**
+ * IconButton - アプリケーション標準のアイコンボタン
+ *
+ * ## 制限していること
+ * - variant/color: intent に集約（ghost/danger）
+ * - size: "1" | "2" のみ（"3", "4" は大きすぎるため不可）
+ * - highContrast, radius: 指定不可（デザイン統一）
+ *
+ * ## 付加している振る舞い
+ * - type: デフォルト "button"（フォーム誤送信防止）
+ * - ref 転送対応（Radix の Popover.Trigger 等と合成可能）
+ */
+```
+
+```tsx
+// 基本的な使い方
+<IconButton onClick={handleEdit}>
+  <IconPencil size={16} />
+</IconButton>
+
+// 削除用（赤色）
+<IconButton intent="danger" onClick={handleDelete}>
+  <IconTrash size={16} />
+</IconButton>
+
+// 小さいサイズ
+<IconButton size="1" onClick={handleAction}>
+  <IconPencil size={16} />
+</IconButton>
+```
+
+**ポイント:**
+- `intent` で意味を表現（`ghost` がデフォルト、`danger` で赤色）
+- Button と同じパターンで統一感を保つ
+- `aria-label` で用途を明示可能
 
 ---
 
