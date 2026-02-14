@@ -66,7 +66,7 @@ export function Select({
 				placeholder={placeholder}
 				aria-label={ariaLabel}
 			/>
-			<RadixSelect.Content>
+			<RadixSelect.Content position="popper">
 				{options.map(option => (
 					<RadixSelect.Item
 						key={option.value}
