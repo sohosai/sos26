@@ -1,4 +1,4 @@
-import { IconButton, Text, Tooltip } from "@radix-ui/themes";
+import { Text, Tooltip } from "@radix-ui/themes";
 import {
 	IconArrowsExchange,
 	IconBug,
@@ -9,6 +9,7 @@ import {
 } from "@tabler/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { IconButton } from "@/components/primitives";
 import { useAuthStore } from "@/lib/auth";
 import styles from "./Sidebar.module.scss";
 
@@ -128,8 +129,6 @@ export function Sidebar({
 		<aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""}`}>
 			<div className={styles.header}>
 				<IconButton
-					variant="ghost"
-					size="2"
 					onClick={onToggle}
 					aria-label={collapsed ? "メニューを展開" : "メニューを折りたたむ"}
 				>

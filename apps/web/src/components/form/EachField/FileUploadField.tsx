@@ -1,5 +1,6 @@
-import { Button, Text } from "@radix-ui/themes";
+import { Text } from "@radix-ui/themes";
 import { useId, useRef } from "react";
+import { Button } from "@/components/primitives";
 import styles from "./FileUploadField.module.scss";
 
 type FileUploadProps = {
@@ -39,6 +40,7 @@ export function FileUploadField({
 
 			<div className={styles.fileLabel}>
 				<input
+					id={id}
 					ref={inputRef}
 					type="file"
 					className={styles.fileInput}
@@ -49,9 +51,7 @@ export function FileUploadField({
 					disabled={disabled}
 				/>
 				<Button
-					variant="outline"
-					size="2"
-					color="gray"
+					intent="secondary"
 					onClick={handleButtonClick}
 					disabled={disabled}
 				>

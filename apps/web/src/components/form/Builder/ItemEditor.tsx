@@ -1,39 +1,47 @@
 import { Draggable } from "@hello-pangea/dnd";
-import { IconButton, Select, Text } from "@radix-ui/themes";
 import {
 	IconAlignLeft,
-	IconCheckbox,
 	IconChevronDown,
 	IconChevronUp,
 	IconCircleDot,
 	IconFile,
 	IconGripHorizontal,
 	IconNumbers,
+	IconSquareCheck,
 	IconTextSize,
 	IconTrash,
 } from "@tabler/icons-react";
-import { useState } from "react";
-import { Switch } from "@/components/primitives";
+import { IconButton, Select, Switch, TextField } from "@/components/primitives";
 import type { FormItem } from "../type";
 import { AnswerFieldEditor } from "./AnswerFieldEditor";
 import styles from "./ItemEditor.module.scss";
+
+const ICON_SIZE = 16;
 
 const FIELD_TYPES = [
 	{
 		value: "text",
 		label: "テキスト（短文）",
-		icon: <IconTextSize size={18} />,
+		icon: <IconTextSize size={ICON_SIZE} />,
 	},
 	{
 		value: "textarea",
 		label: "テキスト（長文）",
-		icon: <IconAlignLeft size={18} />,
+		icon: <IconAlignLeft size={ICON_SIZE} />,
 	},
-	{ value: "select", label: "単一選択", icon: <IconCircleDot size={18} /> },
-	{ value: "checkbox", label: "複数選択", icon: <IconCheckbox size={18} /> },
-	{ value: "number", label: "数値", icon: <IconNumbers size={18} /> },
-	{ value: "file", label: "ファイル", icon: <IconFile size={18} /> },
-] as const;
+	{
+		value: "select",
+		label: "単一選択",
+		icon: <IconCircleDot size={ICON_SIZE} />,
+	},
+	{
+		value: "checkbox",
+		label: "複数選択",
+		icon: <IconSquareCheck size={ICON_SIZE} />,
+	},
+	{ value: "number", label: "数値", icon: <IconNumbers size={ICON_SIZE} /> },
+	{ value: "file", label: "ファイル", icon: <IconFile size={ICON_SIZE} /> },
+];
 
 type Props = {
 	item: FormItem;
@@ -42,6 +50,8 @@ type Props = {
 	onRemove: (id: string) => void;
 	onMoveUp: () => void;
 	onMoveDown: () => void;
+	isFirst: boolean;
+	isLast: boolean;
 };
 
 export function FormItemEditor({
@@ -51,10 +61,9 @@ export function FormItemEditor({
 	onRemove,
 	onMoveUp,
 	onMoveDown,
+	isFirst,
+	isLast,
 }: Props) {
-	const [isOpen, setIsOpen] = useState(false);
-	const currentType = FIELD_TYPES.find(f => f.value === item.type);
-
 	return (
 		<Draggable draggableId={item.id} index={index}>
 			{(provided, snapshot) => (
@@ -74,67 +83,36 @@ export function FormItemEditor({
 						</button>
 
 						<div className={styles.itemOperateButtons}>
-							<IconButton variant="ghost" onClick={onMoveUp}>
+							<IconButton onClick={onMoveUp} disabled={isFirst}>
 								<IconChevronUp size={18} />
 							</IconButton>
-							<IconButton variant="ghost" onClick={onMoveDown}>
+							<IconButton onClick={onMoveDown} disabled={isLast}>
 								<IconChevronDown size={18} />
 							</IconButton>
-							<IconButton variant="ghost" onClick={() => onRemove(item.id)}>
+							<IconButton onClick={() => onRemove(item.id)}>
 								<IconTrash size={18} />
 							</IconButton>
 						</div>
 
 						{/* 質問 */}
-						<input
-							className={styles.questionInput}
+						<TextField
+							label=""
+							aria-label={`質問 ${index + 1}`}
 							value={item.label}
-							onChange={e => onUpdate(item.id, { label: e.target.value })}
+							onChange={value => onUpdate(item.id, { label: value })}
 							placeholder={`質問 ${index + 1}`}
 						/>
 
 						{/* タイプ選択 */}
 						<div className={styles.formItemSetting}>
-							<div className={styles.selectWrapper}>
-								<Select.Root
-									value={item.type}
-									onValueChange={value =>
-										onUpdate(item.id, { type: value as FormItem["type"] })
-									}
-									open={isOpen}
-									onOpenChange={setIsOpen}
-								>
-									<Select.Trigger className={styles.trigger}>
-										<div className={styles.triggerContent}>
-											<span className={styles.icon}>{currentType?.icon}</span>
-											<span className={styles.label}>
-												<Text as="span" size="2">
-													{currentType?.label}
-												</Text>
-											</span>
-										</div>
-									</Select.Trigger>
-									<Select.Content
-										position="popper"
-										side="bottom"
-										align="start"
-										className={styles.content}
-									>
-										<Select.Group>
-											{FIELD_TYPES.map(type => (
-												<Select.Item key={type.value} value={type.value}>
-													<div className={styles.itemContent}>
-														<span className={styles.itemIcon}>{type.icon}</span>
-														<Text as="span" size="2">
-															{type.label}
-														</Text>
-													</div>
-												</Select.Item>
-											))}
-										</Select.Group>
-									</Select.Content>
-								</Select.Root>
-							</div>
+							<Select
+								options={FIELD_TYPES}
+								value={item.type}
+								onValueChange={value =>
+									onUpdate(item.id, { type: value as FormItem["type"] })
+								}
+								aria-label="フィールドタイプ"
+							/>
 
 							<Switch
 								label="必須"

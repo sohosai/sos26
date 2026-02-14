@@ -14,11 +14,11 @@ export function FormEditDialog({ open, onOpenChange, form, onSubmit }: Props) {
 	if (!form) return null;
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
-			<Dialog.Title>
-				<VisuallyHidden>Form Editor</VisuallyHidden>
-			</Dialog.Title>
 			<Dialog.Content className={styles.dialogContent}>
-				<div className={styles.scrollArea}>
+				<VisuallyHidden>
+					<Dialog.Title>Form Editor</Dialog.Title>
+				</VisuallyHidden>
+				<div className={styles.dialogInner}>
 					<FormEditor initialForm={form} onSubmit={onSubmit} />
 				</div>
 			</Dialog.Content>
