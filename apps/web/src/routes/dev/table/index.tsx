@@ -1,4 +1,4 @@
-import { Box, Dialog, Heading, IconButton, Separator } from "@radix-ui/themes";
+import { Box, Dialog, Heading, Separator } from "@radix-ui/themes";
 import { IconPencil } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
@@ -14,7 +14,7 @@ import {
 	SelectCell,
 	TagCell,
 } from "@/components/patterns";
-import { Button } from "@/components/primitives";
+import { Button, IconButton } from "@/components/primitives";
 import styles from "./index.module.scss";
 
 export const Route = createFileRoute("/dev/table/")({
@@ -400,11 +400,7 @@ function TableDemoPage() {
 			id: "actions",
 			header: "",
 			cell: ({ row }) => (
-				<IconButton
-					variant="ghost"
-					size="1"
-					onClick={() => openTagEditor(row.original)}
-				>
+				<IconButton size="1" onClick={() => openTagEditor(row.original)}>
 					<IconPencil size={16} />
 				</IconButton>
 			),
