@@ -137,22 +137,9 @@ fileRoute.get("/:id/content", async c => {
 		throw Errors.notFound("ファイルが見つかりません");
 	}
 
-	// 非公開ファイルの場合は認証チェック
+	// 非公開ファイルの場合は requireAuth と同じ認証フローを実行
 	if (!file.isPublic) {
-		const authHeader = c.req.header("Authorization");
-		if (!authHeader?.startsWith("Bearer ")) {
-			throw Errors.unauthorized("認証が必要です");
-		}
-		// requireAuth ミドルウェアと同等の認証を行うが、
-		// ここでは簡易的にヘッダの存在確認のみ行い、
-		// 詳細な検証は Firebase Admin SDK に委譲する
-		const { auth } = await import("../lib/firebase");
-		const idToken = authHeader.slice(7);
-		try {
-			await auth.verifyIdToken(idToken);
-		} catch {
-			throw Errors.unauthorized("無効なトークンです");
-		}
+		await requireAuth(c, async () => {});
 	}
 
 	const s3Response = await getObject(file.key);
