@@ -1,4 +1,7 @@
-import { createProjectRequestSchema } from "@sos26/shared";
+import {
+	createProjectRequestSchema,
+	type ProjectMemberRole,
+} from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
@@ -82,4 +85,69 @@ projectRoute.get("/", requireAuth, async c => {
 	return c.json({ projects });
 });
 
+// ─────────────────────────────────────────
+// GET /projects/:projectId/members
+// 該当する企画のメンバー一覧
+// ─────────────────────────────────────────
+projectRoute.get("/:projectId/members", requireAuth, async c => {
+	const projectId = c.req.param("projectId");
+	const userId = c.get("user").id;
+
+	// project の存在確認
+	const project = await prisma.project.findFirst({
+		where: {
+			id: projectId,
+			deletedAt: null,
+		},
+	});
+	if (!project) {
+		throw Errors.notFound("企画が見つかりません");
+	}
+
+	// 自分がこの project に参加しているか
+	const isMember = await prisma.projectMember.findFirst({
+		where: {
+			projectId,
+			userId,
+			deletedAt: null,
+		},
+	});
+	if (!isMember) {
+		throw Errors.forbidden("この企画のメンバーではありません");
+	}
+
+	// メンバー一覧取得
+	const members = await prisma.projectMember.findMany({
+		where: {
+			projectId,
+			deletedAt: null,
+		},
+		include: {
+			user: true,
+		},
+		orderBy: {
+			joinedAt: "asc",
+		},
+	});
+
+	const result = members.map(m => {
+		let role: ProjectMemberRole = "MEMBER";
+
+		if (m.userId === project.ownerId) {
+			role = "OWNER";
+		} else if (m.userId === project.subOwnerId) {
+			role = "SUB_OWNER";
+		}
+
+		return {
+			id: m.id,
+			userId: m.userId,
+			name: m.user.name,
+			role,
+			joinedAt: m.joinedAt,
+		};
+	});
+
+	return c.json({ members: result });
+});
 export { projectRoute };

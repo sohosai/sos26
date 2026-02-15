@@ -2,6 +2,8 @@ import {
 	createProjectRequestSchema,
 	createProjectResponseSchema,
 	listMyProjectsResponseSchema,
+	listProjectMembersResponseSchema,
+	projectIdPathParamsSchema,
 } from "../schemas/project";
 import type { BodyEndpoint, GetEndpoint } from "./types";
 
@@ -46,4 +48,22 @@ export const listMyProjectsEndpoint: GetEndpoint<
 	query: undefined,
 	request: undefined,
 	response: listMyProjectsResponseSchema,
+} as const;
+
+/**
+ * GET /projects/:projectId/members
+ * 該当するprojectIdのメンバー一覧を取得
+ */
+export const listProjectMembersEndpoint: GetEndpoint<
+	"/projects/:projectId/members",
+	typeof projectIdPathParamsSchema,
+	undefined,
+	typeof listProjectMembersResponseSchema
+> = {
+	method: "GET",
+	path: "/projects/:projectId/members",
+	pathParams: projectIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: listProjectMembersResponseSchema,
 } as const;

@@ -1,6 +1,6 @@
 import type { Project } from "@sos26/shared";
-import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
 	// type Project,
 	ProjectSelector,
@@ -22,6 +22,7 @@ export const Route = createFileRoute("/project")({
 });
 
 function ProjectLayout() {
+	const navigate = useNavigate();
 	const loaderData = Route.useLoaderData();
 	const [projects, setProjects] = useState(loaderData.projects);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -31,6 +32,17 @@ function ProjectLayout() {
 		// "demo-1"
 		projects[0]?.id ?? null
 	);
+
+	useEffect(() => {
+		if (!selectedProjectId) return;
+
+		navigate({
+			to: "/project/$projectId",
+			params: { projectId: selectedProjectId },
+			replace: true,
+		});
+	}, [selectedProjectId, navigate]);
+
 	const [dialogOpen, setDialogOpen] = useState(false);
 
 	return (
@@ -39,6 +51,7 @@ function ProjectLayout() {
 				collapsed={sidebarCollapsed}
 				onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
 				menuItems={projectMenuItems}
+				projectId={selectedProjectId}
 				projectSelector={
 					<ProjectSelector
 						projects={projects.map((project: Project) => {
@@ -49,7 +62,13 @@ function ProjectLayout() {
 						})}
 						selectedProjectId={selectedProjectId}
 						collapsed={sidebarCollapsed}
-						onSelectProject={setSelectedProjectId}
+						onSelectProject={projectId => {
+							navigate({
+								to: "/project/$projectId",
+								params: { projectId },
+							});
+							setSelectedProjectId(projectId);
+						}}
 						onCreateProject={() => setDialogOpen(true)}
 						onJoinProject={() => alert("招待コード入力モーダル（未実装）")}
 					/>

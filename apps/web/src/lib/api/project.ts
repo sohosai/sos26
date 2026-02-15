@@ -3,7 +3,9 @@ import {
 	type CreateProjectResponse,
 	createProjectEndpoint,
 	type ListMyProjectsResponse,
+	type ListProjectMembersResponse,
 	listMyProjectsEndpoint,
+	listProjectMembersEndpoint,
 } from "@sos26/shared";
 import { callBodyApi, callGetApi } from "./core";
 
@@ -23,4 +25,12 @@ export async function createProject(
  */
 export async function listMyProjects(): Promise<ListMyProjectsResponse> {
 	return callGetApi(listMyProjectsEndpoint);
+}
+
+export function listProjectMembers(
+	projectId: string
+): Promise<ListProjectMembersResponse> {
+	return callGetApi(listProjectMembersEndpoint, {
+		pathParams: { projectId },
+	});
 }
