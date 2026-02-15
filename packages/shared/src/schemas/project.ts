@@ -26,7 +26,6 @@ export const createProjectRequestSchema = z.object({
 	organizationNamePhonetic: z.string().min(1),
 	type: projectTypeSchema,
 	ownerId: z.string().min(1),
-	subOwnerId: z.string().optional(),
 });
 
 export const createProjectResponseSchema = z.object({

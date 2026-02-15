@@ -12,10 +12,10 @@ const generateInviteCode = () =>
 	Math.random().toString(36).substring(2, 8).toUpperCase();
 
 // ─────────────────────────────────────────
-// POST /projects
+// POST /projects/subscribe
 // 企画を作成
 // ─────────────────────────────────────────
-projectRoute.post("/", requireAuth, async c => {
+projectRoute.post("/subscribe", requireAuth, async c => {
 	const body = await c.req.json().catch(() => ({}));
 	const data = createProjectRequestSchema.parse(body);
 
@@ -27,15 +27,15 @@ projectRoute.post("/", requireAuth, async c => {
 		throw Errors.notFound("責任者ユーザーが見つかりません");
 	}
 
-	// 副責任者（任意）
-	if (data.subOwnerId) {
-		const subOwner = await prisma.user.findFirst({
-			where: { id: data.subOwnerId, deletedAt: null },
-		});
-		if (!subOwner) {
-			throw Errors.notFound("副責任者ユーザーが見つかりません");
-		}
-	}
+	// 副責任者
+	// if (data.subOwnerId) {
+	// 	const subOwner = await prisma.user.findFirst({
+	// 		where: { id: data.subOwnerId, deletedAt: null },
+	// 	});
+	// 	if (!subOwner) {
+	// 		throw Errors.notFound("副責任者ユーザーが見つかりません");
+	// 	}
+	// }
 
 	// 招待コード生成（衝突回避）
 	let inviteCode = generateInviteCode();
@@ -46,7 +46,7 @@ projectRoute.post("/", requireAuth, async c => {
 	const project = await prisma.project.create({
 		data: {
 			...data,
-			subOwnerId: data.subOwnerId ?? null,
+			subOwnerId: null,
 			inviteCode,
 		},
 	});
