@@ -43,48 +43,6 @@ export const projectRegisterMockForm: Form = {
 				{ id: "FOOD", label: "食品企画" },
 			],
 		},
-		// デザイン確認用
-		// {
-		// 	id: "project-description",
-		// 	label: "企画内容",
-		// 	type: "textarea",
-		// 	required: true,
-		// },
-		// デザイン確認用
-		// {
-		// 	id: "expected-members",
-		// 	label: "参加予定人数",
-		// 	type: "number",
-		// 	required: false,
-		// },
-		// デザイン確認用
-		// {
-		// 	id: "proposal-pdf",
-		// 	label: "企画提案書（PDF）",
-		// 	type: "file",
-		// 	required: false,
-		// },
-		// デザイン確認用
-		// {
-		// 	id: "agreement",
-		// 	label: "注意事項の確認",
-		// 	type: "checkbox",
-		// 	required: true,
-		// 	options: [
-		// 		{
-		// 			id: "fire",
-		// 			label: "火気使用の有無について正しく申告します",
-		// 		},
-		// 		{
-		// 			id: "noise",
-		// 			label: "騒音・音量に関する規定を遵守します",
-		// 		},
-		// 		{
-		// 			id: "rules",
-		// 			label: "学園祭の企画運営ルールを確認しました",
-		// 		},
-		// 	],
-		// },
 	],
 };
 export const isCreateProjectFormAnswers = (

@@ -2,13 +2,9 @@ import { Heading, Text } from "@radix-ui/themes";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { FormAnswerDialog } from "@/components/form/Answer/AnswerDialog";
-import {
-	isCreateProjectFormAnswers,
-	projectRegisterMockForm,
-} from "@/components/form/projectInitFormMock";
-import type { Form, FormAnswers } from "@/components/form/type";
+import { volunteerEntryFormMock } from "@/components/form/formMock";
+import type { Form } from "@/components/form/type";
 import { Button } from "@/components/primitives";
-import { createProject } from "@/lib/api/project";
 import { useAuthStore } from "@/lib/auth";
 import styles from "./index.module.scss";
 
@@ -23,22 +19,12 @@ function RouteComponent() {
 	const [answeringForm, setAnsweringForm] = useState<Form | null>(null);
 
 	const handleAnswer = () => {
-		setAnsweringForm(projectRegisterMockForm);
+		setAnsweringForm(volunteerEntryFormMock);
 		setDialogOpen(true);
 	};
 
-	const handleSubmit = async (answers: FormAnswers) => {
-		if (!user) return;
-		if (isCreateProjectFormAnswers(answers)) {
-			try {
-				await createProject(answers);
-				setDialogOpen(false);
-			} catch (e) {
-				console.error(e);
-			}
-		} else {
-			console.warn("企画作成フォームではありません。");
-		}
+	const handleSubmit = async () => {
+		// todo:送信時の処理を書く
 	};
 
 	return (
@@ -48,7 +34,7 @@ function RouteComponent() {
 				ようこそ、{user?.name} さん
 			</Text>
 
-			<Button onClick={handleAnswer}>企画を作成する</Button>
+			<Button onClick={handleAnswer}>申請に回答する</Button>
 
 			<FormAnswerDialog
 				open={dialogOpen}

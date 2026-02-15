@@ -1,3 +1,4 @@
+import type { Project } from "@sos26/shared";
 import { FormAnswerDialog } from "@/components/form/Answer/AnswerDialog";
 import {
 	isCreateProjectFormAnswers,
@@ -10,9 +11,10 @@ import { useAuthStore } from "@/lib/auth";
 type Props = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	onCreated: (project: Project) => void;
 };
 
-export function ProjectCreateDialog({ open, onOpenChange }: Props) {
+export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 	const { user } = useAuthStore();
 
 	const handleSubmit = async (answers: FormAnswers) => {
@@ -20,7 +22,8 @@ export function ProjectCreateDialog({ open, onOpenChange }: Props) {
 
 		if (isCreateProjectFormAnswers(answers)) {
 			try {
-				await createProject(answers);
+				const res = await createProject(answers);
+				onCreated(res.project);
 			} catch (e) {
 				console.error(e);
 			}

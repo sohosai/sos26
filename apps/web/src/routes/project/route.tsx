@@ -22,13 +22,14 @@ export const Route = createFileRoute("/project")({
 });
 
 function ProjectLayout() {
-	const projects = Route.useLoaderData();
+	const loaderData = Route.useLoaderData();
+	const [projects, setProjects] = useState(loaderData.projects);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 	// const projects: Project[] = [{ id: "demo-1", name: "模擬店グルメフェス" }];
 
 	const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
 		// "demo-1"
-		projects.projects[0]?.id ?? null
+		projects[0]?.id ?? null
 	);
 	const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -40,7 +41,7 @@ function ProjectLayout() {
 				menuItems={projectMenuItems}
 				projectSelector={
 					<ProjectSelector
-						projects={projects.projects.map((project: Project) => {
+						projects={projects.map((project: Project) => {
 							return {
 								id: project.id,
 								name: project.name,
@@ -59,7 +60,13 @@ function ProjectLayout() {
 			>
 				<Outlet />
 			</main>
-			<ProjectCreateDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+			<ProjectCreateDialog
+				open={dialogOpen}
+				onOpenChange={setDialogOpen}
+				onCreated={project => {
+					setProjects(prev => [...prev, project]);
+				}}
+			/>
 		</div>
 	);
 }
