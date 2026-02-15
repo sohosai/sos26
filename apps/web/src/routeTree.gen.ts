@@ -20,10 +20,12 @@ import { Route as ForbiddenIndexRouteImport } from './routes/forbidden/index'
 import { Route as DocsIndexRouteImport } from './routes/docs/index'
 import { Route as CommitteeIndexRouteImport } from './routes/committee/index'
 import { Route as DocsSlugRouteImport } from './routes/docs/$slug'
+import { Route as ProjectFormsIndexRouteImport } from './routes/project/forms/index'
 import { Route as DevTableIndexRouteImport } from './routes/dev/table/index'
 import { Route as DevSearchIndexRouteImport } from './routes/dev/search/index'
 import { Route as DevPushNotificationIndexRouteImport } from './routes/dev/pushNotification/index'
 import { Route as DevCommitteeMemberIndexRouteImport } from './routes/dev/committeeMember/index'
+import { Route as CommitteeFormsIndexRouteImport } from './routes/committee/forms/index'
 import { Route as AuthResetPasswordIndexRouteImport } from './routes/auth/reset-password/index'
 import { Route as AuthRegisterIndexRouteImport } from './routes/auth/register/index'
 import { Route as AuthLoginIndexRouteImport } from './routes/auth/login/index'
@@ -86,6 +88,11 @@ const DocsSlugRoute = DocsSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => DocsRouteRoute,
 } as any)
+const ProjectFormsIndexRoute = ProjectFormsIndexRouteImport.update({
+  id: '/forms/',
+  path: '/forms/',
+  getParentRoute: () => ProjectRouteRoute,
+} as any)
 const DevTableIndexRoute = DevTableIndexRouteImport.update({
   id: '/table/',
   path: '/table/',
@@ -106,6 +113,11 @@ const DevCommitteeMemberIndexRoute = DevCommitteeMemberIndexRouteImport.update({
   id: '/committeeMember/',
   path: '/committeeMember/',
   getParentRoute: () => DevRouteRoute,
+} as any)
+const CommitteeFormsIndexRoute = CommitteeFormsIndexRouteImport.update({
+  id: '/forms/',
+  path: '/forms/',
+  getParentRoute: () => CommitteeRouteRoute,
 } as any)
 const AuthResetPasswordIndexRoute = AuthResetPasswordIndexRouteImport.update({
   id: '/reset-password/',
@@ -153,10 +165,12 @@ export interface FileRoutesByFullPath {
   '/auth/login/': typeof AuthLoginIndexRoute
   '/auth/register/': typeof AuthRegisterIndexRoute
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
+  '/committee/forms/': typeof CommitteeFormsIndexRoute
   '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
   '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
   '/dev/search/': typeof DevSearchIndexRoute
   '/dev/table/': typeof DevTableIndexRoute
+  '/project/forms/': typeof ProjectFormsIndexRoute
   '/auth/register/setup/': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify/': typeof AuthRegisterVerifyIndexRoute
   '/dev/ui/components/': typeof DevUiComponentsIndexRoute
@@ -173,10 +187,12 @@ export interface FileRoutesByTo {
   '/auth/login': typeof AuthLoginIndexRoute
   '/auth/register': typeof AuthRegisterIndexRoute
   '/auth/reset-password': typeof AuthResetPasswordIndexRoute
+  '/committee/forms': typeof CommitteeFormsIndexRoute
   '/dev/committeeMember': typeof DevCommitteeMemberIndexRoute
   '/dev/pushNotification': typeof DevPushNotificationIndexRoute
   '/dev/search': typeof DevSearchIndexRoute
   '/dev/table': typeof DevTableIndexRoute
+  '/project/forms': typeof ProjectFormsIndexRoute
   '/auth/register/setup': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify': typeof AuthRegisterVerifyIndexRoute
   '/dev/ui/components': typeof DevUiComponentsIndexRoute
@@ -197,10 +213,12 @@ export interface FileRoutesById {
   '/auth/login/': typeof AuthLoginIndexRoute
   '/auth/register/': typeof AuthRegisterIndexRoute
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
+  '/committee/forms/': typeof CommitteeFormsIndexRoute
   '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
   '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
   '/dev/search/': typeof DevSearchIndexRoute
   '/dev/table/': typeof DevTableIndexRoute
+  '/project/forms/': typeof ProjectFormsIndexRoute
   '/auth/register/setup/': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify/': typeof AuthRegisterVerifyIndexRoute
   '/dev/ui/components/': typeof DevUiComponentsIndexRoute
@@ -222,10 +240,12 @@ export interface FileRouteTypes {
     | '/auth/login/'
     | '/auth/register/'
     | '/auth/reset-password/'
+    | '/committee/forms/'
     | '/dev/committeeMember/'
     | '/dev/pushNotification/'
     | '/dev/search/'
     | '/dev/table/'
+    | '/project/forms/'
     | '/auth/register/setup/'
     | '/auth/register/verify/'
     | '/dev/ui/components/'
@@ -242,10 +262,12 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/register'
     | '/auth/reset-password'
+    | '/committee/forms'
     | '/dev/committeeMember'
     | '/dev/pushNotification'
     | '/dev/search'
     | '/dev/table'
+    | '/project/forms'
     | '/auth/register/setup'
     | '/auth/register/verify'
     | '/dev/ui/components'
@@ -265,10 +287,12 @@ export interface FileRouteTypes {
     | '/auth/login/'
     | '/auth/register/'
     | '/auth/reset-password/'
+    | '/committee/forms/'
     | '/dev/committeeMember/'
     | '/dev/pushNotification/'
     | '/dev/search/'
     | '/dev/table/'
+    | '/project/forms/'
     | '/auth/register/setup/'
     | '/auth/register/verify/'
     | '/dev/ui/components/'
@@ -363,6 +387,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsSlugRouteImport
       parentRoute: typeof DocsRouteRoute
     }
+    '/project/forms/': {
+      id: '/project/forms/'
+      path: '/forms'
+      fullPath: '/project/forms/'
+      preLoaderRoute: typeof ProjectFormsIndexRouteImport
+      parentRoute: typeof ProjectRouteRoute
+    }
     '/dev/table/': {
       id: '/dev/table/'
       path: '/table'
@@ -390,6 +421,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dev/committeeMember/'
       preLoaderRoute: typeof DevCommitteeMemberIndexRouteImport
       parentRoute: typeof DevRouteRoute
+    }
+    '/committee/forms/': {
+      id: '/committee/forms/'
+      path: '/forms'
+      fullPath: '/committee/forms/'
+      preLoaderRoute: typeof CommitteeFormsIndexRouteImport
+      parentRoute: typeof CommitteeRouteRoute
     }
     '/auth/reset-password/': {
       id: '/auth/reset-password/'
@@ -458,10 +496,12 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
 
 interface CommitteeRouteRouteChildren {
   CommitteeIndexRoute: typeof CommitteeIndexRoute
+  CommitteeFormsIndexRoute: typeof CommitteeFormsIndexRoute
 }
 
 const CommitteeRouteRouteChildren: CommitteeRouteRouteChildren = {
   CommitteeIndexRoute: CommitteeIndexRoute,
+  CommitteeFormsIndexRoute: CommitteeFormsIndexRoute,
 }
 
 const CommitteeRouteRouteWithChildren = CommitteeRouteRoute._addFileChildren(
@@ -504,10 +544,12 @@ const DocsRouteRouteWithChildren = DocsRouteRoute._addFileChildren(
 
 interface ProjectRouteRouteChildren {
   ProjectIndexRoute: typeof ProjectIndexRoute
+  ProjectFormsIndexRoute: typeof ProjectFormsIndexRoute
 }
 
 const ProjectRouteRouteChildren: ProjectRouteRouteChildren = {
   ProjectIndexRoute: ProjectIndexRoute,
+  ProjectFormsIndexRoute: ProjectFormsIndexRoute,
 }
 
 const ProjectRouteRouteWithChildren = ProjectRouteRoute._addFileChildren(

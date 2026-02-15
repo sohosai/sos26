@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "@radix-ui/themes": "^3.2.1",
     "@sos26/shared": "workspace:*",
     "@tabler/icons-react": "^3.36.1",
