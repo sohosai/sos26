@@ -18,10 +18,10 @@ const generateInviteCode = () =>
 projectRoute.post("/subscribe", requireAuth, async c => {
 	const body = await c.req.json().catch(() => ({}));
 	const data = createProjectRequestSchema.parse(body);
-
+	const userId = c.get("user").id;
 	// 責任者の存在確認
 	const owner = await prisma.user.findFirst({
-		where: { id: data.ownerId, deletedAt: null },
+		where: { id: userId, deletedAt: null },
 	});
 	if (!owner) {
 		throw Errors.notFound("責任者ユーザーが見つかりません");
@@ -46,12 +46,40 @@ projectRoute.post("/subscribe", requireAuth, async c => {
 	const project = await prisma.project.create({
 		data: {
 			...data,
+			ownerId: userId,
 			subOwnerId: null,
 			inviteCode,
+			projectMembers: {
+				create: {
+					userId: userId,
+				},
+			},
 		},
 	});
 
 	return c.json({ project });
+});
+
+// ─────────────────────────────────────────
+// GET /projects
+// 自分が参加している企画一覧
+// ─────────────────────────────────────────
+projectRoute.get("/", requireAuth, async c => {
+	const userId = c.get("user").id;
+
+	const projects = await prisma.project.findMany({
+		where: {
+			deletedAt: null,
+			projectMembers: {
+				some: {
+					userId,
+					deletedAt: null,
+				},
+			},
+		},
+	});
+
+	return c.json({ projects });
 });
 
 export { projectRoute };

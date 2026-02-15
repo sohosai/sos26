@@ -1,8 +1,9 @@
 import {
 	createProjectRequestSchema,
 	createProjectResponseSchema,
+	listMyProjectsResponseSchema,
 } from "../schemas/project";
-import type { BodyEndpoint } from "./types";
+import type { BodyEndpoint, GetEndpoint } from "./types";
 
 /**
  * POST /projects
@@ -15,16 +16,34 @@ import type { BodyEndpoint } from "./types";
  */
 export const createProjectEndpoint: BodyEndpoint<
 	"POST",
-	"/projects",
+	"/projects/subscribe",
 	undefined,
 	undefined,
 	typeof createProjectRequestSchema,
 	typeof createProjectResponseSchema
 > = {
 	method: "POST",
-	path: "/projects",
+	path: "/projects/subscribe",
 	pathParams: undefined,
 	query: undefined,
 	request: createProjectRequestSchema,
 	response: createProjectResponseSchema,
+} as const;
+
+/**
+ * GET /projects
+ * 自分が参加している企画一覧を取得
+ */
+export const listMyProjectsEndpoint: GetEndpoint<
+	"/projects",
+	undefined,
+	undefined,
+	typeof listMyProjectsResponseSchema
+> = {
+	method: "GET",
+	path: "/projects",
+	pathParams: undefined,
+	query: undefined,
+	request: undefined,
+	response: listMyProjectsResponseSchema,
 } as const;

@@ -25,9 +25,20 @@ export const createProjectRequestSchema = z.object({
 	organizationName: z.string().min(1),
 	organizationNamePhonetic: z.string().min(1),
 	type: projectTypeSchema,
-	ownerId: z.string().min(1),
 });
+
+export type CreateProjectRequest = z.infer<typeof createProjectRequestSchema>;
 
 export const createProjectResponseSchema = z.object({
 	project: projectSchema,
 });
+
+export type CreateProjectResponse = z.infer<typeof createProjectResponseSchema>;
+
+export const listMyProjectsResponseSchema = z.object({
+	projects: z.array(projectSchema),
+});
+
+export type ListMyProjectsResponse = z.infer<
+	typeof listMyProjectsResponseSchema
+>;

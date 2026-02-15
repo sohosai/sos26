@@ -35,7 +35,7 @@ app.get("/", c => {
 // Mount routes
 app.route("/auth", authRoute);
 app.route("/committee-members", committeeMemberRoute);
-app.route("/project", projectRoute);
+app.route("/projects", projectRoute);
 app.route("/push", pushRoute);
 
 export { app };
