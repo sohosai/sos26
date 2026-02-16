@@ -20,6 +20,7 @@ import { Route as ForbiddenIndexRouteImport } from './routes/forbidden/index'
 import { Route as DocsIndexRouteImport } from './routes/docs/index'
 import { Route as CommitteeIndexRouteImport } from './routes/committee/index'
 import { Route as DocsSlugRouteImport } from './routes/docs/$slug'
+import { Route as ProjectProjectIdRouteRouteImport } from './routes/project/$projectId/route'
 import { Route as ProjectProjectIdIndexRouteImport } from './routes/project/$projectId/index'
 import { Route as DevTableIndexRouteImport } from './routes/dev/table/index'
 import { Route as DevSearchIndexRouteImport } from './routes/dev/search/index'
@@ -91,10 +92,15 @@ const DocsSlugRoute = DocsSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => DocsRouteRoute,
 } as any)
-const ProjectProjectIdIndexRoute = ProjectProjectIdIndexRouteImport.update({
-  id: '/$projectId/',
-  path: '/$projectId/',
+const ProjectProjectIdRouteRoute = ProjectProjectIdRouteRouteImport.update({
+  id: '/$projectId',
+  path: '/$projectId',
   getParentRoute: () => ProjectRouteRoute,
+} as any)
+const ProjectProjectIdIndexRoute = ProjectProjectIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ProjectProjectIdRouteRoute,
 } as any)
 const DevTableIndexRoute = DevTableIndexRouteImport.update({
   id: '/table/',
@@ -144,15 +150,15 @@ const AuthLoginIndexRoute = AuthLoginIndexRouteImport.update({
 } as any)
 const ProjectProjectIdMembersIndexRoute =
   ProjectProjectIdMembersIndexRouteImport.update({
-    id: '/$projectId/members/',
-    path: '/$projectId/members/',
-    getParentRoute: () => ProjectRouteRoute,
+    id: '/members/',
+    path: '/members/',
+    getParentRoute: () => ProjectProjectIdRouteRoute,
   } as any)
 const ProjectProjectIdFormsIndexRoute =
   ProjectProjectIdFormsIndexRouteImport.update({
-    id: '/$projectId/forms/',
-    path: '/$projectId/forms/',
-    getParentRoute: () => ProjectRouteRoute,
+    id: '/forms/',
+    path: '/forms/',
+    getParentRoute: () => ProjectProjectIdRouteRoute,
   } as any)
 const DevUiComponentsIndexRoute = DevUiComponentsIndexRouteImport.update({
   id: '/ui/components/',
@@ -177,6 +183,7 @@ export interface FileRoutesByFullPath {
   '/dev': typeof DevRouteRouteWithChildren
   '/docs': typeof DocsRouteRouteWithChildren
   '/project': typeof ProjectRouteRouteWithChildren
+  '/project/$projectId': typeof ProjectProjectIdRouteRouteWithChildren
   '/docs/$slug': typeof DocsSlugRoute
   '/committee/': typeof CommitteeIndexRoute
   '/docs/': typeof DocsIndexRoute
@@ -231,6 +238,7 @@ export interface FileRoutesById {
   '/dev': typeof DevRouteRouteWithChildren
   '/docs': typeof DocsRouteRouteWithChildren
   '/project': typeof ProjectRouteRouteWithChildren
+  '/project/$projectId': typeof ProjectProjectIdRouteRouteWithChildren
   '/docs/$slug': typeof DocsSlugRoute
   '/committee/': typeof CommitteeIndexRoute
   '/docs/': typeof DocsIndexRoute
@@ -261,6 +269,7 @@ export interface FileRouteTypes {
     | '/dev'
     | '/docs'
     | '/project'
+    | '/project/$projectId'
     | '/docs/$slug'
     | '/committee/'
     | '/docs/'
@@ -314,6 +323,7 @@ export interface FileRouteTypes {
     | '/dev'
     | '/docs'
     | '/project'
+    | '/project/$projectId'
     | '/docs/$slug'
     | '/committee/'
     | '/docs/'
@@ -425,12 +435,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsSlugRouteImport
       parentRoute: typeof DocsRouteRoute
     }
+    '/project/$projectId': {
+      id: '/project/$projectId'
+      path: '/$projectId'
+      fullPath: '/project/$projectId'
+      preLoaderRoute: typeof ProjectProjectIdRouteRouteImport
+      parentRoute: typeof ProjectRouteRoute
+    }
     '/project/$projectId/': {
       id: '/project/$projectId/'
-      path: '/$projectId'
+      path: '/'
       fullPath: '/project/$projectId/'
       preLoaderRoute: typeof ProjectProjectIdIndexRouteImport
-      parentRoute: typeof ProjectRouteRoute
+      parentRoute: typeof ProjectProjectIdRouteRoute
     }
     '/dev/table/': {
       id: '/dev/table/'
@@ -497,17 +514,17 @@ declare module '@tanstack/react-router' {
     }
     '/project/$projectId/members/': {
       id: '/project/$projectId/members/'
-      path: '/$projectId/members'
+      path: '/members'
       fullPath: '/project/$projectId/members/'
       preLoaderRoute: typeof ProjectProjectIdMembersIndexRouteImport
-      parentRoute: typeof ProjectRouteRoute
+      parentRoute: typeof ProjectProjectIdRouteRoute
     }
     '/project/$projectId/forms/': {
       id: '/project/$projectId/forms/'
-      path: '/$projectId/forms'
+      path: '/forms'
       fullPath: '/project/$projectId/forms/'
       preLoaderRoute: typeof ProjectProjectIdFormsIndexRouteImport
-      parentRoute: typeof ProjectRouteRoute
+      parentRoute: typeof ProjectProjectIdRouteRoute
     }
     '/dev/ui/components/': {
       id: '/dev/ui/components/'
@@ -603,18 +620,31 @@ const DocsRouteRouteWithChildren = DocsRouteRoute._addFileChildren(
   DocsRouteRouteChildren,
 )
 
-interface ProjectRouteRouteChildren {
-  ProjectIndexRoute: typeof ProjectIndexRoute
+interface ProjectProjectIdRouteRouteChildren {
   ProjectProjectIdIndexRoute: typeof ProjectProjectIdIndexRoute
   ProjectProjectIdFormsIndexRoute: typeof ProjectProjectIdFormsIndexRoute
   ProjectProjectIdMembersIndexRoute: typeof ProjectProjectIdMembersIndexRoute
 }
 
-const ProjectRouteRouteChildren: ProjectRouteRouteChildren = {
-  ProjectIndexRoute: ProjectIndexRoute,
+const ProjectProjectIdRouteRouteChildren: ProjectProjectIdRouteRouteChildren = {
   ProjectProjectIdIndexRoute: ProjectProjectIdIndexRoute,
   ProjectProjectIdFormsIndexRoute: ProjectProjectIdFormsIndexRoute,
   ProjectProjectIdMembersIndexRoute: ProjectProjectIdMembersIndexRoute,
+}
+
+const ProjectProjectIdRouteRouteWithChildren =
+  ProjectProjectIdRouteRoute._addFileChildren(
+    ProjectProjectIdRouteRouteChildren,
+  )
+
+interface ProjectRouteRouteChildren {
+  ProjectProjectIdRouteRoute: typeof ProjectProjectIdRouteRouteWithChildren
+  ProjectIndexRoute: typeof ProjectIndexRoute
+}
+
+const ProjectRouteRouteChildren: ProjectRouteRouteChildren = {
+  ProjectProjectIdRouteRoute: ProjectProjectIdRouteRouteWithChildren,
+  ProjectIndexRoute: ProjectIndexRoute,
 }
 
 const ProjectRouteRouteWithChildren = ProjectRouteRoute._addFileChildren(

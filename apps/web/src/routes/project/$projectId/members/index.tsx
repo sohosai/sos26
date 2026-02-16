@@ -1,8 +1,13 @@
-import { Box, Heading, Text } from "@radix-ui/themes";
+import { Heading } from "@radix-ui/themes";
+import { IconPlus } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
+import { useState } from "react";
 import { DataTable } from "@/components/patterns";
+import { Button } from "@/components/primitives";
+import { InviteMemberDialog } from "@/components/project/members/InviteMemberDialog";
 import { listProjectMembers } from "@/lib/api/project";
+import styles from "./index.module.scss";
 
 type MemberRow = {
 	id: string;
@@ -47,15 +52,15 @@ const columns: ColumnDef<MemberRow>[] = [
 
 function RouteComponent() {
 	const { members } = Route.useLoaderData();
+	const [dialogOpen, setDialogOpen] = useState(false);
 
 	return (
-		<Box p="4">
-			<Heading size="6" mb="1">
-				メンバー一覧
-			</Heading>
-			<Text color="gray" mb="4">
-				この企画に参加しているメンバーです
-			</Text>
+		<div className={styles.page}>
+			<Heading size="6">メンバー一覧</Heading>
+			<Button intent="ghost" size="2" onClick={() => setDialogOpen(true)}>
+				<IconPlus size={16} stroke={1.5} />
+				メンバーを追加
+			</Button>
 
 			<DataTable<MemberRow>
 				data={members}
@@ -75,6 +80,8 @@ function RouteComponent() {
 					},
 				]}
 			/>
-		</Box>
+
+			<InviteMemberDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+		</div>
 	);
 }
