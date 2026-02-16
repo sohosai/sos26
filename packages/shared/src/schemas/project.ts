@@ -81,3 +81,19 @@ export const listProjectMembersResponseSchema = z.object({
 export type ListProjectMembersResponse = z.infer<
 	typeof listProjectMembersResponseSchema
 >;
+
+// ─────────────────────────────────────────────
+// POST /projects/join
+// ─────────────────────────────────────────────
+
+export const joinProjectRequestSchema = z.object({
+	inviteCode: z.string().length(6),
+});
+
+export type JoinProjectRequest = z.infer<typeof joinProjectRequestSchema>;
+
+export const joinProjectResponseSchema = z.object({
+	project: projectSchema,
+});
+
+export type JoinProjectResponse = z.infer<typeof joinProjectResponseSchema>;

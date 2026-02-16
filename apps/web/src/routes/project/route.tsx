@@ -7,7 +7,7 @@ import {
 } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
-import { listMyProjects } from "@/lib/api/project";
+import { joinProject, listMyProjects } from "@/lib/api/project";
 import { requireAuth } from "@/lib/auth";
 import styles from "./route.module.scss";
 
@@ -26,6 +26,7 @@ function ProjectLayout() {
 	const loaderData = Route.useLoaderData();
 	const [projects, setProjects] = useState(loaderData.projects);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+	const [dialogOpen, setDialogOpen] = useState(false);
 	// const projects: Project[] = [{ id: "demo-1", name: "模擬店グルメフェス" }];
 
 	const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
@@ -35,15 +36,23 @@ function ProjectLayout() {
 
 	useEffect(() => {
 		if (!selectedProjectId) return;
-
+		const exists = projects.some(p => p.id === selectedProjectId);
+		if (!exists) return;
 		navigate({
 			to: "/project/$projectId",
 			params: { projectId: selectedProjectId },
 			replace: true,
 		});
-	}, [selectedProjectId, navigate]);
+	}, [selectedProjectId, navigate, projects]);
 
-	const [dialogOpen, setDialogOpen] = useState(false);
+	const handleJoinProject = async (inviteCode: string) => {
+		const { project } = await joinProject({ inviteCode });
+
+		setProjects(prev => {
+			if (prev.some(p => p.id === project.id)) return prev;
+			return [...prev, project];
+		});
+	};
 
 	return (
 		<div className={styles.layout}>
@@ -70,7 +79,7 @@ function ProjectLayout() {
 							setSelectedProjectId(projectId);
 						}}
 						onCreateProject={() => setDialogOpen(true)}
-						onJoinProject={() => alert("招待コード入力モーダル（未実装）")}
+						onJoinProject={handleJoinProject}
 					/>
 				}
 			/>

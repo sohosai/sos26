@@ -1,6 +1,8 @@
 import {
 	createProjectRequestSchema,
 	createProjectResponseSchema,
+	joinProjectRequestSchema,
+	joinProjectResponseSchema,
 	listMyProjectsResponseSchema,
 	listProjectMembersResponseSchema,
 	projectIdPathParamsSchema,
@@ -66,4 +68,24 @@ export const listProjectMembersEndpoint: GetEndpoint<
 	query: undefined,
 	request: undefined,
 	response: listProjectMembersResponseSchema,
+} as const;
+
+/**
+ * POST /projects/join
+ * 招待コードで企画に参加
+ */
+export const joinProjectEndpoint: BodyEndpoint<
+	"POST",
+	"/projects/join",
+	undefined,
+	undefined,
+	typeof joinProjectRequestSchema,
+	typeof joinProjectResponseSchema
+> = {
+	method: "POST",
+	path: "/projects/join",
+	pathParams: undefined,
+	query: undefined,
+	request: joinProjectRequestSchema,
+	response: joinProjectResponseSchema,
 } as const;

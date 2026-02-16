@@ -1,5 +1,6 @@
 import {
 	createProjectRequestSchema,
+	joinProjectRequestSchema,
 	type ProjectMemberRole,
 } from "@sos26/shared";
 import { Hono } from "hono";
@@ -151,3 +152,47 @@ projectRoute.get("/:projectId/members", requireAuth, async c => {
 	return c.json({ members: result });
 });
 export { projectRoute };
+
+// ─────────────────────────────────────────
+// POST /projects/join
+// 招待コードで企画に参加
+// ─────────────────────────────────────────
+projectRoute.post("/join", requireAuth, async c => {
+	const body = await c.req.json().catch(() => ({}));
+	const { inviteCode } = joinProjectRequestSchema.parse(body);
+
+	const userId = c.get("user").id;
+
+	const project = await prisma.project.findFirst({
+		where: {
+			inviteCode,
+			deletedAt: null,
+		},
+	});
+
+	if (!project) {
+		throw Errors.notFound("招待コードが無効です");
+	}
+
+	// すでにメンバーか確認
+	const alreadyMember = await prisma.projectMember.findFirst({
+		where: {
+			projectId: project.id,
+			userId,
+			deletedAt: null,
+		},
+	});
+
+	if (alreadyMember) {
+		throw Errors.alreadyExists("すでにこの企画に参加しています");
+	}
+
+	await prisma.projectMember.create({
+		data: {
+			projectId: project.id,
+			userId,
+		},
+	});
+
+	return c.json({ project });
+});

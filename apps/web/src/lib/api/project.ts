@@ -2,6 +2,9 @@ import {
 	type CreateProjectRequest,
 	type CreateProjectResponse,
 	createProjectEndpoint,
+	type JoinProjectRequest,
+	type JoinProjectResponse,
+	joinProjectEndpoint,
 	type ListMyProjectsResponse,
 	type ListProjectMembersResponse,
 	listMyProjectsEndpoint,
@@ -33,4 +36,14 @@ export function listProjectMembers(
 	return callGetApi(listProjectMembersEndpoint, {
 		pathParams: { projectId },
 	});
+}
+
+/**
+ * POST /projects/join
+ * 招待コードで企画に参加
+ */
+export async function joinProject(
+	body: JoinProjectRequest
+): Promise<JoinProjectResponse> {
+	return callBodyApi(joinProjectEndpoint, body);
 }
