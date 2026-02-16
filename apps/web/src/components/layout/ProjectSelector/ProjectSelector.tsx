@@ -7,6 +7,7 @@ import {
 } from "@tabler/icons-react";
 import Avatar from "boring-avatars";
 import { useState } from "react";
+import { Button, TextField } from "@/components/primitives";
 import styles from "./ProjectSelector.module.scss";
 
 export type Project = {
@@ -20,7 +21,7 @@ type ProjectSelectorProps = {
 	collapsed: boolean;
 	onSelectProject: (projectId: string) => void;
 	onCreateProject: () => void;
-	onJoinProject: () => void;
+	onJoinProject: (inviteCode: string) => void;
 };
 
 export function ProjectSelector({
@@ -32,6 +33,8 @@ export function ProjectSelector({
 	onJoinProject,
 }: ProjectSelectorProps) {
 	const [open, setOpen] = useState(false);
+	const [showJoinInput, setShowJoinInput] = useState(false);
+	const [inviteCode, setInviteCode] = useState("");
 	const selectedProject = projects.find(p => p.id === selectedProjectId);
 
 	const handleSelectProject = (projectId: string) => {
@@ -43,10 +46,18 @@ export function ProjectSelector({
 		onCreateProject();
 		setOpen(false);
 	};
+	const handleSubmitJoin = () => {
+		if (!inviteCode.trim()) return;
 
-	const handleJoinProject = () => {
-		onJoinProject();
+		onJoinProject(inviteCode.trim());
+
+		setInviteCode("");
+		setShowJoinInput(false);
 		setOpen(false);
+	};
+	const handleCancelJoin = () => {
+		setInviteCode("");
+		setShowJoinInput(false);
 	};
 
 	const trigger = (
@@ -105,14 +116,38 @@ export function ProjectSelector({
 						<IconPlus size={16} />
 						<Text size="2">新しい企画を作成</Text>
 					</button>
-					<button
-						type="button"
-						className={styles.actionItem}
-						onClick={handleJoinProject}
-					>
-						<IconTicket size={16} />
-						<Text size="2">招待コードで参加</Text>
-					</button>
+
+					{!showJoinInput ? (
+						<button
+							type="button"
+							className={styles.actionItem}
+							onClick={() => setShowJoinInput(true)}
+						>
+							<IconTicket size={16} />
+							<Text size="2">招待コードで参加</Text>
+						</button>
+					) : (
+						<div className={styles.joinInput}>
+							<TextField
+								placeholder="招待コードを入力"
+								value={inviteCode}
+								onChange={(value: string) => setInviteCode(value)}
+								label={""}
+								aria-label="招待コード入力"
+							/>
+							<div className={styles.joinActions}>
+								<Button intent="secondary" onClick={handleCancelJoin}>
+									キャンセル
+								</Button>
+								<Button
+									disabled={!inviteCode.trim()}
+									onClick={handleSubmitJoin}
+								>
+									参加
+								</Button>
+							</div>
+						</div>
+					)}
 				</div>
 			</Popover.Content>
 		</Popover.Root>
