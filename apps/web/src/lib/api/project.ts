@@ -9,6 +9,8 @@ import {
 	type ListProjectMembersResponse,
 	listMyProjectsEndpoint,
 	listProjectMembersEndpoint,
+	type PromoteSubOwnerResponse,
+	promoteSubOwnerEndpoint,
 	type RemoveProjectMemberResponse,
 	removeProjectMemberEndpoint,
 } from "@sos26/shared";
@@ -59,6 +61,19 @@ export async function removeProjectMember(
 	userId: string
 ): Promise<RemoveProjectMemberResponse> {
 	return callBodyApi(removeProjectMemberEndpoint, undefined, {
+		pathParams: { projectId, userId },
+	});
+}
+
+/**
+ * POST /projects/:projectId/members/:userId/promote
+ * プロジェクトメンバーを副責任者に任命
+ */
+export async function promoteSubOwner(
+	projectId: string,
+	userId: string
+): Promise<PromoteSubOwnerResponse> {
+	return callBodyApi(promoteSubOwnerEndpoint, undefined, {
 		pathParams: { projectId, userId },
 	});
 }

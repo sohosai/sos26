@@ -11,7 +11,11 @@ import { useState } from "react";
 import { DataTable } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { InviteMemberDialog } from "@/components/project/members/InviteMemberDialog";
-import { listProjectMembers, removeProjectMember } from "@/lib/api/project";
+import {
+	listProjectMembers,
+	promoteSubOwner,
+	removeProjectMember,
+} from "@/lib/api/project";
 import styles from "./index.module.scss";
 
 type MemberRow = {
@@ -35,8 +39,9 @@ const roleLabelMap: Record<MemberRow["role"], string> = {
 };
 
 const createColumns = (
-	// onPromote: (memberId: string) => void,
-	onDelete: (memberId: string) => void
+	onPromote: (memberId: string) => void,
+	onDelete: (memberId: string) => void,
+	hasSubOwner: boolean
 ): ColumnDef<MemberRow>[] => [
 	{
 		accessorKey: "name",
@@ -75,14 +80,11 @@ const createColumns = (
 
 					<Popover.Content align="start" sideOffset={4}>
 						<div className={styles.menu}>
-							{member.role !== "SUB_OWNER" && (
+							{!hasSubOwner && member.role !== "OWNER" && (
 								<Button
 									intent="ghost"
 									size="2"
-									onClick={() => {
-										// todo:副責任者に指名
-										// console.log("promote", member.id);
-									}}
+									onClick={() => onPromote(member.userId)}
 								>
 									<IconUserUp size={16} />
 									副責任者に指名
@@ -110,6 +112,22 @@ function RouteComponent() {
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const { projectId } = Route.useParams();
 
+	const handlePromote = async (memberId: string) => {
+		try {
+			await promoteSubOwner(projectId, memberId);
+
+			setMembers(prev =>
+				prev.map(m => ({
+					...m,
+					role: m.userId === memberId ? "SUB_OWNER" : m.role,
+				}))
+			);
+		} catch (err) {
+			console.error(err);
+			alert("副責任者の任命に失敗しました");
+		}
+	};
+
 	const handleDeleteMember = async (memberId: string) => {
 		try {
 			await removeProjectMember(projectId, memberId);
@@ -119,6 +137,7 @@ function RouteComponent() {
 			alert("メンバーの削除に失敗しました");
 		}
 	};
+
 	return (
 		<div className={styles.page}>
 			<Heading size="6">メンバー一覧</Heading>
@@ -129,7 +148,11 @@ function RouteComponent() {
 
 			<DataTable<MemberRow>
 				data={members}
-				columns={createColumns(handleDeleteMember)}
+				columns={createColumns(
+					handlePromote,
+					handleDeleteMember,
+					members.some(member => member.role === "SUB_OWNER")
+				)}
 				features={{
 					sorting: true,
 					globalFilter: true,

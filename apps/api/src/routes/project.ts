@@ -197,6 +197,10 @@ projectRoute.post("/join", requireAuth, async c => {
 	return c.json({ project });
 });
 
+// ─────────────────────────────────────────
+// POST /projects/:projectId/members/:userId/remove
+// メンバーを削除
+// ─────────────────────────────────────────
 projectRoute.post(
 	"/:projectId/members/:userId/remove",
 	requireAuth,
@@ -247,5 +251,85 @@ projectRoute.post(
 		});
 
 		return c.json({ success: true });
+	}
+);
+
+// ─────────────────────────────────────────
+// POST /projects/:projectId/members/:userId/promote
+// メンバーを副責任者に任命
+// ─────────────────────────────────────────
+projectRoute.post(
+	"/:projectId/members/:userId/promote",
+	requireAuth,
+	async c => {
+		const { projectId, userId } = c.req.param();
+		const requesterId = c.get("user").id;
+
+		// project 存在確認
+		const project = await prisma.project.findFirst({
+			where: {
+				id: projectId,
+				deletedAt: null,
+			},
+		});
+		if (!project) {
+			throw Errors.notFound("企画が見つかりません");
+		}
+
+		// 権限チェック（責任者のみ）
+		if (project.ownerId !== requesterId) {
+			throw Errors.forbidden("副責任者を任命できるのは責任者のみです");
+		}
+
+		// 任命対象がメンバーか
+		const member = await prisma.projectMember.findFirst({
+			where: {
+				projectId,
+				userId,
+				deletedAt: null,
+			},
+		});
+		if (!member) {
+			throw Errors.notFound("対象ユーザーは企画メンバーではありません");
+		}
+
+		// すでに副責任者がいる場合はエラー
+		if (project.subOwnerId) {
+			throw Errors.invalidRequest("すでに副責任者が任命されています");
+		}
+
+		// 責任者は指定不可
+		if (userId === project.ownerId) {
+			throw Errors.invalidRequest("責任者を副責任者には指定できません");
+		}
+
+		// 他企画で責任者、副責任者をやっていないかチェック
+		const hasOtherPrivilegedProject = await prisma.project.findFirst({
+			where: {
+				deletedAt: null,
+				id: {
+					not: projectId,
+				},
+				OR: [{ ownerId: userId }, { subOwnerId: userId }],
+			},
+		});
+
+		if (hasOtherPrivilegedProject) {
+			throw Errors.invalidRequest(
+				"このユーザーはすでに他の企画で責任者または副責任者です"
+			);
+		}
+
+		await prisma.project.update({
+			where: { id: projectId },
+			data: {
+				subOwnerId: userId,
+			},
+		});
+
+		return c.json({
+			success: true,
+			subOwnerId: userId,
+		});
 	}
 );
