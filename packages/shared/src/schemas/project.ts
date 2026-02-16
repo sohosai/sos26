@@ -97,3 +97,26 @@ export const joinProjectResponseSchema = z.object({
 });
 
 export type JoinProjectResponse = z.infer<typeof joinProjectResponseSchema>;
+
+// ─────────────────────────────────────────────
+// POST /projects/:projectId/members/:userId
+// ─────────────────────────────────────────────
+
+export const projectMemberPathParamsSchema = z.object({
+	projectId: z.string().min(1),
+	userId: z.string().min(1),
+});
+
+export type ProjectMemberPathParams = z.infer<
+	typeof projectMemberPathParamsSchema
+>;
+
+export const removeProjectMemberRequestSchema = z.undefined();
+
+export const removeProjectMemberResponseSchema = z.object({
+	success: z.literal(true),
+});
+
+export type RemoveProjectMemberResponse = z.infer<
+	typeof removeProjectMemberResponseSchema
+>;

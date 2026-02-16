@@ -9,6 +9,8 @@ import {
 	type ListProjectMembersResponse,
 	listMyProjectsEndpoint,
 	listProjectMembersEndpoint,
+	type RemoveProjectMemberResponse,
+	removeProjectMemberEndpoint,
 } from "@sos26/shared";
 import { callBodyApi, callGetApi } from "./core";
 
@@ -46,4 +48,17 @@ export async function joinProject(
 	body: JoinProjectRequest
 ): Promise<JoinProjectResponse> {
 	return callBodyApi(joinProjectEndpoint, body);
+}
+
+/**
+ * POST /projects/:projectId/members/:userId/remove
+ * プロジェクトメンバーを削除
+ */
+export async function removeProjectMember(
+	projectId: string,
+	userId: string
+): Promise<RemoveProjectMemberResponse> {
+	return callBodyApi(removeProjectMemberEndpoint, undefined, {
+		pathParams: { projectId, userId },
+	});
 }

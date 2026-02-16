@@ -196,3 +196,56 @@ projectRoute.post("/join", requireAuth, async c => {
 
 	return c.json({ project });
 });
+
+projectRoute.post(
+	"/:projectId/members/:userId/remove",
+	requireAuth,
+	async c => {
+		const { projectId, userId } = c.req.param();
+		const requesterId = c.get("user").id;
+
+		// project の存在確認
+		const project = await prisma.project.findFirst({
+			where: {
+				id: projectId,
+				deletedAt: null,
+			},
+		});
+
+		if (!project) {
+			throw Errors.notFound("企画が見つかりません");
+		}
+
+		// 権限チェック（責任者 or 副責任者）
+		const isPrivileged =
+			project.ownerId === requesterId || project.subOwnerId === requesterId;
+
+		if (!isPrivileged) {
+			throw Errors.forbidden("この操作を行う権限がありません");
+		}
+
+		// 削除対象がメンバーか確認
+		const member = await prisma.projectMember.findFirst({
+			where: {
+				projectId,
+				userId,
+				deletedAt: null,
+			},
+		});
+
+		if (!member) {
+			throw Errors.notFound("対象ユーザーは企画メンバーではありません");
+		}
+
+		if (userId === project.ownerId || userId === project.subOwnerId) {
+			throw Errors.invalidRequest("責任者・副責任者は削除できません");
+		}
+
+		await prisma.projectMember.update({
+			where: { id: member.id },
+			data: { deletedAt: new Date() },
+		});
+
+		return c.json({ success: true });
+	}
+);

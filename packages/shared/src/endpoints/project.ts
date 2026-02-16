@@ -6,6 +6,9 @@ import {
 	listMyProjectsResponseSchema,
 	listProjectMembersResponseSchema,
 	projectIdPathParamsSchema,
+	projectMemberPathParamsSchema,
+	removeProjectMemberRequestSchema,
+	removeProjectMemberResponseSchema,
 } from "../schemas/project";
 import type { BodyEndpoint, GetEndpoint } from "./types";
 
@@ -88,4 +91,24 @@ export const joinProjectEndpoint: BodyEndpoint<
 	query: undefined,
 	request: joinProjectRequestSchema,
 	response: joinProjectResponseSchema,
+} as const;
+
+/**
+ * POST /projects/:projectId/members/:userId/remove
+ * プロジェクトメンバーを論理削除
+ */
+export const removeProjectMemberEndpoint: BodyEndpoint<
+	"POST",
+	"/projects/:projectId/members/:userId/remove",
+	typeof projectMemberPathParamsSchema,
+	undefined,
+	typeof removeProjectMemberRequestSchema,
+	typeof removeProjectMemberResponseSchema
+> = {
+	method: "POST",
+	path: "/projects/:projectId/members/:userId/remove",
+	pathParams: projectMemberPathParamsSchema,
+	query: undefined,
+	request: removeProjectMemberRequestSchema,
+	response: removeProjectMemberResponseSchema,
 } as const;
