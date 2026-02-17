@@ -35,12 +35,19 @@ function ProjectLayout() {
 	);
 
 	const handleJoinProject = async (inviteCode: string) => {
-		const { project } = await joinProject({ inviteCode });
+		try {
+			const { project } = await joinProject({ inviteCode });
 
-		setProjects(prev => {
-			if (prev.some(p => p.id === project.id)) return prev;
-			return [...prev, project];
-		});
+			setProjects(prev => {
+				if (prev.some(p => p.id === project.id)) return prev;
+				return [...prev, project];
+			});
+		} catch (err) {
+			console.error(err);
+			alert(
+				"プロジェクトへの参加に失敗しました。招待コードを確認してください。"
+			);
+		}
 	};
 
 	return (

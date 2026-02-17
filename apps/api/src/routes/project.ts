@@ -25,6 +25,20 @@ projectRoute.post("/create", requireAuth, async c => {
 	const data = createProjectRequestSchema.parse(body);
 	const userId = c.get("user").id;
 
+	// ── 他の企画で責任者・副責任者をやっていないか確認 ──
+	const hasOtherPrivilegedProject = await prisma.project.findFirst({
+		where: {
+			deletedAt: null,
+			OR: [{ ownerId: userId }, { subOwnerId: userId }],
+		},
+	});
+
+	if (hasOtherPrivilegedProject) {
+		throw Errors.invalidRequest(
+			"このユーザーはすでに他の企画で責任者または副責任者です"
+		);
+	}
+
 	// 招待コード生成（衝突回避）
 	let inviteCode = generateInviteCode();
 	while (await prisma.project.findUnique({ where: { inviteCode } })) {
