@@ -164,6 +164,7 @@ export function DataTable<T extends RowData>({
 							</TextField.Root>
 						</Box>
 					)}
+					<Box flexGrow="1" />
 					{f.columnVisibility && (
 						<Popover.Root>
 							<Popover.Trigger>
