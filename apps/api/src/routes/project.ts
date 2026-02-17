@@ -16,10 +16,10 @@ const generateInviteCode = () =>
 	Math.random().toString(36).substring(2, 8).toUpperCase();
 
 // ─────────────────────────────────────────
-// POST /projects/subscribe
+// POST /projects/register
 // 企画を作成
 // ─────────────────────────────────────────
-projectRoute.post("/subscribe", requireAuth, async c => {
+projectRoute.post("/register", requireAuth, async c => {
 	const body = await c.req.json().catch(() => ({}));
 	const data = createProjectRequestSchema.parse(body);
 	const userId = c.get("user").id;

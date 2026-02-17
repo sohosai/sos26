@@ -15,7 +15,7 @@ import {
 import type { BodyEndpoint, GetEndpoint } from "./types";
 
 /**
- * POST /projects
+ * POST /projects/register
  * 企画を作成
  *
  * - 認証必須
@@ -23,14 +23,14 @@ import type { BodyEndpoint, GetEndpoint } from "./types";
  */
 export const createProjectEndpoint: BodyEndpoint<
 	"POST",
-	"/projects/subscribe",
+	"/projects/register",
 	undefined,
 	undefined,
 	typeof createProjectRequestSchema,
 	typeof createProjectResponseSchema
 > = {
 	method: "POST",
-	path: "/projects/subscribe",
+	path: "/projects/register",
 	pathParams: undefined,
 	query: undefined,
 	request: createProjectRequestSchema,

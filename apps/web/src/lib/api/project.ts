@@ -17,7 +17,7 @@ import {
 import { callBodyApi, callGetApi } from "./core";
 
 /**
- * POST /projects/subscribe
+ * POST /projects/register
  * 企画を作成
  */
 export async function createProject(
