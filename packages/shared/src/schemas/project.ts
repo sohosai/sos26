@@ -39,7 +39,7 @@ export const projectMemberSchema = z.object({
 export type ProjectMember = z.infer<typeof projectMemberSchema>;
 
 // ─────────────────────────────────────────────────────────────
-// POST /projects/register
+// POST /project/create
 // ─────────────────────────────────────────────────────────────
 
 export const createProjectRequestSchema = z.object({
@@ -59,7 +59,7 @@ export const createProjectResponseSchema = z.object({
 export type CreateProjectResponse = z.infer<typeof createProjectResponseSchema>;
 
 // ─────────────────────────────────────────────────────────────
-// GET /projects
+// GET /project/list
 // ─────────────────────────────────────────────────────────────
 
 export const listMyProjectsResponseSchema = z.object({
@@ -71,7 +71,7 @@ export type ListMyProjectsResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
-// GET /projects/:projectId/members
+// GET /project/:projectId/members
 // ─────────────────────────────────────────────────────────────
 
 export const listProjectMembersResponseSchema = z.object({
@@ -83,7 +83,7 @@ export type ListProjectMembersResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────
-// POST /projects/join
+// POST /project/join
 // ─────────────────────────────────────────────
 
 export const joinProjectRequestSchema = z.object({
@@ -99,7 +99,57 @@ export const joinProjectResponseSchema = z.object({
 export type JoinProjectResponse = z.infer<typeof joinProjectResponseSchema>;
 
 // ─────────────────────────────────────────────
-// POST /projects/:projectId/members/:userId/remove
+// GET /project/:projectId/detail
+// ─────────────────────────────────────────────
+
+export const getProjectDetailResponseSchema = z.object({
+	project: projectSchema,
+});
+
+export type GetProjectDetailResponse = z.infer<
+	typeof getProjectDetailResponseSchema
+>;
+
+// ─────────────────────────────────────────────
+// PATCH /project/:projectId/detail
+// ─────────────────────────────────────────────
+
+export const updateProjectDetailRequestSchema = z.object({
+	name: z.string().min(1).optional(),
+	namePhonetic: z.string().min(1).optional(),
+	organizationName: z.string().min(1).optional(),
+	organizationNamePhonetic: z.string().min(1).optional(),
+	type: projectTypeSchema.optional(),
+});
+
+export type UpdateProjectDetailRequest = z.infer<
+	typeof updateProjectDetailRequestSchema
+>;
+
+export const updateProjectDetailResponseSchema = z.object({
+	project: projectSchema,
+});
+
+export type UpdateProjectDetailResponse = z.infer<
+	typeof updateProjectDetailResponseSchema
+>;
+
+// ─────────────────────────────────────────────
+// POST /project/:projectId/invite-code/regenerate
+// ─────────────────────────────────────────────
+
+export const regenerateInviteCodeRequestSchema = z.undefined();
+
+export const regenerateInviteCodeResponseSchema = z.object({
+	inviteCode: z.string().length(6),
+});
+
+export type RegenerateInviteCodeResponse = z.infer<
+	typeof regenerateInviteCodeResponseSchema
+>;
+
+// ─────────────────────────────────────────────
+// POST /project/:projectId/members/:userId/remove
 // ─────────────────────────────────────────────
 
 export const projectMemberPathParamsSchema = z.object({
@@ -122,7 +172,7 @@ export type RemoveProjectMemberResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────
-// POST /projects/:projectId/members/:userId/promote
+// POST /project/:projectId/members/:userId/promote
 // ─────────────────────────────────────────────
 
 export const promoteSubOwnerRequestSchema = z.undefined();

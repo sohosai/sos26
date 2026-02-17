@@ -2,11 +2,12 @@ import {
 	createProjectRequestSchema,
 	joinProjectRequestSchema,
 	type ProjectMemberRole,
+	updateProjectDetailRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
 const projectRoute = new Hono<AuthEnv>();
@@ -16,10 +17,10 @@ const generateInviteCode = () =>
 	Math.random().toString(36).substring(2, 8).toUpperCase();
 
 // ─────────────────────────────────────────
-// POST /projects/register
+// POST /project/create
 // 企画を作成
 // ─────────────────────────────────────────
-projectRoute.post("/register", requireAuth, async c => {
+projectRoute.post("/create", requireAuth, async c => {
 	const body = await c.req.json().catch(() => ({}));
 	const data = createProjectRequestSchema.parse(body);
 	const userId = c.get("user").id;
@@ -48,10 +49,10 @@ projectRoute.post("/register", requireAuth, async c => {
 });
 
 // ─────────────────────────────────────────
-// GET /projects
+// GET /project/list
 // 自分が参加している企画一覧
 // ─────────────────────────────────────────
-projectRoute.get("/", requireAuth, async c => {
+projectRoute.get("/list", requireAuth, async c => {
 	const userId = c.get("user").id;
 
 	const projects = await prisma.project.findMany({
@@ -70,7 +71,122 @@ projectRoute.get("/", requireAuth, async c => {
 });
 
 // ─────────────────────────────────────────
-// GET /projects/:projectId/members
+// POST /project/join
+// 招待コードで企画に参加
+// ─────────────────────────────────────────
+projectRoute.post("/join", requireAuth, async c => {
+	const body = await c.req.json().catch(() => ({}));
+	const { inviteCode } = joinProjectRequestSchema.parse(body);
+
+	const userId = c.get("user").id;
+
+	const project = await prisma.project.findFirst({
+		where: {
+			inviteCode,
+			deletedAt: null,
+		},
+	});
+
+	if (!project) {
+		throw Errors.notFound("招待コードが無効です");
+	}
+
+	// すでにメンバーか確認
+	const alreadyMember = await prisma.projectMember.findFirst({
+		where: {
+			projectId: project.id,
+			userId,
+			deletedAt: null,
+		},
+	});
+
+	if (alreadyMember) {
+		throw Errors.alreadyExists("すでにこの企画に参加しています");
+	}
+
+	await prisma.projectMember.create({
+		data: {
+			projectId: project.id,
+			userId,
+		},
+	});
+
+	return c.json({ project });
+});
+
+// ─────────────────────────────────────────
+// GET /project/:projectId/detail
+// 企画の詳細を取得（招待コード含む）
+// ─────────────────────────────────────────
+projectRoute.get(
+	"/:projectId/detail",
+	requireAuth,
+	requireProjectMember,
+	async c => {
+		const project = c.get("project");
+		return c.json({ project });
+	}
+);
+
+// ─────────────────────────────────────────
+// PATCH /project/:projectId/detail
+// 企画の設定変更（名前・団体名等）
+// ─────────────────────────────────────────
+projectRoute.patch(
+	"/:projectId/detail",
+	requireAuth,
+	requireProjectMember,
+	async c => {
+		const role = c.get("projectRole");
+		if (role !== "OWNER") {
+			throw Errors.forbidden("企画の設定を変更できるのは責任者のみです");
+		}
+
+		const body = await c.req.json().catch(() => ({}));
+		const data = updateProjectDetailRequestSchema.parse(body);
+		const project = c.get("project");
+
+		const updated = await prisma.project.update({
+			where: { id: project.id },
+			data,
+		});
+
+		return c.json({ project: updated });
+	}
+);
+
+// ─────────────────────────────────────────
+// POST /project/:projectId/invite-code/regenerate
+// 招待コードを再生成
+// ─────────────────────────────────────────
+projectRoute.post(
+	"/:projectId/invite-code/regenerate",
+	requireAuth,
+	requireProjectMember,
+	async c => {
+		const role = c.get("projectRole");
+		if (role !== "OWNER") {
+			throw Errors.forbidden("招待コードを再生成できるのは責任者のみです");
+		}
+
+		const project = c.get("project");
+
+		let inviteCode = generateInviteCode();
+		while (await prisma.project.findUnique({ where: { inviteCode } })) {
+			inviteCode = generateInviteCode();
+		}
+
+		await prisma.project.update({
+			where: { id: project.id },
+			data: { inviteCode },
+		});
+
+		return c.json({ inviteCode });
+	}
+);
+
+// ─────────────────────────────────────────
+// GET /project/:projectId/members
 // 該当する企画のメンバー一覧
 // ─────────────────────────────────────────
 projectRoute.get("/:projectId/members", requireAuth, async c => {
@@ -137,51 +253,7 @@ projectRoute.get("/:projectId/members", requireAuth, async c => {
 });
 
 // ─────────────────────────────────────────
-// POST /projects/join
-// 招待コードで企画に参加
-// ─────────────────────────────────────────
-projectRoute.post("/join", requireAuth, async c => {
-	const body = await c.req.json().catch(() => ({}));
-	const { inviteCode } = joinProjectRequestSchema.parse(body);
-
-	const userId = c.get("user").id;
-
-	const project = await prisma.project.findFirst({
-		where: {
-			inviteCode,
-			deletedAt: null,
-		},
-	});
-
-	if (!project) {
-		throw Errors.notFound("招待コードが無効です");
-	}
-
-	// すでにメンバーか確認
-	const alreadyMember = await prisma.projectMember.findFirst({
-		where: {
-			projectId: project.id,
-			userId,
-			deletedAt: null,
-		},
-	});
-
-	if (alreadyMember) {
-		throw Errors.alreadyExists("すでにこの企画に参加しています");
-	}
-
-	await prisma.projectMember.create({
-		data: {
-			projectId: project.id,
-			userId,
-		},
-	});
-
-	return c.json({ project });
-});
-
-// ─────────────────────────────────────────
-// POST /projects/:projectId/members/:userId/remove
+// POST /project/:projectId/members/:userId/remove
 // メンバーを削除
 // ─────────────────────────────────────────
 projectRoute.post(
@@ -238,7 +310,7 @@ projectRoute.post(
 );
 
 // ─────────────────────────────────────────
-// POST /projects/:projectId/members/:userId/promote
+// POST /project/:projectId/members/:userId/promote
 // メンバーを副責任者に任命
 // ─────────────────────────────────────────
 projectRoute.post(
