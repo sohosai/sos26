@@ -9,6 +9,7 @@ import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
 import { joinProject, listMyProjects } from "@/lib/api/project";
 import { requireAuth, useAuthStore } from "@/lib/auth";
+import { ProjectContext } from "@/lib/project/context";
 import styles from "./route.module.scss";
 
 export const Route = createFileRoute("/project")({
@@ -44,8 +45,7 @@ function ProjectLayout() {
 		const exists = projects.some(p => p.id === selectedProjectId);
 		if (!exists) return;
 		navigate({
-			to: "/project/$projectId",
-			params: { projectId: selectedProjectId },
+			to: "/project",
 			replace: true,
 		});
 	}, [selectedProjectId, navigate, projects]);
@@ -78,8 +78,7 @@ function ProjectLayout() {
 						collapsed={sidebarCollapsed}
 						onSelectProject={projectId => {
 							navigate({
-								to: "/project/$projectId",
-								params: { projectId },
+								to: "/project",
 							});
 							setSelectedProjectId(projectId);
 						}}
@@ -92,7 +91,14 @@ function ProjectLayout() {
 			<main
 				className={`${styles.main} ${sidebarCollapsed ? styles.collapsed : ""}`}
 			>
-				<Outlet />
+				<ProjectContext.Provider
+					value={
+						projects.filter(project => project.id === selectedProjectId)[0] ||
+						null
+					}
+				>
+					<Outlet />
+				</ProjectContext.Provider>
 			</main>
 			<ProjectCreateDialog
 				open={dialogOpen}

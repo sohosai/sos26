@@ -7,7 +7,7 @@ import {
 } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { DataTable, TagCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { InviteMemberDialog } from "@/components/project/members/InviteMemberDialog";
@@ -82,10 +82,7 @@ export function MemberActionsCell({
 	);
 }
 
-export const Route = createFileRoute("/project/$projectId/members/")({
-	loader: async ({ params }) => {
-		return listProjectMembers(params.projectId);
-	},
+export const Route = createFileRoute("/project/members/")({
 	component: RouteComponent,
 });
 
@@ -104,16 +101,25 @@ const roleColorMap: Record<string, string> = {
 const memberColumnHelper = createColumnHelper<MemberRow>();
 
 function RouteComponent() {
-	const loaderData = Route.useLoaderData();
-	const [members, setMembers] = useState<MemberRow[]>(
-		loaderData.members.map((m: Omit<MemberRow, "roleLabel">) => ({
-			...m,
-			roleLabel: [roleLabelMap[m.role]],
-		}))
-	);
+	const [members, setMembers] = useState<MemberRow[]>([]);
+
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const project = useContext(ProjectContext);
 	const { user } = useAuthStore();
+
+	useEffect(() => {
+		if (!project?.id) return;
+
+		listProjectMembers(project.id).then(data => {
+			setMembers(
+				data.members.map((m: Omit<MemberRow, "roleLabel">) => ({
+					...m,
+					roleLabel: [roleLabelMap[m.role]],
+				}))
+			);
+		});
+	}, [project?.id]);
+
 	const hasSubOwner = members.some(member => member.role === "SUB_OWNER");
 
 	const isOwner =
@@ -196,46 +202,9 @@ function RouteComponent() {
 			]
 		: baseColumns;
 
-	// const memberColumns = [
-	// 	..baseColumns,
-	// ]
-	// const memberColumns = [
-	// 	memberColumnHelper.accessor("name", {
-	// 		header: "名前",
-	// 	}),
-	// 	memberColumnHelper.accessor("email", {
-	// 		header: "メールアドレス",
-	// 	}),
-	// 	memberColumnHelper.accessor("roleLabel", {
-	// 		header: "役職",
-	// 		cell: TagCell,
-	// 		meta: {
-	// 			tagColors: roleColorMap,
-	// 		},
-	// 	}),
-	// 	memberColumnHelper.accessor("joinedAt", {
-	// 		header: "参加日",
-	// 		cell: (info) => new Date(info.getValue()).toLocaleDateString(),
-	// 	}),
-
-	// 	isOwner &&
-	// 		memberColumnHelper.display({
-	// 			id: "actions",
-	// 			header: "",
-	// 			cell: ({ row }) => (
-	// 				<MemberActionsCell
-	// 					member={row.original}
-	// 					hasSubOwner={hasSubOwner}
-	// 					onPromote={handlePromote}
-	// 					onDelete={handleDeleteMember}
-	// 				/>
-	// 			),
-	// 		}),
-	// ].filter(Boolean);
-
 	return (
 		<div className={styles.page}>
-			<Heading size="6">メンバー一覧</Heading>
+			<Heading size="6">メンバー</Heading>
 			<Button intent="ghost" size="2" onClick={() => setDialogOpen(true)}>
 				<IconPlus size={16} stroke={1.5} />
 				メンバーを追加

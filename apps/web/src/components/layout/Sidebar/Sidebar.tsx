@@ -64,7 +64,6 @@ export function Sidebar({
 	onToggle,
 	menuItems,
 	projectSelector,
-	projectId,
 }: SidebarProps) {
 	const { location } = useRouterState();
 	const navigate = useNavigate();
@@ -83,7 +82,6 @@ export function Sidebar({
 	const renderItem = (item: MenuItem) => {
 		const active = location.pathname.startsWith(item.to);
 		const external = item.to.startsWith("http");
-		const isProjectRoute = item.to.includes("$projectId");
 
 		const inner = (
 			<div className={`${styles.item} ${active ? styles.active : ""}`}>
@@ -91,11 +89,6 @@ export function Sidebar({
 				{!collapsed && <Text size="2">{item.label}</Text>}
 			</div>
 		);
-
-		// projectId が必要なのに無い場合は描画しない
-		if (isProjectRoute && !projectId) {
-			return <div key={item.to} style={{ display: "none" }} />;
-		}
 
 		const content = external ? (
 			<a
@@ -108,12 +101,7 @@ export function Sidebar({
 				{inner}
 			</a>
 		) : (
-			<Link
-				key={item.to}
-				to={item.to}
-				params={isProjectRoute && projectId ? { projectId } : undefined}
-				className={styles.link}
-			>
+			<Link key={item.to} to={item.to} className={styles.link}>
 				{inner}
 			</Link>
 		);
