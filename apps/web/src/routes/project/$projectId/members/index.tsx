@@ -90,14 +90,17 @@ const createColumns = (
 									副責任者に指名
 								</Button>
 							)}
-							<Button
-								intent="ghost"
-								size="2"
-								onClick={() => onDelete(member.userId)}
-							>
-								<IconTrash size={16} />
-								削除
-							</Button>
+							{member.role === "MEMBER" && (
+								<Button
+									intent="ghost"
+									size="2"
+									onClick={() => onDelete(member.userId)}
+								>
+									<IconTrash size={16} />
+									削除
+								</Button>
+							)}
+							{/* 現状何もボタンがない状態が存在するが、後々追加することが予想されるため放置 */}
 						</div>
 					</Popover.Content>
 				</Popover.Root>

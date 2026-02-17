@@ -2,7 +2,7 @@ import { Dialog } from "@radix-ui/themes";
 import { useContext } from "react";
 import { Button, TextField } from "@/components/primitives";
 import { ProjectContext } from "@/lib/project/context";
-import styles from "./inviteMemberDialog.module.scss";
+import styles from "./InviteMemberDialog.module.scss";
 
 type Props = {
 	open: boolean;

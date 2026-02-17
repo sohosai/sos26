@@ -19,8 +19,6 @@ import type { BodyEndpoint, GetEndpoint } from "./types";
  * 企画を作成
  *
  * - 認証必須
- * - ownerId のユーザーが存在すること
- * - subOwnerId は任意
  * - inviteCode は自動生成
  */
 export const createProjectEndpoint: BodyEndpoint<

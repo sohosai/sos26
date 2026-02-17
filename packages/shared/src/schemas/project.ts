@@ -39,7 +39,7 @@ export const projectMemberSchema = z.object({
 export type ProjectMember = z.infer<typeof projectMemberSchema>;
 
 // ─────────────────────────────────────────────────────────────
-// POST /projects/suscribe
+// POST /projects/subscribe
 // ─────────────────────────────────────────────────────────────
 
 export const createProjectRequestSchema = z.object({
