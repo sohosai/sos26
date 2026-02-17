@@ -34,6 +34,7 @@ function ProjectLayout() {
 		projects[0]?.id ?? null
 	);
 
+	// ページリロード時に/membersがなくなっちゃう
 	useEffect(() => {
 		if (!selectedProjectId) return;
 		const exists = projects.some(p => p.id === selectedProjectId);

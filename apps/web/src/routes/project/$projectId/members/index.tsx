@@ -158,11 +158,11 @@ function RouteComponent() {
 				)}
 				features={{
 					sorting: true,
-					globalFilter: true,
-					columnVisibility: true,
-					selection: true,
-					copy: true,
-					csvExport: true,
+					globalFilter: false,
+					columnVisibility: false,
+					selection: false,
+					copy: false,
+					csvExport: false,
 				}}
 				initialSorting={[
 					{
