@@ -3,6 +3,10 @@
 		width: max-content;
 		min-width: 100%;
 	}
+
+	:global(.rt-TableHeader) {
+		--table-row-background-color: var(--gray-a3);
+	}
 }
 
 .cellSelected {
