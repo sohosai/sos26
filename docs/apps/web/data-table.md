@@ -95,6 +95,7 @@ function UserTable() {
 | `initialSorting` | `SortingState` | `[]` | 初期ソート状態 |
 | `initialGlobalFilter` | `string` | `""` | 初期検索文字列 |
 | `onCellEdit` | `(row: T, columnId: string, value: unknown) => void` | - | セル編集時のコールバック。`row` は編集された行の元データオブジェクト |
+| `toolbarExtra` | `ReactNode` | - | ツールバーに追加する任意の要素（ボタンなど） |
 
 ### DataTableFeatures
 
@@ -311,11 +312,44 @@ columnHelper.accessor("tags", {
 />
 ```
 
+### ツールバーにカスタムボタンを追加
+
+`toolbarExtra` にボタン等を渡すと、検索・表示カラム・CSV出力の後ろに表示される。
+
+```tsx
+<DataTable
+	data={events}
+	columns={eventColumns}
+	toolbarExtra={
+		<Button intent="secondary" onClick={handleAdd}>
+			<IconPlus size={16} /> イベント追加
+		</Button>
+	}
+/>
+```
+
 ## 機能詳細
 
 ### ソート
 
 テーブルヘッダーをクリックすると昇順 → 降順 → ソート解除の順でトグルする。ヘッダーには `↑`（昇順）、`↓`（降順）、`↑↓`（未ソート）のインジケーターが表示される。
+
+ソートインジケーターとクリックハンドラはカラム単位で制御される。`enableSorting: false` を指定したカラムや `display()` カラムにはインジケーターが表示されず、クリックしてもソートされない。
+
+```tsx
+// ID カラムのソートを無効化
+columnHelper.accessor("id", {
+	header: "ID",
+	enableSorting: false,
+}),
+
+// アクションカラム（display() はデフォルトでソート無効）
+columnHelper.display({
+	id: "actions",
+	header: "",
+	cell: ({ row }) => <IconButton onClick={() => edit(row.original)}>...</IconButton>,
+}),
+```
 
 ### グローバル検索
 
@@ -395,7 +429,7 @@ const eventColumns = [
 
 **ポイント:**
 
-- `display()` はデータに紐づかない表示専用カラム（ソート・フィルタの対象外）
+- `display()` はデータに紐づかない表示専用カラム（ソート・フィルタの対象外、ソートインジケーターも非表示）
 - 編集ロジックはテーブルの外（親コンポーネント側）で管理する
 - セルコンポーネント自体に編集責務を持たせず、関心を分離する
 - `/dev/table/` のサンプル5（イベント一覧）で Dialog によるタグ編集の実装例を確認できる

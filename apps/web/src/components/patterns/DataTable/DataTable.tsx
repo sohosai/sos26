@@ -12,7 +12,7 @@ import {
 	useReactTable,
 	type VisibilityState,
 } from "@tanstack/react-table";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Button, Checkbox } from "@/components/primitives";
 import styles from "./DataTable.module.scss";
 import { useCopyToClipboard } from "./hooks/useCopyToClipboard";
@@ -46,6 +46,8 @@ type DataTableProps<T> = {
 	initialSorting?: SortingState;
 	initialGlobalFilter?: string;
 	onCellEdit?: (row: T, columnId: string, value: unknown) => void;
+	/** ツールバーに追加する任意の要素（ボタンなど） */
+	toolbarExtra?: ReactNode;
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: TanStack Table's FilterFn requires generic RowData
@@ -70,6 +72,7 @@ export function DataTable<T extends RowData>({
 	initialSorting = [],
 	initialGlobalFilter = "",
 	onCellEdit,
+	toolbarExtra,
 }: DataTableProps<T>) {
 	const f = { ...defaultFeatures, ...featuresProp };
 
@@ -141,59 +144,66 @@ export function DataTable<T extends RowData>({
 		};
 	}, [clearSelection, f.selection]);
 
+	const showToolbar =
+		f.globalFilter || f.columnVisibility || f.csvExport || !!toolbarExtra;
+
 	return (
-		<>
-			<Flex gap="3" mb="3" align="end">
-				{f.globalFilter && (
-					<Box maxWidth="300px" flexGrow="1">
-						<TextField.Root
-							placeholder="検索..."
-							value={globalFilter}
-							onChange={e => setGlobalFilter(e.target.value)}
-						>
-							<TextField.Slot>
-								<IconSearch size={16} />
-							</TextField.Slot>
-						</TextField.Root>
-					</Box>
-				)}
-				{f.columnVisibility && (
-					<Popover.Root>
-						<Popover.Trigger>
-							<Button intent="secondary">
-								<IconSettings size={16} /> 表示カラム
-							</Button>
-						</Popover.Trigger>
-						<Popover.Content>
-							<Flex direction="column" gap="2">
-								{table
-									.getAllColumns()
-									.filter(column => column.getCanHide())
-									.map(column => (
-										<Checkbox
-											key={column.id}
-											label={
-												typeof column.columnDef.header === "string"
-													? column.columnDef.header
-													: column.id
-											}
-											size="1"
-											checked={column.getIsVisible()}
-											onCheckedChange={value =>
-												column.toggleVisibility(!!value)
-											}
-										/>
-									))}
-							</Flex>
-						</Popover.Content>
-					</Popover.Root>
-				)}
-				{f.csvExport && (
-					<Button intent="secondary" onClick={() => downloadCsv(table)}>
-						<IconDownload size={16} /> CSV出力
-					</Button>
-				)}
-			</Flex>
+		<Box>
+			{showToolbar && (
+				<Flex gap="3" mb="3" align="end">
+					{f.globalFilter && (
+						<Box maxWidth="300px" flexGrow="1">
+							<TextField.Root
+								placeholder="検索..."
+								value={globalFilter}
+								onChange={e => setGlobalFilter(e.target.value)}
+							>
+								<TextField.Slot>
+									<IconSearch size={16} />
+								</TextField.Slot>
+							</TextField.Root>
+						</Box>
+					)}
+					<Box flexGrow="1" />
+					{f.columnVisibility && (
+						<Popover.Root>
+							<Popover.Trigger>
+								<Button intent="secondary">
+									<IconSettings size={16} /> 表示カラム
+								</Button>
+							</Popover.Trigger>
+							<Popover.Content>
+								<Flex direction="column" gap="2">
+									{table
+										.getAllColumns()
+										.filter(column => column.getCanHide())
+										.map(column => (
+											<Checkbox
+												key={column.id}
+												label={
+													typeof column.columnDef.header === "string"
+														? column.columnDef.header
+														: column.id
+												}
+												size="1"
+												checked={column.getIsVisible()}
+												onCheckedChange={value =>
+													column.toggleVisibility(!!value)
+												}
+											/>
+										))}
+								</Flex>
+							</Popover.Content>
+						</Popover.Root>
+					)}
+					{f.csvExport && (
+						<Button intent="secondary" onClick={() => downloadCsv(table)}>
+							<IconDownload size={16} /> CSV出力
+						</Button>
+					)}
+					{toolbarExtra}
+				</Flex>
+			)}
 			<Table.Root
 				ref={tableRef}
 				variant="surface"
@@ -207,12 +217,12 @@ export function DataTable<T extends RowData>({
 								<Table.ColumnHeaderCell
 									key={header.id}
 									onClick={
-										f.sorting
+										header.column.getCanSort()
 											? header.column.getToggleSortingHandler()
 											: undefined
 									}
 									style={{
-										cursor: f.sorting ? "pointer" : "default",
+										cursor: header.column.getCanSort() ? "pointer" : "default",
 										userSelect: "none",
 										whiteSpace: "nowrap",
 									}}
@@ -223,7 +233,7 @@ export function DataTable<T extends RowData>({
 												header.column.columnDef.header,
 												header.getContext()
 											)}
-									{f.sorting &&
+									{header.column.getCanSort() &&
 										sortIndicator[
 											(header.column.getIsSorted() || "none") as string
 										]}
@@ -271,6 +281,6 @@ export function DataTable<T extends RowData>({
 					</Text>
 				</Box>
 			)}
-		</>
+		</Box>
 	);
 }
