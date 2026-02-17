@@ -65,7 +65,7 @@ ex.
 import { useContext } from "react";
 import { ProjectContext } from "@/lib/project/context";
 
-const project = useContext(ProjectContext);
+const project = useProject();
 console.log(project);
 ```
 ```json
