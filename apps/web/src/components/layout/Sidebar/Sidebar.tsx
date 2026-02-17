@@ -24,6 +24,7 @@ type SidebarProps = {
 	onToggle: () => void;
 	menuItems: MenuItem[];
 	projectSelector?: ReactNode;
+	projectId?: string | null;
 };
 
 const commonItems: MenuItem[] = [
@@ -89,7 +90,7 @@ export function Sidebar({
 			</div>
 		);
 
-		const el = external ? (
+		const content = external ? (
 			<a
 				key={item.to}
 				href={item.to}
@@ -105,12 +106,16 @@ export function Sidebar({
 			</Link>
 		);
 
-		return collapsed ? (
-			<Tooltip key={item.to} content={item.label} side="right">
-				{el}
-			</Tooltip>
-		) : (
-			el
+		return (
+			<div key={item.to}>
+				{collapsed ? (
+					<Tooltip content={item.label} side="right">
+						{content}
+					</Tooltip>
+				) : (
+					content
+				)}
+			</div>
 		);
 	};
 

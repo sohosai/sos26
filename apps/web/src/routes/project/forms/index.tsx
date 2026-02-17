@@ -2,7 +2,7 @@ import { Heading, Text } from "@radix-ui/themes";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { FormAnswerDialog } from "@/components/form/Answer/AnswerDialog";
-import { projectRegisterMockForm } from "@/components/form/projectInitFormMock";
+import { volunteerEntryFormMock } from "@/components/form/formMock";
 import type { Form } from "@/components/form/type";
 import { Button } from "@/components/primitives";
 import { useAuthStore } from "@/lib/auth";
@@ -19,8 +19,12 @@ function RouteComponent() {
 	const [answeringForm, setAnsweringForm] = useState<Form | null>(null);
 
 	const handleAnswer = () => {
-		setAnsweringForm(projectRegisterMockForm);
+		setAnsweringForm(volunteerEntryFormMock);
 		setDialogOpen(true);
+	};
+
+	const handleSubmit = async () => {
+		// todo:送信時の処理を書く
 	};
 
 	return (
@@ -30,12 +34,13 @@ function RouteComponent() {
 				ようこそ、{user?.name} さん
 			</Text>
 
-			<Button onClick={handleAnswer}>フォームに回答する</Button>
+			<Button onClick={handleAnswer}>申請に回答する</Button>
 
 			<FormAnswerDialog
 				open={dialogOpen}
 				onOpenChange={setDialogOpen}
 				form={answeringForm}
+				onSubmit={handleSubmit}
 			/>
 		</div>
 	);
