@@ -10,6 +10,8 @@
   - [ミドルウェア](#ミドルウェア)
     - [requireAuth](#requireauth)
     - [requireRegTicket](#requireregticket)
+    - [requireCommitteeMember](#requirecommitteemember)
+    - [requireProjectMember](#requireprojectmember)
   - [認証ルート](#認証ルート)
     - [POST /auth/email/start](#post-authemailstart)
     - [POST /auth/email/verify](#post-authemailverify)
@@ -93,6 +95,74 @@ route.post("/register", requireRegTicket, async c => {
 | 条件 | エラーコード |
 |------|-------------|
 | Cookie がない | `TOKEN_INVALID` |
+
+### requireCommitteeMember
+
+実行委員メンバーであることを検証し、Context に格納するミドルウェアです。
+
+**ファイル**: `src/middlewares/auth.ts`
+
+**前提**: `requireAuth` が先に実行されていること（`c.get("user")` が利用可能）
+
+**処理フロー**:
+1. `c.get("user").id` で `CommitteeMember` を検索（`deletedAt: null`）
+2. 見つからなければ `FORBIDDEN` エラー
+3. `c.set("committeeMember", committeeMember)` でコンテキストに格納
+
+**使用例**:
+
+```ts
+import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
+
+route.get("/members", requireAuth, requireCommitteeMember, async c => {
+  const member = c.get("committeeMember");
+  return c.json({ member });
+});
+```
+
+**エラー**:
+| 条件 | エラーコード |
+|------|-------------|
+| 実委メンバーではない（または削除済み） | `FORBIDDEN` |
+
+### requireProjectMember
+
+企画メンバーであることを検証し、`project` と `projectRole` を Context に格納するミドルウェアです。
+
+**ファイル**: `src/middlewares/auth.ts`
+
+**前提**: `requireAuth` が先に実行されていること（`c.get("user")` が利用可能）
+
+**処理フロー**:
+1. `c.req.param("projectId")` でパスパラメータを取得
+2. `projectId` が無ければ `INVALID_REQUEST` エラー
+3. Prisma で `Project` を取得（`deletedAt: null`）
+4. 見つからなければ `NOT_FOUND` エラー
+5. ロール判定:
+   - `project.ownerId === user.id` → `"OWNER"`
+   - `project.subOwnerId === user.id` → `"SUB_OWNER"`
+   - `ProjectMember` に該当レコードがある → `"MEMBER"`
+   - いずれでもなければ `FORBIDDEN` エラー
+6. `c.set("project", project)` / `c.set("projectRole", role)` でコンテキストに格納
+
+**使用例**:
+
+```ts
+import { requireAuth, requireProjectMember } from "../middlewares/auth";
+
+route.get("/:projectId/detail", requireAuth, requireProjectMember, async c => {
+  const project = c.get("project");
+  const role = c.get("projectRole"); // "OWNER" | "SUB_OWNER" | "MEMBER"
+  return c.json({ project, role });
+});
+```
+
+**エラー**:
+| 条件 | エラーコード |
+|------|-------------|
+| `projectId` パラメータがない | `INVALID_REQUEST` |
+| 企画が存在しない（または削除済み） | `NOT_FOUND` |
+| 企画のメンバーではない | `FORBIDDEN` |
 
 ---
 
@@ -266,9 +336,11 @@ Authorization: Bearer <Firebase ID Token>
 | コード | ステータス | 用途 |
 |--------|-----------|------|
 | `UNAUTHORIZED` | 401 | 認証が必要、ID Token が無効 |
-| `NOT_FOUND` | 404 | ユーザーが存在しない（または削除済み） |
+| `FORBIDDEN` | 403 | アクセス権限がない（実委メンバーでない、企画メンバーでない等） |
+| `NOT_FOUND` | 404 | ユーザー/企画が存在しない（または削除済み） |
 | `ALREADY_EXISTS` | 409 | Firebase に同一メールのアカウントが既存 |
 | `VALIDATION_ERROR` | 400 | 入力値が不正 |
+| `INVALID_REQUEST` | 400 | リクエストが不正（必須パラメータ不足等） |
 | `TOKEN_INVALID` | 400 | 検証トークン / reg_ticket が不正または期限切れ |
 
 エラーハンドリングの詳細は [`docs/how-to/error-handling.md`](../../how-to/error-handling.md) を参照。
@@ -318,7 +390,7 @@ apps/api/src/
 ├── routes/
 │   └── auth.ts           # 認証ルート
 ├── middlewares/
-│   └── auth.ts           # requireAuth, requireRegTicket
+│   └── auth.ts           # requireAuth, requireRegTicket, requireCommitteeMember, requireProjectMember
 ├── lib/
 │   ├── error.ts          # AppError, Errors ヘルパー
 │   ├── firebase.ts       # Firebase Admin SDK 初期化
