@@ -6,9 +6,9 @@ import {
 	IconUserUp,
 } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
+import { createColumnHelper } from "@tanstack/react-table";
 import { useState } from "react";
-import { DataTable } from "@/components/patterns";
+import { DataTable, TagCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { InviteMemberDialog } from "@/components/project/members/InviteMemberDialog";
 import {
@@ -18,12 +18,65 @@ import {
 } from "@/lib/api/project";
 import styles from "./index.module.scss";
 
-type MemberRow = {
+export type MemberRow = {
 	userId: string;
 	name: string;
+	email: string;
 	role: "OWNER" | "SUB_OWNER" | "MEMBER";
+	roleLabel: string[]; // TagCell用の配列
 	joinedAt: Date;
 };
+
+type MemberActionsCellProps = {
+	member: MemberRow;
+	hasSubOwner: boolean;
+	onPromote: (memberId: string) => void;
+	onDelete: (memberId: string) => void;
+};
+
+export function MemberActionsCell({
+	member,
+	hasSubOwner,
+	onPromote,
+	onDelete,
+}: MemberActionsCellProps) {
+	return (
+		<Popover.Root>
+			<Popover.Trigger>
+				{/* 色を表の中身で揃えたいため、<IconButton>は使わない */}
+				<button type="button" className={styles.trigger}>
+					<IconDotsVertical size={16} />
+				</button>
+			</Popover.Trigger>
+
+			<Popover.Content align="start" sideOffset={4}>
+				<div className={styles.menu}>
+					{!hasSubOwner && member.role !== "OWNER" && (
+						<Button
+							intent="ghost"
+							size="2"
+							onClick={() => onPromote(member.userId)}
+						>
+							<IconUserUp size={16} />
+							副責任者に指名
+						</Button>
+					)}
+					{member.role === "MEMBER" && (
+						<Button
+							intent="ghost"
+							size="2"
+							onClick={() => onDelete(member.userId)}
+						>
+							<IconTrash size={16} />
+							削除
+						</Button>
+					)}
+					{/* 現状何もボタンがない状態が存在するが、後々追加することが予想されるため放置 */}
+				</div>
+			</Popover.Content>
+		</Popover.Root>
+	);
+}
 
 export const Route = createFileRoute("/project/$projectId/members/")({
 	loader: async ({ params }) => {
@@ -38,97 +91,42 @@ const roleLabelMap: Record<MemberRow["role"], string> = {
 	MEMBER: "メンバー",
 };
 
-const createColumns = (
-	onPromote: (memberId: string) => void,
-	onDelete: (memberId: string) => void,
-	hasSubOwner: boolean
-): ColumnDef<MemberRow>[] => [
-	{
-		accessorKey: "name",
-		header: "名前",
-		cell: info => info.getValue(),
-	},
-	{
-		accessorKey: "email",
-		header: "メールアドレス",
-		cell: info => info.getValue(),
-	},
-	{
-		accessorKey: "role",
-		header: "役職",
-		cell: info => roleLabelMap[info.getValue() as MemberRow["role"]],
-	},
-	{
-		accessorKey: "joinedAt",
-		header: "参加日",
-		meta: {
-			dateFormat: "date",
-		},
-		cell: info => new Date(info.getValue() as Date).toLocaleDateString(),
-	},
-	{
-		id: "actions",
-		header: "",
-		enableSorting: false,
-		enableHiding: false,
-		cell: ({ row }) => {
-			const member = row.original;
+const roleColorMap: Record<string, string> = {
+	責任者: "red",
+	副責任者: "orange",
+	メンバー: "gray",
+};
 
-			return (
-				<Popover.Root>
-					<Popover.Trigger>
-						{/* 色を表の中身で揃えたいため、<IconButton>は使わない */}
-						<button type="button" className={styles.trigger}>
-							<IconDotsVertical size={16} />
-						</button>
-					</Popover.Trigger>
-
-					<Popover.Content align="start" sideOffset={4}>
-						<div className={styles.menu}>
-							{!hasSubOwner && member.role !== "OWNER" && (
-								<Button
-									intent="ghost"
-									size="2"
-									onClick={() => onPromote(member.userId)}
-								>
-									<IconUserUp size={16} />
-									副責任者に指名
-								</Button>
-							)}
-							{member.role === "MEMBER" && (
-								<Button
-									intent="ghost"
-									size="2"
-									onClick={() => onDelete(member.userId)}
-								>
-									<IconTrash size={16} />
-									削除
-								</Button>
-							)}
-							{/* 現状何もボタンがない状態が存在するが、後々追加することが予想されるため放置 */}
-						</div>
-					</Popover.Content>
-				</Popover.Root>
-			);
-		},
-	},
-];
+const memberColumnHelper = createColumnHelper<MemberRow>();
 
 function RouteComponent() {
 	const loaderData = Route.useLoaderData();
-	const [members, setMembers] = useState(loaderData.members);
+	const [members, setMembers] = useState<MemberRow[]>(
+		loaderData.members.map((m: Omit<MemberRow, "roleLabel">) => ({
+			...m,
+			roleLabel: [roleLabelMap[m.role]],
+		}))
+	);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const { projectId } = Route.useParams();
+
+	const hasSubOwner = members.some(member => member.role === "SUB_OWNER");
 
 	const handlePromote = async (memberId: string) => {
 		try {
 			await promoteSubOwner(projectId, memberId);
 
 			setMembers(prev =>
-				prev.map(m => ({
-					...m,
-					role: m.userId === memberId ? "SUB_OWNER" : m.role,
-				}))
+				prev.map(m => {
+					if (m.userId === memberId) {
+						return {
+							...m,
+							role: "SUB_OWNER" as const,
+							roleLabel: [roleLabelMap.SUB_OWNER],
+						};
+					}
+					return m;
+				})
 			);
 		} catch (err) {
 			console.error(err);
@@ -146,6 +144,38 @@ function RouteComponent() {
 		}
 	};
 
+	const memberColumns = [
+		memberColumnHelper.accessor("name", {
+			header: "名前",
+		}),
+		memberColumnHelper.accessor("email", {
+			header: "メールアドレス",
+		}),
+		memberColumnHelper.accessor("roleLabel", {
+			header: "役職",
+			cell: TagCell,
+			meta: {
+				tagColors: roleColorMap,
+			},
+		}),
+		memberColumnHelper.accessor("joinedAt", {
+			header: "参加日",
+			cell: info => new Date(info.getValue()).toLocaleDateString(),
+		}),
+		memberColumnHelper.display({
+			id: "actions",
+			header: "",
+			cell: ({ row }) => (
+				<MemberActionsCell
+					member={row.original}
+					hasSubOwner={hasSubOwner}
+					onPromote={handlePromote}
+					onDelete={handleDeleteMember}
+				/>
+			),
+		}),
+	];
+
 	return (
 		<div className={styles.page}>
 			<Heading size="6">メンバー一覧</Heading>
@@ -156,11 +186,7 @@ function RouteComponent() {
 
 			<DataTable<MemberRow>
 				data={members}
-				columns={createColumns(
-					handlePromote,
-					handleDeleteMember,
-					members.some(member => member.role === "SUB_OWNER")
-				)}
+				columns={memberColumns}
 				features={{
 					sorting: true,
 					globalFilter: false,
