@@ -204,11 +204,7 @@ function RouteComponent() {
 
 	return (
 		<div className={styles.page}>
-			<Heading size="6">メンバー</Heading>
-			<Button intent="ghost" size="2" onClick={() => setDialogOpen(true)}>
-				<IconPlus size={16} stroke={1.5} />
-				メンバーを追加
-			</Button>
+			<Heading size="6">メンバー一覧</Heading>
 
 			<DataTable<MemberRow>
 				data={members}
@@ -227,6 +223,12 @@ function RouteComponent() {
 						desc: false,
 					},
 				]}
+				toolbarExtra={
+					<Button intent="primary" size="2" onClick={() => setDialogOpen(true)}>
+						<IconPlus size={16} stroke={1.5} />
+						メンバーを追加
+					</Button>
+				}
 			/>
 
 			<InviteMemberDialog open={dialogOpen} onOpenChange={setDialogOpen} />
