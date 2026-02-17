@@ -1,14 +1,12 @@
 import type { Project } from "@sos26/shared";
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import {
-	// type Project,
-	ProjectSelector,
-} from "@/components/layout/ProjectSelector";
+import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
+import { useState } from "react";
+import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
 import { joinProject, listMyProjects } from "@/lib/api/project";
 import { requireAuth, useAuthStore } from "@/lib/auth";
+import { useProjectStore } from "@/lib/project/store";
 import styles from "./route.module.scss";
 
 export const Route = createFileRoute("/project")({
@@ -17,38 +15,36 @@ export const Route = createFileRoute("/project")({
 	},
 	component: ProjectLayout,
 	loader: async () => {
-		return await listMyProjects();
+		const result = await listMyProjects();
+
+		// ストアに selectedProjectId が未設定なら先頭を選択
+		const store = useProjectStore.getState();
+		if (!store.selectedProjectId && result.projects[0]) {
+			useProjectStore.setState({ selectedProjectId: result.projects[0].id });
+		}
+
+		// selectedProjectId が確定している場合、プロジェクト詳細を取得
+		const projectId = useProjectStore.getState().selectedProjectId;
+		if (projectId) {
+			await useProjectStore.getState().fetchProjectDetail();
+		}
+
+		return result;
 	},
 });
 
 function ProjectLayout() {
-	const navigate = useNavigate();
+	const router = useRouter();
 	const loaderData = Route.useLoaderData();
 	const [projects, setProjects] = useState(loaderData.projects);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const { user } = useAuthStore();
-	// const projects: Project[] = [{ id: "demo-1", name: "模擬店グルメフェス" }];
-
-	const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-		// "demo-1"
-		projects[0]?.id ?? null
-	);
+	const selectedProjectId = useProjectStore(s => s.selectedProjectId);
 
 	const hasOwnerProject = projects.some(
 		project => project.ownerId === user?.id || project.subOwnerId === user?.id
 	);
-	// ページリロード時に/membersがなくなっちゃう
-	useEffect(() => {
-		if (!selectedProjectId) return;
-		const exists = projects.some(p => p.id === selectedProjectId);
-		if (!exists) return;
-		navigate({
-			to: "/project/$projectId",
-			params: { projectId: selectedProjectId },
-			replace: true,
-		});
-	}, [selectedProjectId, navigate, projects]);
 
 	const handleJoinProject = async (inviteCode: string) => {
 		const { project } = await joinProject({ inviteCode });
@@ -65,7 +61,6 @@ function ProjectLayout() {
 				collapsed={sidebarCollapsed}
 				onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
 				menuItems={projectMenuItems}
-				projectId={selectedProjectId}
 				projectSelector={
 					<ProjectSelector
 						projects={projects.map((project: Project) => {
@@ -77,11 +72,8 @@ function ProjectLayout() {
 						selectedProjectId={selectedProjectId}
 						collapsed={sidebarCollapsed}
 						onSelectProject={projectId => {
-							navigate({
-								to: "/project/$projectId",
-								params: { projectId },
-							});
-							setSelectedProjectId(projectId);
+							useProjectStore.getState().setSelectedProjectId(projectId);
+							router.invalidate();
 						}}
 						onCreateProject={() => setDialogOpen(true)}
 						onJoinProject={handleJoinProject}

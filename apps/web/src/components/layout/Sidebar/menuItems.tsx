@@ -10,17 +10,17 @@ export const projectMenuItems: MenuItem[] = [
 	{
 		label: "メンバー管理",
 		icon: <IconUsers size={18} />,
-		to: "/project/$projectId/members",
+		to: "/project/members",
 	},
 	{
 		label: "フォーム",
 		icon: <IconFileText size={18} />,
-		to: "/project/$projectId/forms",
+		to: "/project/forms",
 	},
 	{
 		label: "お知らせ",
 		icon: <IconBell size={18} />,
-		to: "/project/$projectId/notice",
+		to: "/project/notice",
 	},
 ];
 

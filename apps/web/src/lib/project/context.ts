@@ -1,12 +1,9 @@
-import type { Project } from "@sos26/shared";
-import { createContext, useContext } from "react";
-
-export const ProjectContext = createContext<Project | null>(null);
+import { useProjectStore } from "./store";
 
 export function useProject() {
-	const project = useContext(ProjectContext);
+	const project = useProjectStore(s => s.project);
 	if (!project) {
-		throw new Error("useProject must be used within ProjectContext.Provider");
+		throw new Error("useProject: project is not loaded yet");
 	}
 	return project;
 }

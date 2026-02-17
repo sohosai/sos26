@@ -7,7 +7,7 @@ import {
 } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useContext, useState } from "react";
+import { useState } from "react";
 import { DataTable, TagCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { InviteMemberDialog } from "@/components/project/members/InviteMemberDialog";
@@ -17,7 +17,8 @@ import {
 	removeProjectMember,
 } from "@/lib/api/project";
 import { useAuthStore } from "@/lib/auth";
-import { ProjectContext } from "@/lib/project/context";
+import { useProject } from "@/lib/project/context";
+import { useProjectStore } from "@/lib/project/store";
 import styles from "./index.module.scss";
 
 export type MemberRow = {
@@ -82,9 +83,11 @@ export function MemberActionsCell({
 	);
 }
 
-export const Route = createFileRoute("/project/$projectId/members/")({
-	loader: async ({ params }) => {
-		return listProjectMembers(params.projectId);
+export const Route = createFileRoute("/project/members/")({
+	loader: async () => {
+		const projectId = useProjectStore.getState().selectedProjectId;
+		if (!projectId) throw new Error("No project selected");
+		return listProjectMembers(projectId);
 	},
 	component: RouteComponent,
 });
@@ -112,7 +115,7 @@ function RouteComponent() {
 		}))
 	);
 	const [dialogOpen, setDialogOpen] = useState(false);
-	const project = useContext(ProjectContext);
+	const project = useProject();
 	const { user } = useAuthStore();
 	const hasSubOwner = members.some(member => member.role === "SUB_OWNER");
 

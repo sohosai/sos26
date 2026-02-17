@@ -8,7 +8,7 @@ import { Button } from "@/components/primitives";
 import { useAuthStore } from "@/lib/auth";
 import styles from "./index.module.scss";
 
-export const Route = createFileRoute("/project/$projectId/forms/")({
+export const Route = createFileRoute("/project/forms/")({
 	component: RouteComponent,
 });
 
