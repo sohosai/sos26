@@ -207,12 +207,12 @@ export function DataTable<T extends RowData>({
 								<Table.ColumnHeaderCell
 									key={header.id}
 									onClick={
-										f.sorting
+										header.column.getCanSort()
 											? header.column.getToggleSortingHandler()
 											: undefined
 									}
 									style={{
-										cursor: f.sorting ? "pointer" : "default",
+										cursor: header.column.getCanSort() ? "pointer" : "default",
 										userSelect: "none",
 										whiteSpace: "nowrap",
 									}}
@@ -223,7 +223,7 @@ export function DataTable<T extends RowData>({
 												header.column.columnDef.header,
 												header.getContext()
 											)}
-									{f.sorting &&
+									{header.column.getCanSort() &&
 										sortIndicator[
 											(header.column.getIsSorted() || "none") as string
 										]}
