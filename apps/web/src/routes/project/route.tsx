@@ -42,6 +42,8 @@ function ProjectLayout() {
 				if (prev.some(p => p.id === project.id)) return prev;
 				return [...prev, project];
 			});
+
+			setSelectedProjectId(project.id);
 		} catch (err) {
 			console.error(err);
 			alert(
