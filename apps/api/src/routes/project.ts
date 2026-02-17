@@ -127,6 +127,7 @@ projectRoute.get("/:projectId/members", requireAuth, async c => {
 			id: m.id,
 			userId: m.userId,
 			name: m.user.name,
+			email: m.user.email,
 			role,
 			joinedAt: m.joinedAt,
 		};

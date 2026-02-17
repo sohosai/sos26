@@ -28,11 +28,11 @@ export const projectIdPathParamsSchema = z.object({
 export const projectMemberRoleSchema = z.enum(["OWNER", "SUB_OWNER", "MEMBER"]);
 export type ProjectMemberRole = z.infer<typeof projectMemberRoleSchema>;
 
-// 同じプロジェクトのメンバーに公開される情報を想定するが、最低限の情報に絞る
 export const projectMemberSchema = z.object({
 	id: z.string(),
 	userId: z.string(),
 	name: z.string(),
+	email: z.email(),
 	role: projectMemberRoleSchema,
 	joinedAt: z.coerce.date(),
 });

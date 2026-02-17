@@ -49,6 +49,11 @@ const createColumns = (
 		cell: info => info.getValue(),
 	},
 	{
+		accessorKey: "email",
+		header: "メールアドレス",
+		cell: info => info.getValue(),
+	},
+	{
 		accessorKey: "role",
 		header: "役職",
 		cell: info => roleLabelMap[info.getValue() as MemberRow["role"]],
