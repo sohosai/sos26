@@ -142,7 +142,7 @@ export function DataTable<T extends RowData>({
 	}, [clearSelection, f.selection]);
 
 	return (
-		<>
+		<Box>
 			<Flex gap="3" mb="3" align="end">
 				{f.globalFilter && (
 					<Box maxWidth="300px" flexGrow="1">
@@ -271,6 +271,6 @@ export function DataTable<T extends RowData>({
 					</Text>
 				</Box>
 			)}
-		</>
+		</Box>
 	);
 }
