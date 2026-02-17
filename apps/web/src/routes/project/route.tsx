@@ -8,7 +8,7 @@ import {
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
 import { joinProject, listMyProjects } from "@/lib/api/project";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, useAuthStore } from "@/lib/auth";
 import styles from "./route.module.scss";
 
 export const Route = createFileRoute("/project")({
@@ -27,6 +27,7 @@ function ProjectLayout() {
 	const [projects, setProjects] = useState(loaderData.projects);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 	const [dialogOpen, setDialogOpen] = useState(false);
+	const { user } = useAuthStore();
 	// const projects: Project[] = [{ id: "demo-1", name: "模擬店グルメフェス" }];
 
 	const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
@@ -34,6 +35,9 @@ function ProjectLayout() {
 		projects[0]?.id ?? null
 	);
 
+	const hasOwnerProject = projects.some(
+		project => project.ownerId === user?.id || project.subOwnerId === user?.id
+	);
 	// ページリロード時に/membersがなくなっちゃう
 	useEffect(() => {
 		if (!selectedProjectId) return;
@@ -81,6 +85,7 @@ function ProjectLayout() {
 						}}
 						onCreateProject={() => setDialogOpen(true)}
 						onJoinProject={handleJoinProject}
+						hasOwnerProject={hasOwnerProject}
 					/>
 				}
 			/>

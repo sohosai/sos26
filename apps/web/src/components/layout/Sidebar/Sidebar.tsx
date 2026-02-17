@@ -92,30 +92,6 @@ export function Sidebar({
 			</div>
 		);
 
-		// const el = external ? (
-		// 	<a
-		// 		key={item.to}
-		// 		href={item.to}
-		// 		target="_blank"
-		// 		rel="noopener noreferrer"
-		// 		className={styles.link}
-		// 	>
-		// 		{inner}
-		// 	</a>
-		// ) : (
-		// 	<Link key={item.to} to={item.to} className={styles.link}>
-		// 		{inner}
-		// 	</Link>
-		// );
-
-		// return collapsed ? (
-		// 	<Tooltip key={item.to} content={item.label} side="right">
-		// 		{el}
-		// 	</Tooltip>
-		// ) : (
-		// 	el
-		// );
-
 		// projectId が必要なのに無い場合は描画しない
 		if (isProjectRoute && !projectId) {
 			return <div key={item.to} style={{ display: "none" }} />;
