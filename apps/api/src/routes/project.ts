@@ -208,26 +208,8 @@ projectRoute.get(
 	requireAuth,
 	requireProjectMember,
 	async c => {
-		const userId = c.get("user").id;
 		const project = c.get("project");
 
-		if (!project) {
-			throw Errors.notFound("企画が見つかりません");
-		}
-
-		// 自分がこの project に参加しているか
-		const isMember = await prisma.projectMember.findFirst({
-			where: {
-				projectId: project.id,
-				userId,
-				deletedAt: null,
-			},
-		});
-		if (!isMember) {
-			throw Errors.forbidden("この企画のメンバーではありません");
-		}
-
-		// メンバー一覧取得
 		const members = await prisma.projectMember.findMany({
 			where: {
 				projectId: project.id,
@@ -274,18 +256,10 @@ projectRoute.post(
 	requireProjectMember,
 	async c => {
 		const { userId } = c.req.param();
-		const requesterId = c.get("user").id;
+		const role = c.get("projectRole");
 		const project = c.get("project");
 
-		if (!project) {
-			throw Errors.notFound("企画が見つかりません");
-		}
-
-		// 権限チェック（責任者 or 副責任者）
-		const isPrivileged =
-			project.ownerId === requesterId || project.subOwnerId === requesterId;
-
-		if (!isPrivileged) {
+		if (role === "MEMBER") {
 			throw Errors.forbidden("この操作を行う権限がありません");
 		}
 
@@ -325,15 +299,10 @@ projectRoute.post(
 	requireProjectMember,
 	async c => {
 		const { userId } = c.req.param();
-		const requesterId = c.get("user").id;
+		const role = c.get("projectRole");
 		const project = c.get("project");
 
-		if (!project) {
-			throw Errors.notFound("企画が見つかりません");
-		}
-
-		// 権限チェック（責任者のみ）
-		if (project.ownerId !== requesterId) {
+		if (role !== "OWNER") {
 			throw Errors.forbidden("副責任者を任命できるのは責任者のみです");
 		}
 
