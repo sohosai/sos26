@@ -1,7 +1,9 @@
 import { Dialog, Popover, Text } from "@radix-ui/themes";
-import { IconCopy, IconX } from "@tabler/icons-react";
+import { IconCopy, IconRefresh, IconX } from "@tabler/icons-react";
 import { useContext, useRef, useState } from "react";
 import { IconButton } from "@/components/primitives";
+import { regenerateInviteCode } from "@/lib/api/project";
+import { useAuthStore } from "@/lib/auth";
 import { ProjectContext } from "@/lib/project/context";
 import styles from "./InviteMemberDialog.module.scss";
 
@@ -12,10 +14,29 @@ type Props = {
 
 export function InviteMemberDialog({ open, onOpenChange }: Props) {
 	const project = useContext(ProjectContext);
+	const { user } = useAuthStore();
 	const [copied, setCopied] = useState(false);
+	const [inviteCode, setInviteCode] = useState(project?.inviteCode ?? "");
 	const timerRef = useRef<number | null>(null);
 
+	const isOwner = project?.ownerId === user?.id;
+
 	if (!project) return null;
+
+	const handleRegenerate = async () => {
+		if (
+			!confirm("招待コードを再生成しますか？現在のコードは無効になります。")
+		) {
+			return;
+		}
+		try {
+			const res = await regenerateInviteCode(project.id);
+			setInviteCode(res.inviteCode);
+		} catch (e) {
+			console.error(e);
+			alert("招待コードの再生成に失敗しました");
+		}
+	};
 
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -31,13 +52,13 @@ export function InviteMemberDialog({ open, onOpenChange }: Props) {
 				</div>
 				<div className={styles.content}>
 					<Text weight="bold" size="9" className={styles.inviteCode}>
-						{project.inviteCode}
+						{inviteCode}
 					</Text>
 					<Popover.Root open={copied}>
 						<Popover.Trigger>
 							<IconButton
 								onClick={() => {
-									navigator.clipboard.writeText(project.inviteCode);
+									navigator.clipboard.writeText(inviteCode);
 
 									setCopied(true);
 
@@ -58,6 +79,11 @@ export function InviteMemberDialog({ open, onOpenChange }: Props) {
 							<Text size="2">コピーしました</Text>
 						</Popover.Content>
 					</Popover.Root>
+					{isOwner && (
+						<IconButton onClick={handleRegenerate}>
+							<IconRefresh size={24} />
+						</IconButton>
+					)}
 				</div>
 			</Dialog.Content>
 		</Dialog.Root>

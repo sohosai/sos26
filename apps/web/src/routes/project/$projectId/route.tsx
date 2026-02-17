@@ -1,19 +1,16 @@
-import { createFileRoute, notFound, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { getProjectDetail } from "@/lib/api/project";
 import { ProjectContext } from "@/lib/project/context";
-import { Route as ProjectRoute } from "../route";
 
 export const Route = createFileRoute("/project/$projectId")({
 	component: ProjectIdLayout,
 	loader: async ({ params }) => {
-		return params;
+		return await getProjectDetail(params.projectId);
 	},
 });
 
 function ProjectIdLayout() {
-	const { projects } = ProjectRoute.useLoaderData();
-	const params = Route.useLoaderData();
-	const project = projects.find(p => p.id === params.projectId);
-	if (!project) throw notFound();
+	const { project } = Route.useLoaderData();
 	return (
 		<ProjectContext.Provider value={project}>
 			<Outlet />
