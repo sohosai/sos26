@@ -7,7 +7,7 @@ import {
 } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { DataTable, TagCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { InviteMemberDialog } from "@/components/project/members/InviteMemberDialog";
@@ -17,7 +17,7 @@ import {
 	removeProjectMember,
 } from "@/lib/api/project";
 import { useAuthStore } from "@/lib/auth";
-import { ProjectContext } from "@/lib/project/context";
+import { useProject } from "@/lib/project/context";
 import styles from "./index.module.scss";
 
 export type MemberRow = {
@@ -104,7 +104,7 @@ function RouteComponent() {
 	const [members, setMembers] = useState<MemberRow[]>([]);
 
 	const [dialogOpen, setDialogOpen] = useState(false);
-	const project = useContext(ProjectContext);
+	const project = useProject();
 	const { user } = useAuthStore();
 
 	useEffect(() => {

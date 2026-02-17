@@ -22,7 +22,7 @@ type ProjectSelectorProps = {
 	onSelectProject: (projectId: string) => void;
 	onCreateProject: () => void;
 	onJoinProject: (inviteCode: string) => void;
-	hasOwnerProject: boolean;
+	hasPrivilegedProject: boolean;
 };
 
 export function ProjectSelector({
@@ -32,7 +32,7 @@ export function ProjectSelector({
 	onSelectProject,
 	onCreateProject,
 	onJoinProject,
-	hasOwnerProject,
+	hasPrivilegedProject,
 }: ProjectSelectorProps) {
 	const [open, setOpen] = useState(false);
 	const [showJoinInput, setShowJoinInput] = useState(false);
@@ -111,7 +111,7 @@ export function ProjectSelector({
 				)}
 				<div className={styles.actions}>
 					{/* 責任者、副責任者でなければ */}
-					{!hasOwnerProject && (
+					{!hasPrivilegedProject && (
 						<button
 							type="button"
 							className={styles.actionItem}

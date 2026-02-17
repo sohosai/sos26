@@ -30,7 +30,7 @@ function ProjectLayout() {
 		projects[0]?.id ?? null
 	);
 
-	const hasOwnerProject = projects.some(
+	const hasPrivilegedProject = projects.some(
 		project => project.ownerId === user?.id || project.subOwnerId === user?.id
 	);
 
@@ -75,7 +75,7 @@ function ProjectLayout() {
 						}}
 						onCreateProject={() => setDialogOpen(true)}
 						onJoinProject={handleJoinProject}
-						hasOwnerProject={hasOwnerProject}
+						hasPrivilegedProject={hasPrivilegedProject}
 					/>
 				}
 			/>
