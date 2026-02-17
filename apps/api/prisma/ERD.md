@@ -80,6 +80,24 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"Notice" {
+  String id PK
+  String ownerId FK
+  String title
+  String body "nullable"
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"NoticeShare" {
+  String id PK
+  String noticeId FK
+  String userId FK
+  Boolean isWrite
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
 "Project" }o--|| "User" : owner
 "Project" }o--o| "User" : subOwner
 "ProjectMember" }o--|| "Project" : project
@@ -87,6 +105,9 @@ erDiagram
 "CommitteeMember" |o--|| "User" : user
 "UserPushSubscription" }o--|| "User" : user
 "UserPushSubscription" }o--|| "PushSubscription" : pushSubscription
+"Notice" }o--|| "User" : owner
+"NoticeShare" }o--|| "Notice" : notice
+"NoticeShare" }o--|| "User" : user
 ```
 
 ### `EmailVerification`
@@ -182,5 +203,29 @@ Properties as follows:
 - `id`:
 - `userId`:
 - `pushSubscriptionId`:
+- `createdAt`:
+- `updatedAt`:
+
+### `Notice`
+
+Properties as follows:
+
+- `id`:
+- `ownerId`:
+- `title`:
+- `body`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `NoticeShare`
+
+Properties as follows:
+
+- `id`:
+- `noticeId`:
+- `userId`:
+- `isWrite`:
+- `deletedAt`:
 - `createdAt`:
 - `updatedAt`:

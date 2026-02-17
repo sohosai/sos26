@@ -57,13 +57,18 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  // リレーション: 企画関連
+  // 企画関連
   ownedProjects    Project[]       @relation("ProjectOwner")
   subOwnedProjects Project[]       @relation("ProjectSubOwner")
   projectMembers   ProjectMember[]
 
-  // リレーション: 役割
+  // 実委人関連
   committeeMember       CommitteeMember?
+
+	//Notice関連
+	 notices Notice[] @relation("NoticeOwner")
+  sharedNotices NoticeShare[]
+
   userPushSubscriptions UserPushSubscription[]
 
   @@unique([firebaseUid, deletedAt])
@@ -196,4 +201,47 @@ model UserPushSubscription {
 
   @@unique([userId, pushSubscriptionId])
   @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// お知らせ関連
+// ─────────────────────────────────────────────────────────────
+model Notice{
+	id String @id @default(cuid())
+
+	//Noticeの作成者
+  ownerId String
+  owner   User   @relation("NoticeOwner", fields: [ownerId], references: [id])
+
+	// 共有先
+  sharedUsers NoticeShare[]
+
+	//タイトル
+	title String @default("無題のお知らせ")
+
+	//本文
+	body String?
+
+	deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model NoticeShare {
+  id String @id @default(cuid())
+
+  noticeId String
+  userId   String
+
+  notice Notice @relation(fields: [noticeId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+	//編集権限を持つのか
+  isWrite    Boolean  @default(false)
+
+	deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([noticeId, userId])
 }
