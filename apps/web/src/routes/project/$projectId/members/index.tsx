@@ -7,7 +7,7 @@ import {
 } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { DataTable, TagCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { InviteMemberDialog } from "@/components/project/members/InviteMemberDialog";
@@ -16,6 +16,8 @@ import {
 	promoteSubOwner,
 	removeProjectMember,
 } from "@/lib/api/project";
+import { useAuthStore } from "@/lib/auth";
+import { ProjectContext } from "@/lib/project/context";
 import styles from "./index.module.scss";
 
 export type MemberRow = {
@@ -40,6 +42,9 @@ export function MemberActionsCell({
 	onPromote,
 	onDelete,
 }: MemberActionsCellProps) {
+	if (member.role === "OWNER") {
+		return null;
+	}
 	return (
 		<Popover.Root>
 			<Popover.Trigger>
@@ -51,7 +56,7 @@ export function MemberActionsCell({
 
 			<Popover.Content align="start" sideOffset={4}>
 				<div className={styles.menu}>
-					{!hasSubOwner && member.role !== "OWNER" && (
+					{!hasSubOwner && (
 						<Button
 							intent="ghost"
 							size="2"
@@ -71,7 +76,6 @@ export function MemberActionsCell({
 							削除
 						</Button>
 					)}
-					{/* 現状何もボタンがない状態が存在するが、後々追加することが予想されるため放置 */}
 				</div>
 			</Popover.Content>
 		</Popover.Root>
@@ -108,13 +112,19 @@ function RouteComponent() {
 		}))
 	);
 	const [dialogOpen, setDialogOpen] = useState(false);
-	const { projectId } = Route.useParams();
-
+	const project = useContext(ProjectContext);
+	const { user } = useAuthStore();
 	const hasSubOwner = members.some(member => member.role === "SUB_OWNER");
 
+	const isOwner =
+		project?.ownerId === user?.id || project?.subOwnerId === user?.id;
 	const handlePromote = async (memberId: string) => {
 		try {
-			await promoteSubOwner(projectId, memberId);
+			if (!project?.id) {
+				alert("プロジェクト情報が取得できません");
+				return;
+			}
+			await promoteSubOwner(project.id, memberId);
 
 			setMembers(prev =>
 				prev.map(m => {
@@ -136,7 +146,11 @@ function RouteComponent() {
 
 	const handleDeleteMember = async (memberId: string) => {
 		try {
-			await removeProjectMember(projectId, memberId);
+			if (!project?.id) {
+				alert("プロジェクト情報が取得できません");
+				return;
+			}
+			await removeProjectMember(project.id, memberId);
 			setMembers(prev => prev.filter(m => m.userId !== memberId));
 		} catch (err) {
 			console.error(err);
@@ -144,7 +158,7 @@ function RouteComponent() {
 		}
 	};
 
-	const memberColumns = [
+	const baseColumns = [
 		memberColumnHelper.accessor("name", {
 			header: "名前",
 		}),
@@ -162,19 +176,62 @@ function RouteComponent() {
 			header: "参加日",
 			cell: info => new Date(info.getValue()).toLocaleDateString(),
 		}),
-		memberColumnHelper.display({
-			id: "actions",
-			header: "",
-			cell: ({ row }) => (
-				<MemberActionsCell
-					member={row.original}
-					hasSubOwner={hasSubOwner}
-					onPromote={handlePromote}
-					onDelete={handleDeleteMember}
-				/>
-			),
-		}),
 	];
+
+	const memberColumns = isOwner
+		? [
+				...baseColumns,
+				memberColumnHelper.display({
+					id: "actions",
+					header: "",
+					cell: ({ row }) => (
+						<MemberActionsCell
+							member={row.original}
+							hasSubOwner={hasSubOwner}
+							onPromote={handlePromote}
+							onDelete={handleDeleteMember}
+						/>
+					),
+				}),
+			]
+		: baseColumns;
+
+	// const memberColumns = [
+	// 	..baseColumns,
+	// ]
+	// const memberColumns = [
+	// 	memberColumnHelper.accessor("name", {
+	// 		header: "名前",
+	// 	}),
+	// 	memberColumnHelper.accessor("email", {
+	// 		header: "メールアドレス",
+	// 	}),
+	// 	memberColumnHelper.accessor("roleLabel", {
+	// 		header: "役職",
+	// 		cell: TagCell,
+	// 		meta: {
+	// 			tagColors: roleColorMap,
+	// 		},
+	// 	}),
+	// 	memberColumnHelper.accessor("joinedAt", {
+	// 		header: "参加日",
+	// 		cell: (info) => new Date(info.getValue()).toLocaleDateString(),
+	// 	}),
+
+	// 	isOwner &&
+	// 		memberColumnHelper.display({
+	// 			id: "actions",
+	// 			header: "",
+	// 			cell: ({ row }) => (
+	// 				<MemberActionsCell
+	// 					member={row.original}
+	// 					hasSubOwner={hasSubOwner}
+	// 					onPromote={handlePromote}
+	// 					onDelete={handleDeleteMember}
+	// 				/>
+	// 			),
+	// 		}),
+	// ].filter(Boolean);
 
 	return (
 		<div className={styles.page}>
