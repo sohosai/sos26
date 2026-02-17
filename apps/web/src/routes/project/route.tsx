@@ -1,10 +1,7 @@
 import type { Project } from "@sos26/shared";
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import {
-	// type Project,
-	ProjectSelector,
-} from "@/components/layout/ProjectSelector";
+import { useState } from "react";
+import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
 import { joinProject, listMyProjects } from "@/lib/api/project";
@@ -29,26 +26,13 @@ function ProjectLayout() {
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const { user } = useAuthStore();
-	// const projects: Project[] = [{ id: "demo-1", name: "模擬店グルメフェス" }];
-
 	const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-		// "demo-1"
 		projects[0]?.id ?? null
 	);
 
 	const hasOwnerProject = projects.some(
 		project => project.ownerId === user?.id || project.subOwnerId === user?.id
 	);
-	// ページリロード時に/membersがなくなっちゃう
-	useEffect(() => {
-		if (!selectedProjectId) return;
-		const exists = projects.some(p => p.id === selectedProjectId);
-		if (!exists) return;
-		navigate({
-			to: "/project",
-			replace: true,
-		});
-	}, [selectedProjectId, navigate, projects]);
 
 	const handleJoinProject = async (inviteCode: string) => {
 		const { project } = await joinProject({ inviteCode });
