@@ -1,4 +1,6 @@
 import {
+	type AssignSubOwnerResponse,
+	assignSubOwnerEndpoint,
 	type CreateProjectRequest,
 	type CreateProjectResponse,
 	createProjectEndpoint,
@@ -11,8 +13,6 @@ import {
 	type ListProjectMembersResponse,
 	listMyProjectsEndpoint,
 	listProjectMembersEndpoint,
-	type PromoteSubOwnerResponse,
-	promoteSubOwnerEndpoint,
 	type RegenerateInviteCodeResponse,
 	type RemoveProjectMemberResponse,
 	regenerateInviteCodeEndpoint,
@@ -114,14 +114,14 @@ export async function removeProjectMember(
 }
 
 /**
- * POST /project/:projectId/members/:userId/promote
+ * POST /project/:projectId/members/:userId/assign
  * プロジェクトメンバーを副責任者に任命
  */
-export async function promoteSubOwner(
+export async function assignSubOwner(
 	projectId: string,
 	userId: string
-): Promise<PromoteSubOwnerResponse> {
-	return callBodyApi(promoteSubOwnerEndpoint, undefined, {
+): Promise<AssignSubOwnerResponse> {
+	return callBodyApi(assignSubOwnerEndpoint, undefined, {
 		pathParams: { projectId, userId },
 	});
 }

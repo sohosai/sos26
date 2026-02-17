@@ -316,11 +316,11 @@ projectRoute.post(
 );
 
 // ─────────────────────────────────────────
-// POST /project/:projectId/members/:userId/promote
+// POST /project/:projectId/members/:userId/assign
 // メンバーを副責任者に任命
 // ─────────────────────────────────────────
 projectRoute.post(
-	"/:projectId/members/:userId/promote",
+	"/:projectId/members/:userId/assign",
 	requireAuth,
 	requireProjectMember,
 	async c => {

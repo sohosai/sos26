@@ -19,7 +19,7 @@
   - [POST `/project/:projectId/invite-code/regenerate`](#post-projectprojectidinvite-coderegenerate)
   - [GET `/project/:projectId/members`](#get-projectprojectidmembers)
   - [POST `/project/:projectId/members/:userId/remove`](#post-projectprojectidmembersuseridremove)
-  - [POST `/project/:projectId/members/:userId/promote`](#post-projectprojectidmembersuseridpromote)
+  - [POST `/project/:projectId/members/:userId/assign`](#post-projectprojectidmembersuseridassign)
 - [役職と制約](#役職と制約)
 
 ---
@@ -44,7 +44,7 @@
 | POST | `/project/:projectId/invite-code/regenerate` | 招待コード再生成（責任者のみ） |
 | GET | `/project/:projectId/members` | 企画メンバー一覧 |
 | POST | `/project/:projectId/members/:userId/remove` | メンバー削除（責任者/副責任者） |
-| POST | `/project/:projectId/members/:userId/promote` | 副責任者任命（責任者のみ） |
+| POST | `/project/:projectId/members/:userId/assign` | 副責任者任命（責任者のみ） |
 
 ---
 
@@ -116,7 +116,7 @@
 - OWNER/SUB_OWNER 自身は削除不可
 - 実体は論理削除（`deletedAt` 設定）
 
-### POST `/project/:projectId/members/:userId/promote`
+### POST `/project/:projectId/members/:userId/assign`
 
 企画メンバーを副責任者に任命します。
 

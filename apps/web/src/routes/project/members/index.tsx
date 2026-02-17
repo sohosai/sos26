@@ -12,8 +12,8 @@ import { DataTable, TagCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { InviteMemberDialog } from "@/components/project/members/InviteMemberDialog";
 import {
+	assignSubOwner,
 	listProjectMembers,
-	promoteSubOwner,
 	removeProjectMember,
 } from "@/lib/api/project";
 import { useAuthStore } from "@/lib/auth";
@@ -32,14 +32,14 @@ export type MemberRow = {
 type MemberActionsCellProps = {
 	member: MemberRow;
 	hasSubOwner: boolean;
-	onPromote: (memberId: string) => void;
+	onAssign: (memberId: string) => void;
 	onDelete: (memberId: string) => void;
 };
 
 export function MemberActionsCell({
 	member,
 	hasSubOwner,
-	onPromote,
+	onAssign,
 	onDelete,
 }: MemberActionsCellProps) {
 	if (member.role === "OWNER") {
@@ -60,7 +60,7 @@ export function MemberActionsCell({
 						<Button
 							intent="ghost"
 							size="2"
-							onClick={() => onPromote(member.userId)}
+							onClick={() => onAssign(member.userId)}
 						>
 							<IconUserUp size={16} />
 							副責任者に指名
@@ -124,13 +124,13 @@ function RouteComponent() {
 
 	const isPrivileged =
 		project?.ownerId === user?.id || project?.subOwnerId === user?.id;
-	const handlePromote = async (memberId: string) => {
+	const handleAssign = async (memberId: string) => {
 		try {
 			if (!project?.id) {
 				alert("プロジェクト情報が取得できません");
 				return;
 			}
-			await promoteSubOwner(project.id, memberId);
+			await assignSubOwner(project.id, memberId);
 
 			setMembers(prev =>
 				prev.map(m => {
@@ -194,7 +194,7 @@ function RouteComponent() {
 						<MemberActionsCell
 							member={row.original}
 							hasSubOwner={hasSubOwner}
-							onPromote={handlePromote}
+							onAssign={handleAssign}
 							onDelete={handleDeleteMember}
 						/>
 					),

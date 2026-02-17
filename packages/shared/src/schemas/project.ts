@@ -172,16 +172,16 @@ export type RemoveProjectMemberResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────
-// POST /project/:projectId/members/:userId/promote
+// POST /project/:projectId/members/:userId/assign
 // ─────────────────────────────────────────────
 
-export const promoteSubOwnerRequestSchema = z.undefined();
+export const assignSubOwnerRequestSchema = z.undefined();
 
-export const promoteSubOwnerResponseSchema = z.object({
+export const assignSubOwnerResponseSchema = z.object({
 	success: z.literal(true),
 	subOwnerId: z.string(),
 });
 
-export type PromoteSubOwnerResponse = z.infer<
-	typeof promoteSubOwnerResponseSchema
+export type AssignSubOwnerResponse = z.infer<
+	typeof assignSubOwnerResponseSchema
 >;

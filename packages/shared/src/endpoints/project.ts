@@ -1,4 +1,6 @@
 import {
+	assignSubOwnerRequestSchema,
+	assignSubOwnerResponseSchema,
 	createProjectRequestSchema,
 	createProjectResponseSchema,
 	getProjectDetailResponseSchema,
@@ -8,8 +10,6 @@ import {
 	listProjectMembersResponseSchema,
 	projectIdPathParamsSchema,
 	projectMemberPathParamsSchema,
-	promoteSubOwnerRequestSchema,
-	promoteSubOwnerResponseSchema,
 	regenerateInviteCodeRequestSchema,
 	regenerateInviteCodeResponseSchema,
 	removeProjectMemberRequestSchema,
@@ -181,21 +181,21 @@ export const removeProjectMemberEndpoint: BodyEndpoint<
 } as const;
 
 /**
- * POST /project/:projectId/members/:userId/promote
+ * POST /project/:projectId/members/:userId/assign
  * プロジェクトメンバーを副責任者に任命
  */
-export const promoteSubOwnerEndpoint: BodyEndpoint<
+export const assignSubOwnerEndpoint: BodyEndpoint<
 	"POST",
-	"/project/:projectId/members/:userId/promote",
+	"/project/:projectId/members/:userId/assign",
 	typeof projectMemberPathParamsSchema,
 	undefined,
-	typeof promoteSubOwnerRequestSchema,
-	typeof promoteSubOwnerResponseSchema
+	typeof assignSubOwnerRequestSchema,
+	typeof assignSubOwnerResponseSchema
 > = {
 	method: "POST",
-	path: "/project/:projectId/members/:userId/promote",
+	path: "/project/:projectId/members/:userId/assign",
 	pathParams: projectMemberPathParamsSchema,
 	query: undefined,
-	request: promoteSubOwnerRequestSchema,
-	response: promoteSubOwnerResponseSchema,
+	request: assignSubOwnerRequestSchema,
+	response: assignSubOwnerResponseSchema,
 } as const;
