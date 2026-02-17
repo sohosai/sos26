@@ -1,6 +1,6 @@
 import type { Project } from "@sos26/shared";
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
@@ -29,6 +29,15 @@ function ProjectLayout() {
 	const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
 		projects[0]?.id ?? null
 	);
+
+	// プロジェクトがないときのリダイレクト
+	useEffect(() => {
+		if (projects.length === 0) {
+			navigate({ to: "/project" });
+		} else if (!selectedProjectId && projects[0]) {
+			setSelectedProjectId(projects[0].id);
+		}
+	}, [projects, selectedProjectId, navigate]);
 
 	const hasPrivilegedProject = projects.some(
 		project => project.ownerId === user?.id || project.subOwnerId === user?.id
@@ -84,19 +93,22 @@ function ProjectLayout() {
 			<main
 				className={`${styles.main} ${sidebarCollapsed ? styles.collapsed : ""}`}
 			>
-				<ProjectContext.Provider
-					value={
-						projects.find(project => project.id === selectedProjectId) || null
-					}
-				>
-					<Outlet />
-				</ProjectContext.Provider>
+				{selectedProjectId && (
+					<ProjectContext.Provider
+						value={
+							projects.find(project => project.id === selectedProjectId) || null
+						}
+					>
+						<Outlet />
+					</ProjectContext.Provider>
+				)}
 			</main>
 			<ProjectCreateDialog
 				open={dialogOpen}
 				onOpenChange={setDialogOpen}
 				onCreated={project => {
 					setProjects(prev => [...prev, project]);
+					setSelectedProjectId(project.id);
 				}}
 			/>
 		</div>
