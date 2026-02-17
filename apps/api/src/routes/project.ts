@@ -203,68 +203,66 @@ projectRoute.post(
 // GET /project/:projectId/members
 // 該当する企画のメンバー一覧
 // ─────────────────────────────────────────
-projectRoute.get("/:projectId/members", requireAuth, async c => {
-	const projectId = c.req.param("projectId");
-	const userId = c.get("user").id;
+projectRoute.get(
+	"/:projectId/members",
+	requireAuth,
+	requireProjectMember,
+	async c => {
+		const userId = c.get("user").id;
+		const project = c.get("project");
 
-	// project の存在確認
-	const project = await prisma.project.findFirst({
-		where: {
-			id: projectId,
-			deletedAt: null,
-		},
-	});
-	if (!project) {
-		throw Errors.notFound("企画が見つかりません");
-	}
-
-	// 自分がこの project に参加しているか
-	const isMember = await prisma.projectMember.findFirst({
-		where: {
-			projectId,
-			userId,
-			deletedAt: null,
-		},
-	});
-	if (!isMember) {
-		throw Errors.forbidden("この企画のメンバーではありません");
-	}
-
-	// メンバー一覧取得
-	const members = await prisma.projectMember.findMany({
-		where: {
-			projectId,
-			deletedAt: null,
-		},
-		include: {
-			user: true,
-		},
-		orderBy: {
-			joinedAt: "asc",
-		},
-	});
-
-	const result = members.map(m => {
-		let role: ProjectMemberRole = "MEMBER";
-
-		if (m.userId === project.ownerId) {
-			role = "OWNER";
-		} else if (m.userId === project.subOwnerId) {
-			role = "SUB_OWNER";
+		if (!project) {
+			throw Errors.notFound("企画が見つかりません");
 		}
 
-		return {
-			id: m.id,
-			userId: m.userId,
-			name: m.user.name,
-			email: m.user.email,
-			role,
-			joinedAt: m.joinedAt,
-		};
-	});
+		// 自分がこの project に参加しているか
+		const isMember = await prisma.projectMember.findFirst({
+			where: {
+				projectId: project.id,
+				userId,
+				deletedAt: null,
+			},
+		});
+		if (!isMember) {
+			throw Errors.forbidden("この企画のメンバーではありません");
+		}
 
-	return c.json({ members: result });
-});
+		// メンバー一覧取得
+		const members = await prisma.projectMember.findMany({
+			where: {
+				projectId: project.id,
+				deletedAt: null,
+			},
+			include: {
+				user: true,
+			},
+			orderBy: {
+				joinedAt: "asc",
+			},
+		});
+
+		const result = members.map(m => {
+			let role: ProjectMemberRole = "MEMBER";
+
+			if (m.userId === project.ownerId) {
+				role = "OWNER";
+			} else if (m.userId === project.subOwnerId) {
+				role = "SUB_OWNER";
+			}
+
+			return {
+				id: m.id,
+				userId: m.userId,
+				name: m.user.name,
+				email: m.user.email,
+				role,
+				joinedAt: m.joinedAt,
+			};
+		});
+
+		return c.json({ members: result });
+	}
+);
 
 // ─────────────────────────────────────────
 // POST /project/:projectId/members/:userId/remove
@@ -273,17 +271,11 @@ projectRoute.get("/:projectId/members", requireAuth, async c => {
 projectRoute.post(
 	"/:projectId/members/:userId/remove",
 	requireAuth,
+	requireProjectMember,
 	async c => {
-		const { projectId, userId } = c.req.param();
+		const { userId } = c.req.param();
 		const requesterId = c.get("user").id;
-
-		// project の存在確認
-		const project = await prisma.project.findFirst({
-			where: {
-				id: projectId,
-				deletedAt: null,
-			},
-		});
+		const project = c.get("project");
 
 		if (!project) {
 			throw Errors.notFound("企画が見つかりません");
@@ -300,7 +292,7 @@ projectRoute.post(
 		// 削除対象がメンバーか確認
 		const member = await prisma.projectMember.findFirst({
 			where: {
-				projectId,
+				projectId: project.id,
 				userId,
 				deletedAt: null,
 			},
@@ -330,17 +322,12 @@ projectRoute.post(
 projectRoute.post(
 	"/:projectId/members/:userId/promote",
 	requireAuth,
+	requireProjectMember,
 	async c => {
-		const { projectId, userId } = c.req.param();
+		const { userId } = c.req.param();
 		const requesterId = c.get("user").id;
+		const project = c.get("project");
 
-		// project 存在確認
-		const project = await prisma.project.findFirst({
-			where: {
-				id: projectId,
-				deletedAt: null,
-			},
-		});
 		if (!project) {
 			throw Errors.notFound("企画が見つかりません");
 		}
@@ -353,7 +340,7 @@ projectRoute.post(
 		// 任命対象がメンバーか
 		const member = await prisma.projectMember.findFirst({
 			where: {
-				projectId,
+				projectId: project.id,
 				userId,
 				deletedAt: null,
 			},
@@ -377,7 +364,7 @@ projectRoute.post(
 			where: {
 				deletedAt: null,
 				id: {
-					not: projectId,
+					not: project.id,
 				},
 				OR: [{ ownerId: userId }, { subOwnerId: userId }],
 			},
@@ -390,7 +377,7 @@ projectRoute.post(
 		}
 
 		await prisma.project.update({
-			where: { id: projectId },
+			where: { id: project.id },
 			data: {
 				subOwnerId: userId,
 			},

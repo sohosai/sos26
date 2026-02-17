@@ -122,7 +122,7 @@ function RouteComponent() {
 
 	const hasSubOwner = members.some(member => member.role === "SUB_OWNER");
 
-	const isOwner =
+	const isPrivileged =
 		project?.ownerId === user?.id || project?.subOwnerId === user?.id;
 	const handlePromote = async (memberId: string) => {
 		try {
@@ -184,7 +184,7 @@ function RouteComponent() {
 		}),
 	];
 
-	const memberColumns = isOwner
+	const memberColumns = isPrivileged
 		? [
 				...baseColumns,
 				memberColumnHelper.display({
