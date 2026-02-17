@@ -84,8 +84,7 @@ function ProjectLayout() {
 			>
 				<ProjectContext.Provider
 					value={
-						projects.filter(project => project.id === selectedProjectId)[0] ||
-						null
+						projects.find(project => project.id === selectedProjectId) || null
 					}
 				>
 					<Outlet />
