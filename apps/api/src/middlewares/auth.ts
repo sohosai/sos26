@@ -55,6 +55,77 @@ export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
 });
 
 /**
+ * 実行委員メンバーであることを検証し、Context に格納するミドルウェア
+ *
+ * - requireAuth が先に実行されている前提（c.get("user") が利用可能）
+ * - userId で CommitteeMember を検索（deletedAt が null のもの）
+ */
+export const requireCommitteeMember = createMiddleware<AuthEnv>(
+	async (c, next) => {
+		const user = c.get("user");
+
+		const committeeMember = await prisma.committeeMember.findFirst({
+			where: { userId: user.id, deletedAt: null },
+		});
+
+		if (!committeeMember) {
+			throw Errors.forbidden("実委メンバーではありません");
+		}
+
+		c.set("committeeMember", committeeMember);
+		await next();
+	}
+);
+
+/**
+ * 企画メンバーであることを検証し、Project とロールを Context に格納するミドルウェア
+ *
+ * - requireAuth が先に実行されている前提（c.get("user") が利用可能）
+ * - パスパラメータ projectId から Project を取得
+ * - ownerId / subOwnerId / ProjectMember でロールを判定
+ */
+export const requireProjectMember = createMiddleware<AuthEnv>(
+	async (c, next) => {
+		const user = c.get("user");
+		const projectId = c.req.param("projectId");
+
+		if (!projectId) {
+			throw Errors.invalidRequest("projectId が必要です");
+		}
+
+		const project = await prisma.project.findFirst({
+			where: { id: projectId, deletedAt: null },
+		});
+
+		if (!project) {
+			throw Errors.notFound("企画が見つかりません");
+		}
+
+		let role: "OWNER" | "SUB_OWNER" | "MEMBER";
+
+		if (project.ownerId === user.id) {
+			role = "OWNER";
+		} else if (project.subOwnerId === user.id) {
+			role = "SUB_OWNER";
+		} else {
+			const membership = await prisma.projectMember.findFirst({
+				where: { projectId: project.id, userId: user.id, deletedAt: null },
+			});
+
+			if (!membership) {
+				throw Errors.forbidden("この企画のメンバーではありません");
+			}
+
+			role = "MEMBER";
+		}
+
+		c.set("project", project);
+		c.set("projectRole", role);
+		await next();
+	}
+);
+
+/**
  * reg_ticket Cookie の存在を確認し、値を Context に格納するミドルウェア
  *
  * - Cookie から reg_ticket を取得
