@@ -1,5 +1,5 @@
 import { Box, Dialog, Heading, Separator } from "@radix-ui/themes";
-import { IconPencil } from "@tabler/icons-react";
+import { IconPencil, IconPlus } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useState } from "react";
@@ -77,6 +77,7 @@ const userColumnHelper = createColumnHelper<User>();
 const userColumns = [
 	userColumnHelper.accessor("id", {
 		header: "ID",
+		enableSorting: false,
 		cell: EditableCell,
 		meta: { editable: false },
 	}),
@@ -399,6 +400,7 @@ function TableDemoPage() {
 		eventColumnHelper.display({
 			id: "actions",
 			header: "",
+			enableSorting: false,
 			cell: ({ row }) => (
 				<IconButton size="1" onClick={() => openTagEditor(row.original)}>
 					<IconPencil size={16} />
@@ -485,6 +487,11 @@ function TableDemoPage() {
 				data={events}
 				columns={eventColumns}
 				features={{ selection: false, copy: false }}
+				toolbarExtra={
+					<Button intent="secondary" onClick={() => alert("イベント追加")}>
+						<IconPlus size={16} /> イベント追加
+					</Button>
+				}
 			/>
 
 			{/* タグ編集 Dialog */}
