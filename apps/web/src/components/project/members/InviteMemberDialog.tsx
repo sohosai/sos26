@@ -1,10 +1,10 @@
 import { Dialog, Popover, Text } from "@radix-ui/themes";
 import { IconCopy, IconRefresh, IconX } from "@tabler/icons-react";
-import { useContext, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { IconButton } from "@/components/primitives";
 import { regenerateInviteCode } from "@/lib/api/project";
 import { useAuthStore } from "@/lib/auth";
-import { ProjectContext } from "@/lib/project/context";
+import { useProject } from "@/lib/project/context";
 import styles from "./InviteMemberDialog.module.scss";
 
 type Props = {
@@ -13,7 +13,7 @@ type Props = {
 };
 
 export function InviteMemberDialog({ open, onOpenChange }: Props) {
-	const project = useContext(ProjectContext);
+	const project = useProject();
 	const { user } = useAuthStore();
 	const [copied, setCopied] = useState(false);
 	const [inviteCode, setInviteCode] = useState(project?.inviteCode ?? "");
