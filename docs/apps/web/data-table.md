@@ -95,6 +95,7 @@ function UserTable() {
 | `initialSorting` | `SortingState` | `[]` | 初期ソート状態 |
 | `initialGlobalFilter` | `string` | `""` | 初期検索文字列 |
 | `onCellEdit` | `(row: T, columnId: string, value: unknown) => void` | - | セル編集時のコールバック。`row` は編集された行の元データオブジェクト |
+| `toolbarExtra` | `ReactNode` | - | ツールバーに追加する任意の要素（ボタンなど） |
 
 ### DataTableFeatures
 
@@ -308,6 +309,22 @@ columnHelper.accessor("tags", {
 	initialSorting={[{ id: "priority", desc: true }]}
 	initialGlobalFilter="進行中"
 	features={{ selection: false, copy: false }}
+/>
+```
+
+### ツールバーにカスタムボタンを追加
+
+`toolbarExtra` にボタン等を渡すと、検索・表示カラム・CSV出力の後ろに表示される。
+
+```tsx
+<DataTable
+	data={events}
+	columns={eventColumns}
+	toolbarExtra={
+		<Button intent="secondary" onClick={handleAdd}>
+			<IconPlus size={16} /> イベント追加
+		</Button>
+	}
 />
 ```
 
