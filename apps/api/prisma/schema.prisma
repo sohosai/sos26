@@ -243,7 +243,7 @@ model Notice {
   sharedUsers NoticeShare[]
 
   //配信許可など
-  authorizations  NoticeAuthorization[]
+  authorizations NoticeAuthorization[]
 
   //タイトル
   title String @default("無題のお知らせ")
