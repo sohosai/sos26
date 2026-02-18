@@ -63,6 +63,12 @@ erDiagram
   DateTime joinedAt
   DateTime deletedAt "nullable"
 }
+"CommitteeMemberPermission" {
+  String id PK
+  String committeeMemberId FK
+  CommitteePermission permission
+  DateTime createdAt
+}
 "PushSubscription" {
   String id PK
   String endpoint UK
@@ -80,13 +86,57 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"Notice" {
+  String id PK
+  String ownerId FK
+  String title
+  String body "nullable"
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"NoticeShare" {
+  String id PK
+  String noticeId FK
+  String userId FK
+  Boolean isWrite
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"NoticeAuthorization" {
+  String id PK
+  String noticeId FK
+  String requestedById FK
+  String requestedToId FK
+  NoticeAuthorizationStatus status
+  DateTime decidedAt "nullable"
+  DateTime deliveredAt
+  DateTime createdAt
+  DateTime updatedAt
+}
+"NoticeDelivery" {
+  String id PK
+  String noticeAuthorizationId FK
+  String projectId FK
+  DateTime createdAt
+}
 "Project" }o--|| "User" : owner
 "Project" }o--o| "User" : subOwner
 "ProjectMember" }o--|| "Project" : project
 "ProjectMember" }o--|| "User" : user
 "CommitteeMember" |o--|| "User" : user
+"CommitteeMemberPermission" }o--|| "CommitteeMember" : committeeMember
 "UserPushSubscription" }o--|| "User" : user
 "UserPushSubscription" }o--|| "PushSubscription" : pushSubscription
+"Notice" }o--|| "User" : owner
+"NoticeShare" }o--|| "Notice" : notice
+"NoticeShare" }o--|| "User" : user
+"NoticeAuthorization" }o--|| "Notice" : notice
+"NoticeAuthorization" }o--|| "User" : requestedBy
+"NoticeAuthorization" }o--|| "User" : requestedTo
+"NoticeDelivery" }o--|| "NoticeAuthorization" : noticeAuthorization
+"NoticeDelivery" }o--|| "Project" : project
 ```
 
 ### `EmailVerification`
@@ -162,6 +212,15 @@ Properties as follows:
 - `joinedAt`:
 - `deletedAt`:
 
+### `CommitteeMemberPermission`
+
+Properties as follows:
+
+- `id`:
+- `committeeMemberId`:
+- `permission`:
+- `createdAt`:
+
 ### `PushSubscription`
 
 Properties as follows:
@@ -184,3 +243,50 @@ Properties as follows:
 - `pushSubscriptionId`:
 - `createdAt`:
 - `updatedAt`:
+
+### `Notice`
+
+Properties as follows:
+
+- `id`:
+- `ownerId`:
+- `title`:
+- `body`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `NoticeShare`
+
+Properties as follows:
+
+- `id`:
+- `noticeId`:
+- `userId`:
+- `isWrite`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `NoticeAuthorization`
+
+Properties as follows:
+
+- `id`:
+- `noticeId`:
+- `requestedById`:
+- `requestedToId`:
+- `status`:
+- `decidedAt`:
+- `deliveredAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `NoticeDelivery`
+
+Properties as follows:
+
+- `id`:
+- `noticeAuthorizationId`:
+- `projectId`:
+- `createdAt`:
