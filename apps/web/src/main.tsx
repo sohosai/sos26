@@ -2,6 +2,7 @@ import { Theme } from "@radix-ui/themes";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { Toaster } from "sonner";
 import { routeTree } from "./routeTree.gen";
 
 import "./styles/index.css";
@@ -25,6 +26,7 @@ createRoot(rootElement).render(
 	<StrictMode>
 		<Theme accentColor="indigo" grayColor="slate" panelBackground="solid">
 			<RouterProvider router={router} />
+			<Toaster />
 		</Theme>
 	</StrictMode>
 );
