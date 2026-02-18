@@ -11,3 +11,50 @@
 	gap: var(--space-1);
 	align-items: flex-start;
 }
+
+.titleLink {
+	all: unset;
+	cursor: pointer;
+	color: var(--accent-11);
+	text-decoration: underline;
+
+	&:hover {
+		color: var(--accent-12);
+	}
+}
+
+.noticeBody {
+	margin-top: var(--space-4);
+}
+
+.detailSection {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	margin-top: var(--space-4);
+}
+
+.collaboratorList {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-1);
+}
+
+.authorizationList {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.authorizationItem {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.dialogActions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-2);
+	margin-top: var(--space-4);
+}
