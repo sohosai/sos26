@@ -148,7 +148,7 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
-"FormShare" {
+"FormCollaborator" {
   String id PK
   String formId FK
   String userId FK
@@ -219,8 +219,8 @@ erDiagram
 "Form" }o--|| "User" : owner
 "FormItem" }o--|| "Form" : form
 "FormItemOption" }o--|| "FormItem" : formItem
-"FormShare" }o--|| "Form" : form
-"FormShare" }o--|| "User" : user
+"FormCollaborator" }o--|| "Form" : form
+"FormCollaborator" }o--|| "User" : user
 "FormAuthorization" }o--|| "Form" : form
 "FormAuthorization" }o--|| "User" : requestedBy
 "FormAuthorization" }o--|| "User" : requestedTo
@@ -422,7 +422,7 @@ Properties as follows:
 - `createdAt`:
 - `updatedAt`:
 
-### `FormShare`
+### `FormCollaborator`
 
 Properties as follows:
 

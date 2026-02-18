@@ -73,7 +73,7 @@ model User {
 
   //Form関連
   forms                       Form[]              @relation("FormOwner")
-  sharedForms                 FormShare[]
+  collaboratingForms          FormCollaborator[]
   requestedFormAuthorizations FormAuthorization[] @relation("FormRequestedBy")
   receivedFormAuthorizations  FormAuthorization[] @relation("FormRequestedTo")
   formResponses               FormResponse[]      @relation("FormRespondent")
@@ -374,8 +374,8 @@ model Form {
   ownerId String
   owner   User   @relation("FormOwner", fields: [ownerId], references: [id])
 
-  //共有ユーザー
-  sharedUsers FormShare[]
+  //共同編集者
+  collaborators FormCollaborator[]
 
   //配信許可など
   authorizations FormAuthorization[]
@@ -447,8 +447,8 @@ model FormItemOption {
   @@index([formItemId])
 }
 
-//フォームの共有
-model FormShare {
+//フォームの共同編集者
+model FormCollaborator {
   id String @id @default(cuid())
 
   formId String
