@@ -1,6 +1,10 @@
 .button {
 	cursor: pointer;
 
+	&:global(.rt-variant-ghost) {
+		margin: 0;
+	}
+
 	&:disabled {
 		cursor: not-allowed;
 	}
