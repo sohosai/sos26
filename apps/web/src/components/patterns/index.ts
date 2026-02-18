@@ -2,6 +2,7 @@ export { CheckboxGroup, CheckboxGroupItem } from "./CheckboxGroup";
 export type { DataTableFeatures } from "./DataTable";
 export {
 	AvatarGroupCell,
+	type AvatarGroupItem,
 	DataTable,
 	DateCell,
 	EditableCell,
