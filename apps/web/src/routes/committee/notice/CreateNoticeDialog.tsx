@@ -1,12 +1,8 @@
 import { Dialog } from "@radix-ui/themes";
 import { IconX } from "@tabler/icons-react";
 import { useState } from "react";
-import {
-	Button,
-	IconButton,
-	TextArea,
-	TextField,
-} from "@/components/primitives";
+import { RichTextEditor } from "@/components/patterns";
+import { Button, IconButton, TextField } from "@/components/primitives";
 import styles from "./CreateNoticeDialog.module.scss";
 
 type Props = {
@@ -44,13 +40,11 @@ export function CreateNoticeDialog({ open, onOpenChange }: Props) {
 						onChange={setTitle}
 						required
 					/>
-					<TextArea
+					<RichTextEditor
 						label="本文"
 						placeholder="お知らせの本文を入力"
 						value={body}
 						onChange={setBody}
-						rows={6}
-						autoGrow
 						required
 					/>
 					<div className={styles.actions}>
@@ -65,7 +59,7 @@ export function CreateNoticeDialog({ open, onOpenChange }: Props) {
 							intent="primary"
 							size="2"
 							onClick={handleSubmit}
-							disabled={!title.trim() || !body.trim()}
+							disabled={!title.trim() || !body.replace(/<[^>]*>/g, "").trim()}
 						>
 							作成
 						</Button>
