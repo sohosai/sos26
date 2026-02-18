@@ -436,14 +436,17 @@ committeeNoticeRoute.post(
 			throw Errors.alreadyExists("既に承認待ちの申請があります");
 		}
 
+		// 配信先企画の重複を排除
+		const uniqueProjectIds = [...new Set(projectIds)];
+
 		// 配信先企画が全て存在するか確認
 		const existingProjects = await prisma.project.findMany({
-			where: { id: { in: projectIds }, deletedAt: null },
+			where: { id: { in: uniqueProjectIds }, deletedAt: null },
 			select: { id: true },
 		});
-		if (existingProjects.length !== projectIds.length) {
+		if (existingProjects.length !== uniqueProjectIds.length) {
 			const existingIds = new Set(existingProjects.map(p => p.id));
-			const missingIds = projectIds.filter(id => !existingIds.has(id));
+			const missingIds = uniqueProjectIds.filter(id => !existingIds.has(id));
 			throw Errors.invalidRequest(
 				`存在しない企画が含まれています: ${missingIds.join(", ")}`
 			);
@@ -461,7 +464,7 @@ committeeNoticeRoute.post(
 			});
 
 			const deliveries = await Promise.all(
-				projectIds.map(projectId =>
+				uniqueProjectIds.map(projectId =>
 					tx.noticeDelivery.create({
 						data: {
 							noticeAuthorizationId: auth.id,
