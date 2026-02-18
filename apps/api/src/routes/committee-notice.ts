@@ -425,12 +425,28 @@ committeeNoticeRoute.post(
 			throw Errors.invalidRequest("配信希望日時は未来の日時を指定してください");
 		}
 
-		// 既に PENDING の承認申請がないこと
-		const pendingAuth = await prisma.noticeAuthorization.findFirst({
-			where: { noticeId, status: "PENDING" },
+		// 既に PENDING または APPROVED の承認申請がないこと
+		const existingAuth = await prisma.noticeAuthorization.findFirst({
+			where: { noticeId, status: { in: ["PENDING", "APPROVED"] } },
 		});
-		if (pendingAuth) {
+		if (existingAuth) {
+			if (existingAuth.status === "APPROVED") {
+				throw Errors.invalidRequest("このお知らせは既に承認されています");
+			}
 			throw Errors.alreadyExists("既に承認待ちの申請があります");
+		}
+
+		// 配信先企画が全て存在するか確認
+		const existingProjects = await prisma.project.findMany({
+			where: { id: { in: projectIds }, deletedAt: null },
+			select: { id: true },
+		});
+		if (existingProjects.length !== projectIds.length) {
+			const existingIds = new Set(existingProjects.map(p => p.id));
+			const missingIds = projectIds.filter(id => !existingIds.has(id));
+			throw Errors.invalidRequest(
+				`存在しない企画が含まれています: ${missingIds.join(", ")}`
+			);
 		}
 
 		// トランザクションで承認 + 配信先を作成
@@ -568,10 +584,7 @@ committeeNoticeRoute.get(
 			},
 		});
 		const memberCountMap = new Map(
-			projects.map(p => [
-				p.id,
-				p._count.projectMembers + (p.subOwnerId ? 2 : 1),
-			])
+			projects.map(p => [p.id, p._count.projectMembers])
 		);
 
 		const formatted = deliveries.map(d => ({
