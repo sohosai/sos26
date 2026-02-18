@@ -42,6 +42,7 @@
     "vitest": "^4.0.16"
   },
   "dependencies": {
+    "docx-preview": "^0.3.7",
     "zod": "^4.3.5"
   }
 }

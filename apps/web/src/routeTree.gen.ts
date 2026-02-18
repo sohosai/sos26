@@ -25,6 +25,7 @@ import { Route as ProjectFormsIndexRouteImport } from './routes/project/forms/in
 import { Route as DevTableIndexRouteImport } from './routes/dev/table/index'
 import { Route as DevSearchIndexRouteImport } from './routes/dev/search/index'
 import { Route as DevPushNotificationIndexRouteImport } from './routes/dev/pushNotification/index'
+import { Route as DevFilePreviewIndexRouteImport } from './routes/dev/filePreview/index'
 import { Route as DevCommitteeMemberIndexRouteImport } from './routes/dev/committeeMember/index'
 import { Route as CommitteeMembersIndexRouteImport } from './routes/committee/members/index'
 import { Route as CommitteeFormsIndexRouteImport } from './routes/committee/forms/index'
@@ -116,6 +117,11 @@ const DevPushNotificationIndexRoute =
     path: '/pushNotification/',
     getParentRoute: () => DevRouteRoute,
   } as any)
+const DevFilePreviewIndexRoute = DevFilePreviewIndexRouteImport.update({
+  id: '/filePreview/',
+  path: '/filePreview/',
+  getParentRoute: () => DevRouteRoute,
+} as any)
 const DevCommitteeMemberIndexRoute = DevCommitteeMemberIndexRouteImport.update({
   id: '/committeeMember/',
   path: '/committeeMember/',
@@ -180,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/committee/forms/': typeof CommitteeFormsIndexRoute
   '/committee/members/': typeof CommitteeMembersIndexRoute
   '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
+  '/dev/filePreview/': typeof DevFilePreviewIndexRoute
   '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
   '/dev/search/': typeof DevSearchIndexRoute
   '/dev/table/': typeof DevTableIndexRoute
@@ -204,6 +211,7 @@ export interface FileRoutesByTo {
   '/committee/forms': typeof CommitteeFormsIndexRoute
   '/committee/members': typeof CommitteeMembersIndexRoute
   '/dev/committeeMember': typeof DevCommitteeMemberIndexRoute
+  '/dev/filePreview': typeof DevFilePreviewIndexRoute
   '/dev/pushNotification': typeof DevPushNotificationIndexRoute
   '/dev/search': typeof DevSearchIndexRoute
   '/dev/table': typeof DevTableIndexRoute
@@ -232,6 +240,7 @@ export interface FileRoutesById {
   '/committee/forms/': typeof CommitteeFormsIndexRoute
   '/committee/members/': typeof CommitteeMembersIndexRoute
   '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
+  '/dev/filePreview/': typeof DevFilePreviewIndexRoute
   '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
   '/dev/search/': typeof DevSearchIndexRoute
   '/dev/table/': typeof DevTableIndexRoute
@@ -261,6 +270,7 @@ export interface FileRouteTypes {
     | '/committee/forms/'
     | '/committee/members/'
     | '/dev/committeeMember/'
+    | '/dev/filePreview/'
     | '/dev/pushNotification/'
     | '/dev/search/'
     | '/dev/table/'
@@ -285,6 +295,7 @@ export interface FileRouteTypes {
     | '/committee/forms'
     | '/committee/members'
     | '/dev/committeeMember'
+    | '/dev/filePreview'
     | '/dev/pushNotification'
     | '/dev/search'
     | '/dev/table'
@@ -312,6 +323,7 @@ export interface FileRouteTypes {
     | '/committee/forms/'
     | '/committee/members/'
     | '/dev/committeeMember/'
+    | '/dev/filePreview/'
     | '/dev/pushNotification/'
     | '/dev/search/'
     | '/dev/table/'
@@ -446,6 +458,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevPushNotificationIndexRouteImport
       parentRoute: typeof DevRouteRoute
     }
+    '/dev/filePreview/': {
+      id: '/dev/filePreview/'
+      path: '/filePreview'
+      fullPath: '/dev/filePreview/'
+      preLoaderRoute: typeof DevFilePreviewIndexRouteImport
+      parentRoute: typeof DevRouteRoute
+    }
     '/dev/committeeMember/': {
       id: '/dev/committeeMember/'
       path: '/committeeMember'
@@ -550,6 +569,7 @@ const CommitteeRouteRouteWithChildren = CommitteeRouteRoute._addFileChildren(
 
 interface DevRouteRouteChildren {
   DevCommitteeMemberIndexRoute: typeof DevCommitteeMemberIndexRoute
+  DevFilePreviewIndexRoute: typeof DevFilePreviewIndexRoute
   DevPushNotificationIndexRoute: typeof DevPushNotificationIndexRoute
   DevSearchIndexRoute: typeof DevSearchIndexRoute
   DevTableIndexRoute: typeof DevTableIndexRoute
@@ -558,6 +578,7 @@ interface DevRouteRouteChildren {
 
 const DevRouteRouteChildren: DevRouteRouteChildren = {
   DevCommitteeMemberIndexRoute: DevCommitteeMemberIndexRoute,
+  DevFilePreviewIndexRoute: DevFilePreviewIndexRoute,
   DevPushNotificationIndexRoute: DevPushNotificationIndexRoute,
   DevSearchIndexRoute: DevSearchIndexRoute,
   DevTableIndexRoute: DevTableIndexRoute,

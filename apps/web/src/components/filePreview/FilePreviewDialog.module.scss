@@ -1,0 +1,87 @@
+.content {
+  position: fixed;
+  inset: 0; // 中央配置
+  display: flex;
+  flex-direction: column;
+
+  width: min(96vw, 1200px);
+  height: min(92vh, 900px);
+  margin: auto;
+
+  background: var(--gray-2);
+  border: 1px solid var(--gray-6);
+  border-radius: var(--radius-4);
+  box-shadow: var(--shadow-6);
+  overflow: hidden;
+
+  animation: dialogIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes dialogIn {
+    from { opacity: 0; transform: scale(0.97) translateY(4px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0);   }
+  }
+
+  &:focus { outline: none; }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
+  height: 48px;
+  background: var(--gray-1);
+  border-bottom: 1px solid var(--gray-6);
+  flex-shrink: 0;
+}
+
+.title {
+  flex: 1;
+  font-size: var(--font-size-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--gray-4);
+    color: var(--gray-12);
+  }
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  margin: auto;
+  padding: var(--space-6);
+}
+
+.unsupported {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--gray-10);
+}
