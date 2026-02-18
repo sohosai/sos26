@@ -7,6 +7,7 @@ import { authRoute } from "./routes/auth";
 import { committeeMemberRoute } from "./routes/committee-member";
 import { committeeNoticeRoute } from "./routes/committee-notice";
 import { projectRoute } from "./routes/project";
+import { projectNoticeRoute } from "./routes/project-notice";
 import { pushRoute } from "./routes/push";
 
 // Push 初期化
@@ -38,6 +39,7 @@ app.route("/auth", authRoute);
 app.route("/committee-members", committeeMemberRoute);
 app.route("/committee/notices", committeeNoticeRoute);
 app.route("/project", projectRoute);
+app.route("/project", projectNoticeRoute);
 app.route("/push", pushRoute);
 
 export { app };
