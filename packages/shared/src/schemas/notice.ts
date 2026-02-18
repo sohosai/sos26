@@ -86,9 +86,9 @@ export const projectNoticeIdPathParamsSchema = z.object({
 /** ユーザーの最小表示情報（id + name のみ） */
 const userSummarySchema = userSchema.pick({ id: true, name: true });
 
-/** 共同編集者 + ユーザー情報（一覧・詳細で使用） */
+/** 共同編集者 + ユーザー情報（詳細で使用: id は削除APIのパスに必要） */
 const collaboratorWithUserSchema = noticeCollaboratorSchema
-	.omit({ deletedAt: true })
+	.pick({ id: true })
 	.extend({
 		user: userSummarySchema,
 	});
@@ -138,8 +138,8 @@ export const listNoticesResponseSchema = z.object({
 	notices: z.array(
 		noticeSchema.omit({ deletedAt: true, body: true }).extend({
 			owner: userSummarySchema,
-			collaborators: z.array(collaboratorWithUserSchema),
-			authorizations: z.array(authorizationSummarySchema),
+			collaborators: z.array(userSummarySchema),
+			authorization: authorizationSummarySchema.nullable(),
 		})
 	),
 });
