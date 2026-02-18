@@ -482,7 +482,7 @@ model FormAuthorization {
   id String @id @default(cuid())
 
   formId String
-  form   Form @relation(fields: [formId], references: [id], onDelete: Cascade)
+  form   Form   @relation(fields: [formId], references: [id], onDelete: Cascade)
 
   //承認を求めた人
   requestedById String
