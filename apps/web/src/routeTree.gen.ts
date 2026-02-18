@@ -20,6 +20,7 @@ import { Route as ForbiddenIndexRouteImport } from './routes/forbidden/index'
 import { Route as DocsIndexRouteImport } from './routes/docs/index'
 import { Route as CommitteeIndexRouteImport } from './routes/committee/index'
 import { Route as DocsSlugRouteImport } from './routes/docs/$slug'
+import { Route as ProjectNoticeIndexRouteImport } from './routes/project/notice/index'
 import { Route as ProjectMembersIndexRouteImport } from './routes/project/members/index'
 import { Route as ProjectFormsIndexRouteImport } from './routes/project/forms/index'
 import { Route as DevTableIndexRouteImport } from './routes/dev/table/index'
@@ -89,6 +90,11 @@ const DocsSlugRoute = DocsSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
   getParentRoute: () => DocsRouteRoute,
+} as any)
+const ProjectNoticeIndexRoute = ProjectNoticeIndexRouteImport.update({
+  id: '/notice/',
+  path: '/notice/',
+  getParentRoute: () => ProjectRouteRoute,
 } as any)
 const ProjectMembersIndexRoute = ProjectMembersIndexRouteImport.update({
   id: '/members/',
@@ -185,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/dev/table/': typeof DevTableIndexRoute
   '/project/forms/': typeof ProjectFormsIndexRoute
   '/project/members/': typeof ProjectMembersIndexRoute
+  '/project/notice/': typeof ProjectNoticeIndexRoute
   '/auth/register/setup/': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify/': typeof AuthRegisterVerifyIndexRoute
   '/dev/ui/components/': typeof DevUiComponentsIndexRoute
@@ -209,6 +216,7 @@ export interface FileRoutesByTo {
   '/dev/table': typeof DevTableIndexRoute
   '/project/forms': typeof ProjectFormsIndexRoute
   '/project/members': typeof ProjectMembersIndexRoute
+  '/project/notice': typeof ProjectNoticeIndexRoute
   '/auth/register/setup': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify': typeof AuthRegisterVerifyIndexRoute
   '/dev/ui/components': typeof DevUiComponentsIndexRoute
@@ -237,6 +245,7 @@ export interface FileRoutesById {
   '/dev/table/': typeof DevTableIndexRoute
   '/project/forms/': typeof ProjectFormsIndexRoute
   '/project/members/': typeof ProjectMembersIndexRoute
+  '/project/notice/': typeof ProjectNoticeIndexRoute
   '/auth/register/setup/': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify/': typeof AuthRegisterVerifyIndexRoute
   '/dev/ui/components/': typeof DevUiComponentsIndexRoute
@@ -266,6 +275,7 @@ export interface FileRouteTypes {
     | '/dev/table/'
     | '/project/forms/'
     | '/project/members/'
+    | '/project/notice/'
     | '/auth/register/setup/'
     | '/auth/register/verify/'
     | '/dev/ui/components/'
@@ -290,6 +300,7 @@ export interface FileRouteTypes {
     | '/dev/table'
     | '/project/forms'
     | '/project/members'
+    | '/project/notice'
     | '/auth/register/setup'
     | '/auth/register/verify'
     | '/dev/ui/components'
@@ -317,6 +328,7 @@ export interface FileRouteTypes {
     | '/dev/table/'
     | '/project/forms/'
     | '/project/members/'
+    | '/project/notice/'
     | '/auth/register/setup/'
     | '/auth/register/verify/'
     | '/dev/ui/components/'
@@ -410,6 +422,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/docs/$slug'
       preLoaderRoute: typeof DocsSlugRouteImport
       parentRoute: typeof DocsRouteRoute
+    }
+    '/project/notice/': {
+      id: '/project/notice/'
+      path: '/notice'
+      fullPath: '/project/notice/'
+      preLoaderRoute: typeof ProjectNoticeIndexRouteImport
+      parentRoute: typeof ProjectRouteRoute
     }
     '/project/members/': {
       id: '/project/members/'
@@ -586,12 +605,14 @@ interface ProjectRouteRouteChildren {
   ProjectIndexRoute: typeof ProjectIndexRoute
   ProjectFormsIndexRoute: typeof ProjectFormsIndexRoute
   ProjectMembersIndexRoute: typeof ProjectMembersIndexRoute
+  ProjectNoticeIndexRoute: typeof ProjectNoticeIndexRoute
 }
 
 const ProjectRouteRouteChildren: ProjectRouteRouteChildren = {
   ProjectIndexRoute: ProjectIndexRoute,
   ProjectFormsIndexRoute: ProjectFormsIndexRoute,
   ProjectMembersIndexRoute: ProjectMembersIndexRoute,
+  ProjectNoticeIndexRoute: ProjectNoticeIndexRoute,
 }
 
 const ProjectRouteRouteWithChildren = ProjectRouteRoute._addFileChildren(
