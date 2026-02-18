@@ -1,6 +1,11 @@
 import {
+	addCollaboratorRequestSchema,
+	createNoticeAuthorizationRequestSchema,
 	createNoticeRequestSchema,
+	noticeAuthorizationIdPathParamsSchema,
+	noticeCollaboratorIdPathParamsSchema,
 	noticeIdPathParamsSchema,
+	updateNoticeAuthorizationRequestSchema,
 	updateNoticeRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
@@ -236,6 +241,351 @@ committeeNoticeRoute.delete(
 		});
 
 		return c.json({ success: true as const });
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// POST /committee/notices/:noticeId/collaborators
+// 共同編集者を追加（owner のみ）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.post(
+	"/:noticeId/collaborators",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { noticeId } = noticeIdPathParamsSchema.parse({
+			noticeId: c.req.param("noticeId"),
+		});
+		const body = await c.req.json().catch(() => ({}));
+		const { userId } = addCollaboratorRequestSchema.parse(body);
+
+		const notice = await prisma.notice.findFirst({
+			where: { id: noticeId, deletedAt: null },
+		});
+
+		if (!notice) {
+			throw Errors.notFound("お知らせが見つかりません");
+		}
+
+		if (notice.ownerId !== user.id) {
+			throw Errors.forbidden("共同編集者の追加はオーナーのみ可能です");
+		}
+
+		// 自分自身を追加できない
+		if (userId === user.id) {
+			throw Errors.invalidRequest("自分自身を共同編集者に追加できません");
+		}
+
+		// 対象ユーザーが実委人か確認
+		const targetMember = await prisma.committeeMember.findFirst({
+			where: { userId, deletedAt: null },
+		});
+		if (!targetMember) {
+			throw Errors.invalidRequest("対象ユーザーは実委人ではありません");
+		}
+
+		// 既存チェック（ソフトデリート済みも含めて検索）
+		const existing = await prisma.noticeCollaborator.findUnique({
+			where: { noticeId_userId: { noticeId, userId } },
+		});
+
+		if (existing) {
+			if (!existing.deletedAt) {
+				throw Errors.alreadyExists("既に共同編集者です");
+			}
+
+			// ソフトデリート済み → 再有効化
+			const reactivated = await prisma.noticeCollaborator.update({
+				where: { id: existing.id },
+				data: { deletedAt: null },
+				include: { user: { select: { id: true, name: true } } },
+			});
+
+			return c.json(
+				{ collaborator: { id: reactivated.id, user: reactivated.user } },
+				201
+			);
+		}
+
+		const collaborator = await prisma.noticeCollaborator.create({
+			data: { noticeId, userId },
+			include: { user: { select: { id: true, name: true } } },
+		});
+
+		return c.json(
+			{ collaborator: { id: collaborator.id, user: collaborator.user } },
+			201
+		);
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// DELETE /committee/notices/:noticeId/collaborators/:collaboratorId
+// 共同編集者を削除（owner のみ）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.delete(
+	"/:noticeId/collaborators/:collaboratorId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { noticeId, collaboratorId } =
+			noticeCollaboratorIdPathParamsSchema.parse({
+				noticeId: c.req.param("noticeId"),
+				collaboratorId: c.req.param("collaboratorId"),
+			});
+
+		const notice = await prisma.notice.findFirst({
+			where: { id: noticeId, deletedAt: null },
+		});
+
+		if (!notice) {
+			throw Errors.notFound("お知らせが見つかりません");
+		}
+
+		if (notice.ownerId !== user.id) {
+			throw Errors.forbidden("共同編集者の削除はオーナーのみ可能です");
+		}
+
+		const collaborator = await prisma.noticeCollaborator.findFirst({
+			where: { id: collaboratorId, noticeId, deletedAt: null },
+		});
+
+		if (!collaborator) {
+			throw Errors.notFound("共同編集者が見つかりません");
+		}
+
+		await prisma.noticeCollaborator.update({
+			where: { id: collaboratorId },
+			data: { deletedAt: new Date() },
+		});
+
+		return c.json({ success: true as const });
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// POST /committee/notices/:noticeId/authorizations
+// 配信承認を申請（owner または共同編集者 + NOTICE_DELIVER 権限）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.post(
+	"/:noticeId/authorizations",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const committeeMember = c.get("committeeMember");
+		const { noticeId } = noticeIdPathParamsSchema.parse({
+			noticeId: c.req.param("noticeId"),
+		});
+		const body = await c.req.json().catch(() => ({}));
+		const { requestedToId, deliveredAt, projectIds } =
+			createNoticeAuthorizationRequestSchema.parse(body);
+
+		const notice = await prisma.notice.findFirst({
+			where: { id: noticeId, deletedAt: null },
+			include: { collaborators: { where: { deletedAt: null } } },
+		});
+
+		if (!notice) {
+			throw Errors.notFound("お知らせが見つかりません");
+		}
+
+		// owner または共同編集者のみ
+		const isOwner = notice.ownerId === user.id;
+		const isCollaborator = notice.collaborators.some(
+			col => col.userId === user.id
+		);
+		if (!isOwner && !isCollaborator) {
+			throw Errors.forbidden("配信承認の申請権限がありません");
+		}
+
+		// NOTICE_DELIVER 権限チェック
+		const hasPermission = await prisma.committeeMemberPermission.findFirst({
+			where: {
+				committeeMemberId: committeeMember.id,
+				permission: "NOTICE_DELIVER",
+			},
+		});
+		if (!hasPermission) {
+			throw Errors.forbidden("NOTICE_DELIVER 権限が必要です");
+		}
+
+		// 承認者が共同編集者であること
+		const isRequestedToCollaborator = notice.collaborators.some(
+			col => col.userId === requestedToId
+		);
+		if (!isRequestedToCollaborator) {
+			throw Errors.invalidRequest("承認者は共同編集者の中から指定してください");
+		}
+
+		// deliveredAt が未来であること
+		if (deliveredAt <= new Date()) {
+			throw Errors.invalidRequest("配信希望日時は未来の日時を指定してください");
+		}
+
+		// 既に PENDING の承認申請がないこと
+		const pendingAuth = await prisma.noticeAuthorization.findFirst({
+			where: { noticeId, status: "PENDING" },
+		});
+		if (pendingAuth) {
+			throw Errors.alreadyExists("既に承認待ちの申請があります");
+		}
+
+		// トランザクションで承認 + 配信先を作成
+		const authorization = await prisma.$transaction(async tx => {
+			const auth = await tx.noticeAuthorization.create({
+				data: {
+					noticeId,
+					requestedById: user.id,
+					requestedToId,
+					deliveredAt,
+				},
+			});
+
+			const deliveries = await Promise.all(
+				projectIds.map(projectId =>
+					tx.noticeDelivery.create({
+						data: {
+							noticeAuthorizationId: auth.id,
+							projectId,
+						},
+					})
+				)
+			);
+
+			return { ...auth, deliveries };
+		});
+
+		return c.json({ authorization }, 201);
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// PATCH /committee/notices/:noticeId/authorizations/:authorizationId
+// 承認 / 却下（requestedTo 本人のみ）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.patch(
+	"/:noticeId/authorizations/:authorizationId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { noticeId, authorizationId } =
+			noticeAuthorizationIdPathParamsSchema.parse({
+				noticeId: c.req.param("noticeId"),
+				authorizationId: c.req.param("authorizationId"),
+			});
+		const body = await c.req.json().catch(() => ({}));
+		const { status } = updateNoticeAuthorizationRequestSchema.parse(body);
+
+		const authorization = await prisma.noticeAuthorization.findFirst({
+			where: { id: authorizationId, noticeId },
+		});
+
+		if (!authorization) {
+			throw Errors.notFound("承認申請が見つかりません");
+		}
+
+		// requestedTo 本人のみ
+		if (authorization.requestedToId !== user.id) {
+			throw Errors.forbidden("この承認申請を操作する権限がありません");
+		}
+
+		// PENDING でなければ操作不可
+		if (authorization.status !== "PENDING") {
+			throw Errors.invalidRequest("この承認申請は既に処理済みです");
+		}
+
+		// 承認する場合、deliveredAt が未来であること
+		if (status === "APPROVED" && authorization.deliveredAt <= new Date()) {
+			throw Errors.invalidRequest(
+				"配信希望日時を過ぎているため承認できません。新しい日時で再申請してください"
+			);
+		}
+
+		const updated = await prisma.noticeAuthorization.update({
+			where: { id: authorizationId },
+			data: { status, decidedAt: new Date() },
+		});
+
+		return c.json({ authorization: updated });
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// GET /committee/notices/:noticeId/status
+// 企画ごとの既読状況を取得（owner または共同編集者）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.get(
+	"/:noticeId/status",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { noticeId } = noticeIdPathParamsSchema.parse({
+			noticeId: c.req.param("noticeId"),
+		});
+
+		const notice = await prisma.notice.findFirst({
+			where: { id: noticeId, deletedAt: null },
+			include: { collaborators: { where: { deletedAt: null } } },
+		});
+
+		if (!notice) {
+			throw Errors.notFound("お知らせが見つかりません");
+		}
+
+		// owner または共同編集者のみ
+		const isOwner = notice.ownerId === user.id;
+		const isCollaborator = notice.collaborators.some(
+			col => col.userId === user.id
+		);
+		if (!isOwner && !isCollaborator) {
+			throw Errors.forbidden("配信状況の閲覧権限がありません");
+		}
+
+		const deliveries = await prisma.noticeDelivery.findMany({
+			where: { noticeAuthorization: { noticeId } },
+			include: {
+				project: { select: { id: true, name: true } },
+				noticeAuthorization: {
+					select: { status: true, deliveredAt: true },
+				},
+				readStatuses: true,
+			},
+		});
+
+		// 企画ごとのメンバー数を取得
+		const projectIds = deliveries.map(d => d.projectId);
+		const projects = await prisma.project.findMany({
+			where: { id: { in: projectIds }, deletedAt: null },
+			include: {
+				_count: {
+					select: { projectMembers: { where: { deletedAt: null } } },
+				},
+			},
+		});
+		const memberCountMap = new Map(
+			projects.map(p => [
+				p.id,
+				p._count.projectMembers + (p.subOwnerId ? 2 : 1),
+			])
+		);
+
+		const formatted = deliveries.map(d => ({
+			id: d.id,
+			project: d.project,
+			authorization: {
+				status: d.noticeAuthorization.status,
+				deliveredAt: d.noticeAuthorization.deliveredAt,
+			},
+			readCount: d.readStatuses.length,
+			memberCount: memberCountMap.get(d.projectId) ?? 0,
+		}));
+
+		return c.json({ deliveries: formatted });
 	}
 );
 
