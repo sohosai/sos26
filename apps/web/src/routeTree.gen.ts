@@ -27,6 +27,7 @@ import { Route as DevTableIndexRouteImport } from './routes/dev/table/index'
 import { Route as DevSearchIndexRouteImport } from './routes/dev/search/index'
 import { Route as DevPushNotificationIndexRouteImport } from './routes/dev/pushNotification/index'
 import { Route as DevCommitteeMemberIndexRouteImport } from './routes/dev/committeeMember/index'
+import { Route as CommitteeNoticeIndexRouteImport } from './routes/committee/notice/index'
 import { Route as CommitteeMembersIndexRouteImport } from './routes/committee/members/index'
 import { Route as CommitteeFormsIndexRouteImport } from './routes/committee/forms/index'
 import { Route as AuthResetPasswordIndexRouteImport } from './routes/auth/reset-password/index'
@@ -127,6 +128,11 @@ const DevCommitteeMemberIndexRoute = DevCommitteeMemberIndexRouteImport.update({
   path: '/committeeMember/',
   getParentRoute: () => DevRouteRoute,
 } as any)
+const CommitteeNoticeIndexRoute = CommitteeNoticeIndexRouteImport.update({
+  id: '/notice/',
+  path: '/notice/',
+  getParentRoute: () => CommitteeRouteRoute,
+} as any)
 const CommitteeMembersIndexRoute = CommitteeMembersIndexRouteImport.update({
   id: '/members/',
   path: '/members/',
@@ -185,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
   '/committee/forms/': typeof CommitteeFormsIndexRoute
   '/committee/members/': typeof CommitteeMembersIndexRoute
+  '/committee/notice/': typeof CommitteeNoticeIndexRoute
   '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
   '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
   '/dev/search/': typeof DevSearchIndexRoute
@@ -210,6 +217,7 @@ export interface FileRoutesByTo {
   '/auth/reset-password': typeof AuthResetPasswordIndexRoute
   '/committee/forms': typeof CommitteeFormsIndexRoute
   '/committee/members': typeof CommitteeMembersIndexRoute
+  '/committee/notice': typeof CommitteeNoticeIndexRoute
   '/dev/committeeMember': typeof DevCommitteeMemberIndexRoute
   '/dev/pushNotification': typeof DevPushNotificationIndexRoute
   '/dev/search': typeof DevSearchIndexRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
   '/committee/forms/': typeof CommitteeFormsIndexRoute
   '/committee/members/': typeof CommitteeMembersIndexRoute
+  '/committee/notice/': typeof CommitteeNoticeIndexRoute
   '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
   '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
   '/dev/search/': typeof DevSearchIndexRoute
@@ -269,6 +278,7 @@ export interface FileRouteTypes {
     | '/auth/reset-password/'
     | '/committee/forms/'
     | '/committee/members/'
+    | '/committee/notice/'
     | '/dev/committeeMember/'
     | '/dev/pushNotification/'
     | '/dev/search/'
@@ -294,6 +304,7 @@ export interface FileRouteTypes {
     | '/auth/reset-password'
     | '/committee/forms'
     | '/committee/members'
+    | '/committee/notice'
     | '/dev/committeeMember'
     | '/dev/pushNotification'
     | '/dev/search'
@@ -322,6 +333,7 @@ export interface FileRouteTypes {
     | '/auth/reset-password/'
     | '/committee/forms/'
     | '/committee/members/'
+    | '/committee/notice/'
     | '/dev/committeeMember/'
     | '/dev/pushNotification/'
     | '/dev/search/'
@@ -472,6 +484,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevCommitteeMemberIndexRouteImport
       parentRoute: typeof DevRouteRoute
     }
+    '/committee/notice/': {
+      id: '/committee/notice/'
+      path: '/notice'
+      fullPath: '/committee/notice/'
+      preLoaderRoute: typeof CommitteeNoticeIndexRouteImport
+      parentRoute: typeof CommitteeRouteRoute
+    }
     '/committee/members/': {
       id: '/committee/members/'
       path: '/members'
@@ -555,12 +574,14 @@ interface CommitteeRouteRouteChildren {
   CommitteeIndexRoute: typeof CommitteeIndexRoute
   CommitteeFormsIndexRoute: typeof CommitteeFormsIndexRoute
   CommitteeMembersIndexRoute: typeof CommitteeMembersIndexRoute
+  CommitteeNoticeIndexRoute: typeof CommitteeNoticeIndexRoute
 }
 
 const CommitteeRouteRouteChildren: CommitteeRouteRouteChildren = {
   CommitteeIndexRoute: CommitteeIndexRoute,
   CommitteeFormsIndexRoute: CommitteeFormsIndexRoute,
   CommitteeMembersIndexRoute: CommitteeMembersIndexRoute,
+  CommitteeNoticeIndexRoute: CommitteeNoticeIndexRoute,
 }
 
 const CommitteeRouteRouteWithChildren = CommitteeRouteRoute._addFileChildren(
