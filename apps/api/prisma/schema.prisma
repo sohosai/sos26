@@ -63,11 +63,13 @@ model User {
   projectMembers   ProjectMember[]
 
   // 実委人関連
-  committeeMember       CommitteeMember?
+  committeeMember CommitteeMember?
 
-	//Notice関連
-	 notices Notice[] @relation("NoticeOwner")
-  sharedNotices NoticeShare[]
+  //Notice関連
+  notices                       Notice[]              @relation("NoticeOwner")
+  sharedNotices                 NoticeShare[]
+  requestedNoticeAuthorizations NoticeAuthorization[] @relation("NoticeRequestedBy")
+  receivedNoticeAuthorizations  NoticeAuthorization[] @relation("NoticeRequestedTo")
 
   userPushSubscriptions UserPushSubscription[]
 
@@ -115,7 +117,8 @@ model Project {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  projectMembers ProjectMember[]
+  projectMembers   ProjectMember[]
+  noticeDeliveries NoticeDelivery[]
 
   @@index([ownerId])
   @@index([subOwnerId])
@@ -166,6 +169,28 @@ model CommitteeMember {
 
   joinedAt  DateTime  @default(now())
   deletedAt DateTime?
+
+  permissions CommitteeMemberPermission[]
+}
+
+enum CommitteePermission {
+  MEMBER_EDIT // メンバー編集
+  NOTICE_DELIVER // お知らせ配信
+  FORM_DELIVER // フォーム配信
+}
+
+//実委人の権限管理Table
+model CommitteeMemberPermission {
+  id String @id @default(cuid())
+
+  committeeMemberId String
+  permission        CommitteePermission
+
+  committeeMember CommitteeMember @relation(fields: [committeeMemberId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([committeeMemberId, permission])
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -206,42 +231,105 @@ model UserPushSubscription {
 // ─────────────────────────────────────────────────────────────
 // お知らせ関連
 // ─────────────────────────────────────────────────────────────
-model Notice{
-	id String @id @default(cuid())
+//お知らせの作成
+model Notice {
+  id String @id @default(cuid())
 
-	//Noticeの作成者
+  //お知らせの作成者
   ownerId String
   owner   User   @relation("NoticeOwner", fields: [ownerId], references: [id])
 
-	// 共有先
+  // 共有ユーザー
   sharedUsers NoticeShare[]
 
-	//タイトル
-	title String @default("無題のお知らせ")
+  //配信許可など
+  authorizations  NoticeAuthorization[]
 
-	//本文
-	body String?
+  //タイトル
+  title String @default("無題のお知らせ")
 
-	deletedAt       DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  //本文
+  body String?
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
+//お知らせの共有
 model NoticeShare {
   id String @id @default(cuid())
 
   noticeId String
   userId   String
 
-  notice Notice @relation(fields: [noticeId], references: [id])
+  notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id])
 
-	//編集権限を持つのか
-  isWrite    Boolean  @default(false)
+  //編集権限を持つのか
+  isWrite Boolean @default(false)
 
-	deletedAt       DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@unique([noticeId, userId])
+}
+
+//Noticeに関する承認待ちの状態Enum
+enum NoticeAuthorizationStatus {
+  //承認待ち
+  PENDING
+  //承認済み(時間になれば配信される)
+  APPROVED
+  //承認されず
+  REJECTED
+}
+
+//Noticeの配信許可
+model NoticeAuthorization {
+  id String @id @default(cuid())
+
+  noticeId String
+  notice   Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+
+  //承認を求めた人
+  requestedById String
+  requestedBy   User   @relation("NoticeRequestedBy", fields: [requestedById], references: [id])
+
+  //承認を求められた人
+  requestedToId String
+  requestedTo   User   @relation("NoticeRequestedTo", fields: [requestedToId], references: [id])
+
+  //審査のステータス
+  status NoticeAuthorizationStatus @default(PENDING)
+
+  //審査を行った日付
+  decidedAt DateTime?
+
+  //配信したい日時
+  //承認を求める側があらかじめここを埋める
+  deliveredAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveries NoticeDelivery[]
+}
+
+//Noticeの配信
+model NoticeDelivery {
+  id String @id @default(cuid())
+
+  noticeAuthorizationId String
+  projectId             String
+
+  noticeAuthorization NoticeAuthorization @relation(fields: [noticeAuthorizationId], references: [id], onDelete: Cascade)
+
+  //配信先の企画
+  project Project @relation(fields: [projectId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([noticeAuthorizationId, projectId])
 }
