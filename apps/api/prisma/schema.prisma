@@ -343,7 +343,7 @@ model NoticeReadStatus {
 
   //既読にしたユーザー（企画メンバー）
   userId String
-  user   User @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
 
