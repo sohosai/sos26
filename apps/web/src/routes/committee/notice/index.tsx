@@ -1,7 +1,13 @@
-import { Flex, Heading, Popover, Text } from "@radix-ui/themes";
-import { IconDotsVertical, IconEdit, IconTrash } from "@tabler/icons-react";
+import { Heading, Popover, Text } from "@radix-ui/themes";
+import {
+	IconDotsVertical,
+	IconEdit,
+	IconPlus,
+	IconTrash,
+} from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
+import { useState } from "react";
 import {
 	AvatarGroupCell,
 	type AvatarGroupItem,
@@ -10,6 +16,7 @@ import {
 	NameCell,
 } from "@/components/patterns";
 import { Button, IconButton } from "@/components/primitives";
+import { CreateNoticeDialog } from "./CreateNoticeDialog";
 import styles from "./index.module.scss";
 
 type NoticeRow = {
@@ -88,6 +95,8 @@ export const Route = createFileRoute("/committee/notice/")({
 });
 
 function RouteComponent() {
+	const [dialogOpen, setDialogOpen] = useState(false);
+
 	const columns = [
 		noticeColumnHelper.accessor("title", {
 			header: "タイトル",
@@ -125,7 +134,7 @@ function RouteComponent() {
 						</IconButton>
 					</Popover.Trigger>
 					<Popover.Content align="start" sideOffset={4}>
-						<Flex direction="column" gap="1" align="start">
+						<div className={styles.menu}>
 							<Button intent="ghost" size="2">
 								<IconEdit size={16} />
 								編集
@@ -134,7 +143,7 @@ function RouteComponent() {
 								<IconTrash size={16} />
 								削除
 							</Button>
-						</Flex>
+						</div>
 					</Popover.Content>
 				</Popover.Root>
 			),
@@ -168,7 +177,15 @@ function RouteComponent() {
 						desc: true,
 					},
 				]}
+				toolbarExtra={
+					<Button intent="primary" size="2" onClick={() => setDialogOpen(true)}>
+						<IconPlus size={16} stroke={1.5} />
+						お知らせを作成
+					</Button>
+				}
 			/>
+
+			<CreateNoticeDialog open={dialogOpen} onOpenChange={setDialogOpen} />
 		</div>
 	);
 }

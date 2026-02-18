@@ -4,3 +4,10 @@
 	gap: var(--space-2);
 	margin-bottom: var(--space-5);
 }
+
+.menu {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	align-items: flex-start;
+}
