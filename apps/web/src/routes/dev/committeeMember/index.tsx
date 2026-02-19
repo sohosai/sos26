@@ -1,4 +1,5 @@
 import type { Bureau, CommitteePermission } from "@sos26/shared";
+import { bureauLabelMap } from "@sos26/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -17,18 +18,9 @@ const PERMISSION_OPTIONS: { value: CommitteePermission; label: string }[] = [
 	{ value: "FORM_DELIVER", label: "フォーム配信" },
 ];
 
-const BUREAU_OPTIONS: { value: Bureau; label: string }[] = [
-	{ value: "FINANCE", label: "財務局" },
-	{ value: "GENERAL_AFFAIRS", label: "総務局" },
-	{ value: "PUBLIC_RELATIONS", label: "広報宣伝局" },
-	{ value: "EXTERNAL", label: "渉外局" },
-	{ value: "PROMOTION", label: "推進局" },
-	{ value: "PLANNING", label: "総合計画局" },
-	{ value: "STAGE_MANAGEMENT", label: "ステージ管理局" },
-	{ value: "HQ_PLANNING", label: "本部企画局" },
-	{ value: "INFO_SYSTEM", label: "情報メディアシステム局" },
-	{ value: "INFORMATION", label: "案内所運営部会" },
-];
+const BUREAU_OPTIONS: { value: Bureau; label: string }[] = Object.entries(
+	bureauLabelMap
+).map(([value, label]) => ({ value: value as Bureau, label }));
 
 export const Route = createFileRoute("/dev/committeeMember/")({
 	component: CommitteeMemberDevPage,

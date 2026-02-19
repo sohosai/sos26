@@ -19,6 +19,19 @@ export const bureauSchema = z.enum([
 ]);
 export type Bureau = z.infer<typeof bureauSchema>;
 
+export const bureauLabelMap: Record<Bureau, string> = {
+	FINANCE: "財務局",
+	GENERAL_AFFAIRS: "総務局",
+	PUBLIC_RELATIONS: "広報宣伝局",
+	EXTERNAL: "渉外局",
+	PROMOTION: "推進局",
+	PLANNING: "総合計画局",
+	STAGE_MANAGEMENT: "ステージ管理局",
+	HQ_PLANNING: "本部企画局",
+	INFO_SYSTEM: "情報メディアシステム局",
+	INFORMATION: "案内所運営部会",
+} as const;
+
 /**
  * 委員メンバースキーマ
  */

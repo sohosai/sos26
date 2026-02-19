@@ -1,4 +1,6 @@
 import { Badge, Dialog, Heading, Text } from "@radix-ui/themes";
+import type { Bureau } from "@sos26/shared";
+import { bureauLabelMap } from "@sos26/shared";
 import { IconEye } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
@@ -13,6 +15,9 @@ import {
 } from "@/lib/api/project-notice";
 import { useProject } from "@/lib/project/context";
 import styles from "./index.module.scss";
+
+const getBureauLabel = (bureau: string): string =>
+	bureauLabelMap[bureau as Bureau] ?? bureau;
 
 type NoticeRow = {
 	id: string;
@@ -75,7 +80,7 @@ function RouteComponent() {
 			setSelectedNoticeTitle(res.notice.title);
 			setSelectedNoticeBody(res.notice.body);
 			setSelectedNoticeMeta(
-				`${new Date(res.notice.deliveredAt).toLocaleDateString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit" })} ${res.notice.ownerBureau}`
+				`${new Date(res.notice.deliveredAt).toLocaleDateString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit" })} ${getBureauLabel(res.notice.ownerBureau)}`
 			);
 
 			if (!res.notice.isRead) {
@@ -111,6 +116,7 @@ function RouteComponent() {
 		}),
 		noticeColumnHelper.accessor("ownerBureau", {
 			header: "担当部署",
+			cell: ctx => getBureauLabel(ctx.getValue()),
 		}),
 		noticeColumnHelper.accessor("deliveredAt", {
 			header: "配信日時",
