@@ -5,16 +5,16 @@ import {
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
 const committeeMemberRoute = new Hono<AuthEnv>();
 
 // ─────────────────────────────────────────────────────────────
-// GET /committee-members
+// GET /committee/members
 // 委員メンバー一覧を取得
 // ─────────────────────────────────────────────────────────────
-committeeMemberRoute.get("/", requireAuth, async c => {
+committeeMemberRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 	const committeeMembers = await prisma.committeeMember.findMany({
 		where: { deletedAt: null },
 		include: { user: true },
@@ -24,10 +24,10 @@ committeeMemberRoute.get("/", requireAuth, async c => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// POST /committee-members
+// POST /committee/members
 // 委員メンバーを作成
 // ─────────────────────────────────────────────────────────────
-committeeMemberRoute.post("/", requireAuth, async c => {
+committeeMemberRoute.post("/", requireAuth, requireCommitteeMember, async c => {
 	const body = await c.req.json().catch(() => ({}));
 	const { userId, Bureau, isExecutive } =
 		createCommitteeMemberRequestSchema.parse(body);
@@ -77,51 +77,61 @@ committeeMemberRoute.post("/", requireAuth, async c => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// PATCH /committee-members/:id
+// PATCH /committee/members/:id
 // 委員メンバーを更新
 // ─────────────────────────────────────────────────────────────
-committeeMemberRoute.patch("/:id", requireAuth, async c => {
-	const id = c.req.param("id");
-	const body = await c.req.json().catch(() => ({}));
-	const data = updateCommitteeMemberRequestSchema.parse(body);
+committeeMemberRoute.patch(
+	"/:id",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const id = c.req.param("id");
+		const body = await c.req.json().catch(() => ({}));
+		const data = updateCommitteeMemberRequestSchema.parse(body);
 
-	// 存在確認
-	const existing = await prisma.committeeMember.findFirst({
-		where: { id, deletedAt: null },
-	});
-	if (!existing) {
-		throw Errors.notFound("委員メンバーが見つかりません");
+		// 存在確認
+		const existing = await prisma.committeeMember.findFirst({
+			where: { id, deletedAt: null },
+		});
+		if (!existing) {
+			throw Errors.notFound("委員メンバーが見つかりません");
+		}
+
+		const committeeMember = await prisma.committeeMember.update({
+			where: { id },
+			data,
+		});
+
+		return c.json({ committeeMember });
 	}
-
-	const committeeMember = await prisma.committeeMember.update({
-		where: { id },
-		data,
-	});
-
-	return c.json({ committeeMember });
-});
+);
 
 // ─────────────────────────────────────────────────────────────
-// DELETE /committee-members/:id
+// DELETE /committee/members/:id
 // 委員メンバーをソフトデリート
 // ─────────────────────────────────────────────────────────────
-committeeMemberRoute.delete("/:id", requireAuth, async c => {
-	const id = c.req.param("id");
+committeeMemberRoute.delete(
+	"/:id",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const id = c.req.param("id");
 
-	// 存在確認
-	const existing = await prisma.committeeMember.findFirst({
-		where: { id, deletedAt: null },
-	});
-	if (!existing) {
-		throw Errors.notFound("委員メンバーが見つかりません");
+		// 存在確認
+		const existing = await prisma.committeeMember.findFirst({
+			where: { id, deletedAt: null },
+		});
+		if (!existing) {
+			throw Errors.notFound("委員メンバーが見つかりません");
+		}
+
+		await prisma.committeeMember.update({
+			where: { id },
+			data: { deletedAt: new Date() },
+		});
+
+		return c.json({ success: true });
 	}
-
-	await prisma.committeeMember.update({
-		where: { id },
-		data: { deletedAt: new Date() },
-	});
-
-	return c.json({ success: true });
-});
+);
 
 export { committeeMemberRoute };
