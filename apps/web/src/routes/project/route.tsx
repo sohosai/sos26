@@ -55,9 +55,7 @@ function ProjectLayout() {
 
 			setSelectedProjectId(project.id);
 		} catch {
-			toast.error(
-				"企画への参加に失敗しました。招待コードを確認してください。"
-			);
+			toast.error("企画への参加に失敗しました。招待コードを確認してください。");
 		}
 	};
 
