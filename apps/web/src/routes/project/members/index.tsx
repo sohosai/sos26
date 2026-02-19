@@ -153,7 +153,7 @@ function RouteComponent() {
 	const handleDeleteMember = async (memberId: string) => {
 		try {
 			if (!project?.id) {
-				toast.error("プロジェクト情報が取得できません");
+				toast.error("企画情報が取得できません");
 				return;
 			}
 			await removeProjectMember(project.id, memberId);
