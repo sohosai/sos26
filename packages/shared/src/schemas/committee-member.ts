@@ -136,7 +136,7 @@ export type CommitteePermission = z.infer<typeof committeePermissionSchema>;
  */
 export const committeeMemberPermissionSchema = z.object({
 	id: z.cuid(),
-	committeeMemberId: z.string().min(1),
+	committeeMemberId: z.cuid(),
 	permission: committeePermissionSchema,
 	createdAt: z.coerce.date(),
 });
