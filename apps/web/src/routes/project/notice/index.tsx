@@ -4,7 +4,6 @@ import { bureauLabelMap } from "@sos26/shared";
 import { IconEye } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import DOMPurify from "dompurify";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DataTable, DateCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
@@ -15,6 +14,7 @@ import {
 } from "@/lib/api/project-notice";
 import { formatDate } from "@/lib/format";
 import { useProject } from "@/lib/project/context";
+import { sanitizeHtml } from "@/lib/sanitize";
 import styles from "./index.module.scss";
 
 const getBureauLabel = (bureau: string): string =>
@@ -107,7 +107,7 @@ function RouteComponent() {
 	};
 
 	const sanitizedBody = useMemo(
-		() => (selectedNoticeBody ? DOMPurify.sanitize(selectedNoticeBody) : null),
+		() => (selectedNoticeBody ? sanitizeHtml(selectedNoticeBody) : null),
 		[selectedNoticeBody]
 	);
 

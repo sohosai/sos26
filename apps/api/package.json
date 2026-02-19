@@ -27,6 +27,7 @@
     "@sos26/shared": "workspace:*",
     "firebase-admin": "^13.6.0",
     "hono": "^4.11.3",
+    "isomorphic-dompurify": "^2.36.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {

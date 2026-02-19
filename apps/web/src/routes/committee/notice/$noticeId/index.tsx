@@ -9,7 +9,6 @@ import {
 import type { GetNoticeResponse } from "@sos26/shared";
 import { IconArrowLeft, IconCalendar, IconClock } from "@tabler/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import DOMPurify from "dompurify";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/primitives";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
@@ -21,6 +20,7 @@ import {
 	updateNoticeAuthorization,
 } from "@/lib/api/committee-notice";
 import { useAuthStore } from "@/lib/auth";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { CreateNoticeDialog } from "../CreateNoticeDialog";
 import styles from "./index.module.scss";
 import { NoticeDetailSidebar } from "./NoticeDetailSidebar";
@@ -74,7 +74,7 @@ function RouteComponent() {
 	}, [fetchNotice]);
 
 	const sanitizedBody = useMemo(
-		() => (notice?.body ? DOMPurify.sanitize(notice.body) : null),
+		() => (notice?.body ? sanitizeHtml(notice.body) : null),
 		[notice?.body]
 	);
 

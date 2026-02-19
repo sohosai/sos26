@@ -7,6 +7,7 @@ export * from "./endpoints/push";
 export * from "./endpoints/types";
 export * from "./errors";
 export * from "./lib/email";
+export * from "./lib/sanitize-config";
 export * from "./lib/token";
 export * from "./schemas/auth";
 export * from "./schemas/committee-member";

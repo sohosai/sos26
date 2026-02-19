@@ -11,6 +11,7 @@ import {
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
+import { sanitizeHtml } from "../lib/sanitize";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -29,7 +30,7 @@ committeeNoticeRoute.post("/", requireAuth, requireCommitteeMember, async c => {
 		data: {
 			ownerId: user.id,
 			title,
-			body: noticeBody,
+			body: sanitizeHtml(noticeBody),
 		},
 	});
 
@@ -201,9 +202,13 @@ committeeNoticeRoute.patch(
 			throw Errors.forbidden("編集権限がありません");
 		}
 
+		const sanitizedData = data.body
+			? { ...data, body: sanitizeHtml(data.body) }
+			: data;
+
 		const updated = await prisma.notice.update({
 			where: { id: noticeId },
-			data,
+			data: sanitizedData,
 		});
 
 		const { deletedAt: _, ...updatedNotice } = updated;
