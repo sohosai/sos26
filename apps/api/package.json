@@ -18,7 +18,8 @@
     "db:push": "prisma db push",
     "db:pull": "prisma db pull",
     "db:studio": "prisma studio",
-    "db:format": "prisma format"
+    "db:format": "prisma format",
+    "make-committee-member": "bun run scripts/make-committee-member.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.8.2",

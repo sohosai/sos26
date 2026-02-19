@@ -1,12 +1,21 @@
-import type { Bureau } from "@sos26/shared";
+import type { Bureau, CommitteePermission } from "@sos26/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import {
 	createCommitteeMember,
 	deleteCommitteeMember,
+	grantCommitteeMemberPermission,
+	listCommitteeMemberPermissions,
 	listCommitteeMembers,
+	revokeCommitteeMemberPermission,
 } from "@/lib/api/committee-member";
 import { useAuthStore } from "@/lib/auth";
+
+const PERMISSION_OPTIONS: { value: CommitteePermission; label: string }[] = [
+	{ value: "MEMBER_EDIT", label: "メンバー編集" },
+	{ value: "NOTICE_DELIVER", label: "お知らせ配信" },
+	{ value: "FORM_DELIVER", label: "フォーム配信" },
+];
 
 const BUREAU_OPTIONS: { value: Bureau; label: string }[] = [
 	{ value: "FINANCE", label: "財務局" },
@@ -33,6 +42,9 @@ function CommitteeMemberDevPage() {
 	>([]);
 	const [status, setStatus] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
+	const [permissionsMap, setPermissionsMap] = useState<
+		Record<string, CommitteePermission[]>
+	>({});
 
 	const fetchMembers = useCallback(async () => {
 		try {
@@ -44,9 +56,60 @@ function CommitteeMemberDevPage() {
 		}
 	}, []);
 
+	const fetchPermissions = useCallback(async (memberId: string) => {
+		try {
+			const response = await listCommitteeMemberPermissions(memberId);
+			setPermissionsMap(prev => ({
+				...prev,
+				[memberId]: response.permissions.map(p => p.permission),
+			}));
+		} catch (error) {
+			console.error(error);
+		}
+	}, []);
+
+	const fetchAllPermissions = useCallback(
+		async (
+			memberList: Awaited<
+				ReturnType<typeof listCommitteeMembers>
+			>["committeeMembers"]
+		) => {
+			await Promise.all(memberList.map(m => fetchPermissions(m.id)));
+		},
+		[fetchPermissions]
+	);
+
 	useEffect(() => {
 		fetchMembers();
 	}, [fetchMembers]);
+
+	useEffect(() => {
+		if (members.length > 0) {
+			fetchAllPermissions(members);
+		}
+	}, [members, fetchAllPermissions]);
+
+	const handleTogglePermission = async (
+		memberId: string,
+		permission: CommitteePermission
+	) => {
+		setLoading(true);
+		setStatus(null);
+		const current = permissionsMap[memberId] ?? [];
+		try {
+			if (current.includes(permission)) {
+				await revokeCommitteeMemberPermission(memberId, permission);
+			} else {
+				await grantCommitteeMemberPermission(memberId, { permission });
+			}
+			await fetchPermissions(memberId);
+		} catch (error) {
+			console.error(error);
+			setStatus("権限の変更に失敗しました");
+		} finally {
+			setLoading(false);
+		}
+	};
 
 	const handleRegister = async () => {
 		if (!user) {
@@ -125,6 +188,7 @@ function CommitteeMemberDevPage() {
 							<th>メール</th>
 							<th>局</th>
 							<th>委員長</th>
+							<th>権限</th>
 							<th>操作</th>
 						</tr>
 					</thead>
@@ -139,6 +203,24 @@ function CommitteeMemberDevPage() {
 								</td>
 								<td>{m.isExecutive ? "Yes" : "No"}</td>
 								<td>
+									{PERMISSION_OPTIONS.map(opt => (
+										<label
+											key={opt.value}
+											style={{ display: "block", whiteSpace: "nowrap" }}
+										>
+											<input
+												type="checkbox"
+												checked={(permissionsMap[m.id] ?? []).includes(
+													opt.value
+												)}
+												onChange={() => handleTogglePermission(m.id, opt.value)}
+												disabled={loading}
+											/>
+											{opt.label}
+										</label>
+									))}
+								</td>
+								<td>
 									<button
 										onClick={() => handleDelete(m.id)}
 										disabled={loading}
@@ -151,7 +233,7 @@ function CommitteeMemberDevPage() {
 						))}
 						{members.length === 0 && (
 							<tr>
-								<td colSpan={5}>メンバーなし</td>
+								<td colSpan={6}>メンバーなし</td>
 							</tr>
 						)}
 					</tbody>
