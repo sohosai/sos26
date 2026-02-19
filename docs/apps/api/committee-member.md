@@ -15,6 +15,10 @@
   - [POST `/committee/members`](#post-committeemembers)
   - [PATCH `/committee/members/:id`](#patch-committeemembersid)
   - [DELETE `/committee/members/:id`](#delete-committeemembersid)
+- [権限管理 API](#権限管理-api)
+  - [GET `/committee/members/:id/permissions`](#get-committeemembersidpermissions)
+  - [POST `/committee/members/:id/permissions`](#post-committeemembersidpermissions)
+  - [DELETE `/committee/members/:id/permissions/:permissionId`](#delete-committeemembersidpermissionspermissionid)
 
 ---
 
@@ -34,6 +38,9 @@
 | POST | `/committee/members` | 委員メンバーを作成 |
 | PATCH | `/committee/members/:id` | 委員メンバーを更新 |
 | DELETE | `/committee/members/:id` | 委員メンバーを論理削除 |
+| GET | `/committee/members/:id/permissions` | 権限一覧を取得 |
+| POST | `/committee/members/:id/permissions` | 権限を付与 |
+| DELETE | `/committee/members/:id/permissions/:permissionId` | 権限を削除 |
 
 ---
 
@@ -68,3 +75,38 @@
 
 - `deletedAt` に現在時刻を設定
 - 対象が存在しない場合: `NOT_FOUND`
+
+---
+
+## 権限管理 API
+
+委員メンバーに対して個別の権限を付与・削除するための API です。
+
+### 権限の種類
+
+| 権限名 | 説明 |
+|---|---|
+| `MEMBER_EDIT` | メンバー編集 |
+| `NOTICE_DELIVER` | お知らせ配信 |
+| `FORM_DELIVER` | フォーム配信 |
+
+### GET `/committee/members/:id/permissions`
+
+指定した委員メンバーの権限一覧を返します。
+
+- 対象メンバーが存在しない場合: `NOT_FOUND`
+
+### POST `/committee/members/:id/permissions`
+
+委員メンバーに権限を付与します。
+
+- 入力: `permission`（`MEMBER_EDIT` | `NOTICE_DELIVER` | `FORM_DELIVER`）
+- 対象メンバーが存在しない場合: `NOT_FOUND`
+- 同じ権限が既に付与されている場合: `ALREADY_EXISTS`
+
+### DELETE `/committee/members/:id/permissions/:permissionId`
+
+委員メンバーの権限を削除します。
+
+- 対象メンバーが存在しない場合: `NOT_FOUND`
+- 対象の権限レコードが存在しない場合: `NOT_FOUND`
