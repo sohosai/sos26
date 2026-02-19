@@ -243,10 +243,16 @@ committeeNoticeRoute.delete(
 			throw Errors.forbidden("削除権限がありません");
 		}
 
-		await prisma.notice.update({
-			where: { id: noticeId },
-			data: { deletedAt: new Date() },
-		});
+		await prisma.$transaction([
+			prisma.notice.update({
+				where: { id: noticeId },
+				data: { deletedAt: new Date() },
+			}),
+			prisma.noticeAuthorization.updateMany({
+				where: { noticeId, status: "PENDING" },
+				data: { status: "REJECTED", decidedAt: new Date() },
+			}),
+		]);
 
 		return c.json({ success: true as const });
 	}
@@ -514,10 +520,16 @@ committeeNoticeRoute.patch(
 
 		const authorization = await prisma.noticeAuthorization.findFirst({
 			where: { id: authorizationId, noticeId },
+			include: { notice: { select: { deletedAt: true } } },
 		});
 
 		if (!authorization) {
 			throw Errors.notFound("承認申請が見つかりません");
+		}
+
+		// 削除済みお知らせの承認は不可
+		if (authorization.notice.deletedAt) {
+			throw Errors.invalidRequest("削除済みのお知らせは承認できません");
 		}
 
 		// requestedTo 本人のみ
