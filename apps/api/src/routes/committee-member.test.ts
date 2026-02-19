@@ -30,6 +30,13 @@ vi.mock("../lib/prisma", () => ({
 			create: vi.fn(),
 			update: vi.fn(),
 		},
+		committeeMemberPermission: {
+			findMany: vi.fn(),
+			findUnique: vi.fn(),
+			findFirst: vi.fn(),
+			create: vi.fn(),
+			delete: vi.fn(),
+		},
 	},
 }));
 
@@ -381,5 +388,250 @@ describe("DELETE /committee/members/:id", () => {
 		});
 
 		expect(res.status).toBe(404);
+	});
+});
+
+// ─────────────────────────────────────────────────────────────
+// 権限管理テスト
+// ─────────────────────────────────────────────────────────────
+
+const mockPermission = {
+	id: "clzzzzzzzzzzzzzzzzz",
+	committeeMemberId: "clyyyyyyyyyyyyyyyyy",
+	permission: "MEMBER_EDIT" as const,
+	createdAt: new Date(),
+};
+
+describe("GET /committee/members/:id/permissions", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("正常系: 権限一覧を取得", async () => {
+		const app = makeApp();
+		setupAuth();
+		// ハンドラ内: メンバー存在確認
+		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		mockPrisma.committeeMemberPermission.findMany.mockResolvedValue([
+			mockPermission,
+		]);
+
+		const res = await app.request(
+			`/committee/members/${mockCommitteeMember.id}/permissions`,
+			{
+				method: "GET",
+				headers: { Authorization: "Bearer valid-token" },
+			}
+		);
+
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.permissions).toHaveLength(1);
+		expect(body.permissions[0].permission).toBe("MEMBER_EDIT");
+	});
+
+	it("存在しないメンバーでエラー", async () => {
+		const app = makeApp();
+		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
+			uid: "firebase-uid-123",
+		} as any);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		mockPrisma.committeeMember.findFirst
+			.mockResolvedValueOnce(mockCommitteeMember)
+			.mockResolvedValueOnce(null);
+
+		const res = await app.request(
+			"/committee/members/nonexistent-id/permissions",
+			{
+				method: "GET",
+				headers: { Authorization: "Bearer valid-token" },
+			}
+		);
+
+		expect(res.status).toBe(404);
+	});
+});
+
+describe("POST /committee/members/:id/permissions", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("正常系: 権限を付与", async () => {
+		const app = makeApp();
+		setupAuth();
+		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		mockPrisma.committeeMemberPermission.findUnique.mockResolvedValue(null);
+		mockPrisma.committeeMemberPermission.create.mockResolvedValue(
+			mockPermission
+		);
+
+		const res = await app.request(
+			`/committee/members/${mockCommitteeMember.id}/permissions`,
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: "Bearer valid-token",
+				},
+				body: JSON.stringify({ permission: "MEMBER_EDIT" }),
+			}
+		);
+
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.permissionRecord.permission).toBe("MEMBER_EDIT");
+	});
+
+	it("既に付与済みの権限でエラー", async () => {
+		const app = makeApp();
+		setupAuth();
+		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		mockPrisma.committeeMemberPermission.findUnique.mockResolvedValue(
+			mockPermission
+		);
+
+		const res = await app.request(
+			`/committee/members/${mockCommitteeMember.id}/permissions`,
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: "Bearer valid-token",
+				},
+				body: JSON.stringify({ permission: "MEMBER_EDIT" }),
+			}
+		);
+
+		expect(res.status).toBe(409);
+		const body = await res.json();
+		expect(body.error.code).toBe("ALREADY_EXISTS");
+	});
+
+	it("存在しないメンバーでエラー", async () => {
+		const app = makeApp();
+		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
+			uid: "firebase-uid-123",
+		} as any);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		mockPrisma.committeeMember.findFirst
+			.mockResolvedValueOnce(mockCommitteeMember)
+			.mockResolvedValueOnce(null);
+
+		const res = await app.request(
+			"/committee/members/nonexistent-id/permissions",
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: "Bearer valid-token",
+				},
+				body: JSON.stringify({ permission: "MEMBER_EDIT" }),
+			}
+		);
+
+		expect(res.status).toBe(404);
+	});
+
+	it("不正な権限名でバリデーションエラー", async () => {
+		const app = makeApp();
+		setupAuth();
+
+		const res = await app.request(
+			`/committee/members/${mockCommitteeMember.id}/permissions`,
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: "Bearer valid-token",
+				},
+				body: JSON.stringify({ permission: "INVALID_PERMISSION" }),
+			}
+		);
+
+		expect(res.status).toBe(400);
+	});
+});
+
+describe("DELETE /committee/members/:id/permissions/:permission", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("正常系: 権限を削除", async () => {
+		const app = makeApp();
+		setupAuth();
+		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		mockPrisma.committeeMemberPermission.findUnique.mockResolvedValue(
+			mockPermission
+		);
+		mockPrisma.committeeMemberPermission.delete.mockResolvedValue(
+			mockPermission
+		);
+
+		const res = await app.request(
+			`/committee/members/${mockCommitteeMember.id}/permissions/MEMBER_EDIT`,
+			{
+				method: "DELETE",
+				headers: { Authorization: "Bearer valid-token" },
+			}
+		);
+
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.success).toBe(true);
+	});
+
+	it("存在しないメンバーでエラー", async () => {
+		const app = makeApp();
+		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
+			uid: "firebase-uid-123",
+		} as any);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		mockPrisma.committeeMember.findFirst
+			.mockResolvedValueOnce(mockCommitteeMember)
+			.mockResolvedValueOnce(null);
+
+		const res = await app.request(
+			"/committee/members/nonexistent-id/permissions/MEMBER_EDIT",
+			{
+				method: "DELETE",
+				headers: { Authorization: "Bearer valid-token" },
+			}
+		);
+
+		expect(res.status).toBe(404);
+	});
+
+	it("存在しない権限でエラー", async () => {
+		const app = makeApp();
+		setupAuth();
+		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		mockPrisma.committeeMemberPermission.findUnique.mockResolvedValue(null);
+
+		const res = await app.request(
+			`/committee/members/${mockCommitteeMember.id}/permissions/NOTICE_DELIVER`,
+			{
+				method: "DELETE",
+				headers: { Authorization: "Bearer valid-token" },
+			}
+		);
+
+		expect(res.status).toBe(404);
+	});
+
+	it("不正な権限名でバリデーションエラー", async () => {
+		const app = makeApp();
+		setupAuth();
+
+		const res = await app.request(
+			`/committee/members/${mockCommitteeMember.id}/permissions/INVALID_PERMISSION`,
+			{
+				method: "DELETE",
+				headers: { Authorization: "Bearer valid-token" },
+			}
+		);
+
+		expect(res.status).toBe(400);
 	});
 });

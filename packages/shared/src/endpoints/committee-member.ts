@@ -1,9 +1,14 @@
 import { z } from "zod";
 import {
+	committeePermissionSchema,
 	createCommitteeMemberRequestSchema,
 	createCommitteeMemberResponseSchema,
 	deleteCommitteeMemberResponseSchema,
+	grantCommitteeMemberPermissionRequestSchema,
+	grantCommitteeMemberPermissionResponseSchema,
+	listCommitteeMemberPermissionsResponseSchema,
 	listCommitteeMembersResponseSchema,
+	revokeCommitteeMemberPermissionResponseSchema,
 	updateCommitteeMemberRequestSchema,
 	updateCommitteeMemberResponseSchema,
 } from "../schemas/committee-member";
@@ -11,6 +16,11 @@ import type { BodyEndpoint, GetEndpoint, NoBodyEndpoint } from "./types";
 
 const committeeMemberPathParamsSchema = z.object({
 	id: z.cuid(),
+});
+
+const committeeMemberPermissionPathParamsSchema = z.object({
+	id: z.cuid(),
+	permission: committeePermissionSchema,
 });
 
 /**
@@ -105,4 +115,74 @@ export const deleteCommitteeMemberEndpoint: NoBodyEndpoint<
 	query: undefined,
 	request: undefined,
 	response: deleteCommitteeMemberResponseSchema,
+} as const;
+
+// ─────────────────────────────────────────────────────────────
+// 権限管理エンドポイント
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * GET /committee/members/:id/permissions
+ * 委員メンバーの権限一覧を取得
+ *
+ * - 認証 + 実委メンバー必須
+ * - TODO: 権限チェックの調整
+ */
+export const listCommitteeMemberPermissionsEndpoint: GetEndpoint<
+	"/committee/members/:id/permissions",
+	typeof committeeMemberPathParamsSchema,
+	undefined,
+	typeof listCommitteeMemberPermissionsResponseSchema
+> = {
+	method: "GET",
+	path: "/committee/members/:id/permissions",
+	pathParams: committeeMemberPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: listCommitteeMemberPermissionsResponseSchema,
+} as const;
+
+/**
+ * POST /committee/members/:id/permissions
+ * 委員メンバーに権限を付与
+ *
+ * - 認証 + 実委メンバー必須
+ * - TODO: 権限チェックの調整
+ */
+export const grantCommitteeMemberPermissionEndpoint: BodyEndpoint<
+	"POST",
+	"/committee/members/:id/permissions",
+	typeof committeeMemberPathParamsSchema,
+	undefined,
+	typeof grantCommitteeMemberPermissionRequestSchema,
+	typeof grantCommitteeMemberPermissionResponseSchema
+> = {
+	method: "POST",
+	path: "/committee/members/:id/permissions",
+	pathParams: committeeMemberPathParamsSchema,
+	query: undefined,
+	request: grantCommitteeMemberPermissionRequestSchema,
+	response: grantCommitteeMemberPermissionResponseSchema,
+} as const;
+
+/**
+ * DELETE /committee/members/:id/permissions/:permission
+ * 委員メンバーの権限を削除
+ *
+ * - 認証 + 実委メンバー必須
+ * - TODO: 権限チェックの調整
+ */
+export const revokeCommitteeMemberPermissionEndpoint: NoBodyEndpoint<
+	"DELETE",
+	"/committee/members/:id/permissions/:permission",
+	typeof committeeMemberPermissionPathParamsSchema,
+	undefined,
+	typeof revokeCommitteeMemberPermissionResponseSchema
+> = {
+	method: "DELETE",
+	path: "/committee/members/:id/permissions/:permission",
+	pathParams: committeeMemberPermissionPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: revokeCommitteeMemberPermissionResponseSchema,
 } as const;
