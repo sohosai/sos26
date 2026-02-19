@@ -7,7 +7,6 @@ import {
 	createNoticeResponseSchema,
 	deleteNoticeResponseSchema,
 	getNoticeResponseSchema,
-	getNoticeStatusResponseSchema,
 	getProjectNoticeResponseSchema,
 	listNoticesResponseSchema,
 	listProjectNoticesResponseSchema,
@@ -209,24 +208,6 @@ export const updateNoticeAuthorizationEndpoint: BodyEndpoint<
 	query: undefined,
 	request: updateNoticeAuthorizationRequestSchema,
 	response: updateNoticeAuthorizationResponseSchema,
-} as const;
-
-/**
- * GET /committee/notices/:noticeId/status
- * 企画ごとの既読状況を取得（owner または共同編集者）
- */
-export const getNoticeStatusEndpoint: GetEndpoint<
-	"/committee/notices/:noticeId/status",
-	typeof noticeIdPathParamsSchema,
-	undefined,
-	typeof getNoticeStatusResponseSchema
-> = {
-	method: "GET",
-	path: "/committee/notices/:noticeId/status",
-	pathParams: noticeIdPathParamsSchema,
-	query: undefined,
-	request: undefined,
-	response: getNoticeStatusResponseSchema,
 } as const;
 
 // ─────────────────────────────────────────────────────────────

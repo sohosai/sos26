@@ -252,28 +252,6 @@ export type UpdateNoticeAuthorizationResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
-// GET /committee/notices/:noticeId/status
-// ─────────────────────────────────────────────────────────────
-
-export const getNoticeStatusResponseSchema = z.object({
-	deliveries: z.array(
-		z.object({
-			id: z.cuid(),
-			project: z.object({ id: z.cuid(), name: z.string() }),
-			authorization: z.object({
-				status: noticeAuthorizationStatusSchema,
-				deliveredAt: z.coerce.date(),
-			}),
-			readCount: z.number(),
-			memberCount: z.number(),
-		})
-	),
-});
-export type GetNoticeStatusResponse = z.infer<
-	typeof getNoticeStatusResponseSchema
->;
-
-// ─────────────────────────────────────────────────────────────
 // 企画側: GET /project/:projectId/notices
 // ─────────────────────────────────────────────────────────────
 

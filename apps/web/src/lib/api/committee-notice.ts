@@ -11,9 +11,7 @@ import {
 	type DeleteNoticeResponse,
 	deleteNoticeEndpoint,
 	type GetNoticeResponse,
-	type GetNoticeStatusResponse,
 	getNoticeEndpoint,
-	getNoticeStatusEndpoint,
 	type ListNoticesResponse,
 	listNoticesEndpoint,
 	type RemoveCollaboratorResponse,
@@ -130,17 +128,5 @@ export async function updateNoticeAuthorization(
 ): Promise<UpdateNoticeAuthorizationResponse> {
 	return callBodyApi(updateNoticeAuthorizationEndpoint, body, {
 		pathParams: { noticeId, authorizationId },
-	});
-}
-
-/**
- * GET /committee/notices/:noticeId/status
- * 企画ごとの既読状況を取得
- */
-export async function getNoticeStatus(
-	noticeId: string
-): Promise<GetNoticeStatusResponse> {
-	return callGetApi(getNoticeStatusEndpoint, {
-		pathParams: { noticeId },
 	});
 }
