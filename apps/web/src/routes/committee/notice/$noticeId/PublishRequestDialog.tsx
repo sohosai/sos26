@@ -1,8 +1,15 @@
 import { Dialog, TextField as RadixTextField, Text } from "@radix-ui/themes";
 import { IconSearch, IconSend, IconX } from "@tabler/icons-react";
+import Avatar from "boring-avatars";
 import { useEffect, useMemo, useState } from "react";
 
-import { Button, Checkbox, IconButton, Select } from "@/components/primitives";
+import {
+	Button,
+	Checkbox,
+	IconButton,
+	Select,
+	TextField,
+} from "@/components/primitives";
 import { createNoticeAuthorization } from "@/lib/api/committee-notice";
 import { listCommitteeProjects } from "@/lib/api/committee-project";
 import styles from "./PublishRequestDialog.module.scss";
@@ -47,6 +54,7 @@ export function PublishRequestDialog({
 	const approverOptions = collaborators.map(c => ({
 		value: c.user.id,
 		label: c.user.name,
+		icon: <Avatar size={16} name={c.user.name} variant="beam" />,
 	}));
 
 	const filteredProjects = useMemo(() => {
@@ -183,27 +191,19 @@ export function PublishRequestDialog({
 					</div>
 
 					{/* 公開日時 */}
-					<div className={styles.field}>
-						<Text as="label" size="2" weight="medium">
-							公開日時
-						</Text>
-						<div className={styles.dateTimeRow}>
-							<input
-								type="date"
-								className={styles.dateInput}
-								value={date}
-								onChange={e => setDate(e.target.value)}
-							/>
-							<input
-								type="time"
-								className={styles.timeInput}
-								value={time}
-								onChange={e => setTime(e.target.value)}
-							/>
-						</div>
-						<Text size="1" color="gray">
-							未来の日時のみ指定できます。
-						</Text>
+					<div className={styles.dateTimeRow}>
+						<TextField
+							label="公開日"
+							type="date"
+							value={date}
+							onChange={setDate}
+						/>
+						<TextField
+							label="公開時刻"
+							type="time"
+							value={time}
+							onChange={setTime}
+						/>
 					</div>
 
 					{/* 公開先プロジェクト */}
