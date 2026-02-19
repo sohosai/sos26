@@ -1,5 +1,6 @@
 export * from "./endpoints/auth";
 export * from "./endpoints/committee-member";
+export * from "./endpoints/committee-project";
 export * from "./endpoints/notice";
 export * from "./endpoints/project";
 export * from "./endpoints/push";
@@ -9,6 +10,7 @@ export * from "./lib/email";
 export * from "./lib/token";
 export * from "./schemas/auth";
 export * from "./schemas/committee-member";
+export * from "./schemas/committee-project";
 export * from "./schemas/notice";
 export * from "./schemas/project";
 export * from "./schemas/push";
