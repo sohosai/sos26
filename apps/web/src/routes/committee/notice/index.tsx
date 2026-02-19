@@ -1,7 +1,6 @@
-import { AlertDialog, Heading, Text } from "@radix-ui/themes";
-import type { GetNoticeResponse } from "@sos26/shared";
+import { Heading, Text } from "@radix-ui/themes";
 import { IconEye, IconPlus } from "@tabler/icons-react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -12,11 +11,9 @@ import {
 	NameCell,
 } from "@/components/patterns";
 import { Button } from "@/components/primitives";
-import { deleteNotice, listNotices } from "@/lib/api/committee-notice";
-import { useAuthStore } from "@/lib/auth";
+import { listNotices } from "@/lib/api/committee-notice";
 import { CreateNoticeDialog } from "./CreateNoticeDialog";
 import styles from "./index.module.scss";
-import { NoticeDetailDialog } from "./NoticeDetailDialog";
 
 type NoticeRow = {
 	id: string;
@@ -29,8 +26,6 @@ type NoticeRow = {
 	approverName: string;
 };
 
-type NoticeDetail = GetNoticeResponse["notice"];
-
 const noticeColumnHelper = createColumnHelper<NoticeRow>();
 
 export const Route = createFileRoute("/committee/notice/")({
@@ -38,23 +33,11 @@ export const Route = createFileRoute("/committee/notice/")({
 });
 
 function RouteComponent() {
-	const { user } = useAuthStore();
 	const [notices, setNotices] = useState<NoticeRow[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 
-	// 作成 / 編集ダイアログ
-	const [noticeDialog, setNoticeDialog] = useState<{
-		open: boolean;
-		noticeId?: string;
-		initialValues?: { title: string; body: string };
-	}>({ open: false });
-
-	// 詳細ダイアログ
-	const [detailNoticeId, setDetailNoticeId] = useState<string | null>(null);
-
-	// 削除確認ダイアログ
-	const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-	const [isDeleting, setIsDeleting] = useState(false);
+	// 作成ダイアログ
+	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
 	const fetchNotices = useCallback(async () => {
 		setIsLoading(true);
@@ -82,34 +65,6 @@ function RouteComponent() {
 	useEffect(() => {
 		fetchNotices();
 	}, [fetchNotices]);
-
-	const handleEditFromDetail = (notice: NoticeDetail) => {
-		setDetailNoticeId(null);
-		setNoticeDialog({
-			open: true,
-			noticeId: notice.id,
-			initialValues: { title: notice.title, body: notice.body ?? "" },
-		});
-	};
-
-	const handleDeleteFromDetail = (noticeId: string) => {
-		setDetailNoticeId(null);
-		setDeleteConfirmId(noticeId);
-	};
-
-	const handleDelete = async () => {
-		if (!deleteConfirmId) return;
-		setIsDeleting(true);
-		try {
-			await deleteNotice(deleteConfirmId);
-			setDeleteConfirmId(null);
-			await fetchNotices();
-		} catch (error) {
-			console.error(error);
-		} finally {
-			setIsDeleting(false);
-		}
-	};
 
 	const columns = [
 		noticeColumnHelper.accessor("title", {
@@ -150,14 +105,15 @@ function RouteComponent() {
 			id: "actions",
 			header: "操作",
 			cell: ({ row }) => (
-				<Button
-					intent="ghost"
-					size="1"
-					onClick={() => setDetailNoticeId(row.original.id)}
+				<Link
+					to="/committee/notice/$noticeId"
+					params={{ noticeId: row.original.id }}
 				>
-					<IconEye size={16} />
-					詳細
-				</Button>
+					<Button intent="ghost" size="1">
+						<IconEye size={16} />
+						詳細
+					</Button>
+				</Link>
 			),
 			enableSorting: false,
 		}),
@@ -188,7 +144,7 @@ function RouteComponent() {
 					<Button
 						intent="primary"
 						size="2"
-						onClick={() => setNoticeDialog({ open: true })}
+						onClick={() => setCreateDialogOpen(true)}
 					>
 						<IconPlus size={16} stroke={1.5} />
 						お知らせを作成
@@ -196,56 +152,11 @@ function RouteComponent() {
 				}
 			/>
 
-			{/* 作成 / 編集ダイアログ */}
 			<CreateNoticeDialog
-				open={noticeDialog.open}
-				onOpenChange={open => setNoticeDialog(prev => ({ ...prev, open }))}
-				noticeId={noticeDialog.noticeId}
-				initialValues={noticeDialog.initialValues}
+				open={createDialogOpen}
+				onOpenChange={setCreateDialogOpen}
 				onSuccess={fetchNotices}
 			/>
-
-			{/* 詳細ダイアログ */}
-			<NoticeDetailDialog
-				noticeId={detailNoticeId}
-				currentUserId={user?.id ?? ""}
-				onClose={() => {
-					setDetailNoticeId(null);
-					fetchNotices();
-				}}
-				onEdit={handleEditFromDetail}
-				onDelete={handleDeleteFromDetail}
-			/>
-
-			{/* 削除確認ダイアログ */}
-			<AlertDialog.Root
-				open={deleteConfirmId !== null}
-				onOpenChange={open => {
-					if (!open) setDeleteConfirmId(null);
-				}}
-			>
-				<AlertDialog.Content maxWidth="400px">
-					<AlertDialog.Title>お知らせを削除</AlertDialog.Title>
-					<AlertDialog.Description size="2">
-						このお知らせを削除しますか？この操作は取り消せません。
-					</AlertDialog.Description>
-					<div className={styles.deleteActions}>
-						<AlertDialog.Cancel>
-							<Button intent="secondary" size="2">
-								キャンセル
-							</Button>
-						</AlertDialog.Cancel>
-						<Button
-							intent="danger"
-							size="2"
-							onClick={handleDelete}
-							loading={isDeleting}
-						>
-							削除する
-						</Button>
-					</div>
-				</AlertDialog.Content>
-			</AlertDialog.Root>
 		</div>
 	);
 }

@@ -1,8 +1,21 @@
 .header {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	justify-content: space-between;
-	margin-bottom: var(--space-3);
+	gap: var(--space-4);
+	margin: var(--space-4) 0;
+}
+
+.headerTitle {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.headerActions {
+	display: flex;
+	gap: var(--space-2);
+	flex-shrink: 0;
 }
 
 .body {
@@ -35,7 +48,6 @@
 	gap: var(--space-2);
 	padding: var(--space-3) 0;
 	border-top: 1px solid var(--gray-4);
-	margin-bottom: var(--space-3);
 }
 
 .collaboratorList {
@@ -52,7 +64,6 @@
 	align-items: center;
 	gap: var(--space-2);
 
-	/* 削除ボタンを右端に寄せる */
 	& > :last-child:not(:first-child) {
 		margin-left: auto;
 	}
@@ -64,13 +75,12 @@
 	align-items: center;
 	margin-top: var(--space-1);
 
-	/* Selectを伸ばす */
 	& > :first-child {
 		flex: 1;
 	}
 }
 
-.actions {
+.deleteActions {
 	display: flex;
 	justify-content: flex-end;
 	gap: var(--space-2);
