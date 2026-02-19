@@ -143,9 +143,12 @@ describe("GET /committee/projects", () => {
 		expect(body.projects[0].name).toBe("テスト企画");
 		expect(body.projects[0].memberCount).toBe(3);
 		expect(body.projects[0].ownerName).toBe("筑波太郎");
+		expect(body.projects[0].inviteCode).toBeUndefined();
+		expect(body.projects[0].deletedAt).toBeUndefined();
 		expect(body.total).toBe(1);
-		expect(body.page).toBe(1);
-		expect(body.limit).toBe(20);
+		// limit未指定のため page/limit はレスポンスに含まれない
+		expect(body.page).toBeUndefined();
+		expect(body.limit).toBeUndefined();
 	});
 
 	it("正常系: typeフィルタ", async () => {
@@ -263,8 +266,16 @@ describe("GET /committee/projects/:projectId", () => {
 		setupAuth();
 		mockPrisma.project.findFirst.mockResolvedValue({
 			...mockProject,
-			owner: mockUser,
-			subOwner: mockSubOwner,
+			owner: {
+				id: mockUser.id,
+				name: mockUser.name,
+				email: mockUser.email,
+			},
+			subOwner: {
+				id: mockSubOwner.id,
+				name: mockSubOwner.name,
+				email: mockSubOwner.email,
+			},
 			_count: { projectMembers: 5 },
 		} as any);
 
@@ -277,7 +288,11 @@ describe("GET /committee/projects/:projectId", () => {
 		const body = await res.json();
 		expect(body.project.name).toBe("テスト企画");
 		expect(body.project.memberCount).toBe(5);
+		expect(body.project.inviteCode).toBeUndefined();
+		expect(body.project.deletedAt).toBeUndefined();
 		expect(body.project.owner.name).toBe("筑波太郎");
+		expect(body.project.owner.telephoneNumber).toBeUndefined();
+		expect(body.project.owner.firebaseUid).toBeUndefined();
 		expect(body.project.subOwner.name).toBe("筑波花子");
 	});
 

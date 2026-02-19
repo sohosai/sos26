@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import {
 	listCommitteeProjectsQuerySchema,
 	type ProjectMemberRole,
@@ -18,7 +19,7 @@ committeeProjectRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 	const query = listCommitteeProjectsQuerySchema.parse(c.req.query());
 	const { type, search, page, limit } = query;
 
-	const where: Record<string, unknown> = { deletedAt: null };
+	const where: Prisma.ProjectWhereInput = { deletedAt: null };
 
 	if (type) {
 		where.type = type;
@@ -40,8 +41,10 @@ committeeProjectRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 					select: { projectMembers: { where: { deletedAt: null } } },
 				},
 			},
-			skip: (page - 1) * limit,
-			take: limit,
+			...(limit !== undefined && {
+				skip: (page - 1) * limit,
+				take: limit,
+			}),
 			orderBy: { createdAt: "desc" },
 		}),
 		prisma.project.count({ where }),
@@ -56,15 +59,17 @@ committeeProjectRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 		type: p.type,
 		ownerId: p.ownerId,
 		subOwnerId: p.subOwnerId,
-		inviteCode: p.inviteCode,
 		createdAt: p.createdAt,
 		updatedAt: p.updatedAt,
-		deletedAt: p.deletedAt,
 		memberCount: p._count.projectMembers,
 		ownerName: p.owner.name,
 	}));
 
-	return c.json({ projects: result, total, page, limit });
+	return c.json({
+		projects: result,
+		total,
+		...(limit !== undefined && { page, limit }),
+	});
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -81,8 +86,8 @@ committeeProjectRoute.get(
 		const project = await prisma.project.findFirst({
 			where: { id: projectId, deletedAt: null },
 			include: {
-				owner: true,
-				subOwner: true,
+				owner: { select: { id: true, name: true, email: true } },
+				subOwner: { select: { id: true, name: true, email: true } },
 				_count: {
 					select: { projectMembers: { where: { deletedAt: null } } },
 				},
@@ -102,10 +107,8 @@ committeeProjectRoute.get(
 			type: project.type,
 			ownerId: project.ownerId,
 			subOwnerId: project.subOwnerId,
-			inviteCode: project.inviteCode,
 			createdAt: project.createdAt,
 			updatedAt: project.updatedAt,
-			deletedAt: project.deletedAt,
 			memberCount: project._count.projectMembers,
 			owner: project.owner,
 			subOwner: project.subOwner,

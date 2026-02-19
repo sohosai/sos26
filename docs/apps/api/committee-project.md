@@ -23,6 +23,7 @@
 - 認証: 全エンドポイントで `requireAuth` + `requireCommitteeMember` が必要
 - 削除データ: `deletedAt` を持つモデルは、基本的に `deletedAt: null` を対象に扱う
 - 実委人であれば任意の企画を閲覧可能（`requireProjectMember` は不要）
+- レスポンスに `inviteCode`・`deletedAt` は含まない
 
 ---
 
@@ -47,13 +48,13 @@
 | パラメータ | 型 | デフォルト | 説明 |
 |---|---|---|---|
 | `type` | `"STAGE" \| "FOOD" \| "NORMAL"` | なし | 企画区分でフィルタ |
-| `search` | `string` | なし | 企画名・団体名で部分一致検索（大文字小文字区別なし） |
-| `page` | `number` | `1` | ページ番号（1始まり） |
-| `limit` | `number` | `20` | 1ページあたりの件数（最大100） |
+| `search` | `string`（1文字以上） | なし | 企画名・団体名で部分一致検索（大文字小文字区別なし） |
+| `page` | `number` | `1` | ページ番号（1始まり）。`limit` 指定時のみ有効 |
+| `limit` | `number` | なし | 1ページあたりの件数（最大100）。省略時は全件取得 |
 
 #### レスポンス
 
-```json
+```jsonc
 {
   "projects": [
     {
@@ -64,18 +65,16 @@
       "organizationNamePhonetic": "ダンタイメイ",
       "type": "NORMAL",
       "ownerId": "clxxx...",
-      "subOwnerId": "clyyy..." | null,
-      "inviteCode": "ABC123",
+      "subOwnerId": "clyyy...",  // null の場合あり
       "createdAt": "2026-...",
       "updatedAt": "2026-...",
-      "deletedAt": null,
       "memberCount": 5,
       "ownerName": "筑波太郎"
     }
   ],
   "total": 42,
-  "page": 1,
-  "limit": 20
+  "page": 1,    // limit 指定時のみ
+  "limit": 20   // limit 指定時のみ
 }
 ```
 
@@ -90,7 +89,7 @@
 
 ### GET `/committee/projects/:projectId`
 
-企画の詳細情報を返します。責任者・副責任者のユーザー情報とメンバー数を含みます。
+企画の詳細情報を返します。責任者・副責任者のユーザー情報（id, name, email のみ）とメンバー数を含みます。
 
 #### パスパラメータ
 
@@ -100,7 +99,7 @@
 
 #### レスポンス
 
-```json
+```jsonc
 {
   "project": {
     "id": "clxxx...",
@@ -110,14 +109,12 @@
     "organizationNamePhonetic": "ダンタイメイ",
     "type": "NORMAL",
     "ownerId": "clxxx...",
-    "subOwnerId": "clyyy..." | null,
-    "inviteCode": "ABC123",
+    "subOwnerId": "clyyy...",  // null の場合あり
     "createdAt": "2026-...",
     "updatedAt": "2026-...",
-    "deletedAt": null,
     "memberCount": 5,
-    "owner": { "id": "...", "name": "...", ... },
-    "subOwner": { "id": "...", "name": "...", ... } | null
+    "owner": { "id": "clxxx...", "name": "筑波太郎", "email": "s1234567@u.tsukuba.ac.jp" },
+    "subOwner": { "id": "clyyy...", "name": "筑波花子", "email": "s7654321@u.tsukuba.ac.jp" }  // null の場合あり
   }
 }
 ```
