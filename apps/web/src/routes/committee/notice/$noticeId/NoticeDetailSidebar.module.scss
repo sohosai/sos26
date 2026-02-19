@@ -67,6 +67,33 @@
 	}
 }
 
+.authorizationRequest {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+	padding: var(--space-3);
+	background-color: var(--orange-a2);
+	border: 1px solid var(--orange-6);
+	border-radius: var(--radius-2);
+}
+
+.authorizationMeta {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.projectTags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-1);
+}
+
+.authorizationActions {
+	display: flex;
+	gap: var(--space-2);
+}
+
 .actions {
 	display: flex;
 	flex-direction: column;

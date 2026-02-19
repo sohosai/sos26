@@ -17,6 +17,7 @@ import {
 	deleteNotice,
 	getNotice,
 	removeCollaborator,
+	updateNoticeAuthorization,
 } from "@/lib/api/committee-notice";
 import { useAuthStore } from "@/lib/auth";
 import { CreateNoticeDialog } from "../CreateNoticeDialog";
@@ -117,6 +118,20 @@ function RouteComponent() {
 		}
 	};
 
+	const handleApprove = async (authorizationId: string) => {
+		await updateNoticeAuthorization(noticeId, authorizationId, {
+			status: "APPROVED",
+		});
+		await fetchNotice();
+	};
+
+	const handleReject = async (authorizationId: string) => {
+		await updateNoticeAuthorization(noticeId, authorizationId, {
+			status: "REJECTED",
+		});
+		await fetchNotice();
+	};
+
 	if (isLoading) {
 		return (
 			<div>
@@ -199,12 +214,16 @@ function RouteComponent() {
 			{/* サイドバー */}
 			<NoticeDetailSidebar
 				notice={notice}
+				noticeId={noticeId}
+				userId={user?.id ?? ""}
 				isOwner={isOwner}
 				canEdit={canEdit}
 				availableMembers={availableMembers}
 				removingId={removingId}
 				onAddCollaborator={handleAddCollaborator}
 				onRemoveCollaborator={handleRemoveCollaborator}
+				onApprove={handleApprove}
+				onReject={handleReject}
 				onEdit={() => setEditDialogOpen(true)}
 				onDelete={() => setDeleteConfirmOpen(true)}
 			/>

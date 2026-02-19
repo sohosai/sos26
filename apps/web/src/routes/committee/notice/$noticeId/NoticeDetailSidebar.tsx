@@ -1,10 +1,18 @@
 import { Badge, Separator, Text } from "@radix-ui/themes";
 import type { GetNoticeResponse } from "@sos26/shared";
-import { IconPlus, IconSend, IconTrash } from "@tabler/icons-react";
+import {
+	IconChartBar,
+	IconCheck,
+	IconPlus,
+	IconSend,
+	IconTrash,
+	IconX,
+} from "@tabler/icons-react";
 import Avatar from "boring-avatars";
 import { useState } from "react";
 import { Button, IconButton } from "@/components/primitives";
 import { AddCollaboratorDialog } from "./AddCollaboratorDialog";
+import { DeliveryStatusDialog } from "./DeliveryStatusDialog";
 import styles from "./NoticeDetailSidebar.module.scss";
 import { PublishRequestDialog } from "./PublishRequestDialog";
 
@@ -17,29 +25,65 @@ type AvailableMember = {
 
 type Props = {
 	notice: NoticeDetail;
+	noticeId: string;
+	userId: string;
 	isOwner: boolean;
 	canEdit: boolean;
 	availableMembers: AvailableMember[];
 	removingId: string | null;
 	onAddCollaborator: (userId: string) => Promise<void>;
 	onRemoveCollaborator: (collaboratorId: string) => void;
+	onApprove: (authorizationId: string) => Promise<void>;
+	onReject: (authorizationId: string) => Promise<void>;
 	onEdit: () => void;
 	onDelete: () => void;
 };
 
 export function NoticeDetailSidebar({
 	notice,
+	noticeId,
+	userId,
 	isOwner,
 	canEdit,
 	availableMembers,
 	removingId,
 	onAddCollaborator,
 	onRemoveCollaborator,
+	onApprove,
+	onReject,
 	onEdit,
 	onDelete,
 }: Props) {
 	const [addCollaboratorOpen, setAddCollaboratorOpen] = useState(false);
 	const [publishRequestOpen, setPublishRequestOpen] = useState(false);
+	const [deliveryStatusOpen, setDeliveryStatusOpen] = useState(false);
+	const [approvingId, setApprovingId] = useState<string | null>(null);
+	const [rejectingId, setRejectingId] = useState<string | null>(null);
+
+	const pendingAuth = notice.authorizations.find(
+		a => a.status === "PENDING" && a.requestedToId === userId
+	);
+	const hasApprovedAuth = notice.authorizations.some(
+		a => a.status === "APPROVED"
+	);
+
+	const handleApprove = async (authorizationId: string) => {
+		setApprovingId(authorizationId);
+		try {
+			await onApprove(authorizationId);
+		} finally {
+			setApprovingId(null);
+		}
+	};
+
+	const handleReject = async (authorizationId: string) => {
+		setRejectingId(authorizationId);
+		try {
+			await onReject(authorizationId);
+		} finally {
+			setRejectingId(null);
+		}
+	};
 
 	return (
 		<>
@@ -125,6 +169,72 @@ export function NoticeDetailSidebar({
 					</>
 				)}
 
+				{pendingAuth && (
+					<>
+						<Separator size="4" />
+						<div className={styles.section}>
+							<Text size="2" weight="medium" color="gray">
+								承認依頼
+							</Text>
+							<div className={styles.authorizationRequest}>
+								<div className={styles.authorizationMeta}>
+									<Text size="2">申請者: {pendingAuth.requestedBy.name}</Text>
+									<Text size="2">
+										公開希望日時: {formatDeliveredAt(pendingAuth.deliveredAt)}
+									</Text>
+								</div>
+								{pendingAuth.deliveries.length > 0 && (
+									<div className={styles.projectTags}>
+										{pendingAuth.deliveries.map(d => (
+											<Badge key={d.id} variant="soft" size="1">
+												{d.project.name}
+											</Badge>
+										))}
+									</div>
+								)}
+								<div className={styles.authorizationActions}>
+									<Button
+										intent="primary"
+										size="2"
+										onClick={() => handleApprove(pendingAuth.id)}
+										loading={approvingId === pendingAuth.id}
+										disabled={rejectingId !== null}
+									>
+										<IconCheck size={16} />
+										承認
+									</Button>
+									<Button
+										intent="danger"
+										size="2"
+										onClick={() => handleReject(pendingAuth.id)}
+										loading={rejectingId === pendingAuth.id}
+										disabled={approvingId !== null}
+									>
+										<IconX size={16} />
+										却下
+									</Button>
+								</div>
+							</div>
+						</div>
+					</>
+				)}
+
+				{hasApprovedAuth && (isOwner || canEdit) && (
+					<>
+						<Separator size="4" />
+						<div className={styles.section}>
+							<Button
+								intent="secondary"
+								size="2"
+								onClick={() => setDeliveryStatusOpen(true)}
+							>
+								<IconChartBar size={16} />
+								配信状況
+							</Button>
+						</div>
+					</>
+				)}
+
 				{canEdit && (
 					<>
 						<Separator size="4" />
@@ -154,6 +264,21 @@ export function NoticeDetailSidebar({
 				open={publishRequestOpen}
 				onOpenChange={setPublishRequestOpen}
 			/>
+
+			<DeliveryStatusDialog
+				open={deliveryStatusOpen}
+				onOpenChange={setDeliveryStatusOpen}
+				noticeId={noticeId}
+			/>
 		</>
 	);
+}
+
+function formatDeliveredAt(date: Date): string {
+	const y = date.getFullYear();
+	const m = (date.getMonth() + 1).toString().padStart(2, "0");
+	const d = date.getDate().toString().padStart(2, "0");
+	const h = date.getHours().toString().padStart(2, "0");
+	const min = date.getMinutes().toString().padStart(2, "0");
+	return `${y}/${m}/${d} ${h}:${min}`;
 }
