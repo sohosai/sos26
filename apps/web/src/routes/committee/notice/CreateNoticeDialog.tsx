@@ -1,4 +1,4 @@
-import { Dialog } from "@radix-ui/themes";
+import { Dialog, Text } from "@radix-ui/themes";
 import { IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { RichTextEditor } from "@/components/patterns";
@@ -25,6 +25,7 @@ export function CreateNoticeDialog({
 	const [title, setTitle] = useState("");
 	const [body, setBody] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
 	const isEdit = noticeId !== undefined;
 
@@ -32,11 +33,13 @@ export function CreateNoticeDialog({
 		if (open) {
 			setTitle(initialValues?.title ?? "");
 			setBody(initialValues?.body ?? "");
+			setError(null);
 		}
 	}, [open, initialValues]);
 
 	const handleSubmit = async () => {
 		setIsLoading(true);
+		setError(null);
 		try {
 			if (isEdit) {
 				await updateNotice(noticeId, { title, body });
@@ -45,8 +48,12 @@ export function CreateNoticeDialog({
 			}
 			onSuccess?.();
 			onOpenChange(false);
-		} catch (error) {
-			console.error(error);
+		} catch {
+			setError(
+				isEdit
+					? "お知らせの保存に失敗しました。"
+					: "お知らせの作成に失敗しました。"
+			);
 		} finally {
 			setIsLoading(false);
 		}
@@ -79,6 +86,11 @@ export function CreateNoticeDialog({
 						onChange={setBody}
 						required
 					/>
+					{error && (
+						<Text size="2" color="red">
+							{error}
+						</Text>
+					)}
 					<div className={styles.actions}>
 						<Button
 							intent="secondary"

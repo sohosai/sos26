@@ -4,6 +4,7 @@ import { IconEye, IconPlus } from "@tabler/icons-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
 	AvatarGroupCell,
 	type AvatarGroupItem,
@@ -78,8 +79,8 @@ function RouteComponent() {
 					status: getNoticeStatus(n.authorization),
 				}))
 			);
-		} catch (error) {
-			console.error(error);
+		} catch {
+			toast.error("お知らせ一覧の取得に失敗しました");
 		} finally {
 			setIsLoading(false);
 		}

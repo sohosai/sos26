@@ -5,6 +5,7 @@ import { IconEye } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { DataTable, DateCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import {
@@ -62,8 +63,8 @@ function RouteComponent() {
 					isRead: n.isRead,
 				}))
 			);
-		} catch (error) {
-			console.error(error);
+		} catch {
+			toast.error("お知らせ一覧の取得に失敗しました");
 		} finally {
 			setIsLoading(false);
 		}
@@ -90,8 +91,8 @@ function RouteComponent() {
 					prev.map(n => (n.id === noticeId ? { ...n, isRead: true } : n))
 				);
 			}
-		} catch (error) {
-			console.error(error);
+		} catch {
+			toast.error("お知らせの取得に失敗しました");
 		} finally {
 			setIsLoadingDetail(false);
 		}

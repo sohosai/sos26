@@ -10,6 +10,7 @@ import type { GetNoticeResponse } from "@sos26/shared";
 import { IconArrowLeft, IconCalendar, IconClock } from "@tabler/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/primitives";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import {
@@ -62,8 +63,8 @@ function RouteComponent() {
 			]);
 			setNotice(noticeRes.notice);
 			setCommitteeMembers(membersRes.committeeMembers);
-		} catch (error) {
-			console.error(error);
+		} catch {
+			toast.error("お知らせの取得に失敗しました");
 		} finally {
 			setIsLoading(false);
 		}
@@ -98,8 +99,8 @@ function RouteComponent() {
 			await addCollaborator(notice.id, { userId });
 			const res = await getNotice(notice.id);
 			setNotice(res.notice);
-		} catch (error) {
-			console.error(error);
+		} catch {
+			toast.error("共同編集者の追加に失敗しました");
 		}
 	};
 
@@ -110,8 +111,8 @@ function RouteComponent() {
 			await removeCollaborator(notice.id, collaboratorId);
 			const res = await getNotice(notice.id);
 			setNotice(res.notice);
-		} catch (error) {
-			console.error(error);
+		} catch {
+			toast.error("共同編集者の削除に失敗しました");
 		} finally {
 			setRemovingId(null);
 		}
@@ -122,8 +123,8 @@ function RouteComponent() {
 		try {
 			await deleteNotice(noticeId);
 			navigate({ to: "/committee/notice" });
-		} catch (error) {
-			console.error(error);
+		} catch {
+			toast.error("お知らせの削除に失敗しました");
 		} finally {
 			setIsDeleting(false);
 		}
@@ -135,8 +136,8 @@ function RouteComponent() {
 				status: "APPROVED",
 			});
 			await fetchNotice();
-		} catch (error) {
-			console.error(error);
+		} catch {
+			toast.error("承認に失敗しました");
 		}
 	};
 
@@ -146,8 +147,8 @@ function RouteComponent() {
 				status: "REJECTED",
 			});
 			await fetchNotice();
-		} catch (error) {
-			console.error(error);
+		} catch {
+			toast.error("却下に失敗しました");
 		}
 	};
 
