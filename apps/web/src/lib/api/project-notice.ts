@@ -6,7 +6,7 @@ import {
 	type ReadProjectNoticeResponse,
 	readProjectNoticeEndpoint,
 } from "@sos26/shared";
-import { callBodyApi, callGetApi } from "./core";
+import { callGetApi, callNoBodyApi } from "./core";
 
 /**
  * GET /project/:projectId/notices
@@ -41,11 +41,7 @@ export async function readProjectNotice(
 	projectId: string,
 	noticeId: string
 ): Promise<ReadProjectNoticeResponse> {
-	return callBodyApi(
-		readProjectNoticeEndpoint,
-		{ success: true },
-		{
-			pathParams: { projectId, noticeId },
-		}
-	);
+	return callNoBodyApi(readProjectNoticeEndpoint, {
+		pathParams: { projectId, noticeId },
+	});
 }

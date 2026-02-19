@@ -273,18 +273,17 @@ export const getProjectNoticeEndpoint: GetEndpoint<
  * POST /project/:projectId/notices/:noticeId/read
  * お知らせを既読にする
  */
-export const readProjectNoticeEndpoint: BodyEndpoint<
+export const readProjectNoticeEndpoint: NoBodyEndpoint<
 	"POST",
 	"/project/:projectId/notices/:noticeId/read",
 	typeof projectNoticeIdPathParamsSchema,
 	undefined,
-	typeof readProjectNoticeResponseSchema,
 	typeof readProjectNoticeResponseSchema
 > = {
 	method: "POST",
 	path: "/project/:projectId/notices/:noticeId/read",
 	pathParams: projectNoticeIdPathParamsSchema,
 	query: undefined,
-	request: readProjectNoticeResponseSchema,
+	request: undefined,
 	response: readProjectNoticeResponseSchema,
 } as const;
