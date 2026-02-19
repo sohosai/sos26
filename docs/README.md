@@ -19,7 +19,6 @@
   - スタイリング: `docs/apps/web/styling.md`
   - 環境変数: `docs/apps/web/environment-variables.md`
 - API 開発
-  - お知らせ API 設計: `docs/apps/api/notice-api.md`
   - テストガイド: `docs/apps/api/testing.md`
   - Prisma: `docs/apps/api/prisma.md`
   - メール送信: `docs/apps/api/send-mail.md`

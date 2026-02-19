@@ -11,5 +11,4 @@ export {
 	TagCell,
 } from "./DataTable";
 export { RadioGroup, RadioGroupItem } from "./RadioGroup";
-export { RichTextContent } from "./RichTextContent";
 export { RichTextEditor } from "./RichTextEditor";
