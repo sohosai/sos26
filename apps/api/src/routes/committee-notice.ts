@@ -251,6 +251,10 @@ committeeNoticeRoute.delete(
 				where: { noticeId, status: "PENDING" },
 				data: { status: "REJECTED", decidedAt: new Date() },
 			}),
+			prisma.noticeCollaborator.updateMany({
+				where: { noticeId, deletedAt: null },
+				data: { deletedAt: new Date() },
+			}),
 		]);
 
 		return c.json({ success: true as const });
