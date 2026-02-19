@@ -1,4 +1,5 @@
-import { Heading, Text } from "@radix-ui/themes";
+import { Badge, type BadgeProps, Heading, Text } from "@radix-ui/themes";
+import type { ListNoticesResponse } from "@sos26/shared";
 import { IconEye, IconPlus } from "@tabler/icons-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
@@ -15,6 +16,28 @@ import { listNotices } from "@/lib/api/committee-notice";
 import { CreateNoticeDialog } from "./CreateNoticeDialog";
 import styles from "./index.module.scss";
 
+type NoticeStatusInfo = { label: string; color: BadgeProps["color"] };
+
+type Authorization = ListNoticesResponse["notices"][number]["authorization"];
+
+function getNoticeStatus(authorization: Authorization): NoticeStatusInfo {
+	if (!authorization) {
+		return { label: "公開申請前", color: "gray" };
+	}
+	switch (authorization.status) {
+		case "PENDING":
+			return { label: "承認待機中", color: "orange" };
+		case "REJECTED":
+			return { label: "却下", color: "red" };
+		case "APPROVED": {
+			if (new Date(authorization.deliveredAt) > new Date()) {
+				return { label: "公開予定", color: "blue" };
+			}
+			return { label: "公開済み", color: "green" };
+		}
+	}
+}
+
 type NoticeRow = {
 	id: string;
 	ownerId: string;
@@ -24,6 +47,7 @@ type NoticeRow = {
 	createdAt: Date;
 	updatedAt: Date;
 	approverName: string;
+	status: NoticeStatusInfo;
 };
 
 const noticeColumnHelper = createColumnHelper<NoticeRow>();
@@ -53,6 +77,7 @@ function RouteComponent() {
 					createdAt: n.createdAt,
 					updatedAt: n.updatedAt,
 					approverName: n.authorization?.requestedTo.name ?? "",
+					status: getNoticeStatus(n.authorization),
 				}))
 			);
 		} catch (error) {
@@ -87,6 +112,17 @@ function RouteComponent() {
 			header: "更新日",
 			cell: DateCell,
 			meta: { dateFormat: "date" },
+		}),
+		noticeColumnHelper.accessor("status", {
+			header: "ステータス",
+			cell: ctx => {
+				const { label, color } = ctx.getValue();
+				return (
+					<Badge variant="soft" color={color}>
+						{label}
+					</Badge>
+				);
+			},
 		}),
 		noticeColumnHelper.accessor("approverName", {
 			header: "承認者",
