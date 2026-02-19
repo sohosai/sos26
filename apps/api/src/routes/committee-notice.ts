@@ -443,17 +443,6 @@ committeeNoticeRoute.post(
 			throw Errors.invalidRequest("配信希望日時は未来の日時を指定してください");
 		}
 
-		// 既に PENDING または APPROVED の承認申請がないこと
-		const existingAuth = await prisma.noticeAuthorization.findFirst({
-			where: { noticeId, status: { in: ["PENDING", "APPROVED"] } },
-		});
-		if (existingAuth) {
-			if (existingAuth.status === "APPROVED") {
-				throw Errors.invalidRequest("このお知らせは既に承認されています");
-			}
-			throw Errors.alreadyExists("既に承認待ちの申請があります");
-		}
-
 		// 配信先企画の重複を排除
 		const uniqueProjectIds = [...new Set(projectIds)];
 
@@ -470,30 +459,44 @@ committeeNoticeRoute.post(
 			);
 		}
 
-		// トランザクションで承認 + 配信先を作成
-		const authorization = await prisma.$transaction(async tx => {
-			const auth = await tx.noticeAuthorization.create({
-				data: {
-					noticeId,
-					requestedById: user.id,
-					requestedToId,
-					deliveredAt,
-				},
-			});
+		// Serializable トランザクション内で重複チェック + 作成を行い、
+		// 同時リクエストによる二重作成を防止する
+		const authorization = await prisma.$transaction(
+			async tx => {
+				const existingAuth = await tx.noticeAuthorization.findFirst({
+					where: { noticeId, status: { in: ["PENDING", "APPROVED"] } },
+				});
+				if (existingAuth) {
+					if (existingAuth.status === "APPROVED") {
+						throw Errors.invalidRequest("このお知らせは既に承認されています");
+					}
+					throw Errors.alreadyExists("既に承認待ちの申請があります");
+				}
 
-			const deliveries = await Promise.all(
-				uniqueProjectIds.map(projectId =>
-					tx.noticeDelivery.create({
-						data: {
-							noticeAuthorizationId: auth.id,
-							projectId,
-						},
-					})
-				)
-			);
+				const auth = await tx.noticeAuthorization.create({
+					data: {
+						noticeId,
+						requestedById: user.id,
+						requestedToId,
+						deliveredAt,
+					},
+				});
 
-			return { ...auth, deliveries };
-		});
+				const deliveries = await Promise.all(
+					uniqueProjectIds.map(projectId =>
+						tx.noticeDelivery.create({
+							data: {
+								noticeAuthorizationId: auth.id,
+								projectId,
+							},
+						})
+					)
+				);
+
+				return { ...auth, deliveries };
+			},
+			{ isolationLevel: "Serializable" }
+		);
 
 		return c.json({ authorization }, 201);
 	}
