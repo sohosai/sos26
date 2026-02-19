@@ -1,3 +1,12 @@
+.sidebarWrapper {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+	height: fit-content;
+	position: sticky;
+	top: var(--space-4);
+}
+
 .sidebar {
 	display: flex;
 	flex-direction: column;
@@ -6,9 +15,6 @@
 	background-color: var(--gray-1);
 	border: 1px solid var(--gray-6);
 	border-radius: var(--radius-3);
-	height: fit-content;
-	position: sticky;
-	top: var(--space-4);
 }
 
 .section {
@@ -67,20 +73,16 @@
 	}
 }
 
-.authorizationRequest {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-3);
-	padding: var(--space-3);
-	background-color: var(--orange-a2);
-	border: 1px solid var(--orange-6);
-	border-radius: var(--radius-2);
-}
-
-.authorizationMeta {
+.authDetailRow {
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-1);
+}
+
+.authPerson {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
 }
 
 .projectTags {
