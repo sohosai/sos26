@@ -19,6 +19,10 @@
   - スタイリング: `docs/apps/web/styling.md`
   - 環境変数: `docs/apps/web/environment-variables.md`
 - API 開発
+  - エンドポイント一覧: `docs/apps/api/api.md`
+  - Project API 仕様: `docs/apps/api/project.md`
+  - Committee Member API 仕様: `docs/apps/api/committee-member.md`
+  - Committee Project API 仕様: `docs/apps/api/committee-project.md`
   - テストガイド: `docs/apps/api/testing.md`
   - Prisma: `docs/apps/api/prisma.md`
   - メール送信: `docs/apps/api/send-mail.md`
