@@ -203,14 +203,12 @@ function RouteComponent() {
 								作成: {formatDateTime(notice.createdAt)}
 							</Text>
 						</span>
-						{notice.updatedAt.getTime() !== notice.createdAt.getTime() && (
-							<span className={styles.metaItem}>
-								<IconClock size={14} />
-								<Text size="2" color="gray">
-									更新: {formatDateTime(notice.updatedAt)}
-								</Text>
-							</span>
-						)}
+						<span className={styles.metaItem}>
+							<IconClock size={14} />
+							<Text size="2" color="gray">
+								更新: {formatDateTime(notice.updatedAt)}
+							</Text>
+						</span>
 					</div>
 				</header>
 
