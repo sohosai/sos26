@@ -9,7 +9,8 @@ import {
 import type { GetNoticeResponse } from "@sos26/shared";
 import { IconArrowLeft, IconCalendar, IconClock } from "@tabler/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import DOMPurify from "dompurify";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/primitives";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import {
@@ -71,6 +72,11 @@ function RouteComponent() {
 	useEffect(() => {
 		fetchNotice();
 	}, [fetchNotice]);
+
+	const sanitizedBody = useMemo(
+		() => (notice?.body ? DOMPurify.sanitize(notice.body) : null),
+		[notice?.body]
+	);
 
 	const isOwner = notice?.ownerId === user?.id;
 	const isCollaborator =
@@ -206,12 +212,12 @@ function RouteComponent() {
 
 				<Separator size="4" />
 
-				{notice.body ? (
+				{sanitizedBody ? (
 					<div
 						className={styles.body}
-						// お知らせ本文はRichTextEditorで入力されたHTMLを表示するため必要
-						// biome-ignore lint:security/noDangerouslySetInnerHtml
-						dangerouslySetInnerHTML={{ __html: notice.body }}
+						// お知らせ本文はRichTextEditorで入力されたHTMLをDOMPurifyでサニタイズして表示
+						// biome-ignore lint/security/noDangerouslySetInnerHtml: サニタイズ済みHTML
+						dangerouslySetInnerHTML={{ __html: sanitizedBody }}
 					/>
 				) : (
 					<Text size="2" color="gray">

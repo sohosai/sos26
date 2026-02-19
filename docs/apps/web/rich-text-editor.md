@@ -73,6 +73,37 @@ const handleSubmit = () => {
 const isEmpty = !body.replace(/<[^>]*>/g, "").trim();
 ```
 
+## HTML のサニタイズ（表示側）
+
+RichTextEditor の出力は HTML 文字列であり、表示時に `dangerouslySetInnerHTML` を使用する。
+**保存された HTML をそのまま描画すると XSS 脆弱性になるため、表示前に必ず [DOMPurify](https://github.com/cure53/DOMPurify) でサニタイズする。**
+
+```tsx
+import DOMPurify from "dompurify";
+import { useMemo } from "react";
+
+// サニタイズ結果を useMemo でキャッシュ
+const sanitizedBody = useMemo(
+  () => (body ? DOMPurify.sanitize(body) : null),
+  [body]
+);
+
+// 表示
+{sanitizedBody && (
+  <div
+    // biome-ignore lint/security/noDangerouslySetInnerHtml: サニタイズ済みHTML
+    dangerouslySetInnerHTML={{ __html: sanitizedBody }}
+  />
+)}
+```
+
+### 注意事項
+
+- `DOMPurify.sanitize()` はデフォルトで `<script>`, `onerror` 等の危険な要素・属性を除去する
+- RichTextEditor が生成する HTML（太字・リスト・リンク等）は全てサニタイズ後も保持される
+- 新しい Tiptap 拡張を追加して特殊な HTML 属性を出力する場合、DOMPurify の `ALLOWED_ATTR` / `ALLOWED_TAGS` の調整が必要になる可能性がある
+- サニタイズは**表示側（フロントエンド）**で行う。APIはHTML文字列をそのまま保存・返却する
+
 ## 対応フォーマット
 
 | 機能 | ツールバー | キーボードショートカット |
