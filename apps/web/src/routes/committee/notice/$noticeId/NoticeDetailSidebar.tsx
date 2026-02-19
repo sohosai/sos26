@@ -69,6 +69,11 @@ export function NoticeDetailSidebar({
 	const hasApprovedAuth = notice.authorizations.some(
 		a => a.status === "APPROVED"
 	);
+	const hasPendingAuth = notice.authorizations.some(
+		a => a.status === "PENDING"
+	);
+	const canPublish = canEdit && !hasApprovedAuth && !hasPendingAuth;
+	const canModify = canEdit && !hasApprovedAuth;
 
 	const handleApprove = async (authorizationId: string) => {
 		setApprovingId(authorizationId);
@@ -153,7 +158,7 @@ export function NoticeDetailSidebar({
 					)}
 				</div>
 
-				{canEdit && (
+				{canPublish && (
 					<>
 						<Separator size="4" />
 						<div className={styles.section}>
@@ -238,13 +243,15 @@ export function NoticeDetailSidebar({
 					</>
 				)}
 
-				{canEdit && (
+				{(canModify || isOwner) && (
 					<>
 						<Separator size="4" />
 						<div className={styles.actions}>
-							<Button intent="secondary" size="2" onClick={onEdit}>
-								編集
-							</Button>
+							{canModify && (
+								<Button intent="secondary" size="2" onClick={onEdit}>
+									編集
+								</Button>
+							)}
 							{isOwner && (
 								<Button intent="ghost" size="2" onClick={onDelete}>
 									<IconTrash size={14} />
