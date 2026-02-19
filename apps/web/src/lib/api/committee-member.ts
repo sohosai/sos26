@@ -4,8 +4,15 @@ import {
 	createCommitteeMemberEndpoint,
 	type DeleteCommitteeMemberResponse,
 	deleteCommitteeMemberEndpoint,
+	type GrantCommitteeMemberPermissionRequest,
+	type GrantCommitteeMemberPermissionResponse,
+	grantCommitteeMemberPermissionEndpoint,
+	type ListCommitteeMemberPermissionsResponse,
 	type ListCommitteeMembersResponse,
+	listCommitteeMemberPermissionsEndpoint,
 	listCommitteeMembersEndpoint,
+	type RevokeCommitteeMemberPermissionResponse,
+	revokeCommitteeMemberPermissionEndpoint,
 	type UpdateCommitteeMemberRequest,
 	type UpdateCommitteeMemberResponse,
 	updateCommitteeMemberEndpoint,
@@ -52,5 +59,43 @@ export async function deleteCommitteeMember(
 ): Promise<DeleteCommitteeMemberResponse> {
 	return callNoBodyApi(deleteCommitteeMemberEndpoint, {
 		pathParams: { id },
+	});
+}
+
+/**
+ * GET /committee/members/:id/permissions
+ * 委員メンバーの権限一覧を取得
+ */
+export async function listCommitteeMemberPermissions(
+	id: string
+): Promise<ListCommitteeMemberPermissionsResponse> {
+	return callGetApi(listCommitteeMemberPermissionsEndpoint, {
+		pathParams: { id },
+	});
+}
+
+/**
+ * POST /committee/members/:id/permissions
+ * 委員メンバーに権限を付与
+ */
+export async function grantCommitteeMemberPermission(
+	id: string,
+	body: GrantCommitteeMemberPermissionRequest
+): Promise<GrantCommitteeMemberPermissionResponse> {
+	return callBodyApi(grantCommitteeMemberPermissionEndpoint, body, {
+		pathParams: { id },
+	});
+}
+
+/**
+ * DELETE /committee/members/:id/permissions/:permissionId
+ * 委員メンバーの権限を削除
+ */
+export async function revokeCommitteeMemberPermission(
+	id: string,
+	permissionId: string
+): Promise<RevokeCommitteeMemberPermissionResponse> {
+	return callNoBodyApi(revokeCommitteeMemberPermissionEndpoint, {
+		pathParams: { id, permissionId },
 	});
 }
