@@ -209,7 +209,10 @@ function RouteComponent() {
 			<NoticeDetailDialog
 				noticeId={detailNoticeId}
 				currentUserId={user?.id ?? ""}
-				onClose={() => setDetailNoticeId(null)}
+				onClose={() => {
+					setDetailNoticeId(null);
+					fetchNotices();
+				}}
 				onEdit={handleEditFromDetail}
 				onDelete={handleDeleteFromDetail}
 			/>

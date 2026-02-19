@@ -1,12 +1,113 @@
 import { Dialog, Text } from "@radix-ui/themes";
 import type { GetNoticeResponse } from "@sos26/shared";
-import { IconX } from "@tabler/icons-react";
+import { IconPlus, IconTrash, IconX } from "@tabler/icons-react";
+import Avatar from "boring-avatars";
 import { useEffect, useState } from "react";
-import { Button, IconButton } from "@/components/primitives";
-import { getNotice } from "@/lib/api/committee-notice";
+import { Button, IconButton, Select } from "@/components/primitives";
+import { listCommitteeMembers } from "@/lib/api/committee-member";
+import {
+	addCollaborator,
+	getNotice,
+	removeCollaborator,
+} from "@/lib/api/committee-notice";
 import styles from "./NoticeDetailDialog.module.scss";
 
 type NoticeDetail = GetNoticeResponse["notice"];
+type CommitteeMember = {
+	id: string;
+	userId: string;
+	user: { id: string; name: string };
+};
+
+// ─────────────────────────────────────────────────────────────
+// 共同編集者セクション
+// ─────────────────────────────────────────────────────────────
+
+type CollaboratorsSectionProps = {
+	notice: NoticeDetail;
+	isOwner: boolean;
+	availableMembers: CommitteeMember[];
+	removingId: string | null;
+	isAdding: boolean;
+	selectedUserId: string;
+	onSelectedUserIdChange: (id: string) => void;
+	onAdd: () => void;
+	onRemove: (collaboratorId: string) => void;
+};
+
+function CollaboratorsSection({
+	notice,
+	isOwner,
+	availableMembers,
+	removingId,
+	isAdding,
+	selectedUserId,
+	onSelectedUserIdChange,
+	onAdd,
+	onRemove,
+}: CollaboratorsSectionProps) {
+	return (
+		<div className={styles.collaboratorsSection}>
+			<Text size="2" weight="medium">
+				共同編集者
+			</Text>
+
+			{notice.collaborators.length === 0 ? (
+				<Text size="2" color="gray">
+					共同編集者なし
+				</Text>
+			) : (
+				<ul className={styles.collaboratorList}>
+					{notice.collaborators.map(c => (
+						<li key={c.id} className={styles.collaboratorItem}>
+							<Avatar size={20} name={c.user.name} variant="beam" />
+							<Text size="2">{c.user.name}</Text>
+							{isOwner && (
+								<IconButton
+									aria-label={`${c.user.name}を削除`}
+									onClick={() => onRemove(c.id)}
+									disabled={removingId === c.id}
+								>
+									<IconTrash size={14} />
+								</IconButton>
+							)}
+						</li>
+					))}
+				</ul>
+			)}
+
+			{isOwner && (
+				<div className={styles.addCollaborator}>
+					<Select
+						options={availableMembers.map(m => ({
+							value: m.user.id,
+							label: m.user.name,
+						}))}
+						value={selectedUserId}
+						onValueChange={onSelectedUserIdChange}
+						placeholder="追加するメンバーを選択"
+						size="2"
+						disabled={availableMembers.length === 0}
+					/>
+					<Button
+						intent="secondary"
+						size="2"
+						onClick={onAdd}
+						loading={isAdding}
+						disabled={!selectedUserId}
+					>
+						<IconPlus size={14} />
+						追加
+					</Button>
+				</div>
+			)}
+		</div>
+	);
+}
+
+// ─────────────────────────────────────────────────────────────
+// 詳細ダイアログ
+// ─────────────────────────────────────────────────────────────
 
 type Props = {
 	noticeId: string | null;
@@ -25,15 +126,25 @@ export function NoticeDetailDialog({
 }: Props) {
 	const [notice, setNotice] = useState<NoticeDetail | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
+	const [committeeMembers, setCommitteeMembers] = useState<CommitteeMember[]>(
+		[]
+	);
+	const [selectedUserId, setSelectedUserId] = useState("");
+	const [isAdding, setIsAdding] = useState(false);
+	const [removingId, setRemovingId] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (!noticeId) {
 			setNotice(null);
+			setCommitteeMembers([]);
 			return;
 		}
 		setIsLoading(true);
-		getNotice(noticeId)
-			.then(res => setNotice(res.notice))
+		Promise.all([getNotice(noticeId), listCommitteeMembers()])
+			.then(([noticeRes, membersRes]) => {
+				setNotice(noticeRes.notice);
+				setCommitteeMembers(membersRes.committeeMembers);
+			})
 			.catch(console.error)
 			.finally(() => setIsLoading(false));
 	}, [noticeId]);
@@ -42,6 +153,45 @@ export function NoticeDetailDialog({
 	const isCollaborator =
 		notice?.collaborators.some(c => c.user.id === currentUserId) ?? false;
 	const canEdit = isOwner || isCollaborator;
+
+	const collaboratorUserIds = new Set(
+		notice?.collaborators.map(c => c.user.id) ?? []
+	);
+	const availableMembers = committeeMembers.filter(
+		m => m.user.id !== notice?.ownerId && !collaboratorUserIds.has(m.user.id)
+	);
+
+	const refreshNotice = async (id: string) => {
+		const res = await getNotice(id);
+		setNotice(res.notice);
+	};
+
+	const handleAddCollaborator = async () => {
+		if (!notice || !selectedUserId) return;
+		setIsAdding(true);
+		try {
+			await addCollaborator(notice.id, { userId: selectedUserId });
+			setSelectedUserId("");
+			await refreshNotice(notice.id);
+		} catch (error) {
+			console.error(error);
+		} finally {
+			setIsAdding(false);
+		}
+	};
+
+	const handleRemoveCollaborator = async (collaboratorId: string) => {
+		if (!notice) return;
+		setRemovingId(collaboratorId);
+		try {
+			await removeCollaborator(notice.id, collaboratorId);
+			await refreshNotice(notice.id);
+		} catch (error) {
+			console.error(error);
+		} finally {
+			setRemovingId(null);
+		}
+	};
 
 	return (
 		<Dialog.Root
@@ -70,6 +220,7 @@ export function NoticeDetailDialog({
 							{notice.owner.name} ・{" "}
 							{notice.updatedAt.toLocaleDateString("ja-JP")}
 						</Text>
+
 						{notice.body ? (
 							<div
 								className={styles.body}
@@ -78,10 +229,22 @@ export function NoticeDetailDialog({
 								dangerouslySetInnerHTML={{ __html: notice.body }}
 							/>
 						) : (
-							<Text size="2" color="gray">
+							<Text size="2" color="gray" mb="4">
 								本文なし
 							</Text>
 						)}
+
+						<CollaboratorsSection
+							notice={notice}
+							isOwner={isOwner}
+							availableMembers={availableMembers}
+							removingId={removingId}
+							isAdding={isAdding}
+							selectedUserId={selectedUserId}
+							onSelectedUserIdChange={setSelectedUserId}
+							onAdd={handleAddCollaborator}
+							onRemove={handleRemoveCollaborator}
+						/>
 					</>
 				) : null}
 
