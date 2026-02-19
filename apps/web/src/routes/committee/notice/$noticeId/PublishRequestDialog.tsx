@@ -122,7 +122,7 @@ export function PublishRequestDialog({
 		setIsSubmitting(true);
 		setError(null);
 		try {
-			const deliveredAt = new Date(`${date}T${time}`);
+			const deliveredAt = new Date(`${date}T${time}+09:00`);
 			await createNoticeAuthorization(noticeId, {
 				requestedToId: approverId,
 				deliveredAt,
