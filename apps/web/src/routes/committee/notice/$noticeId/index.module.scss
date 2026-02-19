@@ -63,6 +63,15 @@
 
 /* ─── Body ─── */
 
+/* ─── Delete confirm ─── */
+
+.deleteActions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-2);
+	margin-top: var(--space-4);
+}
+
 .body {
 	font-size: var(--font-size-2);
 	line-height: var(--line-height-3);
@@ -84,13 +93,4 @@
 	em {
 		font-style: italic;
 	}
-}
-
-/* ─── Delete confirm ─── */
-
-.deleteActions {
-	display: flex;
-	justify-content: flex-end;
-	gap: var(--space-2);
-	margin-top: var(--space-4);
 }
