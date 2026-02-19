@@ -16,6 +16,7 @@
   - コンポーネント: `docs/apps/web/components.md`
   - RichTextEditor: `docs/apps/web/rich-text-editor.md`
   - DataTable: `docs/apps/web/data-table.md`
+  - トースト通知: `docs/apps/web/toast.md`
   - スタイリング: `docs/apps/web/styling.md`
   - 環境変数: `docs/apps/web/environment-variables.md`
 - API 開発

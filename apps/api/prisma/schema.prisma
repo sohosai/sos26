@@ -70,6 +70,13 @@ model User {
   noticeCollaborations          NoticeCollaborator[]
   requestedNoticeAuthorizations NoticeAuthorization[] @relation("NoticeRequestedBy")
   receivedNoticeAuthorizations  NoticeAuthorization[] @relation("NoticeRequestedTo")
+
+  //Form関連
+  forms                       Form[]              @relation("FormOwner")
+  collaboratingForms          FormCollaborator[]
+  requestedFormAuthorizations FormAuthorization[] @relation("FormRequestedBy")
+  receivedFormAuthorizations  FormAuthorization[] @relation("FormRequestedTo")
+  formResponses               FormResponse[]      @relation("FormRespondent")
   noticeReadStatuses            NoticeReadStatus[]
 
   userPushSubscriptions UserPushSubscription[]
@@ -120,6 +127,7 @@ model Project {
 
   projectMembers   ProjectMember[]
   noticeDeliveries NoticeDelivery[]
+  formDeliveries   FormDelivery[]
 
   @@index([ownerId])
   @@index([subOwnerId])
@@ -332,6 +340,264 @@ model NoticeDelivery {
   createdAt DateTime @default(now())
 
   @@unique([noticeAuthorizationId, projectId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// フォーム関連
+// ─────────────────────────────────────────────────────────────
+
+enum FormItemType {
+  //テキスト（短文）
+  TEXT
+
+  //テキスト（長文）
+  TEXTAREA
+
+  //単一選択
+  SELECT
+
+  //複数選択
+  CHECKBOX
+
+  //数値
+  NUMBER
+
+  //ファイル
+  FILE
+}
+
+//フォームの作成
+model Form {
+  id String @id @default(cuid())
+
+  //フォームの作成者
+  ownerId String
+  owner   User   @relation("FormOwner", fields: [ownerId], references: [id])
+
+  //共同編集者
+  collaborators FormCollaborator[]
+
+  //配信許可など
+  authorizations FormAuthorization[]
+
+  //タイトル
+  title String @default("無題のフォーム")
+
+  //説明
+  description String?
+
+  //フォーム項目
+  items FormItem[]
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+//フォームの質問項目
+model FormItem {
+  id String @id @default(cuid())
+
+  formId String
+  form   Form   @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  //質問文
+  label String
+
+  //回答タイプ
+  type FormItemType
+
+  //必須かどうか
+  required Boolean @default(false)
+
+  //表示順
+  sortOrder Int
+
+  //選択肢（select/checkbox用）
+  options FormItemOption[]
+
+  //回答
+  answers FormAnswer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([formId])
+}
+
+//フォーム項目の選択肢（select/checkbox用）
+model FormItemOption {
+  id String @id @default(cuid())
+
+  formItemId String
+  formItem   FormItem @relation(fields: [formItemId], references: [id], onDelete: Cascade)
+
+  //選択肢のラベル
+  label String
+
+  //表示順
+  sortOrder Int
+
+  //回答での選択
+  selectedIn FormAnswerSelectedOption[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([formItemId])
+}
+
+//フォームの共同編集者
+model FormCollaborator {
+  id String @id @default(cuid())
+
+  formId String
+  userId String
+
+  form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  //編集権限を持つのか
+  isWrite Boolean @default(false)
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([formId, userId])
+}
+
+//Formに関する承認待ちの状態Enum
+enum FormAuthorizationStatus {
+  //承認待ち
+  PENDING
+  //承認済み（時間になれば配信される）
+  APPROVED
+  //承認されず
+  REJECTED
+}
+
+//フォームの配信許可
+model FormAuthorization {
+  id String @id @default(cuid())
+
+  formId String
+  form   Form   @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  //承認を求めた人
+  requestedById String
+  requestedBy   User   @relation("FormRequestedBy", fields: [requestedById], references: [id])
+
+  //承認を求められた人
+  requestedToId String
+  requestedTo   User   @relation("FormRequestedTo", fields: [requestedToId], references: [id])
+
+  //審査のステータス
+  status FormAuthorizationStatus @default(PENDING)
+
+  //審査を行った日付
+  decidedAt DateTime?
+
+  //配信したい日時
+  scheduledSendAt DateTime
+
+  //回答期限
+  deadlineAt DateTime?
+
+  //期限後の回答を許可するか
+  allowLateResponse Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveries FormDelivery[]
+}
+
+//フォームの配信
+model FormDelivery {
+  id String @id @default(cuid())
+
+  formAuthorizationId String
+  projectId           String
+
+  formAuthorization FormAuthorization @relation(fields: [formAuthorizationId], references: [id], onDelete: Cascade)
+
+  //配信先の企画
+  project Project @relation(fields: [projectId], references: [id])
+
+  //回答
+  responses FormResponse[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([formAuthorizationId, projectId])
+}
+
+//フォームへの回答（1人1回の送信単位）
+model FormResponse {
+  id String @id @default(cuid())
+
+  formDeliveryId String
+  formDelivery   FormDelivery @relation(fields: [formDeliveryId], references: [id], onDelete: Cascade)
+
+  //回答者
+  respondentId String
+  respondent   User   @relation("FormRespondent", fields: [respondentId], references: [id])
+
+  //各項目への回答
+  answers FormAnswer[]
+
+  submittedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([formDeliveryId])
+  @@index([respondentId])
+}
+
+//各項目への回答（1項目1レコード）
+model FormAnswer {
+  id String @id @default(cuid())
+
+  formResponseId String
+  formResponse   FormResponse @relation(fields: [formResponseId], references: [id], onDelete: Cascade)
+
+  formItemId String
+  formItem   FormItem @relation(fields: [formItemId], references: [id])
+
+  //テキスト回答（text, textarea用）
+  textValue String?
+
+  //数値回答（number用）
+  numberValue Float?
+
+  //ファイルURL（file用）
+  fileUrl String?
+
+  //選択肢回答（select, checkbox用）
+  selectedOptions FormAnswerSelectedOption[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([formResponseId, formItemId])
+  @@index([formResponseId])
+  @@index([formItemId])
+}
+
+//選択肢の回答（select/checkbox用の中間テーブル）
+model FormAnswerSelectedOption {
+  id String @id @default(cuid())
+
+  formAnswerId     String
+  formItemOptionId String
+
+  formAnswer     FormAnswer     @relation(fields: [formAnswerId], references: [id], onDelete: Cascade)
+  formItemOption FormItemOption @relation(fields: [formItemOptionId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([formAnswerId, formItemOptionId])
 }
 
 //お知らせの既読状態
