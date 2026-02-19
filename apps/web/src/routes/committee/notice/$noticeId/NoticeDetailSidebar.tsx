@@ -1,7 +1,6 @@
 import { Badge, Separator, Text } from "@radix-ui/themes";
 import type { GetNoticeResponse } from "@sos26/shared";
 import {
-	IconChartBar,
 	IconCheck,
 	IconPlus,
 	IconSend,
@@ -12,7 +11,6 @@ import Avatar from "boring-avatars";
 import { useState } from "react";
 import { Button, IconButton } from "@/components/primitives";
 import { AddCollaboratorDialog } from "./AddCollaboratorDialog";
-import { DeliveryStatusDialog } from "./DeliveryStatusDialog";
 import styles from "./NoticeDetailSidebar.module.scss";
 import { PublishRequestDialog } from "./PublishRequestDialog";
 import { formatDateTime } from "./utils";
@@ -59,7 +57,6 @@ export function NoticeDetailSidebar({
 }: Props) {
 	const [addCollaboratorOpen, setAddCollaboratorOpen] = useState(false);
 	const [publishRequestOpen, setPublishRequestOpen] = useState(false);
-	const [deliveryStatusOpen, setDeliveryStatusOpen] = useState(false);
 	const [approvingId, setApprovingId] = useState<string | null>(null);
 	const [rejectingId, setRejectingId] = useState<string | null>(null);
 
@@ -226,22 +223,6 @@ export function NoticeDetailSidebar({
 					</>
 				)}
 
-				{hasApprovedAuth && canEdit && (
-					<>
-						<Separator size="4" />
-						<div className={styles.section}>
-							<Button
-								intent="secondary"
-								size="2"
-								onClick={() => setDeliveryStatusOpen(true)}
-							>
-								<IconChartBar size={16} />
-								配信状況
-							</Button>
-						</div>
-					</>
-				)}
-
 				{(canEdit || isOwner) && (
 					<>
 						<Separator size="4" />
@@ -275,12 +256,6 @@ export function NoticeDetailSidebar({
 				noticeId={noticeId}
 				collaborators={notice.collaborators}
 				onSuccess={onPublishSuccess}
-			/>
-
-			<DeliveryStatusDialog
-				open={deliveryStatusOpen}
-				onOpenChange={setDeliveryStatusOpen}
-				noticeId={noticeId}
 			/>
 		</>
 	);
