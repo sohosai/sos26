@@ -94,9 +94,13 @@ function RouteComponent() {
 
 	const handleAddCollaborator = async (userId: string) => {
 		if (!notice) return;
-		await addCollaborator(notice.id, { userId });
-		const res = await getNotice(notice.id);
-		setNotice(res.notice);
+		try {
+			await addCollaborator(notice.id, { userId });
+			const res = await getNotice(notice.id);
+			setNotice(res.notice);
+		} catch (error) {
+			console.error(error);
+		}
 	};
 
 	const handleRemoveCollaborator = async (collaboratorId: string) => {
