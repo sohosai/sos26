@@ -128,14 +128,14 @@ export function NoticeDetailSidebar({
 							</div>
 						)}
 						{isOwner && (
-							<button
-								type="button"
-								className={styles.addButton}
+							<Button
+								intent="secondary"
+								size="2"
 								onClick={() => setAddCollaboratorOpen(true)}
 							>
 								<IconPlus size={14} />
-								<Text size="2">共同編集者を追加</Text>
-							</button>
+								共同編集者を追加
+							</Button>
 						)}
 					</div>
 
