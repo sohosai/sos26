@@ -115,3 +115,77 @@ export const deleteCommitteeMemberResponseSchema = z.object({
 export type DeleteCommitteeMemberResponse = z.infer<
 	typeof deleteCommitteeMemberResponseSchema
 >;
+
+// ─────────────────────────────────────────────────────────────
+// 権限管理
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 実委人権限スキーマ
+ * Prisma の CommitteePermission enum に対応
+ */
+export const committeePermissionSchema = z.enum([
+	"MEMBER_EDIT",
+	"NOTICE_DELIVER",
+	"FORM_DELIVER",
+]);
+export type CommitteePermission = z.infer<typeof committeePermissionSchema>;
+
+/**
+ * 実委人権限レコードスキーマ
+ */
+export const committeeMemberPermissionSchema = z.object({
+	id: z.cuid(),
+	committeeMemberId: z.cuid(),
+	permission: committeePermissionSchema,
+	createdAt: z.coerce.date(),
+});
+export type CommitteeMemberPermission = z.infer<
+	typeof committeeMemberPermissionSchema
+>;
+
+// GET /committee/members/:id/permissions
+
+/**
+ * 権限一覧レスポンス
+ */
+export const listCommitteeMemberPermissionsResponseSchema = z.object({
+	permissions: z.array(committeeMemberPermissionSchema),
+});
+export type ListCommitteeMemberPermissionsResponse = z.infer<
+	typeof listCommitteeMemberPermissionsResponseSchema
+>;
+
+// POST /committee/members/:id/permissions
+
+/**
+ * 権限付与リクエスト
+ */
+export const grantCommitteeMemberPermissionRequestSchema = z.object({
+	permission: committeePermissionSchema,
+});
+export type GrantCommitteeMemberPermissionRequest = z.infer<
+	typeof grantCommitteeMemberPermissionRequestSchema
+>;
+
+/**
+ * 権限付与レスポンス
+ */
+export const grantCommitteeMemberPermissionResponseSchema = z.object({
+	permissionRecord: committeeMemberPermissionSchema,
+});
+export type GrantCommitteeMemberPermissionResponse = z.infer<
+	typeof grantCommitteeMemberPermissionResponseSchema
+>;
+
+// DELETE /committee/members/:id/permissions/:permission
+
+/**
+ * 権限削除レスポンス
+ */
+export const revokeCommitteeMemberPermissionResponseSchema = z.object({
+	success: z.literal(true),
+});
+export type RevokeCommitteeMemberPermissionResponse = z.infer<
+	typeof revokeCommitteeMemberPermissionResponseSchema
+>;
