@@ -577,7 +577,7 @@ committeeNoticeRoute.get(
 		}
 
 		const deliveries = await prisma.noticeDelivery.findMany({
-			where: { noticeAuthorization: { noticeId } },
+			where: { noticeAuthorization: { noticeId, status: "APPROVED" } },
 			include: {
 				project: { select: { id: true, name: true } },
 				noticeAuthorization: {
