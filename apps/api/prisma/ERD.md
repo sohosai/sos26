@@ -121,6 +121,85 @@ erDiagram
   String projectId FK
   DateTime createdAt
 }
+"Form" {
+  String id PK
+  String ownerId FK
+  String title
+  String description "nullable"
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"FormItem" {
+  String id PK
+  String formId FK
+  String label
+  FormItemType type
+  Boolean required
+  Int sortOrder
+  DateTime createdAt
+  DateTime updatedAt
+}
+"FormItemOption" {
+  String id PK
+  String formItemId FK
+  String label
+  Int sortOrder
+  DateTime createdAt
+  DateTime updatedAt
+}
+"FormCollaborator" {
+  String id PK
+  String formId FK
+  String userId FK
+  Boolean isWrite
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"FormAuthorization" {
+  String id PK
+  String formId FK
+  String requestedById FK
+  String requestedToId FK
+  FormAuthorizationStatus status
+  DateTime decidedAt "nullable"
+  DateTime scheduledSendAt
+  DateTime deadlineAt "nullable"
+  Boolean allowLateResponse
+  DateTime createdAt
+  DateTime updatedAt
+}
+"FormDelivery" {
+  String id PK
+  String formAuthorizationId FK
+  String projectId FK
+  DateTime createdAt
+}
+"FormResponse" {
+  String id PK
+  String formDeliveryId FK
+  String respondentId FK
+  DateTime submittedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"FormAnswer" {
+  String id PK
+  String formResponseId FK
+  String formItemId FK
+  String textValue "nullable"
+  Float numberValue "nullable"
+  String fileUrl "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"FormAnswerSelectedOption" {
+  String id PK
+  String formAnswerId FK
+  String formItemOptionId FK
+  DateTime createdAt
+}
 "Project" }o--|| "User" : owner
 "Project" }o--o| "User" : subOwner
 "ProjectMember" }o--|| "Project" : project
@@ -137,6 +216,22 @@ erDiagram
 "NoticeAuthorization" }o--|| "User" : requestedTo
 "NoticeDelivery" }o--|| "NoticeAuthorization" : noticeAuthorization
 "NoticeDelivery" }o--|| "Project" : project
+"Form" }o--|| "User" : owner
+"FormItem" }o--|| "Form" : form
+"FormItemOption" }o--|| "FormItem" : formItem
+"FormCollaborator" }o--|| "Form" : form
+"FormCollaborator" }o--|| "User" : user
+"FormAuthorization" }o--|| "Form" : form
+"FormAuthorization" }o--|| "User" : requestedBy
+"FormAuthorization" }o--|| "User" : requestedTo
+"FormDelivery" }o--|| "FormAuthorization" : formAuthorization
+"FormDelivery" }o--|| "Project" : project
+"FormResponse" }o--|| "FormDelivery" : formDelivery
+"FormResponse" }o--|| "User" : respondent
+"FormAnswer" }o--|| "FormResponse" : formResponse
+"FormAnswer" }o--|| "FormItem" : formItem
+"FormAnswerSelectedOption" }o--|| "FormAnswer" : formAnswer
+"FormAnswerSelectedOption" }o--|| "FormItemOption" : formItemOption
 ```
 
 ### `EmailVerification`
@@ -289,4 +384,110 @@ Properties as follows:
 - `id`:
 - `noticeAuthorizationId`:
 - `projectId`:
+- `createdAt`:
+
+### `Form`
+
+Properties as follows:
+
+- `id`:
+- `ownerId`:
+- `title`:
+- `description`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `FormItem`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `label`:
+- `type`:
+- `required`:
+- `sortOrder`:
+- `createdAt`:
+- `updatedAt`:
+
+### `FormItemOption`
+
+Properties as follows:
+
+- `id`:
+- `formItemId`:
+- `label`:
+- `sortOrder`:
+- `createdAt`:
+- `updatedAt`:
+
+### `FormCollaborator`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `userId`:
+- `isWrite`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `FormAuthorization`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `requestedById`:
+- `requestedToId`:
+- `status`:
+- `decidedAt`:
+- `scheduledSendAt`:
+- `deadlineAt`:
+- `allowLateResponse`:
+- `createdAt`:
+- `updatedAt`:
+
+### `FormDelivery`
+
+Properties as follows:
+
+- `id`:
+- `formAuthorizationId`:
+- `projectId`:
+- `createdAt`:
+
+### `FormResponse`
+
+Properties as follows:
+
+- `id`:
+- `formDeliveryId`:
+- `respondentId`:
+- `submittedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `FormAnswer`
+
+Properties as follows:
+
+- `id`:
+- `formResponseId`:
+- `formItemId`:
+- `textValue`:
+- `numberValue`:
+- `fileUrl`:
+- `createdAt`:
+- `updatedAt`:
+
+### `FormAnswerSelectedOption`
+
+Properties as follows:
+
+- `id`:
+- `formAnswerId`:
+- `formItemOptionId`:
 - `createdAt`:
