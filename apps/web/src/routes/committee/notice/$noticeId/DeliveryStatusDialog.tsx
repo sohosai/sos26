@@ -1,5 +1,8 @@
 import { Badge, Dialog, Text } from "@radix-ui/themes";
-import type { GetNoticeStatusResponse } from "@sos26/shared";
+import type {
+	GetNoticeStatusResponse,
+	NoticeAuthorizationStatus,
+} from "@sos26/shared";
 import { IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { IconButton } from "@/components/primitives";
@@ -17,14 +20,26 @@ type Props = {
 export function DeliveryStatusDialog({ open, onOpenChange, noticeId }: Props) {
 	const [deliveries, setDeliveries] = useState<Delivery[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (!open) return;
+		let cancelled = false;
 		setIsLoading(true);
+		setError(null);
 		getNoticeStatus(noticeId)
-			.then(res => setDeliveries(res.deliveries))
-			.catch(console.error)
-			.finally(() => setIsLoading(false));
+			.then(res => {
+				if (!cancelled) setDeliveries(res.deliveries);
+			})
+			.catch(() => {
+				if (!cancelled) setError("配信状況の取得に失敗しました。");
+			})
+			.finally(() => {
+				if (!cancelled) setIsLoading(false);
+			});
+		return () => {
+			cancelled = true;
+		};
 	}, [open, noticeId]);
 
 	return (
@@ -43,6 +58,10 @@ export function DeliveryStatusDialog({ open, onOpenChange, noticeId }: Props) {
 				{isLoading ? (
 					<Text size="2" color="gray">
 						読み込み中...
+					</Text>
+				) : error ? (
+					<Text size="2" color="red">
+						{error}
 					</Text>
 				) : deliveries.length === 0 ? (
 					<Text size="2" color="gray">
@@ -76,7 +95,7 @@ export function DeliveryStatusDialog({ open, onOpenChange, noticeId }: Props) {
 	);
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: { status: NoticeAuthorizationStatus }) {
 	switch (status) {
 		case "APPROVED":
 			return (
@@ -96,8 +115,6 @@ function StatusBadge({ status }: { status: string }) {
 					却下
 				</Badge>
 			);
-		default:
-			return null;
 	}
 }
 

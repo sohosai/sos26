@@ -23,6 +23,7 @@ import { useAuthStore } from "@/lib/auth";
 import { CreateNoticeDialog } from "../CreateNoticeDialog";
 import styles from "./index.module.scss";
 import { NoticeDetailSidebar } from "./NoticeDetailSidebar";
+import { formatDateTime } from "./utils";
 
 type NoticeDetail = GetNoticeResponse["notice"];
 type CommitteeMember = {
@@ -119,17 +120,25 @@ function RouteComponent() {
 	};
 
 	const handleApprove = async (authorizationId: string) => {
-		await updateNoticeAuthorization(noticeId, authorizationId, {
-			status: "APPROVED",
-		});
-		await fetchNotice();
+		try {
+			await updateNoticeAuthorization(noticeId, authorizationId, {
+				status: "APPROVED",
+			});
+			await fetchNotice();
+		} catch (error) {
+			console.error(error);
+		}
 	};
 
 	const handleReject = async (authorizationId: string) => {
-		await updateNoticeAuthorization(noticeId, authorizationId, {
-			status: "REJECTED",
-		});
-		await fetchNotice();
+		try {
+			await updateNoticeAuthorization(noticeId, authorizationId, {
+				status: "REJECTED",
+			});
+			await fetchNotice();
+		} catch (error) {
+			console.error(error);
+		}
 	};
 
 	if (isLoading) {
@@ -181,14 +190,14 @@ function RouteComponent() {
 						<span className={styles.metaItem}>
 							<IconCalendar size={14} />
 							<Text size="2" color="gray">
-								作成: {formatDate(notice.createdAt)}
+								作成: {formatDateTime(notice.createdAt)}
 							</Text>
 						</span>
 						{notice.updatedAt.getTime() !== notice.createdAt.getTime() && (
 							<span className={styles.metaItem}>
 								<IconClock size={14} />
 								<Text size="2" color="gray">
-									更新: {formatDate(notice.updatedAt)}
+									更新: {formatDateTime(notice.updatedAt)}
 								</Text>
 							</span>
 						)}
@@ -224,6 +233,7 @@ function RouteComponent() {
 				onRemoveCollaborator={handleRemoveCollaborator}
 				onApprove={handleApprove}
 				onReject={handleReject}
+				onPublishSuccess={fetchNotice}
 				onEdit={() => setEditDialogOpen(true)}
 				onDelete={() => setDeleteConfirmOpen(true)}
 			/>
@@ -307,13 +317,4 @@ function NoticeStatusBadge({ notice }: { notice: NoticeDetail }) {
 			</Badge>
 		</div>
 	);
-}
-
-function formatDate(date: Date): string {
-	const y = date.getFullYear();
-	const m = (date.getMonth() + 1).toString().padStart(2, "0");
-	const d = date.getDate().toString().padStart(2, "0");
-	const h = date.getHours().toString().padStart(2, "0");
-	const min = date.getMinutes().toString().padStart(2, "0");
-	return `${y}年${m}月${d}日 ${h}:${min}`;
 }

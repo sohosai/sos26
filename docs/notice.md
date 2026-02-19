@@ -18,7 +18,7 @@
 
 ## 概要
 
-お知らせは **実委人が作成・配信** し、**企画人が受信・確認** する一方向の通知機能。
+お知らせは **実委人が作成・配信** し、**企画人が受信・確認** する一方c向の通知機能。
 
 ### ライフサイクル
 
@@ -708,15 +708,13 @@ apps/web/src/routes/committee/notice/
 23. ✅ **共同編集者追加ダイアログ**: `AddCollaboratorDialog` — 検索テキストフィールドでリアルタイムフィルタ、メンバーごとに「追加」ボタン。`POST /committee/notices/:noticeId/collaborators` に接続済み。追加後もダイアログを閉じず連続追加可能。追加可能なメンバーは `listCommitteeMembers` で取得し、オーナーと既存共同編集者を除外
 24. ✅ **共同編集者削除**: 各共同編集者の横に `IconTrash` ボタン。`DELETE /committee/notices/:noticeId/collaborators/:collaboratorId` に接続済み
 
-### Phase 7: フロントエンド — 実委側 配信承認フロー 🔧 一部完了（25 のみ残り）
+### Phase 7: フロントエンド — 実委側 配信承認フロー ✅ 完了
 
-25. 🔧 **公開申請ダイアログ**: `PublishRequestDialog` の UI モックを作成済み。以下のフィールドを持つ:
-    - 承認依頼先（Select — 現在モックデータ）
+25. ✅ **公開申請ダイアログ**: `PublishRequestDialog` を API 接続済み。以下のフィールドを持つ:
+    - 承認依頼先（Select — `notice.collaborators` から動的取得）
     - 公開日時（date + time input）
-    - 公開先プロジェクト（Checkbox リスト — 現在モックデータ）
-    - **TODO**: `POST /committee/notices/:noticeId/authorizations` への API 接続
-    - **TODO**: 承認依頼先を共同編集者リストから動的に取得
-    - **TODO**: 公開先プロジェクトリストを取得する API が必要（実委レベルでプロジェクト一覧を取得するエンドポイント）
+    - 公開先プロジェクト（Checkbox リスト — `GET /committee/projects` から動的取得、検索フィルタ・全選択/解除対応）
+    - `POST /committee/notices/:noticeId/authorizations` に接続済み
 26. ✅ **ステータスバッジ表示**: 詳細ページに `NoticeStatusBadge` を実装。`notice.authorizations` の最新エントリから状態を導出:
     - 承認なし → 「公開申請前」（gray）
     - 最新が PENDING → 「承認待機中」（orange）

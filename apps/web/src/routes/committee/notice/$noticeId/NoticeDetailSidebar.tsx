@@ -15,6 +15,7 @@ import { AddCollaboratorDialog } from "./AddCollaboratorDialog";
 import { DeliveryStatusDialog } from "./DeliveryStatusDialog";
 import styles from "./NoticeDetailSidebar.module.scss";
 import { PublishRequestDialog } from "./PublishRequestDialog";
+import { formatDateTime } from "./utils";
 
 type NoticeDetail = GetNoticeResponse["notice"];
 
@@ -35,6 +36,7 @@ type Props = {
 	onRemoveCollaborator: (collaboratorId: string) => void;
 	onApprove: (authorizationId: string) => Promise<void>;
 	onReject: (authorizationId: string) => Promise<void>;
+	onPublishSuccess: () => void;
 	onEdit: () => void;
 	onDelete: () => void;
 };
@@ -51,6 +53,7 @@ export function NoticeDetailSidebar({
 	onRemoveCollaborator,
 	onApprove,
 	onReject,
+	onPublishSuccess,
 	onEdit,
 	onDelete,
 }: Props) {
@@ -150,7 +153,7 @@ export function NoticeDetailSidebar({
 					)}
 				</div>
 
-				{isOwner && (
+				{canEdit && (
 					<>
 						<Separator size="4" />
 						<div className={styles.section}>
@@ -180,7 +183,7 @@ export function NoticeDetailSidebar({
 								<div className={styles.authorizationMeta}>
 									<Text size="2">申請者: {pendingAuth.requestedBy.name}</Text>
 									<Text size="2">
-										公開希望日時: {formatDeliveredAt(pendingAuth.deliveredAt)}
+										公開希望日時: {formatDateTime(pendingAuth.deliveredAt)}
 									</Text>
 								</div>
 								{pendingAuth.deliveries.length > 0 && (
@@ -219,7 +222,7 @@ export function NoticeDetailSidebar({
 					</>
 				)}
 
-				{hasApprovedAuth && (isOwner || canEdit) && (
+				{hasApprovedAuth && canEdit && (
 					<>
 						<Separator size="4" />
 						<div className={styles.section}>
@@ -263,6 +266,9 @@ export function NoticeDetailSidebar({
 			<PublishRequestDialog
 				open={publishRequestOpen}
 				onOpenChange={setPublishRequestOpen}
+				noticeId={noticeId}
+				collaborators={notice.collaborators}
+				onSuccess={onPublishSuccess}
 			/>
 
 			<DeliveryStatusDialog
@@ -272,13 +278,4 @@ export function NoticeDetailSidebar({
 			/>
 		</>
 	);
-}
-
-function formatDeliveredAt(date: Date): string {
-	const y = date.getFullYear();
-	const m = (date.getMonth() + 1).toString().padStart(2, "0");
-	const d = date.getDate().toString().padStart(2, "0");
-	const h = date.getHours().toString().padStart(2, "0");
-	const min = date.getMinutes().toString().padStart(2, "0");
-	return `${y}/${m}/${d} ${h}:${min}`;
 }

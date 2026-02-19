@@ -1,30 +1,37 @@
-import { Dialog, Text } from "@radix-ui/themes";
-import { IconSend, IconX } from "@tabler/icons-react";
-import { useState } from "react";
+import { Dialog, TextField as RadixTextField, Text } from "@radix-ui/themes";
+import { IconSearch, IconSend, IconX } from "@tabler/icons-react";
+import { useEffect, useMemo, useState } from "react";
+
 import { Button, Checkbox, IconButton, Select } from "@/components/primitives";
+import { createNoticeAuthorization } from "@/lib/api/committee-notice";
+import { listCommitteeProjects } from "@/lib/api/committee-project";
 import styles from "./PublishRequestDialog.module.scss";
 
-// TODO: 実際のAPIに差し替える
-const mockApprovers = [
-	{ value: "user-1", label: "山田 太郎（局長）" },
-	{ value: "user-2", label: "佐藤 次郎（副局長）" },
-	{ value: "user-3", label: "高橋 三郎（部長）" },
-];
+type Collaborator = {
+	id: string;
+	user: { id: string; name: string };
+};
 
-const mockProjects = [
-	{ id: "proj-1", name: "模擬店A" },
-	{ id: "proj-2", name: "ステージ企画B" },
-	{ id: "proj-3", name: "展示企画C" },
-	{ id: "proj-4", name: "飲食企画D" },
-	{ id: "proj-5", name: "物販企画E" },
-];
+type Project = {
+	id: string;
+	name: string;
+};
 
 type Props = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	noticeId: string;
+	collaborators: Collaborator[];
+	onSuccess: () => void;
 };
 
-export function PublishRequestDialog({ open, onOpenChange }: Props) {
+export function PublishRequestDialog({
+	open,
+	onOpenChange,
+	noticeId,
+	collaborators,
+	onSuccess,
+}: Props) {
 	const [approverId, setApproverId] = useState("");
 	const [date, setDate] = useState("");
 	const [time, setTime] = useState("09:00");
@@ -32,6 +39,41 @@ export function PublishRequestDialog({ open, onOpenChange }: Props) {
 		new Set()
 	);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [projects, setProjects] = useState<Project[]>([]);
+	const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+	const [projectSearch, setProjectSearch] = useState("");
+	const [error, setError] = useState<string | null>(null);
+
+	const approverOptions = collaborators.map(c => ({
+		value: c.user.id,
+		label: c.user.name,
+	}));
+
+	const filteredProjects = useMemo(() => {
+		if (!projectSearch) return projects;
+		const q = projectSearch.toLowerCase();
+		return projects.filter(p => p.name.toLowerCase().includes(q));
+	}, [projects, projectSearch]);
+
+	useEffect(() => {
+		if (!open) return;
+		let cancelled = false;
+		setIsLoadingProjects(true);
+		listCommitteeProjects()
+			.then(res => {
+				if (!cancelled)
+					setProjects(res.projects.map(p => ({ id: p.id, name: p.name })));
+			})
+			.catch(() => {
+				if (!cancelled) setError("企画一覧の取得に失敗しました。");
+			})
+			.finally(() => {
+				if (!cancelled) setIsLoadingProjects(false);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [open]);
 
 	const toggleProject = (id: string) => {
 		setSelectedProjectIds(prev => {
@@ -45,25 +87,47 @@ export function PublishRequestDialog({ open, onOpenChange }: Props) {
 		});
 	};
 
+	const allFilteredSelected =
+		filteredProjects.length > 0 &&
+		filteredProjects.every(p => selectedProjectIds.has(p.id));
+
+	const toggleAll = () => {
+		setSelectedProjectIds(prev => {
+			const next = new Set(prev);
+			if (allFilteredSelected) {
+				for (const p of filteredProjects) {
+					next.delete(p.id);
+				}
+			} else {
+				for (const p of filteredProjects) {
+					next.add(p.id);
+				}
+			}
+			return next;
+		});
+	};
+
 	const canSubmit = approverId && date && time && selectedProjectIds.size > 0;
 
 	const handleSubmit = async () => {
 		if (!canSubmit) return;
 		setIsSubmitting(true);
+		setError(null);
 		try {
-			// TODO: createNoticeAuthorization API を呼ぶ
-			alert(
-				JSON.stringify(
-					{
-						approverId,
-						deliveredAt: `${date}T${time}`,
-						projectIds: [...selectedProjectIds],
-					},
-					null,
-					2
-				)
-			);
+			const deliveredAt = new Date(`${date}T${time}`);
+			await createNoticeAuthorization(noticeId, {
+				requestedToId: approverId,
+				deliveredAt,
+				projectIds: [...selectedProjectIds],
+			});
 			onOpenChange(false);
+			onSuccess();
+		} catch (e) {
+			if (e instanceof Error) {
+				setError(e.message);
+			} else {
+				setError("公開申請の送信に失敗しました。");
+			}
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -76,6 +140,8 @@ export function PublishRequestDialog({ open, onOpenChange }: Props) {
 			setDate("");
 			setTime("09:00");
 			setSelectedProjectIds(new Set());
+			setProjectSearch("");
+			setError(null);
 		}
 	};
 
@@ -101,13 +167,19 @@ export function PublishRequestDialog({ open, onOpenChange }: Props) {
 						<Text as="label" size="2" weight="medium">
 							承認依頼先
 						</Text>
-						<Select
-							options={mockApprovers}
-							value={approverId}
-							onValueChange={setApproverId}
-							placeholder="承認者を選択"
-							size="2"
-						/>
+						{approverOptions.length === 0 ? (
+							<Text size="2" color="red">
+								共同編集者がいません。先に共同編集者を追加してください。
+							</Text>
+						) : (
+							<Select
+								options={approverOptions}
+								value={approverId}
+								onValueChange={setApproverId}
+								placeholder="承認者を選択"
+								size="2"
+							/>
+						)}
 					</div>
 
 					{/* 公開日時 */}
@@ -136,20 +208,68 @@ export function PublishRequestDialog({ open, onOpenChange }: Props) {
 
 					{/* 公開先プロジェクト */}
 					<div className={styles.field}>
-						<Text as="label" size="2" weight="medium">
-							公開先プロジェクト
-						</Text>
-						<div className={styles.projectList}>
-							{mockProjects.map(p => (
-								<Checkbox
-									key={p.id}
-									label={p.name}
-									checked={selectedProjectIds.has(p.id)}
-									onCheckedChange={() => toggleProject(p.id)}
-								/>
-							))}
+						<div className={styles.projectHeader}>
+							<Text as="label" size="2" weight="medium">
+								公開先プロジェクト
+							</Text>
+							{projects.length > 0 && (
+								<button
+									type="button"
+									className={styles.selectAllButton}
+									onClick={toggleAll}
+								>
+									<Text size="1" color="blue">
+										{allFilteredSelected ? "すべて解除" : "すべて選択"}
+									</Text>
+								</button>
+							)}
 						</div>
+						{projects.length > 5 && (
+							<RadixTextField.Root
+								placeholder="企画名で検索..."
+								size="1"
+								value={projectSearch}
+								onChange={e => setProjectSearch(e.target.value)}
+							>
+								<RadixTextField.Slot>
+									<IconSearch size={14} />
+								</RadixTextField.Slot>
+							</RadixTextField.Root>
+						)}
+						<div className={styles.projectList}>
+							{isLoadingProjects ? (
+								<Text size="2" color="gray">
+									読み込み中...
+								</Text>
+							) : filteredProjects.length === 0 ? (
+								<Text size="2" color="gray">
+									{projectSearch
+										? "該当する企画がありません"
+										: "企画がありません"}
+								</Text>
+							) : (
+								filteredProjects.map(p => (
+									<Checkbox
+										key={p.id}
+										label={p.name}
+										checked={selectedProjectIds.has(p.id)}
+										onCheckedChange={() => toggleProject(p.id)}
+									/>
+								))
+							)}
+						</div>
+						{selectedProjectIds.size > 0 && (
+							<Text size="1" color="gray">
+								{selectedProjectIds.size}件選択中
+							</Text>
+						)}
 					</div>
+
+					{error && (
+						<Text size="2" color="red">
+							{error}
+						</Text>
+					)}
 				</div>
 
 				<div className={styles.actions}>

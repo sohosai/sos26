@@ -39,6 +39,19 @@
 	}
 }
 
+.projectHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.selectAllButton {
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+}
+
 .projectList {
 	display: flex;
 	flex-direction: column;
