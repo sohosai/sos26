@@ -1,6 +1,7 @@
 import type { Project } from "@sos26/shared";
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
@@ -53,9 +54,8 @@ function ProjectLayout() {
 			});
 
 			setSelectedProjectId(project.id);
-		} catch (err) {
-			console.error(err);
-			alert(
+		} catch {
+			toast.error(
 				"プロジェクトへの参加に失敗しました。招待コードを確認してください。"
 			);
 		}
