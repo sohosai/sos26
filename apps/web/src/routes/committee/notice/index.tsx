@@ -44,7 +44,6 @@ type NoticeRow = {
 	title: string;
 	ownerName: string;
 	collaborators: AvatarGroupItem[];
-	createdAt: Date;
 	updatedAt: Date;
 	approverName: string;
 	status: NoticeStatusInfo;
@@ -74,7 +73,6 @@ function RouteComponent() {
 					title: n.title,
 					ownerName: n.owner.name,
 					collaborators: n.collaborators,
-					createdAt: n.createdAt,
 					updatedAt: n.updatedAt,
 					approverName: n.authorization?.requestedTo.name ?? "",
 					status: getNoticeStatus(n.authorization),
@@ -102,11 +100,6 @@ function RouteComponent() {
 		noticeColumnHelper.accessor("collaborators", {
 			header: "共同編集者",
 			cell: AvatarGroupCell,
-		}),
-		noticeColumnHelper.accessor("createdAt", {
-			header: "投稿日",
-			cell: DateCell,
-			meta: { dateFormat: "date" },
 		}),
 		noticeColumnHelper.accessor("updatedAt", {
 			header: "更新日",
