@@ -71,19 +71,21 @@ const mockCommitteeMember: CommitteeMember = {
 function makeApp() {
 	const app = new Hono();
 	app.onError(errorHandler);
-	app.route("/committee-members", committeeMemberRoute);
+	app.route("/committee/members", committeeMemberRoute);
 	return app;
 }
 
-/** 認証ヘッダーをセットアップ */
+/** 認証 + 実委メンバーチェックをセットアップ */
 function setupAuth() {
 	mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 		uid: "firebase-uid-123",
 	} as any);
 	mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+	// requireCommitteeMember 用
+	mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
 }
 
-describe("GET /committee-members", () => {
+describe("GET /committee/members", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
@@ -95,7 +97,7 @@ describe("GET /committee-members", () => {
 			{ ...mockCommitteeMember, user: mockUser },
 		] as any);
 
-		const res = await app.request("/committee-members", {
+		const res = await app.request("/committee/members", {
 			method: "GET",
 			headers: { Authorization: "Bearer valid-token" },
 		});
@@ -109,15 +111,31 @@ describe("GET /committee-members", () => {
 	it("認証なしでエラー", async () => {
 		const app = makeApp();
 
-		const res = await app.request("/committee-members", {
+		const res = await app.request("/committee/members", {
 			method: "GET",
 		});
 
 		expect(res.status).toBe(401);
 	});
+
+	it("非委員で403エラー", async () => {
+		const app = makeApp();
+		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
+			uid: "firebase-uid-123",
+		} as any);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		mockPrisma.committeeMember.findFirst.mockResolvedValue(null);
+
+		const res = await app.request("/committee/members", {
+			method: "GET",
+			headers: { Authorization: "Bearer valid-token" },
+		});
+
+		expect(res.status).toBe(403);
+	});
 });
 
-describe("POST /committee-members", () => {
+describe("POST /committee/members", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
@@ -129,7 +147,7 @@ describe("POST /committee-members", () => {
 		mockPrisma.committeeMember.findUnique.mockResolvedValue(null);
 		mockPrisma.committeeMember.create.mockResolvedValue(mockCommitteeMember);
 
-		const res = await app.request("/committee-members", {
+		const res = await app.request("/committee/members", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -155,7 +173,7 @@ describe("POST /committee-members", () => {
 			mockCommitteeMember
 		);
 
-		const res = await app.request("/committee-members", {
+		const res = await app.request("/committee/members", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -187,7 +205,7 @@ describe("POST /committee-members", () => {
 			deletedAt: null,
 		});
 
-		const res = await app.request("/committee-members", {
+		const res = await app.request("/committee/members", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -207,13 +225,18 @@ describe("POST /committee-members", () => {
 
 	it("存在しないユーザーでエラー", async () => {
 		const app = makeApp();
-		setupAuth();
-		// requireAuth用にfindFirstが最初に呼ばれ、その後POST内で再度呼ばれる
-		mockPrisma.user.findFirst
-			.mockResolvedValueOnce(mockUser) // requireAuth
-			.mockResolvedValueOnce(null); // POST内のユーザー存在確認
+		// requireAuth用
+		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
+			uid: "firebase-uid-123",
+		} as any);
+		// requireAuth: user.findFirst
+		mockPrisma.user.findFirst.mockResolvedValueOnce(mockUser);
+		// requireCommitteeMember: committeeMember.findFirst
+		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		// POST内のユーザー存在確認: user.findFirst
+		mockPrisma.user.findFirst.mockResolvedValueOnce(null);
 
-		const res = await app.request("/committee-members", {
+		const res = await app.request("/committee/members", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -232,7 +255,7 @@ describe("POST /committee-members", () => {
 		const app = makeApp();
 		setupAuth();
 
-		const res = await app.request("/committee-members", {
+		const res = await app.request("/committee/members", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -248,7 +271,7 @@ describe("POST /committee-members", () => {
 	});
 });
 
-describe("PATCH /committee-members/:id", () => {
+describe("PATCH /committee/members/:id", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
@@ -256,6 +279,7 @@ describe("PATCH /committee-members/:id", () => {
 	it("正常系: 委員メンバーを更新", async () => {
 		const app = makeApp();
 		setupAuth();
+		// ハンドラ内の存在確認用
 		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
 		mockPrisma.committeeMember.update.mockResolvedValue({
 			...mockCommitteeMember,
@@ -264,7 +288,7 @@ describe("PATCH /committee-members/:id", () => {
 		});
 
 		const res = await app.request(
-			`/committee-members/${mockCommitteeMember.id}`,
+			`/committee/members/${mockCommitteeMember.id}`,
 			{
 				method: "PATCH",
 				headers: {
@@ -286,10 +310,18 @@ describe("PATCH /committee-members/:id", () => {
 
 	it("存在しないメンバーでエラー", async () => {
 		const app = makeApp();
-		setupAuth();
-		mockPrisma.committeeMember.findFirst.mockResolvedValue(null);
+		// requireAuth
+		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
+			uid: "firebase-uid-123",
+		} as any);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		// requireCommitteeMember: findFirst 1回目
+		mockPrisma.committeeMember.findFirst
+			.mockResolvedValueOnce(mockCommitteeMember)
+			// ハンドラ内: findFirst 2回目
+			.mockResolvedValueOnce(null);
 
-		const res = await app.request("/committee-members/nonexistent-id", {
+		const res = await app.request("/committee/members/nonexistent-id", {
 			method: "PATCH",
 			headers: {
 				"Content-Type": "application/json",
@@ -302,7 +334,7 @@ describe("PATCH /committee-members/:id", () => {
 	});
 });
 
-describe("DELETE /committee-members/:id", () => {
+describe("DELETE /committee/members/:id", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
@@ -310,6 +342,7 @@ describe("DELETE /committee-members/:id", () => {
 	it("正常系: 委員メンバーをソフトデリート", async () => {
 		const app = makeApp();
 		setupAuth();
+		// ハンドラ内の存在確認用
 		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
 		mockPrisma.committeeMember.update.mockResolvedValue({
 			...mockCommitteeMember,
@@ -317,7 +350,7 @@ describe("DELETE /committee-members/:id", () => {
 		});
 
 		const res = await app.request(
-			`/committee-members/${mockCommitteeMember.id}`,
+			`/committee/members/${mockCommitteeMember.id}`,
 			{
 				method: "DELETE",
 				headers: { Authorization: "Bearer valid-token" },
@@ -331,10 +364,18 @@ describe("DELETE /committee-members/:id", () => {
 
 	it("存在しないメンバーでエラー", async () => {
 		const app = makeApp();
-		setupAuth();
-		mockPrisma.committeeMember.findFirst.mockResolvedValue(null);
+		// requireAuth
+		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
+			uid: "firebase-uid-123",
+		} as any);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		// requireCommitteeMember: findFirst 1回目
+		mockPrisma.committeeMember.findFirst
+			.mockResolvedValueOnce(mockCommitteeMember)
+			// ハンドラ内: findFirst 2回目
+			.mockResolvedValueOnce(null);
 
-		const res = await app.request("/committee-members/nonexistent-id", {
+		const res = await app.request("/committee/members/nonexistent-id", {
 			method: "DELETE",
 			headers: { Authorization: "Bearer valid-token" },
 		});
