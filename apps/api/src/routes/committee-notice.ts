@@ -401,6 +401,11 @@ committeeNoticeRoute.post(
 			throw Errors.forbidden("配信承認の申請権限がありません");
 		}
 
+		// 自分自身を承認者に指定できない
+		if (requestedToId === user.id) {
+			throw Errors.invalidRequest("自分自身を承認者に指定することはできません");
+		}
+
 		// NOTICE_DELIVER 権限チェック
 		const hasPermission = await prisma.committeeMemberPermission.findFirst({
 			where: {
