@@ -480,7 +480,7 @@ describe("POST /committee/members/:id/permissions", () => {
 
 		expect(res.status).toBe(200);
 		const body = await res.json();
-		expect(body.permission.permission).toBe("MEMBER_EDIT");
+		expect(body.permissionRecord.permission).toBe("MEMBER_EDIT");
 	});
 
 	it("既に付与済みの権限でエラー", async () => {
@@ -553,7 +553,7 @@ describe("POST /committee/members/:id/permissions", () => {
 	});
 });
 
-describe("DELETE /committee/members/:id/permissions/:permissionId", () => {
+describe("DELETE /committee/members/:id/permissions/:permission", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
@@ -562,7 +562,7 @@ describe("DELETE /committee/members/:id/permissions/:permissionId", () => {
 		const app = makeApp();
 		setupAuth();
 		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
-		mockPrisma.committeeMemberPermission.findFirst.mockResolvedValue(
+		mockPrisma.committeeMemberPermission.findUnique.mockResolvedValue(
 			mockPermission
 		);
 		mockPrisma.committeeMemberPermission.delete.mockResolvedValue(
@@ -570,7 +570,7 @@ describe("DELETE /committee/members/:id/permissions/:permissionId", () => {
 		);
 
 		const res = await app.request(
-			`/committee/members/${mockCommitteeMember.id}/permissions/${mockPermission.id}`,
+			`/committee/members/${mockCommitteeMember.id}/permissions/MEMBER_EDIT`,
 			{
 				method: "DELETE",
 				headers: { Authorization: "Bearer valid-token" },
@@ -593,7 +593,7 @@ describe("DELETE /committee/members/:id/permissions/:permissionId", () => {
 			.mockResolvedValueOnce(null);
 
 		const res = await app.request(
-			`/committee/members/nonexistent-id/permissions/${mockPermission.id}`,
+			"/committee/members/nonexistent-id/permissions/MEMBER_EDIT",
 			{
 				method: "DELETE",
 				headers: { Authorization: "Bearer valid-token" },
@@ -607,10 +607,10 @@ describe("DELETE /committee/members/:id/permissions/:permissionId", () => {
 		const app = makeApp();
 		setupAuth();
 		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
-		mockPrisma.committeeMemberPermission.findFirst.mockResolvedValue(null);
+		mockPrisma.committeeMemberPermission.findUnique.mockResolvedValue(null);
 
 		const res = await app.request(
-			`/committee/members/${mockCommitteeMember.id}/permissions/nonexistent-id`,
+			`/committee/members/${mockCommitteeMember.id}/permissions/NOTICE_DELIVER`,
 			{
 				method: "DELETE",
 				headers: { Authorization: "Bearer valid-token" },
@@ -618,5 +618,20 @@ describe("DELETE /committee/members/:id/permissions/:permissionId", () => {
 		);
 
 		expect(res.status).toBe(404);
+	});
+
+	it("不正な権限名でバリデーションエラー", async () => {
+		const app = makeApp();
+		setupAuth();
+
+		const res = await app.request(
+			`/committee/members/${mockCommitteeMember.id}/permissions/INVALID_PERMISSION`,
+			{
+				method: "DELETE",
+				headers: { Authorization: "Bearer valid-token" },
+			}
+		);
+
+		expect(res.status).toBe(400);
 	});
 });

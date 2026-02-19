@@ -1,4 +1,5 @@
 import {
+	type CommitteePermission,
 	type CreateCommitteeMemberRequest,
 	type CreateCommitteeMemberResponse,
 	createCommitteeMemberEndpoint,
@@ -88,14 +89,14 @@ export async function grantCommitteeMemberPermission(
 }
 
 /**
- * DELETE /committee/members/:id/permissions/:permissionId
+ * DELETE /committee/members/:id/permissions/:permission
  * 委員メンバーの権限を削除
  */
 export async function revokeCommitteeMemberPermission(
 	id: string,
-	permissionId: string
+	permission: CommitteePermission
 ): Promise<RevokeCommitteeMemberPermissionResponse> {
 	return callNoBodyApi(revokeCommitteeMemberPermissionEndpoint, {
-		pathParams: { id, permissionId },
+		pathParams: { id, permission },
 	});
 }

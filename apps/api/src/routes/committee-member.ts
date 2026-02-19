@@ -1,4 +1,5 @@
 import {
+	committeePermissionSchema,
 	createCommitteeMemberRequestSchema,
 	grantCommitteeMemberPermissionRequestSchema,
 	updateCommitteeMemberRequestSchema,
@@ -206,21 +207,23 @@ committeeMemberRoute.post(
 			},
 		});
 
-		return c.json({ permission: created });
+		return c.json({ permissionRecord: created });
 	}
 );
 
 // ─────────────────────────────────────────────────────────────
-// DELETE /committee/members/:id/permissions/:permissionId
+// DELETE /committee/members/:id/permissions/:permission
 // 委員メンバーの権限を削除
 // ─────────────────────────────────────────────────────────────
 committeeMemberRoute.delete(
-	"/:id/permissions/:permissionId",
+	"/:id/permissions/:permission",
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
 		const id = c.req.param("id");
-		const permissionId = c.req.param("permissionId");
+		const permission = committeePermissionSchema.parse(
+			c.req.param("permission")
+		);
 
 		// TODO: 権限チェックの調整
 		// 対象メンバーの存在確認
@@ -231,16 +234,21 @@ committeeMemberRoute.delete(
 			throw Errors.notFound("委員メンバーが見つかりません");
 		}
 
-		// 権限レコードの存在確認
-		const permission = await prisma.committeeMemberPermission.findFirst({
-			where: { id: permissionId, committeeMemberId: id },
+		// 権限レコードの存在確認（compound unique key で検索）
+		const existing = await prisma.committeeMemberPermission.findUnique({
+			where: {
+				committeeMemberId_permission: {
+					committeeMemberId: id,
+					permission,
+				},
+			},
 		});
-		if (!permission) {
+		if (!existing) {
 			throw Errors.notFound("権限が見つかりません");
 		}
 
 		await prisma.committeeMemberPermission.delete({
-			where: { id: permissionId },
+			where: { id: existing.id },
 		});
 
 		return c.json({ success: true });

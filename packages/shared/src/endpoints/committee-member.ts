@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+	committeePermissionSchema,
 	createCommitteeMemberRequestSchema,
 	createCommitteeMemberResponseSchema,
 	deleteCommitteeMemberResponseSchema,
@@ -19,7 +20,7 @@ const committeeMemberPathParamsSchema = z.object({
 
 const committeeMemberPermissionPathParamsSchema = z.object({
 	id: z.cuid(),
-	permissionId: z.cuid(),
+	permission: committeePermissionSchema,
 });
 
 /**
@@ -165,7 +166,7 @@ export const grantCommitteeMemberPermissionEndpoint: BodyEndpoint<
 } as const;
 
 /**
- * DELETE /committee/members/:id/permissions/:permissionId
+ * DELETE /committee/members/:id/permissions/:permission
  * 委員メンバーの権限を削除
  *
  * - 認証 + 実委メンバー必須
@@ -173,13 +174,13 @@ export const grantCommitteeMemberPermissionEndpoint: BodyEndpoint<
  */
 export const revokeCommitteeMemberPermissionEndpoint: NoBodyEndpoint<
 	"DELETE",
-	"/committee/members/:id/permissions/:permissionId",
+	"/committee/members/:id/permissions/:permission",
 	typeof committeeMemberPermissionPathParamsSchema,
 	undefined,
 	typeof revokeCommitteeMemberPermissionResponseSchema
 > = {
 	method: "DELETE",
-	path: "/committee/members/:id/permissions/:permissionId",
+	path: "/committee/members/:id/permissions/:permission",
 	pathParams: committeeMemberPermissionPathParamsSchema,
 	query: undefined,
 	request: undefined,

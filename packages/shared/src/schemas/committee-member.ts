@@ -172,13 +172,13 @@ export type GrantCommitteeMemberPermissionRequest = z.infer<
  * 権限付与レスポンス
  */
 export const grantCommitteeMemberPermissionResponseSchema = z.object({
-	permission: committeeMemberPermissionSchema,
+	permissionRecord: committeeMemberPermissionSchema,
 });
 export type GrantCommitteeMemberPermissionResponse = z.infer<
 	typeof grantCommitteeMemberPermissionResponseSchema
 >;
 
-// DELETE /committee/members/:id/permissions/:permissionId
+// DELETE /committee/members/:id/permissions/:permission
 
 /**
  * 権限削除レスポンス
