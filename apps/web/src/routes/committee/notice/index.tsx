@@ -1,13 +1,9 @@
-import { Heading, Popover, Text } from "@radix-ui/themes";
-import {
-	IconDotsVertical,
-	IconEdit,
-	IconPlus,
-	IconTrash,
-} from "@tabler/icons-react";
+import { AlertDialog, Heading, Text } from "@radix-ui/themes";
+import type { GetNoticeResponse } from "@sos26/shared";
+import { IconEye, IconPlus } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
 	AvatarGroupCell,
 	type AvatarGroupItem,
@@ -15,98 +11,116 @@ import {
 	DateCell,
 	NameCell,
 } from "@/components/patterns";
-import { Button, IconButton } from "@/components/primitives";
+import { Button } from "@/components/primitives";
+import { deleteNotice, listNotices } from "@/lib/api/committee-notice";
+import { useAuthStore } from "@/lib/auth";
 import { CreateNoticeDialog } from "./CreateNoticeDialog";
 import styles from "./index.module.scss";
+import { NoticeDetailDialog } from "./NoticeDetailDialog";
 
 type NoticeRow = {
 	id: string;
+	ownerId: string;
 	title: string;
-	owner: string;
-	sharedUsers: AvatarGroupItem[];
+	ownerName: string;
+	collaborators: AvatarGroupItem[];
 	createdAt: Date;
 	updatedAt: Date;
-	approver: string;
+	approverName: string;
 };
 
-const noticeColumnHelper = createColumnHelper<NoticeRow>();
+type NoticeDetail = GetNoticeResponse["notice"];
 
-// モックデータ（API接続時に置き換え）
-const mockNotices: NoticeRow[] = [
-	{
-		id: "1",
-		title: "企画書提出期限のお知らせ",
-		owner: "田中太郎",
-		sharedUsers: [{ name: "佐藤花子" }, { name: "鈴木一郎" }],
-		createdAt: new Date("2026-02-15"),
-		updatedAt: new Date("2026-02-16"),
-		approver: "山田次郎",
-	},
-	{
-		id: "2",
-		title: "ステージ使用に関する注意事項",
-		owner: "佐藤花子",
-		sharedUsers: [
-			{ name: "田中太郎" },
-			{ name: "鈴木一郎" },
-			{ name: "山田次郎" },
-		],
-		createdAt: new Date("2026-02-10"),
-		updatedAt: new Date("2026-02-12"),
-		approver: "高橋三郎",
-	},
-	{
-		id: "3",
-		title: "電力申請の締切について",
-		owner: "鈴木一郎",
-		sharedUsers: [],
-		createdAt: new Date("2026-02-08"),
-		updatedAt: new Date("2026-02-08"),
-		approver: "田中太郎",
-	},
-	{
-		id: "4",
-		title: "参加者向け説明会の開催",
-		owner: "高橋三郎",
-		sharedUsers: [
-			{ name: "田中太郎" },
-			{ name: "佐藤花子" },
-			{ name: "鈴木一郎" },
-			{ name: "山田次郎" },
-			{ name: "中村四郎" },
-		],
-		createdAt: new Date("2026-02-05"),
-		updatedAt: new Date("2026-02-06"),
-		approver: "佐藤花子",
-	},
-	{
-		id: "5",
-		title: "物品貸出申請の開始について",
-		owner: "山田次郎",
-		sharedUsers: [{ name: "高橋三郎" }],
-		createdAt: new Date("2026-02-01"),
-		updatedAt: new Date("2026-02-03"),
-		approver: "鈴木一郎",
-	},
-];
+const noticeColumnHelper = createColumnHelper<NoticeRow>();
 
 export const Route = createFileRoute("/committee/notice/")({
 	component: RouteComponent,
 });
 
 function RouteComponent() {
-	const [dialogOpen, setDialogOpen] = useState(false);
+	const { user } = useAuthStore();
+	const [notices, setNotices] = useState<NoticeRow[]>([]);
+	const [isLoading, setIsLoading] = useState(true);
+
+	// 作成 / 編集ダイアログ
+	const [noticeDialog, setNoticeDialog] = useState<{
+		open: boolean;
+		noticeId?: string;
+		initialValues?: { title: string; body: string };
+	}>({ open: false });
+
+	// 詳細ダイアログ
+	const [detailNoticeId, setDetailNoticeId] = useState<string | null>(null);
+
+	// 削除確認ダイアログ
+	const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+	const [isDeleting, setIsDeleting] = useState(false);
+
+	const fetchNotices = useCallback(async () => {
+		setIsLoading(true);
+		try {
+			const res = await listNotices();
+			setNotices(
+				res.notices.map(n => ({
+					id: n.id,
+					ownerId: n.ownerId,
+					title: n.title,
+					ownerName: n.owner.name,
+					collaborators: n.collaborators,
+					createdAt: n.createdAt,
+					updatedAt: n.updatedAt,
+					approverName: n.authorization?.requestedTo.name ?? "",
+				}))
+			);
+		} catch (error) {
+			console.error(error);
+		} finally {
+			setIsLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		fetchNotices();
+	}, [fetchNotices]);
+
+	const handleEditFromDetail = (notice: NoticeDetail) => {
+		setDetailNoticeId(null);
+		setNoticeDialog({
+			open: true,
+			noticeId: notice.id,
+			initialValues: { title: notice.title, body: notice.body ?? "" },
+		});
+	};
+
+	const handleDeleteFromDetail = (noticeId: string) => {
+		setDetailNoticeId(null);
+		setDeleteConfirmId(noticeId);
+	};
+
+	const handleDelete = async () => {
+		if (!deleteConfirmId) return;
+		setIsDeleting(true);
+		try {
+			await deleteNotice(deleteConfirmId);
+			setDeleteConfirmId(null);
+			await fetchNotices();
+		} catch (error) {
+			console.error(error);
+		} finally {
+			setIsDeleting(false);
+		}
+	};
 
 	const columns = [
 		noticeColumnHelper.accessor("title", {
 			header: "タイトル",
 		}),
-		noticeColumnHelper.accessor("owner", {
+		noticeColumnHelper.accessor("ownerName", {
 			header: "オーナー",
 			cell: NameCell,
 		}),
-		noticeColumnHelper.accessor("sharedUsers", {
-			header: "共有者",
+		noticeColumnHelper.accessor("collaborators", {
+			header: "共同編集者",
 			cell: AvatarGroupCell,
 		}),
 		noticeColumnHelper.accessor("createdAt", {
@@ -119,33 +133,31 @@ function RouteComponent() {
 			cell: DateCell,
 			meta: { dateFormat: "date" },
 		}),
-		noticeColumnHelper.accessor("approver", {
+		noticeColumnHelper.accessor("approverName", {
 			header: "承認者",
-			cell: NameCell,
+			cell: ctx => {
+				const name = ctx.getValue();
+				if (!name)
+					return (
+						<Text size="2" color="gray">
+							—
+						</Text>
+					);
+				return <NameCell {...ctx} />;
+			},
 		}),
 		noticeColumnHelper.display({
 			id: "actions",
 			header: "操作",
-			cell: () => (
-				<Popover.Root>
-					<Popover.Trigger>
-						<IconButton aria-label="操作メニュー">
-							<IconDotsVertical size={16} />
-						</IconButton>
-					</Popover.Trigger>
-					<Popover.Content align="start" sideOffset={4}>
-						<div className={styles.menu}>
-							<Button intent="ghost" size="2">
-								<IconEdit size={16} />
-								編集
-							</Button>
-							<Button intent="ghost" size="2">
-								<IconTrash size={16} />
-								削除
-							</Button>
-						</div>
-					</Popover.Content>
-				</Popover.Root>
+			cell: ({ row }) => (
+				<Button
+					intent="ghost"
+					size="1"
+					onClick={() => setDetailNoticeId(row.original.id)}
+				>
+					<IconEye size={16} />
+					詳細
+				</Button>
 			),
 			enableSorting: false,
 		}),
@@ -161,7 +173,7 @@ function RouteComponent() {
 			</div>
 
 			<DataTable<NoticeRow>
-				data={mockNotices}
+				data={isLoading ? [] : notices}
 				columns={columns}
 				features={{
 					sorting: true,
@@ -171,21 +183,66 @@ function RouteComponent() {
 					copy: false,
 					csvExport: false,
 				}}
-				initialSorting={[
-					{
-						id: "createdAt",
-						desc: true,
-					},
-				]}
+				initialSorting={[{ id: "updatedAt", desc: true }]}
 				toolbarExtra={
-					<Button intent="primary" size="2" onClick={() => setDialogOpen(true)}>
+					<Button
+						intent="primary"
+						size="2"
+						onClick={() => setNoticeDialog({ open: true })}
+					>
 						<IconPlus size={16} stroke={1.5} />
 						お知らせを作成
 					</Button>
 				}
 			/>
 
-			<CreateNoticeDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+			{/* 作成 / 編集ダイアログ */}
+			<CreateNoticeDialog
+				open={noticeDialog.open}
+				onOpenChange={open => setNoticeDialog(prev => ({ ...prev, open }))}
+				noticeId={noticeDialog.noticeId}
+				initialValues={noticeDialog.initialValues}
+				onSuccess={fetchNotices}
+			/>
+
+			{/* 詳細ダイアログ */}
+			<NoticeDetailDialog
+				noticeId={detailNoticeId}
+				currentUserId={user?.id ?? ""}
+				onClose={() => setDetailNoticeId(null)}
+				onEdit={handleEditFromDetail}
+				onDelete={handleDeleteFromDetail}
+			/>
+
+			{/* 削除確認ダイアログ */}
+			<AlertDialog.Root
+				open={deleteConfirmId !== null}
+				onOpenChange={open => {
+					if (!open) setDeleteConfirmId(null);
+				}}
+			>
+				<AlertDialog.Content maxWidth="400px">
+					<AlertDialog.Title>お知らせを削除</AlertDialog.Title>
+					<AlertDialog.Description size="2">
+						このお知らせを削除しますか？この操作は取り消せません。
+					</AlertDialog.Description>
+					<div className={styles.deleteActions}>
+						<AlertDialog.Cancel>
+							<Button intent="secondary" size="2">
+								キャンセル
+							</Button>
+						</AlertDialog.Cancel>
+						<Button
+							intent="danger"
+							size="2"
+							onClick={handleDelete}
+							loading={isDeleting}
+						>
+							削除する
+						</Button>
+					</div>
+				</AlertDialog.Content>
+			</AlertDialog.Root>
 		</div>
 	);
 }
