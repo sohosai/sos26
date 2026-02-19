@@ -73,7 +73,6 @@ export function NoticeDetailSidebar({
 		a => a.status === "PENDING"
 	);
 	const canPublish = canEdit && !hasApprovedAuth && !hasPendingAuth;
-	const canModify = canEdit && !hasApprovedAuth;
 
 	const handleApprove = async (authorizationId: string) => {
 		setApprovingId(authorizationId);
@@ -243,11 +242,11 @@ export function NoticeDetailSidebar({
 					</>
 				)}
 
-				{(canModify || isOwner) && (
+				{(canEdit || isOwner) && (
 					<>
 						<Separator size="4" />
 						<div className={styles.actions}>
-							{canModify && (
+							{canEdit && (
 								<Button intent="secondary" size="2" onClick={onEdit}>
 									編集
 								</Button>
