@@ -25,7 +25,7 @@ committeeNoticeRoute.post("/", requireAuth, requireCommitteeMember, async c => {
 	const body = await c.req.json().catch(() => ({}));
 	const { title, body: noticeBody } = createNoticeRequestSchema.parse(body);
 
-	const notice = await prisma.notice.create({
+	const created = await prisma.notice.create({
 		data: {
 			ownerId: user.id,
 			title,
@@ -33,6 +33,7 @@ committeeNoticeRoute.post("/", requireAuth, requireCommitteeMember, async c => {
 		},
 	});
 
+	const { deletedAt: _, ...notice } = created;
 	return c.json({ notice }, 201);
 });
 
@@ -211,7 +212,8 @@ committeeNoticeRoute.patch(
 			data,
 		});
 
-		return c.json({ notice: updated });
+		const { deletedAt: _, ...updatedNotice } = updated;
+		return c.json({ notice: updatedNotice });
 	}
 );
 

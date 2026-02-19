@@ -126,7 +126,7 @@ export const createNoticeRequestSchema = z.object({
 export type CreateNoticeRequest = z.infer<typeof createNoticeRequestSchema>;
 
 export const createNoticeResponseSchema = z.object({
-	notice: noticeSchema,
+	notice: noticeSchema.omit({ deletedAt: true }),
 });
 export type CreateNoticeResponse = z.infer<typeof createNoticeResponseSchema>;
 
@@ -169,7 +169,7 @@ export const updateNoticeRequestSchema = z.object({
 export type UpdateNoticeRequest = z.infer<typeof updateNoticeRequestSchema>;
 
 export const updateNoticeResponseSchema = z.object({
-	notice: noticeSchema,
+	notice: noticeSchema.omit({ deletedAt: true }),
 });
 export type UpdateNoticeResponse = z.infer<typeof updateNoticeResponseSchema>;
 
