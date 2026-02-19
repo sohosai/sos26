@@ -1,10 +1,16 @@
-import { AlertDialog, Heading, Text } from "@radix-ui/themes";
+import {
+	AlertDialog,
+	Badge,
+	type BadgeProps,
+	Heading,
+	Separator,
+	Text,
+} from "@radix-ui/themes";
 import type { GetNoticeResponse } from "@sos26/shared";
-import { IconArrowLeft, IconPlus, IconTrash } from "@tabler/icons-react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import Avatar from "boring-avatars";
+import { IconArrowLeft, IconCalendar, IconClock } from "@tabler/icons-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { Button, IconButton, Select } from "@/components/primitives";
+import { Button } from "@/components/primitives";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import {
 	addCollaborator,
@@ -15,6 +21,7 @@ import {
 import { useAuthStore } from "@/lib/auth";
 import { CreateNoticeDialog } from "../CreateNoticeDialog";
 import styles from "./index.module.scss";
+import { NoticeDetailSidebar } from "./NoticeDetailSidebar";
 
 type NoticeDetail = GetNoticeResponse["notice"];
 type CommitteeMember = {
@@ -38,17 +45,10 @@ function RouteComponent() {
 		[]
 	);
 
-	// 共同編集者
-	const [selectedUserId, setSelectedUserId] = useState("");
-	const [isAdding, setIsAdding] = useState(false);
-	const [removingId, setRemovingId] = useState<string | null>(null);
-
-	// 編集ダイアログ
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
-
-	// 削除確認
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
+	const [removingId, setRemovingId] = useState<string | null>(null);
 
 	const fetchNotice = useCallback(async () => {
 		setIsLoading(true);
@@ -78,23 +78,17 @@ function RouteComponent() {
 	const collaboratorUserIds = new Set(
 		notice?.collaborators.map(c => c.user.id) ?? []
 	);
-	const availableMembers = committeeMembers.filter(
-		m => m.user.id !== notice?.ownerId && !collaboratorUserIds.has(m.user.id)
-	);
+	const availableMembers = committeeMembers
+		.filter(
+			m => m.user.id !== notice?.ownerId && !collaboratorUserIds.has(m.user.id)
+		)
+		.map(m => ({ userId: m.user.id, name: m.user.name }));
 
-	const handleAddCollaborator = async () => {
-		if (!notice || !selectedUserId) return;
-		setIsAdding(true);
-		try {
-			await addCollaborator(notice.id, { userId: selectedUserId });
-			setSelectedUserId("");
-			const res = await getNotice(notice.id);
-			setNotice(res.notice);
-		} catch (error) {
-			console.error(error);
-		} finally {
-			setIsAdding(false);
-		}
+	const handleAddCollaborator = async (userId: string) => {
+		if (!notice) return;
+		await addCollaborator(notice.id, { userId });
+		const res = await getNotice(notice.id);
+		setNotice(res.notice);
 	};
 
 	const handleRemoveCollaborator = async (collaboratorId: string) => {
@@ -136,128 +130,84 @@ function RouteComponent() {
 	if (!notice) {
 		return (
 			<div>
-				<Text size="2" color="gray">
-					お知らせが見つかりませんでした。
+				<Heading size="5">お知らせが見つかりません</Heading>
+				<Text as="p" size="2" color="gray">
+					指定されたお知らせは存在しないか、削除された可能性があります。
 				</Text>
-				<Link to="/committee/notice">
-					<Button intent="ghost" size="2">
-						<IconArrowLeft size={16} />
-						一覧に戻る
-					</Button>
-				</Link>
+				<button
+					type="button"
+					className={styles.backLink}
+					onClick={() => navigate({ to: "/committee/notice" })}
+				>
+					<IconArrowLeft size={16} />
+					<Text size="2">一覧に戻る</Text>
+				</button>
 			</div>
 		);
 	}
 
 	return (
-		<div>
-			<Link to="/committee/notice">
-				<Button intent="ghost" size="2">
+		<div className={styles.layout}>
+			{/* メインコンテンツ */}
+			<div className={styles.main}>
+				<button
+					type="button"
+					className={styles.backLink}
+					onClick={() => navigate({ to: "/committee/notice" })}
+				>
 					<IconArrowLeft size={16} />
-					一覧に戻る
-				</Button>
-			</Link>
+					<Text size="2">お知らせ一覧に戻る</Text>
+				</button>
 
-			<div className={styles.header}>
-				<div className={styles.headerTitle}>
-					<Heading size="6">{notice.title}</Heading>
-					<Text as="p" size="2" color="gray">
-						{notice.owner.name} ・{" "}
-						{notice.updatedAt.toLocaleDateString("ja-JP")}
-					</Text>
-				</div>
-				<div className={styles.headerActions}>
-					{canEdit && (
-						<Button
-							intent="secondary"
-							size="2"
-							onClick={() => setEditDialogOpen(true)}
-						>
-							編集
-						</Button>
-					)}
-					{isOwner && (
-						<Button
-							intent="danger"
-							size="2"
-							onClick={() => setDeleteConfirmOpen(true)}
-						>
-							削除
-						</Button>
-					)}
-				</div>
-			</div>
-
-			{/* 本文 */}
-			{notice.body ? (
-				<div
-					className={styles.body}
-					// お知らせ本文はRichTextEditorで入力されたHTMLを表示するため必要
-					// biome-ignore lint:security/noDangerouslySetInnerHtml
-					dangerouslySetInnerHTML={{ __html: notice.body }}
-				/>
-			) : (
-				<Text size="2" color="gray">
-					本文なし
-				</Text>
-			)}
-
-			{/* 共同編集者 */}
-			<div className={styles.collaboratorsSection}>
-				<Text size="2" weight="medium">
-					共同編集者
-				</Text>
-
-				{notice.collaborators.length === 0 ? (
-					<Text size="2" color="gray">
-						共同編集者なし
-					</Text>
-				) : (
-					<ul className={styles.collaboratorList}>
-						{notice.collaborators.map(c => (
-							<li key={c.id} className={styles.collaboratorItem}>
-								<Avatar size={20} name={c.user.name} variant="beam" />
-								<Text size="2">{c.user.name}</Text>
-								{isOwner && (
-									<IconButton
-										aria-label={`${c.user.name}を削除`}
-										onClick={() => handleRemoveCollaborator(c.id)}
-										disabled={removingId === c.id}
-									>
-										<IconTrash size={14} />
-									</IconButton>
-								)}
-							</li>
-						))}
-					</ul>
-				)}
-
-				{isOwner && (
-					<div className={styles.addCollaborator}>
-						<Select
-							options={availableMembers.map(m => ({
-								value: m.user.id,
-								label: m.user.name,
-							}))}
-							value={selectedUserId}
-							onValueChange={setSelectedUserId}
-							placeholder="追加するメンバーを選択"
-							size="2"
-							disabled={availableMembers.length === 0}
-						/>
-						<Button
-							intent="secondary"
-							size="2"
-							onClick={handleAddCollaborator}
-							loading={isAdding}
-							disabled={!selectedUserId}
-						>
-							<IconPlus size={14} />
-							追加
-						</Button>
+				<header className={styles.titleSection}>
+					<NoticeStatusBadge notice={notice} />
+					<Heading size="5">{notice.title}</Heading>
+					<div className={styles.meta}>
+						<span className={styles.metaItem}>
+							<IconCalendar size={14} />
+							<Text size="2" color="gray">
+								作成: {formatDate(notice.createdAt)}
+							</Text>
+						</span>
+						{notice.updatedAt.getTime() !== notice.createdAt.getTime() && (
+							<span className={styles.metaItem}>
+								<IconClock size={14} />
+								<Text size="2" color="gray">
+									更新: {formatDate(notice.updatedAt)}
+								</Text>
+							</span>
+						)}
 					</div>
+				</header>
+
+				<Separator size="4" />
+
+				{notice.body ? (
+					<div
+						className={styles.body}
+						// お知らせ本文はRichTextEditorで入力されたHTMLを表示するため必要
+						// biome-ignore lint:security/noDangerouslySetInnerHtml
+						dangerouslySetInnerHTML={{ __html: notice.body }}
+					/>
+				) : (
+					<Text size="2" color="gray">
+						本文なし
+					</Text>
 				)}
 			</div>
+
+			{/* サイドバー */}
+			<NoticeDetailSidebar
+				notice={notice}
+				isOwner={isOwner}
+				canEdit={canEdit}
+				availableMembers={availableMembers}
+				removingId={removingId}
+				onAddCollaborator={handleAddCollaborator}
+				onRemoveCollaborator={handleRemoveCollaborator}
+				onEdit={() => setEditDialogOpen(true)}
+				onDelete={() => setDeleteConfirmOpen(true)}
+			/>
 
 			{/* 編集ダイアログ */}
 			<CreateNoticeDialog
@@ -297,4 +247,54 @@ function RouteComponent() {
 			</AlertDialog.Root>
 		</div>
 	);
+}
+
+type NoticeStatus = {
+	label: string;
+	color: BadgeProps["color"];
+};
+
+function getNoticeStatus(notice: NoticeDetail): NoticeStatus {
+	if (notice.authorizations.length === 0) {
+		return { label: "公開申請前", color: "gray" };
+	}
+
+	// 最新の承認情報で判定
+	const latest = notice.authorizations.reduce((a, b) =>
+		a.createdAt > b.createdAt ? a : b
+	);
+
+	switch (latest.status) {
+		case "PENDING":
+			return { label: "承認待機中", color: "orange" };
+		case "REJECTED":
+			return { label: "却下", color: "red" };
+		case "APPROVED": {
+			const now = new Date();
+			if (latest.deliveredAt > now) {
+				return { label: "公開予定", color: "blue" };
+			}
+			return { label: "公開済み", color: "green" };
+		}
+	}
+}
+
+function NoticeStatusBadge({ notice }: { notice: NoticeDetail }) {
+	const status = getNoticeStatus(notice);
+	return (
+		<div>
+			<Badge variant="soft" size="2" color={status.color}>
+				{status.label}
+			</Badge>
+		</div>
+	);
+}
+
+function formatDate(date: Date): string {
+	const y = date.getFullYear();
+	const m = (date.getMonth() + 1).toString().padStart(2, "0");
+	const d = date.getDate().toString().padStart(2, "0");
+	const h = date.getHours().toString().padStart(2, "0");
+	const min = date.getMinutes().toString().padStart(2, "0");
+	return `${y}年${m}月${d}日 ${h}:${min}`;
 }
