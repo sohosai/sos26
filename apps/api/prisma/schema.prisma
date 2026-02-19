@@ -77,7 +77,7 @@ model User {
   requestedFormAuthorizations FormAuthorization[] @relation("FormRequestedBy")
   receivedFormAuthorizations  FormAuthorization[] @relation("FormRequestedTo")
   formResponses               FormResponse[]      @relation("FormRespondent")
-  noticeReadStatuses            NoticeReadStatus[]
+  noticeReadStatuses          NoticeReadStatus[]
 
   userPushSubscriptions UserPushSubscription[]
 
