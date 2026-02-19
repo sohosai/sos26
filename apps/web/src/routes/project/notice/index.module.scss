@@ -9,8 +9,14 @@
 	max-width: 560px;
 }
 
+.dialogDivider {
+	border: none;
+	border-top: 1px solid var(--gray-a6);
+	margin: var(--space-4) 0;
+}
+
 .noticeContent {
-	margin-top: var(--space-4);
+	margin-top: 0;
 }
 
 .dialogActions {

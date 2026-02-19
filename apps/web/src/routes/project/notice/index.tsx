@@ -13,6 +13,7 @@ import {
 	listProjectNotices,
 	readProjectNotice,
 } from "@/lib/api/project-notice";
+import { formatDate } from "@/lib/format";
 import { useProject } from "@/lib/project/context";
 import styles from "./index.module.scss";
 
@@ -80,7 +81,7 @@ function RouteComponent() {
 			setSelectedNoticeTitle(res.notice.title);
 			setSelectedNoticeBody(res.notice.body);
 			setSelectedNoticeMeta(
-				`${new Date(res.notice.deliveredAt).toLocaleDateString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit" })} ${getBureauLabel(res.notice.ownerBureau)}`
+				`${formatDate(new Date(res.notice.deliveredAt), "datetime")}　${getBureauLabel(res.notice.ownerBureau)}`
 			);
 
 			if (!res.notice.isRead) {
@@ -198,6 +199,7 @@ function RouteComponent() {
 							<Dialog.Description size="2" color="gray">
 								{selectedNoticeMeta}
 							</Dialog.Description>
+							<hr className={styles.dialogDivider} />
 							{sanitizedBody ? (
 								<div
 									className={styles.noticeContent}
