@@ -120,7 +120,7 @@ export function NoticeDetailSidebar({
 												onClick={() => onRemoveCollaborator(c.id)}
 												disabled={removingId === c.id}
 											>
-												<IconTrash size={12} />
+												<IconTrash size={16} />
 											</IconButton>
 										)}
 									</div>
