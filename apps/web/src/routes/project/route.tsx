@@ -6,6 +6,7 @@ import {
 	useRouter,
 } from "@tanstack/react-router";
 import { useState } from "react";
+import { toast } from "sonner";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
@@ -62,11 +63,8 @@ function ProjectLayout() {
 
 			setSelectedProjectId(project.id);
 			router.invalidate();
-		} catch (err) {
-			console.error(err);
-			alert(
-				"プロジェクトへの参加に失敗しました。招待コードを確認してください。"
-			);
+		} catch {
+			toast.error("企画への参加に失敗しました。招待コードを確認してください。");
 		}
 	};
 

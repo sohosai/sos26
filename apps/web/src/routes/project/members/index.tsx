@@ -8,6 +8,7 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useState } from "react";
+import { toast } from "sonner";
 import { DataTable, TagCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { InviteMemberDialog } from "@/components/project/members/InviteMemberDialog";
@@ -138,9 +139,8 @@ function RouteComponent() {
 					return m;
 				})
 			);
-		} catch (err) {
-			console.error(err);
-			alert("副責任者の任命に失敗しました");
+		} catch {
+			toast.error("副責任者の任命に失敗しました");
 		}
 	};
 
@@ -148,9 +148,8 @@ function RouteComponent() {
 		try {
 			await removeProjectMember(project.id, memberId);
 			setMembers(prev => prev.filter(m => m.userId !== memberId));
-		} catch (err) {
-			console.error(err);
-			alert("メンバーの削除に失敗しました");
+		} catch {
+			toast.error("メンバーの削除に失敗しました");
 		}
 	};
 
