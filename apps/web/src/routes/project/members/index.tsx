@@ -100,7 +100,7 @@ export const Route = createFileRoute("/project/members/")({
 	component: RouteComponent,
 	loader: async () => {
 		const { selectedProjectId } = useProjectStore.getState();
-		if (!selectedProjectId) throw new Error("No project selected");
+		if (!selectedProjectId) return { members: [] as MemberRow[] };
 		const data = await listProjectMembers(selectedProjectId);
 		return {
 			members: data.members.map((m: Omit<MemberRow, "roleLabel">) => ({
@@ -121,13 +121,9 @@ function RouteComponent() {
 	const hasSubOwner = members.some(member => member.role === "SUB_OWNER");
 
 	const isPrivileged =
-		project?.ownerId === user?.id || project?.subOwnerId === user?.id;
+		project.ownerId === user?.id || project.subOwnerId === user?.id;
 	const handleAssign = async (memberId: string) => {
 		try {
-			if (!project?.id) {
-				alert("プロジェクト情報が取得できません");
-				return;
-			}
 			await assignSubOwner(project.id, memberId);
 
 			setMembers(prev =>
@@ -150,10 +146,6 @@ function RouteComponent() {
 
 	const handleDeleteMember = async (memberId: string) => {
 		try {
-			if (!project?.id) {
-				alert("プロジェクト情報が取得できません");
-				return;
-			}
 			await removeProjectMember(project.id, memberId);
 			setMembers(prev => prev.filter(m => m.userId !== memberId));
 		} catch (err) {
