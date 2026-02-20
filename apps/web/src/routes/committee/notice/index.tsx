@@ -17,7 +17,7 @@ import {
 	getNoticeStatusFromAuth,
 	type NoticeStatusInfo,
 } from "@/lib/notice-status";
-import { CreateNoticeDialog } from "./_components/CreateNoticeDialog";
+import { CreateNoticeDialog } from "./-components/CreateNoticeDialog";
 import styles from "./index.module.scss";
 
 type NoticeRow = {
