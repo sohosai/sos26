@@ -10,10 +10,10 @@ import {
 import Avatar from "boring-avatars";
 import { useState } from "react";
 import { Button, IconButton } from "@/components/primitives";
+import { formatDate } from "@/lib/format";
 import { AddCollaboratorDialog } from "./AddCollaboratorDialog";
 import styles from "./NoticeDetailSidebar.module.scss";
 import { PublishRequestDialog } from "./PublishRequestDialog";
-import { formatDateTime } from "./utils";
 
 type NoticeDetail = GetNoticeResponse["notice"];
 
@@ -219,7 +219,7 @@ export function NoticeDetailSidebar({
 										公開希望日時
 									</Text>
 									<Text size="2">
-										{formatDateTime(pendingAuth.deliveredAt)}
+										{formatDate(pendingAuth.deliveredAt, "datetime")}
 									</Text>
 								</div>
 								{pendingAuth.deliveries.length > 0 && (

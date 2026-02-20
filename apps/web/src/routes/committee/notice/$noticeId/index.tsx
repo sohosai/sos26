@@ -1,11 +1,4 @@
-import {
-	AlertDialog,
-	Badge,
-	type BadgeProps,
-	Heading,
-	Separator,
-	Text,
-} from "@radix-ui/themes";
+import { AlertDialog, Badge, Heading, Separator, Text } from "@radix-ui/themes";
 import type { GetNoticeResponse } from "@sos26/shared";
 import { IconArrowLeft, IconCalendar, IconClock } from "@tabler/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -21,11 +14,12 @@ import {
 	updateNoticeAuthorization,
 } from "@/lib/api/committee-notice";
 import { useAuthStore } from "@/lib/auth";
+import { formatDate } from "@/lib/format";
+import { getNoticeStatusFromAuth } from "@/lib/notice-status";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { CreateNoticeDialog } from "../CreateNoticeDialog";
 import styles from "./index.module.scss";
 import { NoticeDetailSidebar } from "./NoticeDetailSidebar";
-import { formatDateTime } from "./utils";
 
 type NoticeDetail = GetNoticeResponse["notice"];
 type CommitteeMember = {
@@ -201,13 +195,13 @@ function RouteComponent() {
 						<span className={styles.metaItem}>
 							<IconCalendar size={14} />
 							<Text size="2" color="gray">
-								作成: {formatDateTime(notice.createdAt)}
+								作成: {formatDate(notice.createdAt, "datetime")}
 							</Text>
 						</span>
 						<span className={styles.metaItem}>
 							<IconClock size={14} />
 							<Text size="2" color="gray">
-								更新: {formatDateTime(notice.updatedAt)}
+								更新: {formatDate(notice.updatedAt, "datetime")}
 							</Text>
 						</span>
 					</div>
@@ -287,38 +281,14 @@ function RouteComponent() {
 	);
 }
 
-type NoticeStatus = {
-	label: string;
-	color: BadgeProps["color"];
-};
-
-function getNoticeStatus(notice: NoticeDetail): NoticeStatus {
-	if (notice.authorizations.length === 0) {
-		return { label: "公開申請前", color: "gray" };
-	}
-
-	// 最新の承認情報で判定
-	const latest = notice.authorizations.reduce((a, b) =>
-		a.createdAt > b.createdAt ? a : b
-	);
-
-	switch (latest.status) {
-		case "PENDING":
-			return { label: "承認待機中", color: "orange" };
-		case "REJECTED":
-			return { label: "却下", color: "red" };
-		case "APPROVED": {
-			const now = new Date();
-			if (latest.deliveredAt > now) {
-				return { label: "公開予定", color: "blue" };
-			}
-			return { label: "公開済み", color: "green" };
-		}
-	}
-}
-
 function NoticeStatusBadge({ notice }: { notice: NoticeDetail }) {
-	const status = getNoticeStatus(notice);
+	const latestAuth =
+		notice.authorizations.length > 0
+			? notice.authorizations.reduce((a, b) =>
+					a.createdAt > b.createdAt ? a : b
+				)
+			: null;
+	const status = getNoticeStatusFromAuth(latestAuth);
 	return (
 		<div>
 			<Badge variant="soft" size="2" color={status.color}>

@@ -6,8 +6,8 @@ export function formatDate(date: Date, format: "date" | "datetime"): string {
 	if (format === "datetime") {
 		const h = String(date.getHours()).padStart(2, "0");
 		const min = String(date.getMinutes()).padStart(2, "0");
-		return `${y}/${m}/${d} ${h}:${min}`;
+		return `${y}-${m}-${d} ${h}:${min}`;
 	}
 
-	return `${y}/${m}/${d}`;
+	return `${y}-${m}-${d}`;
 }
