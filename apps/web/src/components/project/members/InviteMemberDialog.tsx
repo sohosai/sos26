@@ -1,10 +1,11 @@
 import { Dialog, Popover, Text } from "@radix-ui/themes";
 import { IconCopy, IconRefresh, IconX } from "@tabler/icons-react";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { IconButton } from "@/components/primitives";
 import { regenerateInviteCode } from "@/lib/api/project";
 import { useAuthStore } from "@/lib/auth";
-import { useProject } from "@/lib/project/context";
+import { useProject } from "@/lib/project/store";
 import styles from "./InviteMemberDialog.module.scss";
 
 type Props = {
@@ -16,12 +17,10 @@ export function InviteMemberDialog({ open, onOpenChange }: Props) {
 	const project = useProject();
 	const { user } = useAuthStore();
 	const [copied, setCopied] = useState(false);
-	const [inviteCode, setInviteCode] = useState(project?.inviteCode ?? "");
+	const [inviteCode, setInviteCode] = useState(project.inviteCode ?? "");
 	const timerRef = useRef<number | null>(null);
 
-	const isOwner = project?.ownerId === user?.id;
-
-	if (!project) return null;
+	const isOwner = project.ownerId === user?.id;
 
 	const handleRegenerate = async () => {
 		if (
@@ -32,9 +31,8 @@ export function InviteMemberDialog({ open, onOpenChange }: Props) {
 		try {
 			const res = await regenerateInviteCode(project.id);
 			setInviteCode(res.inviteCode);
-		} catch (e) {
-			console.error(e);
-			alert("招待コードの再生成に失敗しました");
+		} catch {
+			toast.error("招待コードの再生成に失敗しました");
 		}
 	};
 
