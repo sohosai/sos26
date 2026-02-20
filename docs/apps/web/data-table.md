@@ -16,6 +16,7 @@
 		- [基本のカラム](#基本のカラム)
 		- [ColumnMeta](#columnmeta)
 	- [セルコンポーネント](#セルコンポーネント)
+		- [AvatarGroupCell](#avatargroupcell)
 		- [DateCell](#datecell)
 		- [EditableCell](#editablecell)
 		- [NameCell](#namecell)
@@ -42,6 +43,8 @@
 
 ```tsx
 import {
+	AvatarGroupCell,
+	type AvatarGroupItem,
 	DataTable,
 	DateCell,
 	EditableCell,
@@ -155,6 +158,29 @@ TanStack Table の `meta` フィールドでセルの振る舞いを制御する
 | `tagColors` | `Record<string, string>` | TagCell のタグ→Radix カラー名マッピング |
 
 ## セルコンポーネント
+
+### AvatarGroupCell
+
+アバターグループ表示セル。`AvatarGroupItem[]`（`{ id, name }`）を受け取り、boring-avatars のアバターを横並びで表示する。読み取り専用。
+
+- 3人以下: 全員のアバターを表示
+- 4人以上: 先頭2人 + `+N` バッジを表示
+- クリックすると Popover で全メンバーの名前付きリストを表示
+- 0人の場合は `—` を表示
+
+```tsx
+import { AvatarGroupCell, type AvatarGroupItem } from "@/components/patterns";
+
+type Row = {
+	// ...
+	collaborators: AvatarGroupItem[];
+};
+
+columnHelper.accessor("collaborators", {
+	header: "共同編集者",
+	cell: AvatarGroupCell,
+}),
+```
 
 ### DateCell
 
