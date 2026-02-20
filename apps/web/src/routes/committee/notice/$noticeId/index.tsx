@@ -29,6 +29,9 @@ type NoticeDetail = GetNoticeResponse["notice"];
 
 export const Route = createFileRoute("/committee/notice/$noticeId/")({
 	component: RouteComponent,
+	head: () => ({
+		meta: [{ title: "お知らせ詳細 | 雙峰祭オンラインシステム" }],
+	}),
 	loader: async ({ params }) => {
 		const [noticeRes, membersRes] = await Promise.all([
 			getNotice(params.noticeId),

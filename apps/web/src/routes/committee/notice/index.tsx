@@ -34,6 +34,9 @@ const noticeColumnHelper = createColumnHelper<NoticeRow>();
 
 export const Route = createFileRoute("/committee/notice/")({
 	component: RouteComponent,
+	head: () => ({
+		meta: [{ title: "お知らせ管理 | 雙峰祭オンラインシステム" }],
+	}),
 	loader: async () => {
 		const res = await listNotices();
 		return {
