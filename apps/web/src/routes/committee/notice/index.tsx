@@ -1,9 +1,8 @@
 import { Badge, Heading, Text } from "@radix-ui/themes";
 import { IconEye, IconPlus } from "@tabler/icons-react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 import {
 	AvatarGroupCell,
 	type AvatarGroupItem,
@@ -35,41 +34,28 @@ const noticeColumnHelper = createColumnHelper<NoticeRow>();
 
 export const Route = createFileRoute("/committee/notice/")({
 	component: RouteComponent,
+	loader: async () => {
+		const res = await listNotices();
+		return {
+			notices: res.notices.map(n => ({
+				id: n.id,
+				ownerId: n.ownerId,
+				title: n.title,
+				ownerName: n.owner.name,
+				collaborators: n.collaborators,
+				updatedAt: n.updatedAt,
+				approverName: n.authorization?.requestedTo.name ?? "",
+				status: getNoticeStatusFromAuth(n.authorization),
+			})),
+		};
+	},
 });
 
 function RouteComponent() {
-	const [notices, setNotices] = useState<NoticeRow[]>([]);
-	const [isLoading, setIsLoading] = useState(true);
+	const { notices } = Route.useLoaderData();
+	const router = useRouter();
 
-	// 作成ダイアログ
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
-
-	const fetchNotices = useCallback(async () => {
-		setIsLoading(true);
-		try {
-			const res = await listNotices();
-			setNotices(
-				res.notices.map(n => ({
-					id: n.id,
-					ownerId: n.ownerId,
-					title: n.title,
-					ownerName: n.owner.name,
-					collaborators: n.collaborators,
-					updatedAt: n.updatedAt,
-					approverName: n.authorization?.requestedTo.name ?? "",
-					status: getNoticeStatusFromAuth(n.authorization),
-				}))
-			);
-		} catch {
-			toast.error("お知らせ一覧の取得に失敗しました");
-		} finally {
-			setIsLoading(false);
-		}
-	}, []);
-
-	useEffect(() => {
-		fetchNotices();
-	}, [fetchNotices]);
 
 	const columns = [
 		noticeColumnHelper.accessor("title", {
@@ -140,7 +126,7 @@ function RouteComponent() {
 			</div>
 
 			<DataTable<NoticeRow>
-				data={isLoading ? [] : notices}
+				data={notices}
 				columns={columns}
 				features={{
 					sorting: true,
@@ -166,7 +152,7 @@ function RouteComponent() {
 			<CreateNoticeDialog
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}
-				onSuccess={fetchNotices}
+				onSuccess={() => router.invalidate()}
 			/>
 		</div>
 	);

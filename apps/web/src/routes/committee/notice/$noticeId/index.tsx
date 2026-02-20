@@ -1,8 +1,12 @@
 import { AlertDialog, Badge, Heading, Separator, Text } from "@radix-ui/themes";
 import type { GetNoticeResponse } from "@sos26/shared";
 import { IconArrowLeft, IconCalendar, IconClock } from "@tabler/icons-react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+	createFileRoute,
+	useNavigate,
+	useRouter,
+} from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
@@ -22,69 +26,46 @@ import { NoticeDetailSidebar } from "./-components/NoticeDetailSidebar";
 import styles from "./index.module.scss";
 
 type NoticeDetail = GetNoticeResponse["notice"];
-type CommitteeMember = {
-	id: string;
-	userId: string;
-	user: { id: string; name: string };
-	permissions: { permission: string }[];
-};
 
 export const Route = createFileRoute("/committee/notice/$noticeId/")({
 	component: RouteComponent,
+	loader: async ({ params }) => {
+		const [noticeRes, membersRes] = await Promise.all([
+			getNotice(params.noticeId),
+			listCommitteeMembers(),
+		]);
+		return {
+			notice: noticeRes.notice,
+			committeeMembers: membersRes.committeeMembers,
+		};
+	},
 });
 
 function RouteComponent() {
 	const { noticeId } = Route.useParams();
+	const { notice, committeeMembers } = Route.useLoaderData();
 	const navigate = useNavigate();
+	const router = useRouter();
 	const { user } = useAuthStore();
-
-	const [notice, setNotice] = useState<NoticeDetail | null>(null);
-	const [isLoading, setIsLoading] = useState(true);
-	const [committeeMembers, setCommitteeMembers] = useState<CommitteeMember[]>(
-		[]
-	);
 
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [removingId, setRemovingId] = useState<string | null>(null);
 
-	const fetchNotice = useCallback(async () => {
-		setIsLoading(true);
-		try {
-			const [noticeRes, membersRes] = await Promise.all([
-				getNotice(noticeId),
-				listCommitteeMembers(),
-			]);
-			setNotice(noticeRes.notice);
-			setCommitteeMembers(membersRes.committeeMembers);
-		} catch {
-			toast.error("お知らせの取得に失敗しました");
-		} finally {
-			setIsLoading(false);
-		}
-	}, [noticeId]);
-
-	useEffect(() => {
-		fetchNotice();
-	}, [fetchNotice]);
-
 	const sanitizedBody = useMemo(
-		() => (notice?.body ? sanitizeHtml(notice.body) : null),
-		[notice?.body]
+		() => (notice.body ? sanitizeHtml(notice.body) : null),
+		[notice.body]
 	);
 
-	const isOwner = notice?.ownerId === user?.id;
-	const isCollaborator =
-		notice?.collaborators.some(c => c.user.id === user?.id) ?? false;
+	const isOwner = notice.ownerId === user?.id;
+	const isCollaborator = notice.collaborators.some(c => c.user.id === user?.id);
 	const canEdit = isOwner || isCollaborator;
 
-	const collaboratorUserIds = new Set(
-		notice?.collaborators.map(c => c.user.id) ?? []
-	);
+	const collaboratorUserIds = new Set(notice.collaborators.map(c => c.user.id));
 	const availableMembers = committeeMembers
 		.filter(
-			m => m.user.id !== notice?.ownerId && !collaboratorUserIds.has(m.user.id)
+			m => m.user.id !== notice.ownerId && !collaboratorUserIds.has(m.user.id)
 		)
 		.map(m => ({ userId: m.user.id, name: m.user.name }));
 
@@ -97,23 +78,19 @@ function RouteComponent() {
 		.map(m => ({ userId: m.user.id, name: m.user.name }));
 
 	const handleAddCollaborator = async (userId: string) => {
-		if (!notice) return;
 		try {
 			await addCollaborator(notice.id, { userId });
-			const res = await getNotice(notice.id);
-			setNotice(res.notice);
+			await router.invalidate();
 		} catch {
 			toast.error("共同編集者の追加に失敗しました");
 		}
 	};
 
 	const handleRemoveCollaborator = async (collaboratorId: string) => {
-		if (!notice) return;
 		setRemovingId(collaboratorId);
 		try {
 			await removeCollaborator(notice.id, collaboratorId);
-			const res = await getNotice(notice.id);
-			setNotice(res.notice);
+			await router.invalidate();
 		} catch {
 			toast.error("共同編集者の削除に失敗しました");
 		} finally {
@@ -138,7 +115,7 @@ function RouteComponent() {
 			await updateNoticeAuthorization(noticeId, authorizationId, {
 				status: "APPROVED",
 			});
-			await fetchNotice();
+			await router.invalidate();
 		} catch {
 			toast.error("承認に失敗しました");
 		}
@@ -149,40 +126,11 @@ function RouteComponent() {
 			await updateNoticeAuthorization(noticeId, authorizationId, {
 				status: "REJECTED",
 			});
-			await fetchNotice();
+			await router.invalidate();
 		} catch {
 			toast.error("却下に失敗しました");
 		}
 	};
-
-	if (isLoading) {
-		return (
-			<div>
-				<Text size="2" color="gray">
-					読み込み中...
-				</Text>
-			</div>
-		);
-	}
-
-	if (!notice) {
-		return (
-			<div>
-				<Heading size="5">お知らせが見つかりません</Heading>
-				<Text as="p" size="2" color="gray">
-					指定されたお知らせは存在しないか、削除された可能性があります。
-				</Text>
-				<button
-					type="button"
-					className={styles.backLink}
-					onClick={() => navigate({ to: "/committee/notice" })}
-				>
-					<IconArrowLeft size={16} />
-					<Text size="2">一覧に戻る</Text>
-				</button>
-			</div>
-		);
-	}
 
 	return (
 		<div className={styles.layout}>
@@ -246,7 +194,7 @@ function RouteComponent() {
 				onRemoveCollaborator={handleRemoveCollaborator}
 				onApprove={handleApprove}
 				onReject={handleReject}
-				onPublishSuccess={fetchNotice}
+				onPublishSuccess={() => router.invalidate()}
 				onEdit={() => setEditDialogOpen(true)}
 				onDelete={() => setDeleteConfirmOpen(true)}
 			/>
@@ -257,7 +205,7 @@ function RouteComponent() {
 				onOpenChange={setEditDialogOpen}
 				noticeId={notice.id}
 				initialValues={{ title: notice.title, body: notice.body ?? "" }}
-				onSuccess={fetchNotice}
+				onSuccess={() => router.invalidate()}
 			/>
 
 			{/* 削除確認ダイアログ */}
