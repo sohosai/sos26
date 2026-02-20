@@ -343,6 +343,7 @@ model NoticeDelivery {
   createdAt DateTime @default(now())
 
   @@unique([noticeAuthorizationId, projectId])
+  @@index([projectId])
 }
 
 // ─────────────────────────────────────────────────────────────
