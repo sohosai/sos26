@@ -34,7 +34,13 @@ projectNoticeRoute.get(
 						notice: {
 							include: {
 								owner: {
-									include: { committeeMember: true },
+									select: {
+										id: true,
+										name: true,
+										committeeMember: {
+											select: { Bureau: true },
+										},
+									},
 								},
 							},
 						},
@@ -95,7 +101,13 @@ projectNoticeRoute.get(
 						notice: {
 							include: {
 								owner: {
-									include: { committeeMember: true },
+									select: {
+										id: true,
+										name: true,
+										committeeMember: {
+											select: { Bureau: true },
+										},
+									},
 								},
 							},
 						},
