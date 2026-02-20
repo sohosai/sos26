@@ -4,6 +4,7 @@ import Avatar from "boring-avatars";
 import styles from "./AvatarGroupCell.module.scss";
 
 export type AvatarGroupItem = {
+	id: string;
 	name: string;
 };
 
@@ -26,7 +27,7 @@ export function AvatarGroupCell<TData extends RowData>({
 			<Popover.Trigger>
 				<button type="button" className={styles.trigger}>
 					{visible.map(user => (
-						<span key={user.name} className={styles.avatar}>
+						<span key={user.id} className={styles.avatar}>
 							<Avatar size={20} name={user.name} variant="beam" />
 						</span>
 					))}
@@ -38,7 +39,7 @@ export function AvatarGroupCell<TData extends RowData>({
 			<Popover.Content side="bottom" align="start" sideOffset={4}>
 				<div className={styles.popoverList}>
 					{users.map(user => (
-						<div key={user.name} className={styles.popoverItem}>
+						<div key={user.id} className={styles.popoverItem}>
 							<Avatar size={20} name={user.name} variant="beam" />
 							<Text size="2">{user.name}</Text>
 						</div>
