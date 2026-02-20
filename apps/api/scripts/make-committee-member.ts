@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { type CommitteePermission, PrismaClient } from "@prisma/client";
 
 const BUREAUS = [
 	"FINANCE",
@@ -15,54 +15,110 @@ const BUREAUS = [
 
 type Bureau = (typeof BUREAUS)[number];
 
+const PERMISSIONS: CommitteePermission[] = [
+	"MEMBER_EDIT",
+	"NOTICE_DELIVER",
+	"NOTICE_APPROVE",
+	"FORM_DELIVER",
+];
+
 function printUsage() {
 	console.log(`
-Usage: bun run make-committee-member -- --email <email> [--bureau <bureau>]
+Usage: bun run make-committee-member --email <email> [--bureau <bureau>] [--permissions <p1,p2,...>]
 
 Options:
-  --email    登録済みユーザーのメールアドレス（必須）
-  --bureau   局名（デフォルト: INFO_SYSTEM）
+  --email        登録済みユーザーのメールアドレス（必須）
+  --bureau       局名（デフォルト: INFO_SYSTEM）
+  --permissions  付与する権限（カンマ区切り）
 
 Bureau:
   ${BUREAUS.join(", ")}
 
+Permissions:
+  ${PERMISSIONS.join(", ")}
+
 Examples:
-  bun run make-committee-member -- --email user@example.com
-  bun run make-committee-member -- --email user@example.com --bureau FINANCE
+  bun run make-committee-member --email user@example.com
+  bun run make-committee-member --email user@example.com --bureau FINANCE
+  bun run make-committee-member --email user@example.com --permissions NOTICE_DELIVER,NOTICE_APPROVE
 `);
 }
 
-function parseArgs(args: string[]): { email: string; bureau: Bureau } {
-	let email: string | undefined;
-	let bureau: Bureau = "INFO_SYSTEM";
-
-	for (let i = 0; i < args.length; i++) {
-		if (args[i] === "--email" && args[i + 1]) {
-			email = args[i + 1];
-			i++;
-		} else if (args[i] === "--bureau" && args[i + 1]) {
-			const value = args[i + 1];
-			if (!BUREAUS.includes(value as Bureau)) {
-				console.error(`エラー: 不明な局名 "${value}"`);
-				console.error(`有効な値: ${BUREAUS.join(", ")}`);
-				process.exit(1);
-			}
-			bureau = value as Bureau;
-			i++;
-		}
+function getOptionValue(args: string[], name: string): string | undefined {
+	const idx = args.indexOf(name);
+	if (idx !== -1 && args[idx + 1]) {
+		return args[idx + 1];
 	}
+	return undefined;
+}
 
+function parseBureau(value: string): Bureau {
+	if (!BUREAUS.includes(value as Bureau)) {
+		console.error(`エラー: 不明な局名 "${value}"`);
+		console.error(`有効な値: ${BUREAUS.join(", ")}`);
+		process.exit(1);
+	}
+	return value as Bureau;
+}
+
+function parsePermissions(value: string): CommitteePermission[] {
+	return value.split(",").map(v => {
+		if (!PERMISSIONS.includes(v as CommitteePermission)) {
+			console.error(`エラー: 不明な権限 "${v}"`);
+			console.error(`有効な値: ${PERMISSIONS.join(", ")}`);
+			process.exit(1);
+		}
+		return v as CommitteePermission;
+	});
+}
+
+function parseArgs(args: string[]): {
+	email: string;
+	bureau: Bureau;
+	permissions: CommitteePermission[];
+} {
+	const email = getOptionValue(args, "--email");
 	if (!email) {
 		console.error("エラー: --email は必須です");
 		printUsage();
 		process.exit(1);
 	}
 
-	return { email, bureau };
+	const bureauValue = getOptionValue(args, "--bureau");
+	const bureau = bureauValue ? parseBureau(bureauValue) : "INFO_SYSTEM";
+
+	const permissionsValue = getOptionValue(args, "--permissions");
+	const permissions = permissionsValue
+		? parsePermissions(permissionsValue)
+		: [];
+
+	return { email, bureau, permissions };
+}
+
+async function grantPermissions(
+	prisma: PrismaClient,
+	memberId: string,
+	permissions: CommitteePermission[]
+) {
+	if (permissions.length === 0) return;
+
+	for (const permission of permissions) {
+		await prisma.committeeMemberPermission.upsert({
+			where: {
+				committeeMemberId_permission: {
+					committeeMemberId: memberId,
+					permission,
+				},
+			},
+			create: { committeeMemberId: memberId, permission },
+			update: {},
+		});
+		console.log(`  権限付与: ${permission}`);
+	}
 }
 
 async function main() {
-	const { email, bureau } = parseArgs(process.argv.slice(2));
+	const { email, bureau, permissions } = parseArgs(process.argv.slice(2));
 
 	const prisma = new PrismaClient();
 
@@ -87,6 +143,7 @@ async function main() {
 			console.log(`ユーザー "${user.name}" (${email}) は既に実委人です`);
 			console.log(`  局: ${existing.Bureau}`);
 			console.log(`  ID: ${existing.id}`);
+			await grantPermissions(prisma, existing.id, permissions);
 			process.exit(0);
 		}
 
@@ -103,6 +160,7 @@ async function main() {
 			console.log(`  ユーザー: ${user.name} (${email})`);
 			console.log(`  局: ${reactivated.Bureau}`);
 			console.log(`  ID: ${reactivated.id}`);
+			await grantPermissions(prisma, reactivated.id, permissions);
 		} else {
 			const member = await prisma.committeeMember.create({
 				data: {
@@ -114,6 +172,7 @@ async function main() {
 			console.log(`  ユーザー: ${user.name} (${email})`);
 			console.log(`  局: ${member.Bureau}`);
 			console.log(`  ID: ${member.id}`);
+			await grantPermissions(prisma, member.id, permissions);
 		}
 	} finally {
 		await prisma.$disconnect();
