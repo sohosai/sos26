@@ -49,18 +49,16 @@ function ProjectLayout() {
 	const handleSelectProject = (projectId: string) => {
 		setSelectedProjectId(projectId);
 		navigate({ to: "/project" });
-		router.invalidate();
 	};
 
 	const handleJoinProject = async (inviteCode: string) => {
 		try {
 			const { project } = await joinProject({ inviteCode });
 
-			setProjects(
-				projects.some(p => p.id === project.id)
-					? projects
-					: [...projects, project]
-			);
+			const current = useProjectStore.getState().projects;
+			if (!current.some(p => p.id === project.id)) {
+				setProjects([...current, project]);
+			}
 
 			setSelectedProjectId(project.id);
 			router.invalidate();
@@ -105,7 +103,7 @@ function ProjectLayout() {
 				open={dialogOpen}
 				onOpenChange={setDialogOpen}
 				onCreated={project => {
-					setProjects([...projects, project]);
+					setProjects([...useProjectStore.getState().projects, project]);
 					setSelectedProjectId(project.id);
 					router.invalidate();
 				}}
