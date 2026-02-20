@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { IconButton } from "@/components/primitives";
 import { regenerateInviteCode } from "@/lib/api/project";
 import { useAuthStore } from "@/lib/auth";
-import { useProject } from "@/lib/project/context";
+import { useProject } from "@/lib/project/store";
 import styles from "./InviteMemberDialog.module.scss";
 
 type Props = {
