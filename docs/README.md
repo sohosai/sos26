@@ -14,7 +14,8 @@
   - ルーティング: `docs/apps/web/routing.md`
   - API クライアント: `docs/apps/web/api-client.md`
   - コンポーネント: `docs/apps/web/components.md`
-  - RichTextEditor: `docs/apps/web/rich-text-editor.md`
+  - RichTextEditor（サニタイズ仕様含む）: `docs/apps/web/rich-text-editor.md`
+  - 日付フォーマット: `docs/apps/web/format.md`
   - DataTable: `docs/apps/web/data-table.md`
   - トースト通知: `docs/apps/web/toast.md`
   - スタイリング: `docs/apps/web/styling.md`
@@ -23,6 +24,7 @@
   - エンドポイント一覧: `docs/apps/api/api.md`
   - Project API 仕様: `docs/apps/api/project.md`
   - Committee Member API 仕様: `docs/apps/api/committee-member.md`
+  - Notice API 仕様: `docs/apps/api/notice.md`
   - Committee Project API 仕様: `docs/apps/api/committee-project.md`
   - テストガイド: `docs/apps/api/testing.md`
   - Prisma: `docs/apps/api/prisma.md`

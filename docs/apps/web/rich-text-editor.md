@@ -73,18 +73,46 @@ const handleSubmit = () => {
 const isEmpty = !body.replace(/<[^>]*>/g, "").trim();
 ```
 
-## HTML のサニタイズ（表示側）
+## HTML のサニタイズ
 
 RichTextEditor の出力は HTML 文字列であり、表示時に `dangerouslySetInnerHTML` を使用する。
-**保存された HTML をそのまま描画すると XSS 脆弱性になるため、表示前に必ず [DOMPurify](https://github.com/cure53/DOMPurify) でサニタイズする。**
+**XSS 防止のため、API（保存時）と Web（表示時）の両方で [DOMPurify](https://github.com/cure53/DOMPurify) によるサニタイズを行う。**
+
+### 許可リスト
+
+許可するタグ・属性は `packages/shared/src/lib/sanitize-config.ts` で一元管理している。
+
+| 許可タグ | 対応する機能 |
+|---|---|
+| `p`, `br` | 段落・改行 |
+| `strong`, `em`, `s` | 太字・斜体・取り消し線 |
+| `ul`, `ol`, `li` | 箇条書き・番号リスト |
+| `blockquote` | 引用 |
+| `a` | リンク |
+
+| 許可属性 | 用途 |
+|---|---|
+| `href` | リンク先 URL |
+| `target` | `_blank`（別タブで開く） |
+| `rel` | `noopener noreferrer` |
+
+### サニタイズの実装
+
+API と Web でそれぞれラッパー関数を提供している。どちらも共通の許可リストを使用する。
+
+| レイヤー | ファイル | パッケージ |
+|---|---|---|
+| 共通設定 | `packages/shared/src/lib/sanitize-config.ts` | - |
+| API | `apps/api/src/lib/sanitize.ts` | `isomorphic-dompurify` |
+| Web | `apps/web/src/lib/sanitize.ts` | `dompurify` |
 
 ```tsx
-import DOMPurify from "dompurify";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { useMemo } from "react";
 
 // サニタイズ結果を useMemo でキャッシュ
 const sanitizedBody = useMemo(
-  () => (body ? DOMPurify.sanitize(body) : null),
+  () => (body ? sanitizeHtml(body) : null),
   [body]
 );
 
@@ -99,10 +127,8 @@ const sanitizedBody = useMemo(
 
 ### 注意事項
 
-- `DOMPurify.sanitize()` はデフォルトで `<script>`, `onerror` 等の危険な要素・属性を除去する
-- RichTextEditor が生成する HTML（太字・リスト・リンク等）は全てサニタイズ後も保持される
-- 新しい Tiptap 拡張を追加して特殊な HTML 属性を出力する場合、DOMPurify の `ALLOWED_ATTR` / `ALLOWED_TAGS` の調整が必要になる可能性がある
-- サニタイズは**表示側（フロントエンド）**で行う。APIはHTML文字列をそのまま保存・返却する
+- API は保存時にサニタイズし、Web は表示時にもサニタイズする（二重サニタイズ）
+- 新しい Tiptap 拡張を追加して特殊な HTML タグや属性を出力する場合、`sanitize-config.ts` の `SANITIZE_ALLOWED_TAGS` / `SANITIZE_ALLOWED_ATTR` に追加が必要
 
 ## 対応フォーマット
 
