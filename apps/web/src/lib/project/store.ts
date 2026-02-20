@@ -17,7 +17,6 @@ export const useProjectStore = create<ProjectStore>(set => ({
 
 /**
  * 選択中のプロジェクトを返す。未選択の場合は例外を投げる。
- * 旧 ProjectContext の useProject() の代替。
  */
 export function useProject(): Project {
 	const project = useProjectStore(s =>
