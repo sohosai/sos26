@@ -68,6 +68,8 @@ export function NoticeDetailSidebar({
 	const [rejectingId, setRejectingId] = useState<string | null>(null);
 
 	const pendingAuth = notice.authorizations.find(a => a.status === "PENDING");
+	const approvedAuth = notice.authorizations.find(a => a.status === "APPROVED");
+	const latestAuth = pendingAuth ?? approvedAuth;
 	const isApprover = pendingAuth?.requestedToId === userId;
 	const hasApprovedAuth = notice.authorizations.some(
 		a => a.status === "APPROVED"
@@ -77,7 +79,7 @@ export function NoticeDetailSidebar({
 	);
 	const canPublish = canEdit && !hasApprovedAuth && !hasPendingAuth;
 
-	const showAuthBox = canPublish || pendingAuth;
+	const showAuthBox = canPublish || latestAuth;
 
 	return (
 		<>
@@ -185,103 +187,30 @@ export function NoticeDetailSidebar({
 							</div>
 						)}
 
-						{pendingAuth && (
-							<div className={styles.section}>
-								<Text size="2" weight="medium" color="gray">
-									承認依頼
-								</Text>
-								{isApprover && (
-									<Text size="2" color="orange" weight="medium">
-										あなたに承認リクエストが届いています
-									</Text>
-								)}
-								<div className={styles.authDetailRow}>
-									<Text size="2" color="gray">
-										申請者
-									</Text>
-									<div className={styles.authPerson}>
-										<Avatar
-											size={20}
-											name={pendingAuth.requestedBy.name}
-											variant="beam"
-										/>
-										<Text size="2">{pendingAuth.requestedBy.name}</Text>
-									</div>
-								</div>
-								<div className={styles.authDetailRow}>
-									<Text size="2" color="gray">
-										承認者
-									</Text>
-									<div className={styles.authPerson}>
-										<Avatar
-											size={20}
-											name={pendingAuth.requestedTo.name}
-											variant="beam"
-										/>
-										<Text size="2">{pendingAuth.requestedTo.name}</Text>
-									</div>
-								</div>
-								<div className={styles.authDetailRow}>
-									<Text size="2" color="gray">
-										公開希望日時
-									</Text>
-									<Text size="2">
-										{formatDate(pendingAuth.deliveredAt, "datetime")}
-									</Text>
-								</div>
-								{pendingAuth.deliveries.length > 0 && (
-									<div className={styles.authDetailRow}>
-										<Text size="2" color="gray">
-											配信先
-										</Text>
-										<div className={styles.projectTags}>
-											{pendingAuth.deliveries.map(d => (
-												<Badge key={d.id} variant="soft" size="1">
-													{d.project.name}
-												</Badge>
-											))}
-										</div>
-									</div>
-								)}
-								{isApprover && (
-									<div className={styles.authorizationActions}>
-										<Button
-											intent="primary"
-											size="2"
-											onClick={async () => {
-												setApprovingId(pendingAuth.id);
-												try {
-													await onApprove(pendingAuth.id);
-												} finally {
-													setApprovingId(null);
-												}
-											}}
-											loading={approvingId === pendingAuth.id}
-											disabled={rejectingId !== null}
-										>
-											<IconCheck size={16} />
-											承認
-										</Button>
-										<Button
-											intent="secondary"
-											size="2"
-											onClick={async () => {
-												setRejectingId(pendingAuth.id);
-												try {
-													await onReject(pendingAuth.id);
-												} finally {
-													setRejectingId(null);
-												}
-											}}
-											loading={rejectingId === pendingAuth.id}
-											disabled={approvingId !== null}
-										>
-											<IconX size={16} />
-											却下
-										</Button>
-									</div>
-								)}
-							</div>
+						{latestAuth && (
+							<AuthDetailSection
+								auth={latestAuth}
+								pendingAuth={pendingAuth}
+								isApprover={isApprover}
+								approvingId={approvingId}
+								rejectingId={rejectingId}
+								onApprove={async id => {
+									setApprovingId(id);
+									try {
+										await onApprove(id);
+									} finally {
+										setApprovingId(null);
+									}
+								}}
+								onReject={async id => {
+									setRejectingId(id);
+									try {
+										await onReject(id);
+									} finally {
+										setRejectingId(null);
+									}
+								}}
+							/>
 						)}
 					</aside>
 				)}
@@ -302,5 +231,100 @@ export function NoticeDetailSidebar({
 				onSuccess={onPublishSuccess}
 			/>
 		</>
+	);
+}
+
+type AuthDetailSectionProps = {
+	auth: NoticeDetail["authorizations"][number];
+	pendingAuth: NoticeDetail["authorizations"][number] | undefined;
+	isApprover: boolean;
+	approvingId: string | null;
+	rejectingId: string | null;
+	onApprove: (id: string) => void;
+	onReject: (id: string) => void;
+};
+
+function AuthDetailSection({
+	auth,
+	pendingAuth,
+	isApprover,
+	approvingId,
+	rejectingId,
+	onApprove,
+	onReject,
+}: AuthDetailSectionProps) {
+	return (
+		<div className={styles.section}>
+			<Text size="2" weight="medium" color="gray">
+				承認依頼
+			</Text>
+			{isApprover && pendingAuth && (
+				<Text size="2" color="orange" weight="medium">
+					あなたに承認リクエストが届いています
+				</Text>
+			)}
+			<div className={styles.authDetailRow}>
+				<Text size="2" color="gray">
+					申請者
+				</Text>
+				<div className={styles.authPerson}>
+					<Avatar size={20} name={auth.requestedBy.name} variant="beam" />
+					<Text size="2">{auth.requestedBy.name}</Text>
+				</div>
+			</div>
+			<div className={styles.authDetailRow}>
+				<Text size="2" color="gray">
+					承認者
+				</Text>
+				<div className={styles.authPerson}>
+					<Avatar size={20} name={auth.requestedTo.name} variant="beam" />
+					<Text size="2">{auth.requestedTo.name}</Text>
+				</div>
+			</div>
+			<div className={styles.authDetailRow}>
+				<Text size="2" color="gray">
+					公開希望日時
+				</Text>
+				<Text size="2">{formatDate(auth.deliveredAt, "datetime")}</Text>
+			</div>
+			{auth.deliveries.length > 0 && (
+				<div className={styles.authDetailRow}>
+					<Text size="2" color="gray">
+						配信先
+					</Text>
+					<div className={styles.projectTags}>
+						{auth.deliveries.map(d => (
+							<Badge key={d.id} variant="soft" size="1">
+								{d.project.name}
+							</Badge>
+						))}
+					</div>
+				</div>
+			)}
+			{isApprover && pendingAuth && (
+				<div className={styles.authorizationActions}>
+					<Button
+						intent="primary"
+						size="2"
+						onClick={() => onApprove(pendingAuth.id)}
+						loading={approvingId === pendingAuth.id}
+						disabled={rejectingId !== null}
+					>
+						<IconCheck size={16} />
+						承認
+					</Button>
+					<Button
+						intent="secondary"
+						size="2"
+						onClick={() => onReject(pendingAuth.id)}
+						loading={rejectingId === pendingAuth.id}
+						disabled={approvingId !== null}
+					>
+						<IconX size={16} />
+						却下
+					</Button>
+				</div>
+			)}
+		</div>
 	);
 }
