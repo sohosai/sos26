@@ -1,0 +1,19 @@
+.content {
+	max-width: 560px;
+}
+
+.divider {
+	border: none;
+	border-top: 1px solid var(--gray-a6);
+	margin: var(--space-4) 0;
+}
+
+.body {
+	margin-top: 0;
+}
+
+.actions {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: var(--space-4);
+}

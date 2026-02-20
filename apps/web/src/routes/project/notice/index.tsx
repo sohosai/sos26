@@ -1,21 +1,15 @@
-import { Badge, Dialog, Heading, Text } from "@radix-ui/themes";
+import { Badge, Heading, Text } from "@radix-ui/themes";
 import type { Bureau } from "@sos26/shared";
 import { bureauLabelMap } from "@sos26/shared";
 import { IconEye } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
+import { useCallback, useEffect, useState } from "react";
 import { DataTable, DateCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
-import {
-	getProjectNotice,
-	listProjectNotices,
-	readProjectNotice,
-} from "@/lib/api/project-notice";
-import { formatDate } from "@/lib/format";
+import { listProjectNotices } from "@/lib/api/project-notice";
 import { useProjectStore } from "@/lib/project/store";
-import { sanitizeHtml } from "@/lib/sanitize";
+import { NoticeDetailDialog } from "./-components/NoticeDetailDialog";
 import styles from "./index.module.scss";
 
 const getBureauLabel = (bureau: string): string =>
@@ -64,51 +58,12 @@ function RouteComponent() {
 	}, [initialNotices]);
 
 	const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
-	const [selectedNoticeBody, setSelectedNoticeBody] = useState<string | null>(
-		null
-	);
-	const [selectedNoticeTitle, setSelectedNoticeTitle] = useState("");
-	const [selectedNoticeMeta, setSelectedNoticeMeta] = useState("");
-	const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
-	const handleOpenNotice = async (noticeId: string) => {
-		if (!selectedProjectId) return;
-		setSelectedNoticeId(noticeId);
-		setIsLoadingDetail(true);
-		try {
-			const res = await getProjectNotice(selectedProjectId, noticeId);
-			setSelectedNoticeTitle(res.notice.title);
-			setSelectedNoticeBody(res.notice.body);
-			setSelectedNoticeMeta(
-				`${formatDate(new Date(res.notice.deliveredAt), "datetime")}　${getBureauLabel(res.notice.ownerBureau)}`
-			);
-
-			if (!res.notice.isRead) {
-				await readProjectNotice(selectedProjectId, noticeId);
-				setNotices(prev =>
-					prev.map(n => (n.id === noticeId ? { ...n, isRead: true } : n))
-				);
-			}
-		} catch {
-			toast.error("お知らせの取得に失敗しました");
-		} finally {
-			setIsLoadingDetail(false);
-		}
-	};
-
-	const handleCloseDialog = (open: boolean) => {
-		if (!open) {
-			setSelectedNoticeId(null);
-			setSelectedNoticeBody(null);
-			setSelectedNoticeTitle("");
-			setSelectedNoticeMeta("");
-		}
-	};
-
-	const sanitizedBody = useMemo(
-		() => (selectedNoticeBody ? sanitizeHtml(selectedNoticeBody) : null),
-		[selectedNoticeBody]
-	);
+	const handleRead = useCallback((noticeId: string) => {
+		setNotices(prev =>
+			prev.map(n => (n.id === noticeId ? { ...n, isRead: true } : n))
+		);
+	}, []);
 
 	const columns = [
 		noticeColumnHelper.accessor("title", {
@@ -145,7 +100,7 @@ function RouteComponent() {
 				<Button
 					intent="secondary"
 					size="1"
-					onClick={() => handleOpenNotice(row.original.id)}
+					onClick={() => setSelectedNoticeId(row.original.id)}
 				>
 					<IconEye size={16} />
 					お知らせを見る
@@ -183,42 +138,12 @@ function RouteComponent() {
 				]}
 			/>
 
-			<Dialog.Root
-				open={selectedNoticeId !== null}
-				onOpenChange={handleCloseDialog}
-			>
-				<Dialog.Content className={styles.dialogContent}>
-					{isLoadingDetail ? (
-						<Text size="2" color="gray">
-							読み込み中...
-						</Text>
-					) : (
-						<>
-							<Dialog.Title>{selectedNoticeTitle}</Dialog.Title>
-							<Dialog.Description size="2" color="gray">
-								{selectedNoticeMeta}
-							</Dialog.Description>
-							<hr className={styles.dialogDivider} />
-							{sanitizedBody ? (
-								<div
-									className={styles.noticeContent}
-									// biome-ignore lint/security/noDangerouslySetInnerHtml: サニタイズ済みHTML
-									dangerouslySetInnerHTML={{ __html: sanitizedBody }}
-								/>
-							) : (
-								<Text as="p" size="2" color="gray" mt="4">
-									本文なし
-								</Text>
-							)}
-							<div className={styles.dialogActions}>
-								<Dialog.Close>
-									<Button intent="secondary">閉じる</Button>
-								</Dialog.Close>
-							</div>
-						</>
-					)}
-				</Dialog.Content>
-			</Dialog.Root>
+			<NoticeDetailDialog
+				noticeId={selectedNoticeId}
+				projectId={selectedProjectId ?? ""}
+				onClose={() => setSelectedNoticeId(null)}
+				onRead={handleRead}
+			/>
 		</div>
 	);
 }
