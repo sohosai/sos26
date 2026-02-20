@@ -7,7 +7,7 @@ import {
 } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DataTable, TagCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
@@ -115,6 +115,10 @@ export const Route = createFileRoute("/project/members/")({
 function RouteComponent() {
 	const { members: initialMembers } = Route.useLoaderData();
 	const [members, setMembers] = useState<MemberRow[]>(initialMembers);
+
+	useEffect(() => {
+		setMembers(initialMembers);
+	}, [initialMembers]);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const project = useProject();
 	const { user } = useAuthStore();
