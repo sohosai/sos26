@@ -1,6 +1,7 @@
 import { Dialog, Popover, Text } from "@radix-ui/themes";
 import { IconCopy, IconRefresh, IconX } from "@tabler/icons-react";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { IconButton } from "@/components/primitives";
 import { regenerateInviteCode } from "@/lib/api/project";
 import { useAuthStore } from "@/lib/auth";
@@ -32,9 +33,8 @@ export function InviteMemberDialog({ open, onOpenChange }: Props) {
 		try {
 			const res = await regenerateInviteCode(project.id);
 			setInviteCode(res.inviteCode);
-		} catch (e) {
-			console.error(e);
-			alert("招待コードの再生成に失敗しました");
+		} catch {
+			toast.error("招待コードの再生成に失敗しました");
 		}
 	};
 

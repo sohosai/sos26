@@ -1,4 +1,5 @@
 import type { Project } from "@sos26/shared";
+import { toast } from "sonner";
 import { FormAnswerDialog } from "@/components/form/Answer/AnswerDialog";
 import {
 	isCreateProjectFormAnswers,
@@ -24,8 +25,8 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 			try {
 				const res = await createProject(answers);
 				onCreated(res.project);
-			} catch (e) {
-				console.error(e);
+			} catch {
+				toast.error("企画の作成に失敗しました");
 			}
 		} else {
 			console.warn("企画作成フォームではありません。");

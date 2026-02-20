@@ -2,6 +2,7 @@ import type { CommitteeMember, User } from "@sos26/shared";
 import { ErrorCode } from "@sos26/shared";
 import type { User as FirebaseUser } from "firebase/auth";
 import { signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
+import { toast } from "sonner";
 import { create } from "zustand";
 import { getMe } from "../api/auth";
 import { auth as firebaseAuth } from "../firebase";
@@ -71,7 +72,7 @@ async function fetchAndSetUser(fbUser: FirebaseUser | null): Promise<void> {
 		if (isClientError(err) && err.code === ErrorCode.NOT_FOUND) {
 			useAuthStore.setState(UNAUTHENTICATED_STATE);
 		} else {
-			console.error("[AuthStore] getMe failed", err);
+			toast.error("認証情報の取得に失敗しました");
 			useAuthStore.setState(UNAUTHENTICATED_STATE);
 		}
 	} finally {
