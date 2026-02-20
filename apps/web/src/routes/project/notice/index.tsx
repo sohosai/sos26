@@ -4,7 +4,7 @@ import { bureauLabelMap } from "@sos26/shared";
 import { IconEye } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DataTable, DateCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
@@ -14,7 +14,7 @@ import {
 	readProjectNotice,
 } from "@/lib/api/project-notice";
 import { formatDate } from "@/lib/format";
-import { useProject } from "@/lib/project/context";
+import { useProjectStore } from "@/lib/project/store";
 import { sanitizeHtml } from "@/lib/sanitize";
 import styles from "./index.module.scss";
 
@@ -34,12 +34,31 @@ const noticeColumnHelper = createColumnHelper<NoticeRow>();
 
 export const Route = createFileRoute("/project/notice/")({
 	component: RouteComponent,
+	loader: async () => {
+		const { selectedProjectId } = useProjectStore.getState();
+		if (!selectedProjectId) return { notices: [] as NoticeRow[] };
+		const res = await listProjectNotices(selectedProjectId);
+		return {
+			notices: res.notices.map(n => ({
+				id: n.id,
+				title: n.title,
+				ownerName: n.owner.name,
+				ownerBureau: n.ownerBureau,
+				deliveredAt: n.deliveredAt,
+				isRead: n.isRead,
+			})),
+		};
+	},
 });
 
 function RouteComponent() {
-	const project = useProject();
-	const [notices, setNotices] = useState<NoticeRow[]>([]);
-	const [isLoading, setIsLoading] = useState(true);
+	const { notices: initialNotices } = Route.useLoaderData();
+	const [notices, setNotices] = useState<NoticeRow[]>(initialNotices);
+	const { selectedProjectId } = useProjectStore();
+
+	useEffect(() => {
+		setNotices(initialNotices);
+	}, [initialNotices]);
 
 	const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
 	const [selectedNoticeBody, setSelectedNoticeBody] = useState<string | null>(
@@ -49,36 +68,12 @@ function RouteComponent() {
 	const [selectedNoticeMeta, setSelectedNoticeMeta] = useState("");
 	const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
-	const fetchNotices = useCallback(async () => {
-		setIsLoading(true);
-		try {
-			const res = await listProjectNotices(project.id);
-			setNotices(
-				res.notices.map(n => ({
-					id: n.id,
-					title: n.title,
-					ownerName: n.owner.name,
-					ownerBureau: n.ownerBureau,
-					deliveredAt: n.deliveredAt,
-					isRead: n.isRead,
-				}))
-			);
-		} catch {
-			toast.error("お知らせ一覧の取得に失敗しました");
-		} finally {
-			setIsLoading(false);
-		}
-	}, [project.id]);
-
-	useEffect(() => {
-		fetchNotices();
-	}, [fetchNotices]);
-
 	const handleOpenNotice = async (noticeId: string) => {
+		if (!selectedProjectId) return;
 		setSelectedNoticeId(noticeId);
 		setIsLoadingDetail(true);
 		try {
-			const res = await getProjectNotice(project.id, noticeId);
+			const res = await getProjectNotice(selectedProjectId, noticeId);
 			setSelectedNoticeTitle(res.notice.title);
 			setSelectedNoticeBody(res.notice.body);
 			setSelectedNoticeMeta(
@@ -86,7 +81,7 @@ function RouteComponent() {
 			);
 
 			if (!res.notice.isRead) {
-				await readProjectNotice(project.id, noticeId);
+				await readProjectNotice(selectedProjectId, noticeId);
 				setNotices(prev =>
 					prev.map(n => (n.id === noticeId ? { ...n, isRead: true } : n))
 				);
@@ -167,7 +162,7 @@ function RouteComponent() {
 			</div>
 
 			<DataTable<NoticeRow>
-				data={isLoading ? [] : notices}
+				data={notices}
 				columns={columns}
 				features={{
 					sorting: true,
