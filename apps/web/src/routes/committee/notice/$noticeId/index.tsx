@@ -17,9 +17,9 @@ import { useAuthStore } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { getNoticeStatusFromAuth } from "@/lib/notice-status";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { CreateNoticeDialog } from "../CreateNoticeDialog";
+import { CreateNoticeDialog } from "../_components/CreateNoticeDialog";
+import { NoticeDetailSidebar } from "./_components/NoticeDetailSidebar";
 import styles from "./index.module.scss";
-import { NoticeDetailSidebar } from "./NoticeDetailSidebar";
 
 type NoticeDetail = GetNoticeResponse["notice"];
 type CommitteeMember = {
