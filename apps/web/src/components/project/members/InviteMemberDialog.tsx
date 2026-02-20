@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { IconButton } from "@/components/primitives";
 import { regenerateInviteCode } from "@/lib/api/project";
 import { useAuthStore } from "@/lib/auth";
-import { useProject } from "@/lib/project/context";
+import { useProject } from "@/lib/project/store";
 import styles from "./InviteMemberDialog.module.scss";
 
 type Props = {
@@ -17,12 +17,10 @@ export function InviteMemberDialog({ open, onOpenChange }: Props) {
 	const project = useProject();
 	const { user } = useAuthStore();
 	const [copied, setCopied] = useState(false);
-	const [inviteCode, setInviteCode] = useState(project?.inviteCode ?? "");
+	const [inviteCode, setInviteCode] = useState(project.inviteCode ?? "");
 	const timerRef = useRef<number | null>(null);
 
-	const isOwner = project?.ownerId === user?.id;
-
-	if (!project) return null;
+	const isOwner = project.ownerId === user?.id;
 
 	const handleRegenerate = async () => {
 		if (
