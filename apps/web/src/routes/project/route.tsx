@@ -56,9 +56,8 @@ function ProjectLayout() {
 		try {
 			const { project } = await joinProject({ inviteCode });
 
-			const current = useProjectStore.getState().projects;
-			if (!current.some(p => p.id === project.id)) {
-				setProjects([...current, project]);
+			if (!projects.some(p => p.id === project.id)) {
+				setProjects([...projects, project]);
 			}
 
 			setSelectedProjectId(project.id);
@@ -101,7 +100,7 @@ function ProjectLayout() {
 				open={dialogOpen}
 				onOpenChange={setDialogOpen}
 				onCreated={project => {
-					setProjects([...useProjectStore.getState().projects, project]);
+					setProjects([...projects, project]);
 					setSelectedProjectId(project.id);
 					router.invalidate();
 				}}
