@@ -560,8 +560,10 @@ committeeNoticeRoute.patch(
 			);
 		}
 
+		// where に status: "PENDING" を含めることで、
+		// 同時リクエストによる二重承認を防止する
 		const updated = await prisma.noticeAuthorization.update({
-			where: { id: authorizationId },
+			where: { id: authorizationId, status: "PENDING" },
 			data: { status, decidedAt: new Date() },
 		});
 
