@@ -430,12 +430,17 @@ committeeNoticeRoute.post(
 			throw Errors.forbidden("NOTICE_DELIVER 権限が必要です");
 		}
 
-		// 承認者が共同編集者であること
-		const isRequestedToCollaborator = notice.collaborators.some(
-			col => col.userId === requestedToId
+		// 承認者が NOTICE_APPROVE 権限を持つか確認
+		const approverPermission = await prisma.committeeMemberPermission.findFirst(
+			{
+				where: {
+					committeeMember: { userId: requestedToId, deletedAt: null },
+					permission: "NOTICE_APPROVE",
+				},
+			}
 		);
-		if (!isRequestedToCollaborator) {
-			throw Errors.invalidRequest("承認者は共同編集者の中から指定してください");
+		if (!approverPermission) {
+			throw Errors.invalidRequest("承認者には NOTICE_APPROVE 権限が必要です");
 		}
 
 		// deliveredAt が未来であること

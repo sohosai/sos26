@@ -22,6 +22,11 @@ type AvailableMember = {
 	name: string;
 };
 
+type Approver = {
+	userId: string;
+	name: string;
+};
+
 type Props = {
 	notice: NoticeDetail;
 	noticeId: string;
@@ -29,6 +34,7 @@ type Props = {
 	isOwner: boolean;
 	canEdit: boolean;
 	availableMembers: AvailableMember[];
+	approvers: Approver[];
 	removingId: string | null;
 	onAddCollaborator: (userId: string) => Promise<void>;
 	onRemoveCollaborator: (collaboratorId: string) => void;
@@ -46,6 +52,7 @@ export function NoticeDetailSidebar({
 	isOwner,
 	canEdit,
 	availableMembers,
+	approvers,
 	removingId,
 	onAddCollaborator,
 	onRemoveCollaborator,
@@ -291,7 +298,7 @@ export function NoticeDetailSidebar({
 				open={publishRequestOpen}
 				onOpenChange={setPublishRequestOpen}
 				noticeId={noticeId}
-				collaborators={notice.collaborators}
+				approvers={approvers}
 				onSuccess={onPublishSuccess}
 			/>
 		</>

@@ -14,9 +14,9 @@ import { createNoticeAuthorization } from "@/lib/api/committee-notice";
 import { listCommitteeProjects } from "@/lib/api/committee-project";
 import styles from "./PublishRequestDialog.module.scss";
 
-type Collaborator = {
-	id: string;
-	user: { id: string; name: string };
+type Approver = {
+	userId: string;
+	name: string;
 };
 
 type Project = {
@@ -28,7 +28,7 @@ type Props = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	noticeId: string;
-	collaborators: Collaborator[];
+	approvers: Approver[];
 	onSuccess: () => void;
 };
 
@@ -36,7 +36,7 @@ export function PublishRequestDialog({
 	open,
 	onOpenChange,
 	noticeId,
-	collaborators,
+	approvers,
 	onSuccess,
 }: Props) {
 	const [approverId, setApproverId] = useState("");
@@ -51,10 +51,10 @@ export function PublishRequestDialog({
 	const [projectSearch, setProjectSearch] = useState("");
 	const [error, setError] = useState<string | null>(null);
 
-	const approverOptions = collaborators.map(c => ({
-		value: c.user.id,
-		label: c.user.name,
-		icon: <Avatar size={16} name={c.user.name} variant="beam" />,
+	const approverOptions = approvers.map(a => ({
+		value: a.userId,
+		label: a.name,
+		icon: <Avatar size={16} name={a.name} variant="beam" />,
 	}));
 
 	const filteredProjects = useMemo(() => {
@@ -177,7 +177,8 @@ export function PublishRequestDialog({
 						</Text>
 						{approverOptions.length === 0 ? (
 							<Text size="2" color="red">
-								共同編集者がいません。先に共同編集者を追加してください。
+								承認可能なメンバーがいません。NOTICE_APPROVE
+								権限を持つメンバーを追加してください。
 							</Text>
 						) : (
 							<Select

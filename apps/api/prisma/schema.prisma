@@ -185,6 +185,7 @@ model CommitteeMember {
 enum CommitteePermission {
   MEMBER_EDIT // メンバー編集
   NOTICE_DELIVER // お知らせ配信
+  NOTICE_APPROVE // お知らせ承認
   FORM_DELIVER // フォーム配信
 }
 

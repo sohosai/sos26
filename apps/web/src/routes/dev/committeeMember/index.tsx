@@ -15,6 +15,7 @@ import { useAuthStore } from "@/lib/auth";
 const PERMISSION_OPTIONS: { value: CommitteePermission; label: string }[] = [
 	{ value: "MEMBER_EDIT", label: "メンバー編集" },
 	{ value: "NOTICE_DELIVER", label: "お知らせ配信" },
+	{ value: "NOTICE_APPROVE", label: "お知らせ承認" },
 	{ value: "FORM_DELIVER", label: "フォーム配信" },
 ];
 

@@ -26,6 +26,7 @@ type CommitteeMember = {
 	id: string;
 	userId: string;
 	user: { id: string; name: string };
+	permissions: { permission: string }[];
 };
 
 export const Route = createFileRoute("/committee/notice/$noticeId/")({
@@ -84,6 +85,14 @@ function RouteComponent() {
 	const availableMembers = committeeMembers
 		.filter(
 			m => m.user.id !== notice?.ownerId && !collaboratorUserIds.has(m.user.id)
+		)
+		.map(m => ({ userId: m.user.id, name: m.user.name }));
+
+	const approvers = committeeMembers
+		.filter(
+			m =>
+				m.user.id !== user?.id &&
+				m.permissions.some(p => p.permission === "NOTICE_APPROVE")
 		)
 		.map(m => ({ userId: m.user.id, name: m.user.name }));
 
@@ -231,6 +240,7 @@ function RouteComponent() {
 				isOwner={isOwner}
 				canEdit={canEdit}
 				availableMembers={availableMembers}
+				approvers={approvers}
 				removingId={removingId}
 				onAddCollaborator={handleAddCollaborator}
 				onRemoveCollaborator={handleRemoveCollaborator}
