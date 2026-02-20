@@ -22,7 +22,12 @@ import {
 	updateNoticeResponseSchema,
 } from "../schemas/notice";
 import { projectIdPathParamsSchema } from "../schemas/project";
-import type { BodyEndpoint, GetEndpoint, NoBodyEndpoint } from "./types";
+import type {
+	BodyEndpoint,
+	Endpoint,
+	GetEndpoint,
+	NoBodyEndpoint,
+} from "./types";
 
 // ─────────────────────────────────────────────────────────────
 // 実委側: /committee/notices
@@ -253,11 +258,14 @@ export const getProjectNoticeEndpoint: GetEndpoint<
 /**
  * POST /project/:projectId/notices/:noticeId/read
  * お知らせを既読にする
+ *
+ * bodyを持たないPOSTのため、BodyEndpoint/NoBodyEndpoint ではなく Endpoint を直接使用
  */
-export const readProjectNoticeEndpoint: NoBodyEndpoint<
+export const readProjectNoticeEndpoint: Endpoint<
 	"POST",
 	"/project/:projectId/notices/:noticeId/read",
 	typeof projectNoticeIdPathParamsSchema,
+	undefined,
 	undefined,
 	typeof readProjectNoticeResponseSchema
 > = {

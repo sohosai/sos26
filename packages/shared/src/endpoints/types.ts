@@ -58,10 +58,10 @@ export type BodyEndpoint<
 
 /**
  * bodyを持たないリクエスト用のエンドポイント定義ヘルパー
- * DELETE/HEAD、およびbody不要のPOSTで使用
+ * DELETE/HEADなどで使用
  */
 export type NoBodyEndpoint<
-	Method extends "POST" | "DELETE" | "HEAD",
+	Method extends "DELETE" | "HEAD",
 	Path extends string,
 	PathParams extends z.ZodTypeAny | undefined,
 	Query extends z.ZodTypeAny | undefined,
