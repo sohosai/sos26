@@ -192,7 +192,7 @@ function RouteComponent() {
 		: baseColumns;
 
 	return (
-		<div className={styles.page}>
+		<div>
 			<Heading size="6">メンバー一覧</Heading>
 
 			<DataTable<MemberRow>
