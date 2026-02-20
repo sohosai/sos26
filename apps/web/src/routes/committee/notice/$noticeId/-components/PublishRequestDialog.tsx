@@ -130,12 +130,8 @@ export function PublishRequestDialog({
 			});
 			onOpenChange(false);
 			onSuccess();
-		} catch (e) {
-			if (e instanceof Error) {
-				setError(e.message);
-			} else {
-				setError("公開申請の送信に失敗しました。");
-			}
+		} catch {
+			setError("公開申請の送信に失敗しました。");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -228,6 +224,7 @@ export function PublishRequestDialog({
 						{projects.length > 5 && (
 							<RadixTextField.Root
 								placeholder="企画名で検索..."
+								aria-label="企画名で検索"
 								size="1"
 								value={projectSearch}
 								onChange={e => setProjectSearch(e.target.value)}

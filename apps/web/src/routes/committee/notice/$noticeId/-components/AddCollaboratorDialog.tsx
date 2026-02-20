@@ -63,6 +63,7 @@ export function AddCollaboratorDialog({
 				<div className={styles.search}>
 					<RadixTextField.Root
 						placeholder="名前で検索..."
+						aria-label="名前で検索"
 						size="2"
 						value={query}
 						onChange={e => setQuery(e.target.value)}
