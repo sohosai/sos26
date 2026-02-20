@@ -17,9 +17,7 @@ import styles from "./route.module.scss";
 export const Route = createFileRoute("/project")({
 	beforeLoad: async ({ location }) => {
 		await requireAuth(location.pathname);
-	},
-	component: ProjectLayout,
-	loader: async () => {
+
 		const res = await listMyProjects();
 
 		const store = useProjectStore.getState();
@@ -31,9 +29,8 @@ export const Route = createFileRoute("/project")({
 		if (!isValid && res.projects[0]) {
 			store.setSelectedProjectId(res.projects[0].id);
 		}
-
-		return res;
 	},
+	component: ProjectLayout,
 });
 
 function ProjectLayout() {
