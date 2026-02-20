@@ -322,6 +322,8 @@ model NoticeAuthorization {
   updatedAt DateTime @updatedAt
 
   deliveries NoticeDelivery[]
+
+  @@index([noticeId, status])
 }
 
 //Noticeの配信
