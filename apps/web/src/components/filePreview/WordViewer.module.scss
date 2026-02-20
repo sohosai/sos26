@@ -1,8 +1,8 @@
 .page {
-  flex: 1;
   overflow: auto;
-  padding:    var(--space-7) var(--space-5);
-  background: var(--gray-3);
+	// もう一つ余白を作る
+  // padding:    var(--space-7) var(--space-5);
+  // background: var(--gray-3);
 
 	// スクロールバーのカスタム
   // &::-webkit-scrollbar { width: 8px; }
@@ -12,14 +12,4 @@
   //   border-radius: var(--radius-full);
   //   &:hover { background: var(--gray-8); }
   // }
-}
-
-.body {
-  max-width: 800px;
-  margin: 0 auto;
-  background: #fff;
-  border-radius: var(--radius-2);
-  box-shadow:
-    0 1px 4px var(--black-a4),
-    0 8px 32px var(--black-a5);
 }

@@ -1,5 +1,5 @@
-import * as Dialog from "@radix-ui/react-dialog";
-import { Text } from "@radix-ui/themes";
+// import * as Dialog from "@radix-ui/react-dialog";
+import { Dialog, Text } from "@radix-ui/themes";
 import { IconX } from "@tabler/icons-react";
 import ExcelViewer from "./ExcelViewer";
 import styles from "./FilePreviewDialog.module.scss";
@@ -36,23 +36,23 @@ function Viewer({ file }: { file: File }) {
 export default function FilePreviewDialog({ file, open, onOpenChange }: Props) {
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
-			<Dialog.Portal>
-				<Dialog.Content className={styles.content}>
-					<div className={styles.header}>
-						<Dialog.Title className={styles.title}>
-							{file?.name ?? ""}
-						</Dialog.Title>
-						<Dialog.Close className={styles.closeBtn} aria-label="閉じる">
-							<IconX size={16} />
-						</Dialog.Close>
-					</div>
+			{/* <Dialog.Portal> */}
+			<Dialog.Content className={styles.content}>
+				<div className={styles.header}>
+					<Dialog.Title className={styles.title}>
+						{file?.name ?? ""}
+					</Dialog.Title>
+					<Dialog.Close className={styles.closeBtn} aria-label="閉じる">
+						<IconX size={20} />
+					</Dialog.Close>
+				</div>
 
-					{/* プレビューエリア */}
-					<div className={styles.body}>
-						{file && <Viewer key={file.name + file.size} file={file} />}
-					</div>
-				</Dialog.Content>
-			</Dialog.Portal>
+				{/* プレビューエリア */}
+				<div className={styles.body}>
+					{file && <Viewer key={file.name + file.size} file={file} />}
+				</div>
+			</Dialog.Content>
+			{/* </Dialog.Portal> */}
 		</Dialog.Root>
 	);
 }
