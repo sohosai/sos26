@@ -81,6 +81,9 @@ model User {
 
   userPushSubscriptions UserPushSubscription[]
 
+  // リレーション: ファイル
+  files File[]
+
   @@unique([firebaseUid, deletedAt])
   @@unique([email, deletedAt])
 }
@@ -236,6 +239,34 @@ model UserPushSubscription {
 
   @@unique([userId, pushSubscriptionId])
   @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// ファイルストレージ
+// ─────────────────────────────────────────────────────────────
+
+enum FileStatus {
+  PENDING // URL発行済み、アップロード未確認
+  CONFIRMED // アップロード確認済み
+}
+
+model File {
+  id           String     @id @default(cuid())
+  key          String     @unique // S3オブジェクトキー
+  fileName     String // 元のファイル名
+  mimeType     String
+  size         Int // バイト
+  isPublic     Boolean    @default(false)
+  status       FileStatus @default(PENDING)
+  uploadedById String
+  uploadedBy   User       @relation(fields: [uploadedById], references: [id])
+  deletedAt    DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([uploadedById])
+  @@index([status])
+  @@index([deletedAt])
 }
 
 // ─────────────────────────────────────────────────────────────
