@@ -12,6 +12,7 @@ import {
 } from "@/components/primitives";
 import { createNoticeAuthorization } from "@/lib/api/committee-notice";
 import { listCommitteeProjects } from "@/lib/api/committee-project";
+import { isClientError } from "@/lib/http/error";
 import styles from "./PublishRequestDialog.module.scss";
 
 type Approver = {
@@ -130,8 +131,12 @@ export function PublishRequestDialog({
 			});
 			onOpenChange(false);
 			onSuccess();
-		} catch {
-			setError("公開申請の送信に失敗しました。");
+		} catch (e) {
+			if (isClientError(e) && e.apiError) {
+				setError(e.apiError.error.message);
+			} else {
+				setError("公開申請の送信に失敗しました。");
+			}
 		} finally {
 			setIsSubmitting(false);
 		}
