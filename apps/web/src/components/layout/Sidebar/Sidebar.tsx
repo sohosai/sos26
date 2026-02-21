@@ -1,4 +1,4 @@
-import { IconButton, Text, Tooltip } from "@radix-ui/themes";
+import { Text, Tooltip } from "@radix-ui/themes";
 import {
 	IconArrowsExchange,
 	IconBug,
@@ -9,6 +9,7 @@ import {
 } from "@tabler/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { IconButton } from "@/components/primitives";
 import { useAuthStore } from "@/lib/auth";
 import styles from "./Sidebar.module.scss";
 
@@ -23,6 +24,7 @@ type SidebarProps = {
 	onToggle: () => void;
 	menuItems: MenuItem[];
 	projectSelector?: ReactNode;
+	projectId?: string | null;
 };
 
 const commonItems: MenuItem[] = [
@@ -88,7 +90,7 @@ export function Sidebar({
 			</div>
 		);
 
-		const el = external ? (
+		const content = external ? (
 			<a
 				key={item.to}
 				href={item.to}
@@ -104,12 +106,16 @@ export function Sidebar({
 			</Link>
 		);
 
-		return collapsed ? (
-			<Tooltip key={item.to} content={item.label} side="right">
-				{el}
-			</Tooltip>
-		) : (
-			el
+		return (
+			<div key={item.to}>
+				{collapsed ? (
+					<Tooltip content={item.label} side="right">
+						{content}
+					</Tooltip>
+				) : (
+					content
+				)}
+			</div>
 		);
 	};
 
@@ -128,8 +134,6 @@ export function Sidebar({
 		<aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""}`}>
 			<div className={styles.header}>
 				<IconButton
-					variant="ghost"
-					size="2"
 					onClick={onToggle}
 					aria-label={collapsed ? "メニューを展開" : "メニューを折りたたむ"}
 				>

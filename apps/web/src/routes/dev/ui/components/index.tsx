@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { toast } from "sonner";
 import {
 	CheckboxGroup,
 	CheckboxGroupItem,
@@ -206,6 +207,81 @@ function ComponentsPage() {
 						<div className={styles.stack}>
 							<TextArea label="リサイズ不可" resize="none" />
 							<TextArea label="水平方向のみ" resize="horizontal" />
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<h2 className={styles.categoryTitle}>Toast</h2>
+
+			{/* Toast */}
+			<section className={styles.section}>
+				<h3>Toast（Sonner）</h3>
+				<div className={styles.grid}>
+					<div className={styles.item}>
+						<h4>種別</h4>
+						<div className={styles.row}>
+							<Button
+								intent="primary"
+								onClick={() => toast.success("保存しました")}
+							>
+								Success
+							</Button>
+							<Button
+								intent="danger"
+								onClick={() => toast.error("エラーが発生しました")}
+							>
+								Error
+							</Button>
+							<Button
+								intent="secondary"
+								onClick={() => toast.info("新しいバージョンがあります")}
+							>
+								Info
+							</Button>
+							<Button
+								intent="ghost"
+								onClick={() => toast.warning("この操作は取り消せません")}
+							>
+								Warning
+							</Button>
+						</div>
+					</div>
+					<div className={styles.item}>
+						<h4>Promise</h4>
+						<div className={styles.row}>
+							<Button
+								intent="primary"
+								onClick={() =>
+									toast.promise(
+										new Promise(resolve => setTimeout(resolve, 2000)),
+										{
+											loading: "保存中...",
+											success: "保存しました",
+											error: "保存に失敗しました",
+										}
+									)
+								}
+							>
+								Promise (成功)
+							</Button>
+							<Button
+								intent="secondary"
+								onClick={() =>
+									toast.promise(
+										new Promise((_, reject) =>
+											setTimeout(() => reject(new Error("fail")), 2000)
+										),
+										{
+											loading: "処理中...",
+											success: "完了しました",
+											error: "処理に失敗しました",
+										}
+									)
+								}
+							>
+								Promise (失敗)
+							</Button>
 						</div>
 					</div>
 				</div>
