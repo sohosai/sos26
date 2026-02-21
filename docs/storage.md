@@ -117,11 +117,7 @@ User.avatarId    ProjectDocument.fileId
 
 ### 非公開ファイル
 
-非公開ファイル（`isPublic === false`）は以下の 2 つの方法でアクセスできる。いずれの方法でもアクセス権限の判定を行う。
-
-#### 方法 1: 署名付きトークン（`<img>`, `<a>` 等で使用）
-
-`<img src>` や `<a href>` では `Authorization` ヘッダーを付けられないため、HMAC-SHA256 署名付きトークンをクエリパラメータで渡す。
+非公開ファイル（`isPublic === false`）は、HMAC-SHA256 署名付きトークンをクエリパラメータで渡してアクセスする。
 
 ```
 ブラウザ                       API
