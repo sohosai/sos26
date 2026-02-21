@@ -57,6 +57,35 @@
 - S3 側のバケットポリシー・ACL 設定は不要
 - `Cache-Control` でブラウザキャッシュを活用
 
+### 非公開ファイルの署名付きトークン認証
+
+`<img src>` や `<a href>` では `Authorization` ヘッダーを付けられないため、非公開ファイルには **HMAC-SHA256 署名付きトークン** をクエリパラメータで渡す方式を提供する。
+
+```
+ブラウザ                       API
+  │                            │
+  │ GET /files/:id/token       │
+  │ (Authorization: Bearer)    │
+  │ ──────────────────────────> │
+  │                            │ 認証チェック
+  │                            │ ファイル存在・非公開チェック
+  │  { token, expiresAt }      │ HMAC-SHA256 署名付きトークン生成
+  │ <────────────────────────── │
+  │                            │
+  │ GET /files/:id/content     │
+  │   ?token=xxx               │
+  │ ──────────────────────────> │
+  │                            │ トークン検証（署名・期限・fileId）
+  │  ストリーミング配信         │
+  │ <────────────────────────── │
+```
+
+- トークン形式: `base64url(payload).base64url(hmac-sha256(payload))`
+- ペイロード: `fileId:userId:expiresAt(unix秒)`
+- デフォルト有効期限: **5分**
+- `timingSafeEqual` によるタイミング攻撃防止
+- トークンなしの場合は従来の Bearer 認証にフォールバック
+
 ---
 
 ## 2. 関連ファイル
@@ -69,6 +98,8 @@
 | `apps/api/src/lib/storage/client.ts` | S3Client の初期化・取得 |
 | `apps/api/src/lib/storage/presign.ts` | Presigned URL 生成、オブジェクト取得・存在確認 |
 | `apps/api/src/lib/storage/key.ts` | S3 キー生成、MIME → 拡張子マッピング |
+| `apps/api/src/lib/storage/file-token.ts` | 署名付きトークンの生成・検証 |
+| `apps/api/src/lib/storage/file-token.test.ts` | トークンユーティリティのテスト |
 | `apps/api/src/lib/storage/cleanup.ts` | 古い PENDING レコードのクリーンアップ |
 
 ### 共有（SSOT）
@@ -82,7 +113,7 @@
 
 | ファイル | 役割 |
 |---------|------|
-| `apps/web/src/lib/api/files.ts` | API クライアント関数・`uploadFile()` ヘルパー |
+| `apps/web/src/lib/api/files.ts` | API クライアント関数・`useStorageUrl` フック・`uploadFile()` ヘルパー |
 | `apps/web/src/routes/dev/storage/index.tsx` | 開発用テストページ |
 
 ---
@@ -93,7 +124,8 @@
 |---------------|---------|------|------|
 | `/files/upload-url` | POST | 必須 | Presigned PUT URL 発行 + PENDING レコード作成 |
 | `/files/:id/confirm` | POST | 必須（本人のみ） | S3 存在確認 → CONFIRMED 更新（冪等） |
-| `/files/:id/content` | GET | 公開→不要 / 非公開→必須 | API プロキシでファイル配信 |
+| `/files/:id/content` | GET | 公開→不要 / 非公開→Bearer or `?token` | API プロキシでファイル配信 |
+| `/files/:id/token` | GET | 必須 | 非公開ファイル用の署名付きトークン発行 |
 | `/files` | GET | 必須 | 自分のファイル一覧（CONFIRMED のみ） |
 | `/files/:id` | DELETE | 必須（本人のみ） | ソフトデリート |
 
@@ -178,6 +210,7 @@ User.avatarId    ProjectDocument.fileId
 | `S3_SECRET_ACCESS_KEY` | シークレットキー | （必須） |
 | `S3_PRESIGNED_URL_EXPIRES` | Presigned URL の有効期限（秒） | `3600` |
 | `S3_MAX_FILE_SIZE` | 最大ファイルサイズ（バイト） | `10485760` |
+| `FILE_TOKEN_SECRET` | ファイルトークン署名用秘密鍵（32文字以上） | （必須） |
 
 ---
 
@@ -235,10 +268,38 @@ import { getFileContentUrl } from "@/lib/api/files";
 
 // 公開ファイルの場合: そのまま使える
 <img src={getFileContentUrl(fileId)} />
+```
 
-// 非公開ファイルの場合: Authorization ヘッダーが必要
-// → <img src> や <a href> では認証を付けられないため、
-//   fetch + Bearer トークンで取得し Blob URL に変換する必要がある
+### useStorageUrl フック（推奨）
+
+公開・非公開を問わず、ファイル URL を返す汎用フック。`<img>`, `<a>`, `<video>` 等どこでも使える。
+
+```typescript
+import { useStorageUrl } from "@/lib/api/files";
+
+const url = useStorageUrl(file.id, file.isPublic);
+// 公開 → 即座に URL を返す
+// 非公開 → トークン付き URL を非同期取得（取得中は null）
+```
+
+使用例:
+
+```tsx
+// 画像
+{url && <img src={url} alt="添付画像" />}
+
+// リンク
+{url && <a href={url} target="_blank">ダウンロード</a>}
+```
+
+### getAuthenticatedFileUrl 関数
+
+コンポーネント外（イベントハンドラ等）でトークン付き URL が必要な場合:
+
+```typescript
+import { getAuthenticatedFileUrl } from "@/lib/api/files";
+
+const url = await getAuthenticatedFileUrl(fileId);
 ```
 
 ---
@@ -259,7 +320,6 @@ const count = await cleanupStalePendingFiles();
 
 ## 10. 既知の制限・TODO
 
-- **非公開ファイルのアクセス制御**: 現在は「有効なトークンを持つ任意のユーザー」がアクセス可能。所有者チェック（`uploadedById === userId`）は行っていない。用途に応じた権限モデルの設計が必要
-- **非公開ファイルのブラウザ表示**: `<img src>` 等では Authorization ヘッダーを付けられないため、非公開ファイルのインライン表示には fetch + Blob URL 方式の実装が必要
+- **非公開ファイルのアクセス制御**: 現在は「ログイン済みの任意のユーザー」がトークンを取得・アクセス可能。所有者チェック（`uploadedById === userId`）は行っていない。用途に応じた権限モデルの設計が必要
 - **PENDING クリーンアップの自動化**: cron 等の定期実行の仕組みが未整備
 - **S3 孤立オブジェクト**: ソフトデリート後も S3 上のオブジェクトは残る。物理削除の仕組みは未実装

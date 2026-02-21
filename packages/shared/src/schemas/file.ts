@@ -89,3 +89,12 @@ export const deleteFileResponseSchema = z.object({
 	success: z.literal(true),
 });
 export type DeleteFileResponse = z.infer<typeof deleteFileResponseSchema>;
+
+/**
+ * ファイルトークン応答
+ */
+export const fileTokenResponseSchema = z.object({
+	token: z.string(),
+	expiresAt: z.string(),
+});
+export type FileTokenResponse = z.infer<typeof fileTokenResponseSchema>;

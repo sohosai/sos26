@@ -4,6 +4,7 @@ import { stream } from "hono/streaming";
 import { env } from "../lib/env";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
+import { generateFileToken, verifyFileToken } from "../lib/storage/file-token";
 import { generateObjectKey } from "../lib/storage/key";
 import {
 	generateUploadUrl,
@@ -123,6 +124,34 @@ fileRoute.post("/:id/confirm", requireAuth, async c => {
 });
 
 /**
+ * GET /files/:id/token
+ * 非公開ファイルアクセス用の署名付きトークン発行
+ */
+fileRoute.get("/:id/token", requireAuth, async c => {
+	const fileId = c.req.param("id");
+	const userId = c.get("user").id;
+
+	const file = await prisma.file.findFirst({
+		where: { id: fileId, status: "CONFIRMED", deletedAt: null },
+	});
+
+	if (!file) {
+		throw Errors.notFound("ファイルが見つかりません");
+	}
+
+	if (file.isPublic) {
+		throw Errors.validationError("公開ファイルにトークンは不要です");
+	}
+
+	const token = await generateFileToken(fileId, userId);
+	const expiresAt = new Date(
+		Math.floor(Date.now() / 1000) * 1000 + 300 * 1000
+	).toISOString();
+
+	return c.json({ token, expiresAt });
+});
+
+/**
  * GET /files/:id/content
  * API プロキシでファイル配信
  */
@@ -137,9 +166,17 @@ fileRoute.get("/:id/content", async c => {
 		throw Errors.notFound("ファイルが見つかりません");
 	}
 
-	// 非公開ファイルの場合は requireAuth と同じ認証フローを実行
+	// 非公開ファイルの認証: トークンまたは Bearer ヘッダー
 	if (!file.isPublic) {
-		await requireAuth(c, async () => {});
+		const token = c.req.query("token");
+		if (token) {
+			const payload = await verifyFileToken(token, fileId);
+			if (!payload) {
+				throw Errors.unauthorized("ファイルトークンが無効または期限切れです");
+			}
+		} else {
+			await requireAuth(c, async () => {});
+		}
 	}
 
 	const s3Response = await getObject(file.key);

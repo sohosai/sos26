@@ -1,12 +1,8 @@
 import type { FileInfo } from "@sos26/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-	deleteFile,
-	getFileContentUrl,
-	listFiles,
-	uploadFile,
-} from "@/lib/api/files";
+import { deleteFile, listFiles, uploadFile } from "@/lib/api/files";
+import { useStorageUrl } from "@/lib/storage";
 
 export const Route = createFileRoute("/dev/storage/")({
 	component: StorageDevPage,
@@ -76,8 +72,6 @@ function StorageDevPage() {
 		}
 	};
 
-	const isImage = (mimeType: string) => mimeType.startsWith("image/");
-
 	return (
 		<div style={{ maxWidth: 800, margin: "0 auto", padding: 24 }}>
 			<h1>ストレージテスト（開発用）</h1>
@@ -144,48 +138,66 @@ function StorageDevPage() {
 						</thead>
 						<tbody>
 							{files.map(file => (
-								<tr key={file.id}>
-									<td style={tdStyle}>
-										{isImage(file.mimeType) ? (
-											<img
-												src={getFileContentUrl(file.id)}
-												alt={file.fileName}
-												style={{
-													maxWidth: 80,
-													maxHeight: 80,
-													objectFit: "contain",
-												}}
-											/>
-										) : (
-											<a
-												href={getFileContentUrl(file.id)}
-												target="_blank"
-												rel="noreferrer"
-											>
-												表示
-											</a>
-										)}
-									</td>
-									<td style={tdStyle}>{file.fileName}</td>
-									<td style={tdStyle}>{file.mimeType}</td>
-									<td style={tdStyle}>{formatSize(file.size)}</td>
-									<td style={tdStyle}>{file.isPublic ? "Yes" : "No"}</td>
-									<td style={tdStyle}>
-										<button
-											onClick={() => handleDelete(file.id)}
-											disabled={loading}
-											type="button"
-										>
-											削除
-										</button>
-									</td>
-								</tr>
+								<FileRow
+									key={file.id}
+									file={file}
+									loading={loading}
+									onDelete={handleDelete}
+								/>
 							))}
 						</tbody>
 					</table>
 				)}
 			</section>
 		</div>
+	);
+}
+
+function FileRow({
+	file,
+	loading,
+	onDelete,
+}: {
+	file: FileInfo;
+	loading: boolean;
+	onDelete: (fileId: string) => void;
+}) {
+	const url = useStorageUrl(file.id, file.isPublic);
+	const isImage = file.mimeType.startsWith("image/");
+
+	return (
+		<tr>
+			<td style={tdStyle}>
+				{url ? (
+					isImage ? (
+						<img
+							src={url}
+							alt={file.fileName}
+							style={{ maxWidth: 80, maxHeight: 80, objectFit: "contain" }}
+						/>
+					) : (
+						<a href={url} target="_blank" rel="noreferrer">
+							表示
+						</a>
+					)
+				) : (
+					<span>読込中...</span>
+				)}
+			</td>
+			<td style={tdStyle}>{file.fileName}</td>
+			<td style={tdStyle}>{file.mimeType}</td>
+			<td style={tdStyle}>{formatSize(file.size)}</td>
+			<td style={tdStyle}>{file.isPublic ? "Yes" : "No"}</td>
+			<td style={tdStyle}>
+				<button
+					onClick={() => onDelete(file.id)}
+					disabled={loading}
+					type="button"
+				>
+					削除
+				</button>
+			</td>
+		</tr>
 	);
 }
 

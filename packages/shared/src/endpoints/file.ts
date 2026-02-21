@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
 	confirmUploadResponseSchema,
 	deleteFileResponseSchema,
+	fileTokenResponseSchema,
 	listFilesResponseSchema,
 	requestUploadUrlRequestSchema,
 	requestUploadUrlResponseSchema,
@@ -92,4 +93,22 @@ export const deleteFileEndpoint: NoBodyEndpoint<
 	query: undefined,
 	request: undefined,
 	response: deleteFileResponseSchema,
+} as const;
+
+/**
+ * GET /files/:id/token
+ * 非公開ファイルアクセス用の署名付きトークン発行
+ */
+export const getFileTokenEndpoint: GetEndpoint<
+	"/files/:id/token",
+	typeof fileIdPathParamsSchema,
+	undefined,
+	typeof fileTokenResponseSchema
+> = {
+	method: "GET",
+	path: "/files/:id/token",
+	pathParams: fileIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: fileTokenResponseSchema,
 } as const;

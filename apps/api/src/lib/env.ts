@@ -50,6 +50,9 @@ const envSchema = z.object({
 	S3_SECRET_ACCESS_KEY: z.string().min(1),
 	S3_PRESIGNED_URL_EXPIRES: z.coerce.number().min(1).default(3600),
 	S3_MAX_FILE_SIZE: z.coerce.number().min(1).default(10_485_760), // 10MB
+
+	// ファイルトークン署名用秘密鍵
+	FILE_TOKEN_SECRET: z.string().min(32),
 });
 
 export const env = envSchema.parse({
@@ -73,6 +76,7 @@ export const env = envSchema.parse({
 	S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY,
 	S3_PRESIGNED_URL_EXPIRES: process.env.S3_PRESIGNED_URL_EXPIRES,
 	S3_MAX_FILE_SIZE: process.env.S3_MAX_FILE_SIZE,
+	FILE_TOKEN_SECRET: process.env.FILE_TOKEN_SECRET,
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -1,11 +1,13 @@
 import type {
 	AllowedMimeType,
 	ConfirmUploadResponse,
+	FileTokenResponse,
 	ListFilesResponse,
 } from "@sos26/shared";
 import {
 	confirmUploadEndpoint,
 	deleteFileEndpoint,
+	getFileTokenEndpoint,
 	listFilesEndpoint,
 	requestUploadUrlEndpoint,
 } from "@sos26/shared";
@@ -59,6 +61,21 @@ export async function deleteFile(fileId: string) {
  */
 export function getFileContentUrl(fileId: string): string {
 	return `${env.VITE_API_BASE_URL}/files/${fileId}/content`;
+}
+
+/**
+ * 非公開ファイル用のトークンを取得する
+ */
+export async function getFileToken(fileId: string): Promise<FileTokenResponse> {
+	return callGetApi(getFileTokenEndpoint, { pathParams: { id: fileId } });
+}
+
+/**
+ * 非公開ファイルのトークン付き URL を取得する
+ */
+export async function getAuthenticatedFileUrl(fileId: string): Promise<string> {
+	const { token } = await getFileToken(fileId);
+	return `${env.VITE_API_BASE_URL}/files/${fileId}/content?token=${encodeURIComponent(token)}`;
 }
 
 /**
