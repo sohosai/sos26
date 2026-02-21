@@ -29,7 +29,6 @@ export type AllowedMimeType = z.infer<typeof mimeTypeSchema>;
  */
 export const fileSchema = z.object({
 	id: z.string(),
-	key: z.string(),
 	fileName: z.string(),
 	mimeType: z.string(),
 	size: z.number(),

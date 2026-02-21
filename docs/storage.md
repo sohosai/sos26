@@ -146,13 +146,9 @@ User.avatarId    ProjectDocument.fileId
 - デフォルト有効期限: **5分**
 - `timingSafeEqual` によるタイミング攻撃防止
 
-#### 方法 2: Bearer 認証（API クライアントから直接）
-
-`?token` なしで `GET /files/:id/content` にアクセスした場合、Bearer ヘッダーで認証しアクセス制御を行う。
-
 ### アクセス権限の判定フロー
 
-`GET /:id/token` と `GET /:id/content`（Bearer 認証時）で共通:
+`GET /:id/token` でのアクセス権限判定:
 
 ```
 ├─ アップローダー本人 (uploadedById === userId) → 許可
@@ -213,7 +209,7 @@ const hasAccess = await canAccessFile(fileId, user);
 |---------------|---------|------|------|
 | `/files/upload-url` | POST | 必須 | Presigned PUT URL 発行 + PENDING レコード作成 |
 | `/files/:id/confirm` | POST | 必須（本人のみ） | S3 存在確認 → CONFIRMED 更新（冪等） |
-| `/files/:id/content` | GET | 公開→不要 / 非公開→`?token` or Bearer（アクセス制御あり） | API プロキシでファイル配信 |
+| `/files/:id/content` | GET | 公開→不要 / 非公開→`?token` 必須 | API プロキシでファイル配信 |
 | `/files/:id/token` | GET | 必須（アクセス制御あり） | 非公開ファイル用の署名付きトークン発行 |
 | `/files` | GET | 必須 | 自分のファイル一覧（CONFIRMED のみ） |
 | `/files/:id` | DELETE | 必須（本人のみ） | ソフトデリート |
@@ -247,7 +243,7 @@ import { getFileContentUrl } from "@/lib/api/files";
 公開・非公開を問わず、ファイル URL を返す汎用フック。`<img>`, `<a>`, `<video>` 等どこでも使える。
 
 ```typescript
-import { useStorageUrl } from "@/lib/api/files";
+import { useStorageUrl } from "@/lib/storage";
 
 const url = useStorageUrl(file.id, file.isPublic);
 // 公開 → 即座に URL を返す

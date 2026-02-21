@@ -1,5 +1,4 @@
 import { requestUploadUrlRequestSchema } from "@sos26/shared";
-import type { Context } from "hono";
 import { Hono } from "hono";
 import { stream } from "hono/streaming";
 import { env } from "../lib/env";
@@ -23,7 +22,6 @@ export const fileRoute = new Hono<AuthEnv>();
  */
 function toFileResponse(file: {
 	id: string;
-	key: string;
 	fileName: string;
 	mimeType: string;
 	size: number;
@@ -35,7 +33,6 @@ function toFileResponse(file: {
 }) {
 	return {
 		id: file.id,
-		key: file.key,
 		fileName: file.fileName,
 		mimeType: file.mimeType,
 		size: file.size,
@@ -52,9 +49,7 @@ function toFileResponse(file: {
  * Presigned PUT URL 発行 + PENDING レコード作成
  */
 fileRoute.post("/upload-url", requireAuth, async c => {
-	const body = await c.req.json().catch(() => {
-		throw Errors.invalidRequest("JSON の形式が不正です");
-	});
+	const body = await c.req.json().catch(() => ({}));
 	const parsed = requestUploadUrlRequestSchema.parse(body);
 	const userId = c.get("user").id;
 
@@ -162,39 +157,11 @@ fileRoute.get("/:id/token", requireAuth, async c => {
 });
 
 /**
- * 非公開ファイルの認証チェック
- * トークンまたは Bearer ヘッダーで認証し、アクセス制御を行う
- */
-async function authenticatePrivateFile(
-	c: Context<AuthEnv>,
-	fileId: string,
-	uploadedById: string
-): Promise<void> {
-	const token = c.req.query("token");
-	if (token) {
-		// トークン発行時にアクセス権限を確認済みなので、署名検証のみ
-		const payload = await verifyFileToken(token, fileId);
-		if (!payload) {
-			throw Errors.unauthorized("ファイルトークンが無効または期限切れです");
-		}
-		return;
-	}
-
-	// Bearer 認証 + アクセス制御
-	await requireAuth(c, async () => {});
-	const user = c.get("user");
-
-	if (uploadedById !== user.id) {
-		const hasAccess = await canAccessFile(fileId, user);
-		if (!hasAccess) {
-			throw Errors.forbidden("このファイルにアクセスする権限がありません");
-		}
-	}
-}
-
-/**
  * GET /files/:id/content
  * API プロキシでファイル配信
+ *
+ * - 公開ファイル: 認証不要
+ * - 非公開ファイル: ?token クエリパラメータ必須（GET /files/:id/token で事前取得）
  */
 fileRoute.get("/:id/content", async c => {
 	const fileId = c.req.param("id");
@@ -208,7 +175,17 @@ fileRoute.get("/:id/content", async c => {
 	}
 
 	if (!file.isPublic) {
-		await authenticatePrivateFile(c, file.id, file.uploadedById);
+		const token = c.req.query("token");
+		if (!token) {
+			throw Errors.unauthorized(
+				"非公開ファイルにはトークンが必要です。GET /files/:id/token で取得してください"
+			);
+		}
+		// トークン発行時にアクセス権限を確認済みなので、署名検証のみ
+		const payload = await verifyFileToken(token, fileId);
+		if (!payload) {
+			throw Errors.unauthorized("ファイルトークンが無効または期限切れです");
+		}
 	}
 
 	const s3Response = await getObject(file.key);
@@ -223,9 +200,10 @@ fileRoute.get("/:id/content", async c => {
 		"Cache-Control",
 		file.isPublic ? "public, max-age=86400" : "private, max-age=3600"
 	);
+	const encodedFileName = encodeURIComponent(file.fileName);
 	c.header(
 		"Content-Disposition",
-		`inline; filename="${encodeURIComponent(file.fileName)}"`
+		`inline; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`
 	);
 
 	return stream(c, async s => {
