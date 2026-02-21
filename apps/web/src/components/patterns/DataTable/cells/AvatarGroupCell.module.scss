@@ -1,0 +1,43 @@
+.container {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	cursor: default;
+}
+
+.trigger {
+	all: unset;
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	cursor: pointer;
+}
+
+.avatar {
+	display: flex;
+	align-items: center;
+}
+
+.moreButton {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background-color: var(--gray-4);
+	color: var(--gray-11);
+	font-size: var(--font-size-1);
+}
+
+.popoverList {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.popoverItem {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}

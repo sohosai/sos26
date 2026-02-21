@@ -19,6 +19,19 @@ export const bureauSchema = z.enum([
 ]);
 export type Bureau = z.infer<typeof bureauSchema>;
 
+export const bureauLabelMap: Record<Bureau, string> = {
+	FINANCE: "財務局",
+	GENERAL_AFFAIRS: "総務局",
+	PUBLIC_RELATIONS: "広報宣伝局",
+	EXTERNAL: "渉外局",
+	PROMOTION: "推進局",
+	PLANNING: "総合計画局",
+	STAGE_MANAGEMENT: "ステージ管理局",
+	HQ_PLANNING: "本部企画局",
+	INFO_SYSTEM: "情報メディアシステム局",
+	INFORMATION: "案内所運営部会",
+} as const;
+
 /**
  * 委員メンバースキーマ
  */
@@ -33,6 +46,35 @@ export const committeeMemberSchema = z.object({
 export type CommitteeMember = z.infer<typeof committeeMemberSchema>;
 
 // ─────────────────────────────────────────────────────────────
+// 権限管理
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 実委人権限スキーマ
+ * Prisma の CommitteePermission enum に対応
+ */
+export const committeePermissionSchema = z.enum([
+	"MEMBER_EDIT",
+	"NOTICE_DELIVER",
+	"NOTICE_APPROVE",
+	"FORM_DELIVER",
+]);
+export type CommitteePermission = z.infer<typeof committeePermissionSchema>;
+
+/**
+ * 実委人権限レコードスキーマ
+ */
+export const committeeMemberPermissionSchema = z.object({
+	id: z.cuid(),
+	committeeMemberId: z.cuid(),
+	permission: committeePermissionSchema,
+	createdAt: z.coerce.date(),
+});
+export type CommitteeMemberPermission = z.infer<
+	typeof committeeMemberPermissionSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
 // GET /committee-members
 // ─────────────────────────────────────────────────────────────
 
@@ -43,6 +85,7 @@ export const listCommitteeMembersResponseSchema = z.object({
 	committeeMembers: z.array(
 		committeeMemberSchema.extend({
 			user: userSchema,
+			permissions: z.array(committeeMemberPermissionSchema),
 		})
 	),
 });
@@ -114,34 +157,6 @@ export const deleteCommitteeMemberResponseSchema = z.object({
 });
 export type DeleteCommitteeMemberResponse = z.infer<
 	typeof deleteCommitteeMemberResponseSchema
->;
-
-// ─────────────────────────────────────────────────────────────
-// 権限管理
-// ─────────────────────────────────────────────────────────────
-
-/**
- * 実委人権限スキーマ
- * Prisma の CommitteePermission enum に対応
- */
-export const committeePermissionSchema = z.enum([
-	"MEMBER_EDIT",
-	"NOTICE_DELIVER",
-	"FORM_DELIVER",
-]);
-export type CommitteePermission = z.infer<typeof committeePermissionSchema>;
-
-/**
- * 実委人権限レコードスキーマ
- */
-export const committeeMemberPermissionSchema = z.object({
-	id: z.cuid(),
-	committeeMemberId: z.cuid(),
-	permission: committeePermissionSchema,
-	createdAt: z.coerce.date(),
-});
-export type CommitteeMemberPermission = z.infer<
-	typeof committeeMemberPermissionSchema
 >;
 
 // GET /committee/members/:id/permissions

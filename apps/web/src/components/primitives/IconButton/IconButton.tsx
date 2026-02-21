@@ -13,7 +13,7 @@ import styles from "./IconButton.module.scss";
  * @see https://www.radix-ui.com/themes/docs/components/icon-button
  *
  * ## 制限していること
- * - variant/color: intent に集約（ghost/danger）
+ * - variant/color: intent に集約（ghost/secondary/danger）
  * - size: "1" | "2" のみ（"3", "4" は大きすぎるため不可）
  * - highContrast, radius: 指定不可（デザイン統一）
  *
@@ -26,6 +26,7 @@ type RadixIconButtonProps = ComponentProps<typeof RadixIconButton>;
 
 const intentMap = {
 	ghost: { variant: "ghost", color: undefined },
+	secondary: { variant: "outline", color: undefined },
 	danger: { variant: "ghost", color: "red" },
 } as const satisfies Record<
 	string,

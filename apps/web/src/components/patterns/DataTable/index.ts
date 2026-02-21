@@ -1,3 +1,4 @@
+export { AvatarGroupCell, type AvatarGroupItem } from "./cells/AvatarGroupCell";
 export { DateCell } from "./cells/DateCell";
 export { EditableCell } from "./cells/EditableCell";
 export { NameCell } from "./cells/NameCell";

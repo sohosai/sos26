@@ -18,7 +18,8 @@
     "db:push": "prisma db push",
     "db:pull": "prisma db pull",
     "db:studio": "prisma studio",
-    "db:format": "prisma format"
+    "db:format": "prisma format",
+    "make-committee-member": "bun run scripts/make-committee-member.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.8.2",
@@ -26,6 +27,7 @@
     "@sos26/shared": "workspace:*",
     "firebase-admin": "^13.6.0",
     "hono": "^4.11.3",
+    "isomorphic-dompurify": "^2.36.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {

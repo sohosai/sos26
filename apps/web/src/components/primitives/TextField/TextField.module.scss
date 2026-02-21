@@ -2,4 +2,16 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-1);
+
+	/* date / time input のピッカーアイコンを右端に配置 */
+	input[type="date"],
+	input[type="time"] {
+		position: relative;
+
+		&::-webkit-calendar-picker-indicator {
+			position: absolute;
+			right: var(--space-2);
+			cursor: pointer;
+		}
+	}
 }

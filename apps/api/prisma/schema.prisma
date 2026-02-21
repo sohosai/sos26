@@ -67,7 +67,7 @@ model User {
 
   //Notice関連
   notices                       Notice[]              @relation("NoticeOwner")
-  sharedNotices                 NoticeShare[]
+  noticeCollaborations          NoticeCollaborator[]
   requestedNoticeAuthorizations NoticeAuthorization[] @relation("NoticeRequestedBy")
   receivedNoticeAuthorizations  NoticeAuthorization[] @relation("NoticeRequestedTo")
 
@@ -77,6 +77,7 @@ model User {
   requestedFormAuthorizations FormAuthorization[] @relation("FormRequestedBy")
   receivedFormAuthorizations  FormAuthorization[] @relation("FormRequestedTo")
   formResponses               FormResponse[]      @relation("FormRespondent")
+  noticeReadStatuses          NoticeReadStatus[]
 
   userPushSubscriptions UserPushSubscription[]
 
@@ -184,6 +185,7 @@ model CommitteeMember {
 enum CommitteePermission {
   MEMBER_EDIT // メンバー編集
   NOTICE_DELIVER // お知らせ配信
+  NOTICE_APPROVE // お知らせ承認
   FORM_DELIVER // フォーム配信
 }
 
@@ -247,8 +249,8 @@ model Notice {
   ownerId String
   owner   User   @relation("NoticeOwner", fields: [ownerId], references: [id])
 
-  // 共有ユーザー
-  sharedUsers NoticeShare[]
+  // 共同編集者
+  collaborators NoticeCollaborator[]
 
   //配信許可など
   authorizations NoticeAuthorization[]
@@ -264,8 +266,8 @@ model Notice {
   updatedAt DateTime  @updatedAt
 }
 
-//お知らせの共有
-model NoticeShare {
+//お知らせの共同編集者
+model NoticeCollaborator {
   id String @id @default(cuid())
 
   noticeId String
@@ -273,9 +275,6 @@ model NoticeShare {
 
   notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id])
-
-  //編集権限を持つのか
-  isWrite Boolean @default(false)
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -323,6 +322,8 @@ model NoticeAuthorization {
   updatedAt DateTime @updatedAt
 
   deliveries NoticeDelivery[]
+
+  @@index([noticeId, status])
 }
 
 //Noticeの配信
@@ -337,9 +338,12 @@ model NoticeDelivery {
   //配信先の企画
   project Project @relation(fields: [projectId], references: [id])
 
+  readStatuses NoticeReadStatus[]
+
   createdAt DateTime @default(now())
 
   @@unique([noticeAuthorizationId, projectId])
+  @@index([projectId])
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -598,4 +602,20 @@ model FormAnswerSelectedOption {
   createdAt DateTime @default(now())
 
   @@unique([formAnswerId, formItemOptionId])
+}
+
+//お知らせの既読状態
+model NoticeReadStatus {
+  id String @id @default(cuid())
+
+  noticeDeliveryId String
+  noticeDelivery   NoticeDelivery @relation(fields: [noticeDeliveryId], references: [id], onDelete: Cascade)
+
+  //既読にしたユーザー（企画メンバー）
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([noticeDeliveryId, userId])
 }

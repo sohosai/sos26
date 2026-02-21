@@ -95,11 +95,10 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
-"NoticeShare" {
+"NoticeCollaborator" {
   String id PK
   String noticeId FK
   String userId FK
-  Boolean isWrite
   DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
@@ -200,6 +199,12 @@ erDiagram
   String formItemOptionId FK
   DateTime createdAt
 }
+"NoticeReadStatus" {
+  String id PK
+  String noticeDeliveryId FK
+  String userId FK
+  DateTime createdAt
+}
 "Project" }o--|| "User" : owner
 "Project" }o--o| "User" : subOwner
 "ProjectMember" }o--|| "Project" : project
@@ -209,8 +214,8 @@ erDiagram
 "UserPushSubscription" }o--|| "User" : user
 "UserPushSubscription" }o--|| "PushSubscription" : pushSubscription
 "Notice" }o--|| "User" : owner
-"NoticeShare" }o--|| "Notice" : notice
-"NoticeShare" }o--|| "User" : user
+"NoticeCollaborator" }o--|| "Notice" : notice
+"NoticeCollaborator" }o--|| "User" : user
 "NoticeAuthorization" }o--|| "Notice" : notice
 "NoticeAuthorization" }o--|| "User" : requestedBy
 "NoticeAuthorization" }o--|| "User" : requestedTo
@@ -232,6 +237,8 @@ erDiagram
 "FormAnswer" }o--|| "FormItem" : formItem
 "FormAnswerSelectedOption" }o--|| "FormAnswer" : formAnswer
 "FormAnswerSelectedOption" }o--|| "FormItemOption" : formItemOption
+"NoticeReadStatus" }o--|| "NoticeDelivery" : noticeDelivery
+"NoticeReadStatus" }o--|| "User" : user
 ```
 
 ### `EmailVerification`
@@ -351,14 +358,13 @@ Properties as follows:
 - `createdAt`:
 - `updatedAt`:
 
-### `NoticeShare`
+### `NoticeCollaborator`
 
 Properties as follows:
 
 - `id`:
 - `noticeId`:
 - `userId`:
-- `isWrite`:
 - `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
@@ -490,4 +496,13 @@ Properties as follows:
 - `id`:
 - `formAnswerId`:
 - `formItemOptionId`:
+- `createdAt`:
+
+### `NoticeReadStatus`
+
+Properties as follows:
+
+- `id`:
+- `noticeDeliveryId`:
+- `userId`:
 - `createdAt`:

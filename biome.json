@@ -81,6 +81,16 @@
       }
     },
     {
+      "includes": ["**/scripts/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["**/routeTree.gen.ts"],
       "formatter": {
         "enabled": false
