@@ -123,9 +123,9 @@ User.avatarId    ProjectDocument.fileId
 ブラウザ                       API
   │                            │
   │ GET /files/:id/token       │
-  │ (Authorization: Bearer)    │
+  │ (requireAuth)              │
   │ ──────────────────────────> │
-  │                            │ 認証 + アクセス制御
+  │                            │ requireAuth + アクセス制御
   │  { token, expiresAt }      │ HMAC-SHA256 署名付きトークン生成
   │ <────────────────────────── │
   │                            │
