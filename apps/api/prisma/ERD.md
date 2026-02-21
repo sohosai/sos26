@@ -86,6 +86,19 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"File" {
+  String id PK
+  String key UK
+  String fileName
+  String mimeType
+  Int size
+  Boolean isPublic
+  FileStatus status
+  String uploadedById FK
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
 "Notice" {
   String id PK
   String ownerId FK
@@ -213,6 +226,7 @@ erDiagram
 "CommitteeMemberPermission" }o--|| "CommitteeMember" : committeeMember
 "UserPushSubscription" }o--|| "User" : user
 "UserPushSubscription" }o--|| "PushSubscription" : pushSubscription
+"File" }o--|| "User" : uploadedBy
 "Notice" }o--|| "User" : owner
 "NoticeCollaborator" }o--|| "Notice" : notice
 "NoticeCollaborator" }o--|| "User" : user
@@ -343,6 +357,22 @@ Properties as follows:
 - `id`:
 - `userId`:
 - `pushSubscriptionId`:
+- `createdAt`:
+- `updatedAt`:
+
+### `File`
+
+Properties as follows:
+
+- `id`:
+- `key`:
+- `fileName`:
+- `mimeType`:
+- `size`:
+- `isPublic`:
+- `status`:
+- `uploadedById`:
+- `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
 

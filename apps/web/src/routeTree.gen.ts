@@ -24,6 +24,7 @@ import { Route as ProjectNoticeIndexRouteImport } from './routes/project/notice/
 import { Route as ProjectMembersIndexRouteImport } from './routes/project/members/index'
 import { Route as ProjectFormsIndexRouteImport } from './routes/project/forms/index'
 import { Route as DevTableIndexRouteImport } from './routes/dev/table/index'
+import { Route as DevStorageIndexRouteImport } from './routes/dev/storage/index'
 import { Route as DevSearchIndexRouteImport } from './routes/dev/search/index'
 import { Route as DevPushNotificationIndexRouteImport } from './routes/dev/pushNotification/index'
 import { Route as DevCommitteeMemberIndexRouteImport } from './routes/dev/committeeMember/index'
@@ -111,6 +112,11 @@ const ProjectFormsIndexRoute = ProjectFormsIndexRouteImport.update({
 const DevTableIndexRoute = DevTableIndexRouteImport.update({
   id: '/table/',
   path: '/table/',
+  getParentRoute: () => DevRouteRoute,
+} as any)
+const DevStorageIndexRoute = DevStorageIndexRouteImport.update({
+  id: '/storage/',
+  path: '/storage/',
   getParentRoute: () => DevRouteRoute,
 } as any)
 const DevSearchIndexRoute = DevSearchIndexRouteImport.update({
@@ -202,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
   '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
   '/dev/search/': typeof DevSearchIndexRoute
+  '/dev/storage/': typeof DevStorageIndexRoute
   '/dev/table/': typeof DevTableIndexRoute
   '/project/forms/': typeof ProjectFormsIndexRoute
   '/project/members/': typeof ProjectMembersIndexRoute
@@ -229,6 +236,7 @@ export interface FileRoutesByTo {
   '/dev/committeeMember': typeof DevCommitteeMemberIndexRoute
   '/dev/pushNotification': typeof DevPushNotificationIndexRoute
   '/dev/search': typeof DevSearchIndexRoute
+  '/dev/storage': typeof DevStorageIndexRoute
   '/dev/table': typeof DevTableIndexRoute
   '/project/forms': typeof ProjectFormsIndexRoute
   '/project/members': typeof ProjectMembersIndexRoute
@@ -260,6 +268,7 @@ export interface FileRoutesById {
   '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
   '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
   '/dev/search/': typeof DevSearchIndexRoute
+  '/dev/storage/': typeof DevStorageIndexRoute
   '/dev/table/': typeof DevTableIndexRoute
   '/project/forms/': typeof ProjectFormsIndexRoute
   '/project/members/': typeof ProjectMembersIndexRoute
@@ -292,6 +301,7 @@ export interface FileRouteTypes {
     | '/dev/committeeMember/'
     | '/dev/pushNotification/'
     | '/dev/search/'
+    | '/dev/storage/'
     | '/dev/table/'
     | '/project/forms/'
     | '/project/members/'
@@ -319,6 +329,7 @@ export interface FileRouteTypes {
     | '/dev/committeeMember'
     | '/dev/pushNotification'
     | '/dev/search'
+    | '/dev/storage'
     | '/dev/table'
     | '/project/forms'
     | '/project/members'
@@ -349,6 +360,7 @@ export interface FileRouteTypes {
     | '/dev/committeeMember/'
     | '/dev/pushNotification/'
     | '/dev/search/'
+    | '/dev/storage/'
     | '/dev/table/'
     | '/project/forms/'
     | '/project/members/'
@@ -474,6 +486,13 @@ declare module '@tanstack/react-router' {
       path: '/table'
       fullPath: '/dev/table/'
       preLoaderRoute: typeof DevTableIndexRouteImport
+      parentRoute: typeof DevRouteRoute
+    }
+    '/dev/storage/': {
+      id: '/dev/storage/'
+      path: '/storage'
+      fullPath: '/dev/storage/'
+      preLoaderRoute: typeof DevStorageIndexRouteImport
       parentRoute: typeof DevRouteRoute
     }
     '/dev/search/': {
@@ -614,6 +633,7 @@ interface DevRouteRouteChildren {
   DevCommitteeMemberIndexRoute: typeof DevCommitteeMemberIndexRoute
   DevPushNotificationIndexRoute: typeof DevPushNotificationIndexRoute
   DevSearchIndexRoute: typeof DevSearchIndexRoute
+  DevStorageIndexRoute: typeof DevStorageIndexRoute
   DevTableIndexRoute: typeof DevTableIndexRoute
   DevUiComponentsIndexRoute: typeof DevUiComponentsIndexRoute
 }
@@ -622,6 +642,7 @@ const DevRouteRouteChildren: DevRouteRouteChildren = {
   DevCommitteeMemberIndexRoute: DevCommitteeMemberIndexRoute,
   DevPushNotificationIndexRoute: DevPushNotificationIndexRoute,
   DevSearchIndexRoute: DevSearchIndexRoute,
+  DevStorageIndexRoute: DevStorageIndexRoute,
   DevTableIndexRoute: DevTableIndexRoute,
   DevUiComponentsIndexRoute: DevUiComponentsIndexRoute,
 }
