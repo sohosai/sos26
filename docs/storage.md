@@ -100,6 +100,8 @@
 | `apps/api/src/lib/storage/key.ts` | S3 キー生成、MIME → 拡張子マッピング |
 | `apps/api/src/lib/storage/file-token.ts` | 署名付きトークンの生成・検証 |
 | `apps/api/src/lib/storage/file-token.test.ts` | トークンユーティリティのテスト |
+| `apps/api/src/lib/storage/access.ts` | アクセスチェッカーレジストリ |
+| `apps/api/src/lib/storage/access.test.ts` | アクセスチェッカーのテスト |
 | `apps/api/src/lib/storage/cleanup.ts` | 古い PENDING レコードのクリーンアップ |
 
 ### 共有（SSOT）
@@ -124,8 +126,8 @@
 |---------------|---------|------|------|
 | `/files/upload-url` | POST | 必須 | Presigned PUT URL 発行 + PENDING レコード作成 |
 | `/files/:id/confirm` | POST | 必須（本人のみ） | S3 存在確認 → CONFIRMED 更新（冪等） |
-| `/files/:id/content` | GET | 公開→不要 / 非公開→Bearer or `?token` | API プロキシでファイル配信 |
-| `/files/:id/token` | GET | 必須 | 非公開ファイル用の署名付きトークン発行 |
+| `/files/:id/content` | GET | 公開→不要 / 非公開→Bearer or `?token`（アクセス制御あり） | API プロキシでファイル配信 |
+| `/files/:id/token` | GET | 必須（アクセス制御あり） | 非公開ファイル用の署名付きトークン発行 |
 | `/files` | GET | 必須 | 自分のファイル一覧（CONFIRMED のみ） |
 | `/files/:id` | DELETE | 必須（本人のみ） | ソフトデリート |
 
@@ -318,8 +320,118 @@ const count = await cleanupStalePendingFiles();
 
 ---
 
-## 10. 既知の制限・TODO
+## 10. アクセス制御
 
-- **非公開ファイルのアクセス制御**: 現在は「ログイン済みの任意のユーザー」がトークンを取得・アクセス可能。所有者チェック（`uploadedById === userId`）は行っていない。用途に応じた権限モデルの設計が必要
+### 背景
+
+非公開ファイルへのアクセス権は **用途によって異なる**。File テーブルは「物理管理」のみの責任なので、アクセス権の判定は **各機能モジュール側** に委譲する。
+
+> 例（実際のルールは各機能の実装に依存する）:
+>
+> | 用途 | アクセスできるユーザー |
+> |------|----------------------|
+> | お知らせ添付 | 配信先企画メンバー + owner/共同編集者 |
+> | フォーム回答添付 | 回答者本人 + フォームの owner/共同編集者 |
+
+### アクセスチェッカー登録パターン
+
+各機能モジュールが「このファイルにこのユーザーはアクセスできるか？」を判定する関数を登録する。ファイル配信時にそれらを順番にチェックし、1つでも許可すれば配信する。
+
+#### 判定フロー
+
+```
+GET /files/:id/content（または GET /files/:id/token）
+│
+├─ ファイルが存在しない → 404
+├─ ファイルが公開 (isPublic === true) → そのまま配信
+│
+├─ ファイルが非公開 (isPublic === false)
+│   │
+│   ├─ 認証なし → 401
+│   │
+│   ├─ 認証あり
+│   │   │
+│   │   ├─ アップローダー本人 (uploadedById === userId) → 配信
+│   │   │   ※自分がアップロードしたファイルは常にアクセス可能
+│   │   │
+│   │   ├─ 登録済みアクセスチェッカーを順次実行
+│   │   │   │
+│   │   │   ├─ [お知らせチェッカー] → 配信先企画メンバー等なら許可
+│   │   │   ├─ [フォームチェッカー] → フォーム管理者等なら許可
+│   │   │   └─ (将来追加される他のチェッカー)
+│   │   │
+│   │   └─ すべてのチェッカーが拒否 or 該当なし → 403
+```
+
+`GET /:id/content` の `?token` パスではトークン署名検証のみ行う（トークン発行時（`GET /:id/token`）にアクセス権限を確認済みのため）。
+
+#### 関連ファイル
+
+| ファイル | 役割 |
+|---------|------|
+| `apps/api/src/lib/storage/access.ts` | レジストリ本体 |
+| `apps/api/src/lib/storage/access.test.ts` | ユニットテスト |
+
+#### API
+
+```typescript
+import { registerFileAccessChecker, canAccessFile } from "../lib/storage/access";
+
+// チェッカーの型
+type FileAccessChecker = (fileId: string, user: User) => Promise<boolean>;
+// true  → アクセス許可
+// false → このチェッカーでは判定不能（次のチェッカーへ）
+// ※ すべてのチェッカーが false を返した場合のみアクセス拒否
+
+// チェッカー登録（各機能モジュールの初期化時に呼ぶ）
+registerFileAccessChecker(async (fileId, user) => { ... });
+
+// アクセス判定（files.ts 内で使用）
+const hasAccess = await canAccessFile(fileId, user);
+```
+
+#### チェッカー登録例（お知らせ機能）
+
+```typescript
+// apps/api/src/routes/committee-notice.ts（初期化時）
+registerFileAccessChecker(async (fileId, user) => {
+  // このファイルがお知らせに添付されているか確認
+  const attachment = await prisma.noticeAttachment.findFirst({
+    where: { fileId },
+    include: { notice: { include: { collaborators: true, authorizations: { ... } } } },
+  });
+  if (!attachment) return false; // お知らせの添付ではない → 判定不能
+
+  const notice = attachment.notice;
+  if (notice.ownerId === user.id) return true; // owner → 許可
+  if (notice.collaborators.some(c => c.userId === user.id)) return true; // 共同編集者 → 許可
+
+  // 配信先企画のメンバーかチェック → 該当すれば許可
+  // ...
+  return false;
+});
+```
+
+### 設計のポイント
+
+| ポイント | 説明 |
+|---------|------|
+| **File テーブルは変更不要** | アクセス制御ロジックは各機能側に置く |
+| **拡張が容易** | 新しい機能が増えたら、チェッカーを `registerFileAccessChecker` で登録するだけ |
+| **チェッカーの独立性** | 各チェッカーは他のチェッカーを知らない。自分の管轄外なら `false` を返すだけ |
+| **アップローダー本人は常にアクセス可** | チェッカーの前にチェックするため、どの機能にも紐づいていないファイルでも本人はアクセスできる |
+
+### 注意点
+
+| 項目 | 内容 |
+|------|------|
+| **パフォーマンス** | チェッカーが増えると DB クエリが増える。現時点ではお知らせとフォームの 2 つ程度なので問題なし |
+| **チェッカーの登録タイミング** | アプリ起動時に全チェッカーが登録されている必要がある。`index.ts` での初期化順序に注意 |
+| **監査ログ** | 現時点では不要だが、将来的に `canAccessFile` 内にログを追加できる |
+
+---
+
+## 11. 既知の制限・TODO
+
 - **PENDING クリーンアップの自動化**: cron 等の定期実行の仕組みが未整備
 - **S3 孤立オブジェクト**: ソフトデリート後も S3 上のオブジェクトは残る。物理削除の仕組みは未実装

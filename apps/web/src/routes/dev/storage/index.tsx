@@ -1,7 +1,12 @@
 import type { FileInfo } from "@sos26/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { deleteFile, listFiles, uploadFile } from "@/lib/api/files";
+import {
+	deleteFile,
+	getAuthenticatedFileUrl,
+	listFiles,
+	uploadFile,
+} from "@/lib/api/files";
 import { useStorageUrl } from "@/lib/storage";
 
 export const Route = createFileRoute("/dev/storage/")({
@@ -149,7 +154,104 @@ function StorageDevPage() {
 					</table>
 				)}
 			</section>
+
+			<AccessVerificationSection />
 		</div>
+	);
+}
+
+function AccessVerificationSection() {
+	const [fileId, setFileId] = useState("");
+	const [verifyLoading, setVerifyLoading] = useState(false);
+	const [result, setResult] = useState<{
+		type: "success" | "error";
+		url?: string;
+		mimeType?: string;
+		message?: string;
+	} | null>(null);
+
+	const handleVerify = async () => {
+		const trimmed = fileId.trim();
+		if (!trimmed) return;
+
+		setVerifyLoading(true);
+		setResult(null);
+
+		try {
+			const url = await getAuthenticatedFileUrl(trimmed);
+			// HEAD リクエストでファイルの MIME タイプを取得
+			const res = await fetch(url, { method: "HEAD" });
+			if (!res.ok) {
+				setResult({
+					type: "error",
+					message: `エラー: ${String(res.status)} ${res.statusText}`,
+				});
+				return;
+			}
+			const mimeType = res.headers.get("Content-Type") ?? "";
+			setResult({ type: "success", url, mimeType });
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "不明なエラー";
+			setResult({ type: "error", message: `アクセス失敗: ${message}` });
+		} finally {
+			setVerifyLoading(false);
+		}
+	};
+
+	return (
+		<section>
+			<h2>アクセス検証</h2>
+			<p style={{ color: "#666", fontSize: 14 }}>
+				ファイルIDを入力して、アクセス権限を確認できます。自分がアップロードした非公開ファイルはアクセス成功、他人のファイルは
+				403 になります。
+			</p>
+			<div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+				<input
+					type="text"
+					placeholder="ファイルID"
+					value={fileId}
+					onChange={e => setFileId(e.target.value)}
+					style={{ flex: 1, padding: 6 }}
+				/>
+				<button
+					onClick={handleVerify}
+					disabled={verifyLoading || !fileId.trim()}
+					type="button"
+				>
+					{verifyLoading ? "確認中..." : "アクセスを試す"}
+				</button>
+			</div>
+
+			{result && (
+				<div
+					style={{
+						marginTop: 12,
+						padding: 12,
+						background: result.type === "success" ? "#e8f5e9" : "#ffebee",
+						borderRadius: 4,
+					}}
+				>
+					{result.type === "success" && result.url ? (
+						<div>
+							<p style={{ color: "#2e7d32", marginBottom: 8 }}>アクセス成功</p>
+							{result.mimeType?.startsWith("image/") ? (
+								<img
+									src={result.url}
+									alt="プレビュー"
+									style={{ maxWidth: 300, maxHeight: 300 }}
+								/>
+							) : (
+								<a href={result.url} target="_blank" rel="noreferrer">
+									ファイルを開く
+								</a>
+							)}
+						</div>
+					) : (
+						<p style={{ color: "#c62828" }}>{result.message}</p>
+					)}
+				</div>
+			)}
+		</section>
 	);
 }
 

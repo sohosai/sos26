@@ -1,9 +1,11 @@
 import { requestUploadUrlRequestSchema } from "@sos26/shared";
+import type { Context } from "hono";
 import { Hono } from "hono";
 import { stream } from "hono/streaming";
 import { env } from "../lib/env";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
+import { canAccessFile } from "../lib/storage/access";
 import { generateFileToken, verifyFileToken } from "../lib/storage/file-token";
 import { generateObjectKey } from "../lib/storage/key";
 import {
@@ -129,7 +131,7 @@ fileRoute.post("/:id/confirm", requireAuth, async c => {
  */
 fileRoute.get("/:id/token", requireAuth, async c => {
 	const fileId = c.req.param("id");
-	const userId = c.get("user").id;
+	const user = c.get("user");
 
 	const file = await prisma.file.findFirst({
 		where: { id: fileId, status: "CONFIRMED", deletedAt: null },
@@ -143,13 +145,52 @@ fileRoute.get("/:id/token", requireAuth, async c => {
 		throw Errors.validationError("公開ファイルにトークンは不要です");
 	}
 
-	const token = await generateFileToken(fileId, userId);
+	// アクセス制御: アップローダー本人 or 登録済みチェッカーで許可
+	if (file.uploadedById !== user.id) {
+		const hasAccess = await canAccessFile(file.id, user);
+		if (!hasAccess) {
+			throw Errors.forbidden("このファイルにアクセスする権限がありません");
+		}
+	}
+
+	const token = await generateFileToken(fileId, user.id);
 	const expiresAt = new Date(
 		Math.floor(Date.now() / 1000) * 1000 + 300 * 1000
 	).toISOString();
 
 	return c.json({ token, expiresAt });
 });
+
+/**
+ * 非公開ファイルの認証チェック
+ * トークンまたは Bearer ヘッダーで認証し、アクセス制御を行う
+ */
+async function authenticatePrivateFile(
+	c: Context<AuthEnv>,
+	fileId: string,
+	uploadedById: string
+): Promise<void> {
+	const token = c.req.query("token");
+	if (token) {
+		// トークン発行時にアクセス権限を確認済みなので、署名検証のみ
+		const payload = await verifyFileToken(token, fileId);
+		if (!payload) {
+			throw Errors.unauthorized("ファイルトークンが無効または期限切れです");
+		}
+		return;
+	}
+
+	// Bearer 認証 + アクセス制御
+	await requireAuth(c, async () => {});
+	const user = c.get("user");
+
+	if (uploadedById !== user.id) {
+		const hasAccess = await canAccessFile(fileId, user);
+		if (!hasAccess) {
+			throw Errors.forbidden("このファイルにアクセスする権限がありません");
+		}
+	}
+}
 
 /**
  * GET /files/:id/content
@@ -166,17 +207,8 @@ fileRoute.get("/:id/content", async c => {
 		throw Errors.notFound("ファイルが見つかりません");
 	}
 
-	// 非公開ファイルの認証: トークンまたは Bearer ヘッダー
 	if (!file.isPublic) {
-		const token = c.req.query("token");
-		if (token) {
-			const payload = await verifyFileToken(token, fileId);
-			if (!payload) {
-				throw Errors.unauthorized("ファイルトークンが無効または期限切れです");
-			}
-		} else {
-			await requireAuth(c, async () => {});
-		}
+		await authenticatePrivateFile(c, file.id, file.uploadedById);
 	}
 
 	const s3Response = await getObject(file.key);
