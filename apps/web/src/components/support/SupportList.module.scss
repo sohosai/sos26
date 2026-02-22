@@ -62,9 +62,10 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 18px;
-	height: 18px;
-	border-radius: var(--radius-full);
+	min-width: 20px;
+	min-height: 20px;
+	aspect-ratio: 1;
+	border-radius: 9999px;
 	background-color: var(--accent-9);
 	color: white;
 	font-size: var(--font-size-1);
@@ -109,8 +110,9 @@
 
 	/* 件数バッジを完全な円にする */
 	:global(.rt-Badge) {
-		width: 20px;
-		height: 20px;
+		min-width: 20px;
+		min-height: 20px;
+		aspect-ratio: 1;
 		padding: 0;
 		justify-content: center;
 	}
