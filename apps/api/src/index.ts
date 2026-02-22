@@ -19,6 +19,9 @@ initPush();
 // Storage 初期化
 initStorage();
 
+// ファイルアクセスチェッカー登録
+import "./lib/storage/checkers";
+
 const app = new Hono();
 
 // 統一エラーハンドラ
