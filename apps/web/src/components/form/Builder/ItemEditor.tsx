@@ -105,15 +105,16 @@ export function FormItemEditor({
 
 						{/* タイプ選択 */}
 						<div className={styles.formItemSetting}>
-							<Select
-								options={FIELD_TYPES}
-								value={item.type}
-								onValueChange={value =>
-									onUpdate(item.id, { type: value as FormItem["type"] })
-								}
-								aria-label="フィールドタイプ"
-							/>
-
+							<div>
+								<Select
+									options={FIELD_TYPES}
+									value={item.type}
+									onValueChange={value =>
+										onUpdate(item.id, { type: value as FormItem["type"] })
+									}
+									aria-label="フィールドタイプ"
+								/>
+							</div>
 							<Switch
 								label="必須"
 								onCheckedChange={checked =>
