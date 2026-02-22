@@ -1,7 +1,8 @@
 // import * as Dialog from "@radix-ui/react-dialog";
 import { Dialog, Text } from "@radix-ui/themes";
 import { IconX } from "@tabler/icons-react";
-import ExcelViewer from "./ExcelViewer";
+// import ExcelViewer from "./ExcelViewer";
+import ExcelViewer_exceljs from "./ExcelViewer_exceljs";
 import styles from "./FilePreviewDialog.module.scss";
 import PdfViewer from "./Pdfviewer";
 import WordViewer from "./Wordviewer";
@@ -21,7 +22,10 @@ function Viewer({ file }: { file: File }) {
 	const url = URL.createObjectURL(file); // Dialog再マウント時に生成
 
 	if (ext === "pdf") return <PdfViewer url={url} />;
-	if (ext === "xlsx" || ext === "xls") return <ExcelViewer file={file} />;
+	// if (ext === "xlsx" || ext === "xls") return <ExcelViewer file={file} />;
+	if (ext === "xlsx" || ext === "xls")
+		return <ExcelViewer_exceljs file={file} />;
+
 	if (ext === "docx") return <WordViewer file={file} />;
 	if (["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext))
 		return <img src={url} className={styles.image} alt={file.name} />;

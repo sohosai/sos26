@@ -19,6 +19,7 @@
     "@tanstack/react-router": "^1.147.1",
     "@tanstack/react-table": "^8.21.3",
     "boring-avatars": "^1.11.2",
+    "exceljs": "^4.4.0",
     "firebase": "^12.8.0",
     "ky": "^1.14.2",
     "react": "^19.2.0",
