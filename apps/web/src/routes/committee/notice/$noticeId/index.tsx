@@ -23,7 +23,7 @@ import {
 	removeCollaborator,
 	updateNoticeAuthorization,
 } from "@/lib/api/committee-notice";
-import { getAuthenticatedFileUrl, getFileContentUrl } from "@/lib/api/files";
+import { downloadFile } from "@/lib/api/files";
 import { useAuthStore } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { getNoticeStatusFromAuth } from "@/lib/notice-status";
@@ -126,20 +126,6 @@ function RouteComponent() {
 		}
 	};
 
-	const handleDownloadAttachment = async (
-		fileId: string,
-		isPublic: boolean
-	) => {
-		try {
-			const url = isPublic
-				? getFileContentUrl(fileId)
-				: await getAuthenticatedFileUrl(fileId);
-			window.open(url, "_blank");
-		} catch {
-			toast.error("ファイルの取得に失敗しました");
-		}
-	};
-
 	const handleApprove = async (authorizationId: string) => {
 		try {
 			await updateNoticeAuthorization(noticeId, authorizationId, {
@@ -222,7 +208,9 @@ function RouteComponent() {
 									type="button"
 									className={styles.attachmentItem}
 									onClick={() =>
-										handleDownloadAttachment(att.fileId, att.isPublic)
+										downloadFile(att.fileId, att.fileName, att.isPublic).catch(
+											() => toast.error("ファイルの取得に失敗しました")
+										)
 									}
 								>
 									<IconDownload size={14} />

@@ -256,6 +256,16 @@ const url = useStorageUrl(file.id, file.isPublic);
 {url && <a href={url} target="_blank">ダウンロード</a>}
 ```
 
+### ファイルダウンロード
+
+`downloadFile()` はファイルを Blob として取得し、ブラウザのダウンロードを実行する。別オリジン（S3 プロキシ経由）でも `download` 属性が機能するよう、Object URL を経由する。
+
+```typescript
+import { downloadFile } from "@/lib/api/files";
+
+await downloadFile(fileId, fileName, isPublic);
+```
+
 ### getAuthenticatedFileUrl 関数
 
 コンポーネント外（イベントハンドラ等）でトークン付き URL が必要な場合:

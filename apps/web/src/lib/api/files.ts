@@ -79,6 +79,29 @@ export async function getAuthenticatedFileUrl(fileId: string): Promise<string> {
 }
 
 /**
+ * ファイルをダウンロードする
+ */
+export async function downloadFile(
+	fileId: string,
+	fileName: string,
+	isPublic: boolean
+): Promise<void> {
+	const url = isPublic
+		? getFileContentUrl(fileId)
+		: await getAuthenticatedFileUrl(fileId);
+	const res = await fetch(url);
+	const blob = await res.blob();
+	const objectUrl = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = objectUrl;
+	a.download = fileName;
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
+	URL.revokeObjectURL(objectUrl);
+}
+
+/**
  * 3ステップのアップロードフローをまとめたヘルパー
  *
  * 1. API に Presigned URL を要求

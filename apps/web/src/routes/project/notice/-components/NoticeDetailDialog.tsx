@@ -5,7 +5,7 @@ import { IconDownload, IconPaperclip } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
-import { getAuthenticatedFileUrl, getFileContentUrl } from "@/lib/api/files";
+import { downloadFile } from "@/lib/api/files";
 import { getProjectNotice, readProjectNotice } from "@/lib/api/project-notice";
 import { formatDate } from "@/lib/format";
 import { sanitizeHtml } from "@/lib/sanitize";
@@ -87,20 +87,6 @@ export function NoticeDetailDialog({
 		}
 	};
 
-	const handleDownloadAttachment = async (
-		fileId: string,
-		isPublic: boolean
-	) => {
-		try {
-			const url = isPublic
-				? getFileContentUrl(fileId)
-				: await getAuthenticatedFileUrl(fileId);
-			window.open(url, "_blank");
-		} catch {
-			toast.error("ファイルの取得に失敗しました");
-		}
-	};
-
 	return (
 		<Dialog.Root open={noticeId !== null} onOpenChange={handleOpenChange}>
 			<Dialog.Content className={styles.content}>
@@ -143,7 +129,13 @@ export function NoticeDetailDialog({
 											type="button"
 											className={styles.attachmentItem}
 											onClick={() =>
-												handleDownloadAttachment(att.fileId, att.isPublic)
+												downloadFile(
+													att.fileId,
+													att.fileName,
+													att.isPublic
+												).catch(() =>
+													toast.error("ファイルの取得に失敗しました")
+												)
 											}
 										>
 											<IconDownload size={14} />
