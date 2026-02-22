@@ -166,6 +166,7 @@ const inquirySummarySchema = z.object({
 export const createProjectInquiryRequestSchema = z.object({
 	title: z.string().min(1, "件名を入力してください"),
 	body: z.string().min(1, "内容を入力してください"),
+	coAssigneeUserIds: z.array(z.cuid()).optional(),
 });
 export type CreateProjectInquiryRequest = z.infer<
 	typeof createProjectInquiryRequestSchema
@@ -275,6 +276,7 @@ export const createCommitteeInquiryRequestSchema = z.object({
 	projectAssigneeUserIds: z
 		.array(z.cuid())
 		.min(1, "企画側担当者を1人以上指定してください"),
+	committeeAssigneeUserIds: z.array(z.cuid()).optional(),
 });
 export type CreateCommitteeInquiryRequest = z.infer<
 	typeof createCommitteeInquiryRequestSchema

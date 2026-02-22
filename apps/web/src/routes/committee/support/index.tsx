@@ -12,6 +12,10 @@ import {
 	listCommitteeInquiries,
 } from "@/lib/api/committee-inquiry";
 import {
+	listCommitteeMemberPermissions,
+	listCommitteeMembers,
+} from "@/lib/api/committee-member";
+import {
 	listCommitteeProjectMembers,
 	listCommitteeProjects,
 } from "@/lib/api/committee-project";
@@ -26,19 +30,44 @@ export const Route = createFileRoute("/committee/support/")({
 		],
 	}),
 	loader: async () => {
-		const [inquiriesRes, projectsRes] = await Promise.all([
+		const { committeeMember } = useAuthStore.getState();
+
+		const [inquiriesRes, projectsRes, membersRes] = await Promise.all([
 			listCommitteeInquiries(),
 			listCommitteeProjects(),
+			listCommitteeMembers(),
 		]);
+
+		// INQUIRY_ADMIN 権限チェック
+		let isAdmin = false;
+		if (committeeMember) {
+			try {
+				const permRes = await listCommitteeMemberPermissions(
+					committeeMember.id
+				);
+				isAdmin = permRes.permissions.some(
+					p => p.permission === "INQUIRY_ADMIN"
+				);
+			} catch {
+				// 権限取得失敗時は管理者でない扱い
+			}
+		}
+
 		return {
 			inquiries: inquiriesRes.inquiries,
 			projects: projectsRes.projects.map(p => ({ id: p.id, name: p.name })),
+			committeeMembers: membersRes.committeeMembers.map(m => ({
+				id: m.user.id,
+				name: m.user.name,
+			})),
+			isAdmin,
 		};
 	},
 });
 
 function CommitteeSupportListPage() {
-	const { inquiries, projects } = Route.useLoaderData();
+	const { inquiries, projects, committeeMembers, isAdmin } =
+		Route.useLoaderData();
 	const [formOpen, setFormOpen] = useState(false);
 	const navigate = useNavigate();
 	const router = useRouter();
@@ -61,6 +90,7 @@ function CommitteeSupportListPage() {
 				viewerRole="committee"
 				basePath="/committee/support"
 				onNewInquiry={() => setFormOpen(true)}
+				isAdmin={isAdmin}
 			/>
 			<NewInquiryForm
 				open={formOpen}
@@ -69,6 +99,7 @@ function CommitteeSupportListPage() {
 				currentUser={currentUser}
 				projects={projects}
 				onLoadProjectMembers={handleLoadProjectMembers}
+				committeeMembers={committeeMembers}
 				onSubmit={async params => {
 					try {
 						if (!params.projectId || !params.projectAssigneeUserIds) return;
@@ -77,6 +108,7 @@ function CommitteeSupportListPage() {
 							body: params.body,
 							projectId: params.projectId,
 							projectAssigneeUserIds: params.projectAssigneeUserIds,
+							committeeAssigneeUserIds: params.committeeAssigneeUserIds,
 						});
 						await router.invalidate();
 						navigate({

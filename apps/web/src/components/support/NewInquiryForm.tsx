@@ -22,18 +22,25 @@ type NewInquiryFormProps = {
 	onOpenChange: (open: boolean) => void;
 	viewerRole: "project" | "committee";
 	currentUser: UserSummary;
+	// Project side: project members for co-assignee selection
+	projectMembers?: UserSummary[];
 	// Committee only: projects to select from
 	projects?: { id: string; name: string }[];
 	// Committee only: load project members when a project is selected
 	onLoadProjectMembers?: (
 		projectId: string
 	) => Promise<{ id: string; name: string }[]>;
+	// Committee only: committee members for additional assignee selection
+	committeeMembers?: UserSummary[];
 	onSubmit: (params: {
 		title: string;
 		body: string;
+		// Project side: co-assignees
+		coAssigneeUserIds?: string[];
 		// Committee only
 		projectId?: string;
 		projectAssigneeUserIds?: string[];
+		committeeAssigneeUserIds?: string[];
 	}) => Promise<void>;
 };
 
@@ -42,17 +49,22 @@ export function NewInquiryForm({
 	onOpenChange,
 	viewerRole,
 	currentUser,
+	projectMembers,
 	projects,
 	onLoadProjectMembers,
+	committeeMembers,
 	onSubmit,
 }: NewInquiryFormProps) {
 	const [title, setTitle] = useState("");
 	const [body, setBody] = useState("");
+	// Committee side: project selection
 	const [selectedProject, setSelectedProject] = useState<{
 		id: string;
 		name: string;
 	} | null>(null);
-	const [projectMembers, setProjectMembers] = useState<UserSummary[]>([]);
+	const [loadedProjectMembers, setLoadedProjectMembers] = useState<
+		UserSummary[]
+	>([]);
 	const [selectedProjectAssignees, setSelectedProjectAssignees] = useState<
 		UserSummary[]
 	>([]);
@@ -61,15 +73,31 @@ export function NewInquiryForm({
 	const [projectSelectorOpen, setProjectSelectorOpen] = useState(false);
 	const [projectSelectorQuery, setProjectSelectorQuery] = useState("");
 	const [loadingMembers, setLoadingMembers] = useState(false);
+	// Project side: co-assignee selection
+	const [selectedCoAssignees, setSelectedCoAssignees] = useState<UserSummary[]>(
+		[]
+	);
+	const [coAssigneePopoverOpen, setCoAssigneePopoverOpen] = useState(false);
+	const [coAssigneeSearchQuery, setCoAssigneeSearchQuery] = useState("");
+	// Committee side: additional committee assignee selection
+	const [selectedCommitteeAssignees, setSelectedCommitteeAssignees] = useState<
+		UserSummary[]
+	>([]);
+	const [committeePopoverOpen, setCommitteePopoverOpen] = useState(false);
+	const [committeeSearchQuery, setCommitteeSearchQuery] = useState("");
 
 	const reset = () => {
 		setTitle("");
 		setBody("");
 		setSelectedProject(null);
-		setProjectMembers([]);
+		setLoadedProjectMembers([]);
 		setSelectedProjectAssignees([]);
 		setProjectSearchQuery("");
 		setProjectSelectorQuery("");
+		setSelectedCoAssignees([]);
+		setCoAssigneeSearchQuery("");
+		setSelectedCommitteeAssignees([]);
+		setCommitteeSearchQuery("");
 	};
 
 	const handleSelectProject = async (project: { id: string; name: string }) => {
@@ -82,37 +110,68 @@ export function NewInquiryForm({
 			setLoadingMembers(true);
 			try {
 				const members = await onLoadProjectMembers(project.id);
-				setProjectMembers(members);
+				setLoadedProjectMembers(members);
 			} finally {
 				setLoadingMembers(false);
 			}
 		}
 	};
 
+	const buildCommitteeParams = () => {
+		if (!selectedProject || selectedProjectAssignees.length === 0) return null;
+		return {
+			title: title.trim(),
+			body: body.trim(),
+			projectId: selectedProject.id,
+			projectAssigneeUserIds: selectedProjectAssignees.map(p => p.id),
+			committeeAssigneeUserIds:
+				selectedCommitteeAssignees.length > 0
+					? selectedCommitteeAssignees.map(p => p.id)
+					: undefined,
+		};
+	};
+
+	const buildProjectParams = () => ({
+		title: title.trim(),
+		body: body.trim(),
+		coAssigneeUserIds:
+			selectedCoAssignees.length > 0
+				? selectedCoAssignees.map(p => p.id)
+				: undefined,
+	});
+
 	const handleSubmit = async () => {
 		if (!title.trim() || !body.trim()) return;
 
-		if (viewerRole === "committee") {
-			if (!selectedProject || selectedProjectAssignees.length === 0) return;
-			await onSubmit({
-				title: title.trim(),
-				body: body.trim(),
-				projectId: selectedProject.id,
-				projectAssigneeUserIds: selectedProjectAssignees.map(p => p.id),
-			});
-		} else {
-			await onSubmit({
-				title: title.trim(),
-				body: body.trim(),
-			});
-		}
+		const params =
+			viewerRole === "committee"
+				? buildCommitteeParams()
+				: buildProjectParams();
+		if (!params) return;
 
+		await onSubmit(params);
 		reset();
 		onOpenChange(false);
 	};
 
 	const toggleProjectAssignee = (person: UserSummary) => {
 		setSelectedProjectAssignees(prev =>
+			prev.some(p => p.id === person.id)
+				? prev.filter(p => p.id !== person.id)
+				: [...prev, person]
+		);
+	};
+
+	const toggleCoAssignee = (person: UserSummary) => {
+		setSelectedCoAssignees(prev =>
+			prev.some(p => p.id === person.id)
+				? prev.filter(p => p.id !== person.id)
+				: [...prev, person]
+		);
+	};
+
+	const toggleCommitteeAssignee = (person: UserSummary) => {
+		setSelectedCommitteeAssignees(prev =>
 			prev.some(p => p.id === person.id)
 				? prev.filter(p => p.id !== person.id)
 				: [...prev, person]
@@ -249,97 +308,91 @@ export function NewInquiryForm({
 								</Text>
 							) : (
 								<>
-									<Popover.Root
+									<AssigneePopover
 										open={projectPopoverOpen}
 										onOpenChange={o => {
 											setProjectPopoverOpen(o);
 											if (!o) setProjectSearchQuery("");
 										}}
-									>
-										<Popover.Trigger>
-											<button type="button" className={styles.assignTrigger}>
-												<Text size="2" color="gray">
-													担当者を選択...
-												</Text>
-												<IconChevronDown size={16} />
-											</button>
-										</Popover.Trigger>
-										<Popover.Content
-											className={styles.assignPopover}
-											side="bottom"
-											align="start"
-										>
-											<div className={styles.assignSearch}>
-												<RadixTextField.Root
-													placeholder="検索..."
-													size="2"
-													value={projectSearchQuery}
-													onChange={e => setProjectSearchQuery(e.target.value)}
-												>
-													<RadixTextField.Slot>
-														<IconSearch size={14} />
-													</RadixTextField.Slot>
-												</RadixTextField.Root>
-											</div>
-											<div className={styles.assignList}>
-												{projectMembers
-													.filter(person => {
-														const q = projectSearchQuery.toLowerCase();
-														if (!q) return true;
-														return person.name.toLowerCase().includes(q);
-													})
-													.map(person => {
-														const isSelected = selectedProjectAssignees.some(
-															p => p.id === person.id
-														);
-														return (
-															<button
-																key={person.id}
-																type="button"
-																className={`${styles.assignOption} ${isSelected ? styles.assignOptionSelected : ""}`}
-																onClick={() => toggleProjectAssignee(person)}
-															>
-																<Avatar
-																	size={20}
-																	name={person.name}
-																	variant="beam"
-																/>
-																<div className={styles.assignOptionText}>
-																	<Text size="2">{person.name}</Text>
-																</div>
-																{isSelected && (
-																	<IconCheck
-																		size={14}
-																		className={styles.assignOptionCheck}
-																	/>
-																)}
-															</button>
-														);
-													})}
-											</div>
-										</Popover.Content>
-									</Popover.Root>
-									{selectedProjectAssignees.length > 0 && (
-										<div className={styles.assignChips}>
-											{selectedProjectAssignees.map(person => (
-												<span key={person.id} className={styles.assignChip}>
-													<Avatar size={16} name={person.name} variant="beam" />
-													<Text size="1">{person.name}</Text>
-													<button
-														type="button"
-														className={styles.assignChipRemove}
-														onClick={() => toggleProjectAssignee(person)}
-													>
-														<IconX size={12} />
-													</button>
-												</span>
-											))}
-										</div>
-									)}
+										members={loadedProjectMembers}
+										selected={selectedProjectAssignees}
+										searchQuery={projectSearchQuery}
+										onSearchChange={setProjectSearchQuery}
+										onToggle={toggleProjectAssignee}
+										triggerLabel="担当者を選択..."
+									/>
+									<SelectedChips
+										items={selectedProjectAssignees}
+										onRemove={toggleProjectAssignee}
+									/>
 								</>
 							)}
 						</div>
 					)}
+
+					{/* 実委作成の場合: 追加実委担当者（任意） */}
+					{viewerRole === "committee" &&
+						committeeMembers &&
+						committeeMembers.length > 0 && (
+							<div className={styles.assignSection}>
+								<Text size="2" weight="medium">
+									追加の実委担当者（任意）
+								</Text>
+								<Text size="1" color="gray">
+									あなた以外に実委側の担当者を追加する場合に選択してください
+								</Text>
+								<AssigneePopover
+									open={committeePopoverOpen}
+									onOpenChange={o => {
+										setCommitteePopoverOpen(o);
+										if (!o) setCommitteeSearchQuery("");
+									}}
+									members={committeeMembers.filter(
+										m => m.id !== currentUser.id
+									)}
+									selected={selectedCommitteeAssignees}
+									searchQuery={committeeSearchQuery}
+									onSearchChange={setCommitteeSearchQuery}
+									onToggle={toggleCommitteeAssignee}
+									triggerLabel="実委担当者を追加..."
+								/>
+								<SelectedChips
+									items={selectedCommitteeAssignees}
+									onRemove={toggleCommitteeAssignee}
+								/>
+							</div>
+						)}
+
+					{/* 企画作成の場合: 共同担当者（任意） */}
+					{viewerRole === "project" &&
+						projectMembers &&
+						projectMembers.length > 1 && (
+							<div className={styles.assignSection}>
+								<Text size="2" weight="medium">
+									共同担当者（任意）
+								</Text>
+								<Text size="1" color="gray">
+									自企画のメンバーを共同担当者として追加できます
+								</Text>
+								<AssigneePopover
+									open={coAssigneePopoverOpen}
+									onOpenChange={o => {
+										setCoAssigneePopoverOpen(o);
+										if (!o) setCoAssigneeSearchQuery("");
+									}}
+									members={projectMembers.filter(m => m.id !== currentUser.id)}
+									selected={selectedCoAssignees}
+									searchQuery={coAssigneeSearchQuery}
+									onSearchChange={setCoAssigneeSearchQuery}
+									onToggle={toggleCoAssignee}
+									triggerLabel="共同担当者を追加..."
+								/>
+								<SelectedChips
+									items={selectedCoAssignees}
+									onRemove={toggleCoAssignee}
+								/>
+							</div>
+						)}
 
 					{viewerRole === "project" && (
 						<div className={styles.infoBox}>
@@ -370,5 +423,113 @@ export function NewInquiryForm({
 				</div>
 			</Dialog.Content>
 		</Dialog.Root>
+	);
+}
+
+/* ─── 共通サブコンポーネント ─── */
+
+function AssigneePopover({
+	open,
+	onOpenChange,
+	members,
+	selected,
+	searchQuery,
+	onSearchChange,
+	onToggle,
+	triggerLabel,
+}: {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+	members: UserSummary[];
+	selected: UserSummary[];
+	searchQuery: string;
+	onSearchChange: (q: string) => void;
+	onToggle: (person: UserSummary) => void;
+	triggerLabel: string;
+}) {
+	return (
+		<Popover.Root open={open} onOpenChange={onOpenChange}>
+			<Popover.Trigger>
+				<button type="button" className={styles.assignTrigger}>
+					<Text size="2" color="gray">
+						{triggerLabel}
+					</Text>
+					<IconChevronDown size={16} />
+				</button>
+			</Popover.Trigger>
+			<Popover.Content
+				className={styles.assignPopover}
+				side="bottom"
+				align="start"
+			>
+				<div className={styles.assignSearch}>
+					<RadixTextField.Root
+						placeholder="検索..."
+						size="2"
+						value={searchQuery}
+						onChange={e => onSearchChange(e.target.value)}
+					>
+						<RadixTextField.Slot>
+							<IconSearch size={14} />
+						</RadixTextField.Slot>
+					</RadixTextField.Root>
+				</div>
+				<div className={styles.assignList}>
+					{members
+						.filter(person => {
+							const q = searchQuery.toLowerCase();
+							if (!q) return true;
+							return person.name.toLowerCase().includes(q);
+						})
+						.map(person => {
+							const isSelected = selected.some(p => p.id === person.id);
+							return (
+								<button
+									key={person.id}
+									type="button"
+									className={`${styles.assignOption} ${isSelected ? styles.assignOptionSelected : ""}`}
+									onClick={() => onToggle(person)}
+								>
+									<Avatar size={20} name={person.name} variant="beam" />
+									<div className={styles.assignOptionText}>
+										<Text size="2">{person.name}</Text>
+									</div>
+									{isSelected && (
+										<IconCheck size={14} className={styles.assignOptionCheck} />
+									)}
+								</button>
+							);
+						})}
+				</div>
+			</Popover.Content>
+		</Popover.Root>
+	);
+}
+
+function SelectedChips({
+	items,
+	onRemove,
+}: {
+	items: UserSummary[];
+	onRemove: (person: UserSummary) => void;
+}) {
+	if (items.length === 0) return null;
+
+	return (
+		<div className={styles.assignChips}>
+			{items.map(person => (
+				<span key={person.id} className={styles.assignChip}>
+					<Avatar size={16} name={person.name} variant="beam" />
+					<Text size="1">{person.name}</Text>
+					<button
+						type="button"
+						className={styles.assignChipRemove}
+						onClick={() => onRemove(person)}
+					>
+						<IconX size={12} />
+					</button>
+				</span>
+			))}
+		</div>
 	);
 }

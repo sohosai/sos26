@@ -10,6 +10,7 @@ import {
 	removeCommitteeInquiryAssignee,
 	reopenCommitteeInquiry,
 	updateCommitteeInquiryStatus,
+	updateCommitteeInquiryViewers,
 } from "@/lib/api/committee-inquiry";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { listCommitteeProjectMembers } from "@/lib/api/committee-project";
@@ -68,6 +69,7 @@ function CommitteeSupportDetailPage() {
 			basePath="/committee/support"
 			committeeMembers={committeeMembers}
 			projectMembers={projectMembers}
+			viewers={inquiry.viewers}
 			onUpdateStatus={async status => {
 				try {
 					if (status === "RESOLVED") {
@@ -107,6 +109,14 @@ function CommitteeSupportDetailPage() {
 					await router.invalidate();
 				} catch {
 					toast.error("担当者の削除に失敗しました");
+				}
+			}}
+			onUpdateViewers={async viewers => {
+				try {
+					await updateCommitteeInquiryViewers(inquiryId, { viewers });
+					await router.invalidate();
+				} catch {
+					toast.error("閲覧者設定の更新に失敗しました");
 				}
 			}}
 		/>

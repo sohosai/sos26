@@ -7,6 +7,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { NewInquiryForm } from "@/components/support/NewInquiryForm";
 import { SupportList } from "@/components/support/SupportList";
+import { listProjectMembers } from "@/lib/api/project";
 import {
 	createProjectInquiry,
 	listProjectInquiries,
@@ -24,14 +25,24 @@ export const Route = createFileRoute("/project/support/")({
 	}),
 	loader: async () => {
 		const { selectedProjectId } = useProjectStore.getState();
-		if (!selectedProjectId) return { inquiries: [] as never[] };
-		const res = await listProjectInquiries(selectedProjectId);
-		return { inquiries: res.inquiries };
+		if (!selectedProjectId)
+			return { inquiries: [] as never[], projectMembers: [] as never[] };
+		const [inquiriesRes, membersRes] = await Promise.all([
+			listProjectInquiries(selectedProjectId),
+			listProjectMembers(selectedProjectId),
+		]);
+		return {
+			inquiries: inquiriesRes.inquiries,
+			projectMembers: membersRes.members.map(m => ({
+				id: m.userId,
+				name: m.name,
+			})),
+		};
 	},
 });
 
 function ProjectSupportListPage() {
-	const { inquiries } = Route.useLoaderData();
+	const { inquiries, projectMembers } = Route.useLoaderData();
 	const [formOpen, setFormOpen] = useState(false);
 	const navigate = useNavigate();
 	const router = useRouter();
@@ -56,11 +67,13 @@ function ProjectSupportListPage() {
 				onOpenChange={setFormOpen}
 				viewerRole="project"
 				currentUser={currentUser}
+				projectMembers={projectMembers}
 				onSubmit={async params => {
 					try {
 						const { inquiry } = await createProjectInquiry(selectedProjectId, {
 							title: params.title,
 							body: params.body,
+							coAssigneeUserIds: params.coAssigneeUserIds,
 						});
 						await router.invalidate();
 						navigate({

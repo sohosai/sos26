@@ -85,6 +85,34 @@
 	}
 }
 
+/* ─── Sections (committee open tab) ─── */
+
+.sections {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-5);
+}
+
+.section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.sectionHighlight {
+	padding: var(--space-3);
+	background-color: var(--orange-2);
+	border: 1px solid var(--orange-6);
+	border-radius: var(--radius-3);
+}
+
+.sectionTitle {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	color: var(--gray-11);
+}
+
 /* ─── List ─── */
 
 .list {
