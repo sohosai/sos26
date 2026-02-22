@@ -60,6 +60,38 @@ function PageName() {
 }
 ```
 
+## ページ固有コンポーネントのコロケーション
+
+ページでしか使わないコンポーネント（ダイアログ、サイドバーなど）は、ルートファイルと同階層に `-components/` ディレクトリを作成して配置できます。
+
+```
+src/routes/committee/notice/
+├── index.tsx                      # ルートファイル
+├── index.module.scss
+├── -components/                   # "-" プレフィクスでルート生成から除外
+│   ├── CreateNoticeDialog.tsx
+│   └── CreateNoticeDialog.module.scss
+└── $noticeId/
+    ├── index.tsx
+    ├── index.module.scss
+    └── -components/
+        ├── NoticeDetailSidebar.tsx
+        └── PublishRequestDialog.tsx
+```
+
+### なぜ `-` プレフィクスなのか
+
+TanStack Router はデフォルトで `routeFileIgnorePrefix: "-"` が設定されており、`-` で始まるファイル・ディレクトリはルート生成の対象外になります。
+
+`_` プレフィクスは TanStack Router で**レイアウトルート**を意味する予約トークンのため、コンポーネント配置には使えません。
+
+### 判断基準
+
+| コンポーネントの性質 | 配置場所 |
+|---|---|
+| 複数ページで再利用する | `src/components/primitives/` or `patterns/` |
+| 特定のページでしか使わない | `src/routes/.../-components/` |
+
 ## コンポーネントのインポート
 
 エイリアス (`@/*`) を使用してコンポーネントをインポートできます。

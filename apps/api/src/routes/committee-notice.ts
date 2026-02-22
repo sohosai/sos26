@@ -1,0 +1,782 @@
+import {
+	addCollaboratorRequestSchema,
+	addNoticeAttachmentRequestSchema,
+	createNoticeAuthorizationRequestSchema,
+	createNoticeRequestSchema,
+	noticeAttachmentIdPathParamsSchema,
+	noticeAuthorizationIdPathParamsSchema,
+	noticeCollaboratorIdPathParamsSchema,
+	noticeIdPathParamsSchema,
+	updateNoticeAuthorizationRequestSchema,
+	updateNoticeRequestSchema,
+} from "@sos26/shared";
+import { Hono } from "hono";
+import { Errors } from "../lib/error";
+import { prisma } from "../lib/prisma";
+import { sanitizeHtml } from "../lib/sanitize";
+import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
+import type { AuthEnv } from "../types/auth-env";
+
+const committeeNoticeRoute = new Hono<AuthEnv>();
+
+// ─────────────────────────────────────────────────────────────
+// POST /committee/notices
+// お知らせを作成
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.post("/", requireAuth, requireCommitteeMember, async c => {
+	const user = c.get("user");
+	const body = await c.req.json().catch(() => ({}));
+	const { title, body: noticeBody } = createNoticeRequestSchema.parse(body);
+
+	const created = await prisma.notice.create({
+		data: {
+			ownerId: user.id,
+			title,
+			body: sanitizeHtml(noticeBody),
+		},
+	});
+
+	const { deletedAt: _, ...notice } = created;
+	return c.json({ notice }, 201);
+});
+
+// ─────────────────────────────────────────────────────────────
+// GET /committee/notices
+// お知らせ一覧を取得（実委人全員閲覧可）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.get("/", requireAuth, requireCommitteeMember, async c => {
+	const notices = await prisma.notice.findMany({
+		where: { deletedAt: null },
+		include: {
+			owner: { select: { id: true, name: true } },
+			collaborators: {
+				where: { deletedAt: null },
+				include: { user: { select: { id: true, name: true } } },
+			},
+			authorizations: {
+				include: {
+					requestedTo: { select: { id: true, name: true } },
+				},
+				orderBy: { createdAt: "desc" },
+				take: 1,
+			},
+		},
+		orderBy: { updatedAt: "desc" },
+	});
+
+	// レスポンス形式に整形
+	const formatted = notices.map(n => {
+		const latestAuth = n.authorizations[0] ?? null;
+		return {
+			id: n.id,
+			ownerId: n.ownerId,
+			title: n.title,
+			createdAt: n.createdAt,
+			updatedAt: n.updatedAt,
+			owner: n.owner,
+			collaborators: n.collaborators.map(col => col.user),
+			authorization: latestAuth
+				? {
+						id: latestAuth.id,
+						status: latestAuth.status,
+						deliveredAt: latestAuth.deliveredAt,
+						requestedTo: latestAuth.requestedTo,
+					}
+				: null,
+		};
+	});
+
+	return c.json({ notices: formatted });
+});
+
+// ─────────────────────────────────────────────────────────────
+// GET /committee/notices/:noticeId
+// お知らせ詳細を取得（実委人全員閲覧可）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.get(
+	"/:noticeId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const { noticeId } = noticeIdPathParamsSchema.parse({
+			noticeId: c.req.param("noticeId"),
+		});
+
+		const notice = await prisma.notice.findFirst({
+			where: { id: noticeId, deletedAt: null },
+			include: {
+				owner: { select: { id: true, name: true } },
+				collaborators: {
+					where: { deletedAt: null },
+					include: { user: { select: { id: true, name: true } } },
+				},
+				authorizations: {
+					include: {
+						requestedBy: { select: { id: true, name: true } },
+						requestedTo: { select: { id: true, name: true } },
+						deliveries: {
+							include: {
+								project: { select: { id: true, name: true } },
+							},
+						},
+					},
+					orderBy: { createdAt: "desc" },
+				},
+				attachments: {
+					where: { deletedAt: null },
+					include: {
+						file: {
+							select: {
+								id: true,
+								fileName: true,
+								mimeType: true,
+								size: true,
+								isPublic: true,
+							},
+						},
+					},
+					orderBy: { createdAt: "asc" },
+				},
+			},
+		});
+
+		if (!notice) {
+			throw Errors.notFound("お知らせが見つかりません");
+		}
+
+		// レスポンス形式に整形（deletedAt を除外）
+		const formatted = {
+			id: notice.id,
+			ownerId: notice.ownerId,
+			title: notice.title,
+			body: notice.body,
+			createdAt: notice.createdAt,
+			updatedAt: notice.updatedAt,
+			owner: notice.owner,
+			collaborators: notice.collaborators.map(col => ({
+				id: col.id,
+				user: col.user,
+			})),
+			authorizations: notice.authorizations.map(auth => ({
+				id: auth.id,
+				noticeId: auth.noticeId,
+				requestedById: auth.requestedById,
+				requestedToId: auth.requestedToId,
+				status: auth.status,
+				decidedAt: auth.decidedAt,
+				deliveredAt: auth.deliveredAt,
+				createdAt: auth.createdAt,
+				updatedAt: auth.updatedAt,
+				requestedBy: auth.requestedBy,
+				requestedTo: auth.requestedTo,
+				deliveries: auth.deliveries.map(del => ({
+					id: del.id,
+					noticeAuthorizationId: del.noticeAuthorizationId,
+					projectId: del.projectId,
+					createdAt: del.createdAt,
+					project: del.project,
+				})),
+			})),
+			attachments: notice.attachments.map(att => ({
+				id: att.id,
+				fileId: att.file.id,
+				fileName: att.file.fileName,
+				mimeType: att.file.mimeType,
+				size: att.file.size,
+				isPublic: att.file.isPublic,
+				createdAt: att.createdAt,
+			})),
+		};
+
+		return c.json({ notice: formatted });
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// PATCH /committee/notices/:noticeId
+// お知らせを編集（owner または共同編集者のみ）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.patch(
+	"/:noticeId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { noticeId } = noticeIdPathParamsSchema.parse({
+			noticeId: c.req.param("noticeId"),
+		});
+		const body = await c.req.json().catch(() => ({}));
+		const data = updateNoticeRequestSchema.parse(body);
+
+		const notice = await prisma.notice.findFirst({
+			where: { id: noticeId, deletedAt: null },
+			include: {
+				collaborators: { where: { deletedAt: null } },
+			},
+		});
+
+		if (!notice) {
+			throw Errors.notFound("お知らせが見つかりません");
+		}
+
+		// owner または共同編集者のみ編集可能
+		const isOwner = notice.ownerId === user.id;
+		const isCollaborator = notice.collaborators.some(
+			col => col.userId === user.id
+		);
+		if (!isOwner && !isCollaborator) {
+			throw Errors.forbidden("編集権限がありません");
+		}
+
+		const sanitizedData = data.body
+			? { ...data, body: sanitizeHtml(data.body) }
+			: data;
+
+		const updated = await prisma.notice.update({
+			where: { id: noticeId },
+			data: sanitizedData,
+		});
+
+		const { deletedAt: _, ...updatedNotice } = updated;
+		return c.json({ notice: updatedNotice });
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// DELETE /committee/notices/:noticeId
+// お知らせを削除（owner のみ）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.delete(
+	"/:noticeId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { noticeId } = noticeIdPathParamsSchema.parse({
+			noticeId: c.req.param("noticeId"),
+		});
+
+		const notice = await prisma.notice.findFirst({
+			where: { id: noticeId, deletedAt: null },
+		});
+
+		if (!notice) {
+			throw Errors.notFound("お知らせが見つかりません");
+		}
+
+		if (notice.ownerId !== user.id) {
+			throw Errors.forbidden("削除権限がありません");
+		}
+
+		await prisma.$transaction([
+			prisma.notice.update({
+				where: { id: noticeId },
+				data: { deletedAt: new Date() },
+			}),
+			prisma.noticeAuthorization.updateMany({
+				where: { noticeId, status: "PENDING" },
+				data: { status: "REJECTED", decidedAt: new Date() },
+			}),
+			prisma.noticeCollaborator.updateMany({
+				where: { noticeId, deletedAt: null },
+				data: { deletedAt: new Date() },
+			}),
+		]);
+
+		return c.json({ success: true as const });
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// POST /committee/notices/:noticeId/collaborators
+// 共同編集者を追加（owner のみ）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.post(
+	"/:noticeId/collaborators",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { noticeId } = noticeIdPathParamsSchema.parse({
+			noticeId: c.req.param("noticeId"),
+		});
+		const body = await c.req.json().catch(() => ({}));
+		const { userId } = addCollaboratorRequestSchema.parse(body);
+
+		const notice = await prisma.notice.findFirst({
+			where: { id: noticeId, deletedAt: null },
+		});
+
+		if (!notice) {
+			throw Errors.notFound("お知らせが見つかりません");
+		}
+
+		if (notice.ownerId !== user.id) {
+			throw Errors.forbidden("共同編集者の追加はオーナーのみ可能です");
+		}
+
+		// 自分自身を追加できない
+		if (userId === user.id) {
+			throw Errors.invalidRequest("自分自身を共同編集者に追加できません");
+		}
+
+		// 対象ユーザーが実委人か確認
+		const targetMember = await prisma.committeeMember.findFirst({
+			where: { userId, deletedAt: null },
+		});
+		if (!targetMember) {
+			throw Errors.invalidRequest("対象ユーザーは実委人ではありません");
+		}
+
+		// 既存チェック（ソフトデリート済みも含めて検索）
+		const existing = await prisma.noticeCollaborator.findUnique({
+			where: { noticeId_userId: { noticeId, userId } },
+		});
+
+		if (existing) {
+			if (!existing.deletedAt) {
+				throw Errors.alreadyExists("既に共同編集者です");
+			}
+
+			// ソフトデリート済み → 再有効化
+			const reactivated = await prisma.noticeCollaborator.update({
+				where: { id: existing.id },
+				data: { deletedAt: null },
+				include: { user: { select: { id: true, name: true } } },
+			});
+
+			return c.json(
+				{ collaborator: { id: reactivated.id, user: reactivated.user } },
+				201
+			);
+		}
+
+		const collaborator = await prisma.noticeCollaborator.create({
+			data: { noticeId, userId },
+			include: { user: { select: { id: true, name: true } } },
+		});
+
+		return c.json(
+			{ collaborator: { id: collaborator.id, user: collaborator.user } },
+			201
+		);
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// DELETE /committee/notices/:noticeId/collaborators/:collaboratorId
+// 共同編集者を削除（owner のみ）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.delete(
+	"/:noticeId/collaborators/:collaboratorId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { noticeId, collaboratorId } =
+			noticeCollaboratorIdPathParamsSchema.parse({
+				noticeId: c.req.param("noticeId"),
+				collaboratorId: c.req.param("collaboratorId"),
+			});
+
+		const notice = await prisma.notice.findFirst({
+			where: { id: noticeId, deletedAt: null },
+		});
+
+		if (!notice) {
+			throw Errors.notFound("お知らせが見つかりません");
+		}
+
+		if (notice.ownerId !== user.id) {
+			throw Errors.forbidden("共同編集者の削除はオーナーのみ可能です");
+		}
+
+		const collaborator = await prisma.noticeCollaborator.findFirst({
+			where: { id: collaboratorId, noticeId, deletedAt: null },
+		});
+
+		if (!collaborator) {
+			throw Errors.notFound("共同編集者が見つかりません");
+		}
+
+		await prisma.noticeCollaborator.update({
+			where: { id: collaboratorId },
+			data: { deletedAt: new Date() },
+		});
+
+		return c.json({ success: true as const });
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// POST /committee/notices/:noticeId/attachments
+// 添付ファイルを追加（owner または共同編集者のみ）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.post(
+	"/:noticeId/attachments",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { noticeId } = noticeIdPathParamsSchema.parse({
+			noticeId: c.req.param("noticeId"),
+		});
+		const body = await c.req.json().catch(() => ({}));
+		const { fileIds } = addNoticeAttachmentRequestSchema.parse(body);
+
+		const notice = await prisma.notice.findFirst({
+			where: { id: noticeId, deletedAt: null },
+			include: { collaborators: { where: { deletedAt: null } } },
+		});
+
+		if (!notice) {
+			throw Errors.notFound("お知らせが見つかりません");
+		}
+
+		const isOwner = notice.ownerId === user.id;
+		const isCollaborator = notice.collaborators.some(
+			col => col.userId === user.id
+		);
+		if (!isOwner && !isCollaborator) {
+			throw Errors.forbidden("添付ファイルの追加権限がありません");
+		}
+
+		// ファイルの存在・状態チェック
+		const uniqueFileIds = [...new Set(fileIds)];
+		const files = await prisma.file.findMany({
+			where: {
+				id: { in: uniqueFileIds },
+				status: "CONFIRMED",
+				deletedAt: null,
+			},
+			select: {
+				id: true,
+				fileName: true,
+				mimeType: true,
+				size: true,
+				isPublic: true,
+			},
+		});
+
+		if (files.length !== uniqueFileIds.length) {
+			throw Errors.invalidRequest(
+				"指定されたファイルの一部が存在しないか、アップロードが未完了です"
+			);
+		}
+
+		// 一括作成（ソフトデリート済みは再有効化）
+		const attachments = await Promise.all(
+			uniqueFileIds.map(async fileId => {
+				const existing = await prisma.noticeAttachment.findUnique({
+					where: { noticeId_fileId: { noticeId, fileId } },
+				});
+
+				if (existing) {
+					if (!existing.deletedAt) {
+						return prisma.noticeAttachment.findUniqueOrThrow({
+							where: { id: existing.id },
+							include: {
+								file: {
+									select: {
+										id: true,
+										fileName: true,
+										mimeType: true,
+										size: true,
+										isPublic: true,
+									},
+								},
+							},
+						});
+					}
+					return prisma.noticeAttachment.update({
+						where: { id: existing.id },
+						data: { deletedAt: null },
+						include: {
+							file: {
+								select: {
+									id: true,
+									fileName: true,
+									mimeType: true,
+									size: true,
+									isPublic: true,
+								},
+							},
+						},
+					});
+				}
+
+				return prisma.noticeAttachment.create({
+					data: { noticeId, fileId },
+					include: {
+						file: {
+							select: {
+								id: true,
+								fileName: true,
+								mimeType: true,
+								size: true,
+								isPublic: true,
+							},
+						},
+					},
+				});
+			})
+		);
+
+		return c.json(
+			{
+				attachments: attachments.map(att => ({
+					id: att.id,
+					fileId: att.file.id,
+					fileName: att.file.fileName,
+					mimeType: att.file.mimeType,
+					size: att.file.size,
+					isPublic: att.file.isPublic,
+					createdAt: att.createdAt,
+				})),
+			},
+			201
+		);
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// DELETE /committee/notices/:noticeId/attachments/:attachmentId
+// 添付ファイルを削除（owner または共同編集者のみ）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.delete(
+	"/:noticeId/attachments/:attachmentId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { noticeId, attachmentId } = noticeAttachmentIdPathParamsSchema.parse(
+			{
+				noticeId: c.req.param("noticeId"),
+				attachmentId: c.req.param("attachmentId"),
+			}
+		);
+
+		const notice = await prisma.notice.findFirst({
+			where: { id: noticeId, deletedAt: null },
+			include: { collaborators: { where: { deletedAt: null } } },
+		});
+
+		if (!notice) {
+			throw Errors.notFound("お知らせが見つかりません");
+		}
+
+		const isOwner = notice.ownerId === user.id;
+		const isCollaborator = notice.collaborators.some(
+			col => col.userId === user.id
+		);
+		if (!isOwner && !isCollaborator) {
+			throw Errors.forbidden("添付ファイルの削除権限がありません");
+		}
+
+		const attachment = await prisma.noticeAttachment.findFirst({
+			where: { id: attachmentId, noticeId, deletedAt: null },
+		});
+
+		if (!attachment) {
+			throw Errors.notFound("添付ファイルが見つかりません");
+		}
+
+		await prisma.noticeAttachment.update({
+			where: { id: attachmentId },
+			data: { deletedAt: new Date() },
+		});
+
+		return c.json({ success: true as const });
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// POST /committee/notices/:noticeId/authorizations
+// 配信承認を申請（owner または共同編集者 + NOTICE_DELIVER 権限）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.post(
+	"/:noticeId/authorizations",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const committeeMember = c.get("committeeMember");
+		const { noticeId } = noticeIdPathParamsSchema.parse({
+			noticeId: c.req.param("noticeId"),
+		});
+		const body = await c.req.json().catch(() => ({}));
+		const { requestedToId, deliveredAt, projectIds } =
+			createNoticeAuthorizationRequestSchema.parse(body);
+
+		const notice = await prisma.notice.findFirst({
+			where: { id: noticeId, deletedAt: null },
+			include: { collaborators: { where: { deletedAt: null } } },
+		});
+
+		if (!notice) {
+			throw Errors.notFound("お知らせが見つかりません");
+		}
+
+		// owner または共同編集者のみ
+		const isOwner = notice.ownerId === user.id;
+		const isCollaborator = notice.collaborators.some(
+			col => col.userId === user.id
+		);
+		if (!isOwner && !isCollaborator) {
+			throw Errors.forbidden("配信承認の申請権限がありません");
+		}
+
+		// 自分自身を承認者に指定できない
+		if (requestedToId === user.id) {
+			throw Errors.invalidRequest("自分自身を承認者に指定することはできません");
+		}
+
+		// NOTICE_DELIVER 権限チェック
+		const hasPermission = await prisma.committeeMemberPermission.findFirst({
+			where: {
+				committeeMemberId: committeeMember.id,
+				permission: "NOTICE_DELIVER",
+			},
+		});
+		if (!hasPermission) {
+			throw Errors.forbidden("NOTICE_DELIVER 権限が必要です");
+		}
+
+		// 承認者が NOTICE_APPROVE 権限を持つか確認
+		const approverPermission = await prisma.committeeMemberPermission.findFirst(
+			{
+				where: {
+					committeeMember: { userId: requestedToId, deletedAt: null },
+					permission: "NOTICE_APPROVE",
+				},
+			}
+		);
+		if (!approverPermission) {
+			throw Errors.invalidRequest("承認者には NOTICE_APPROVE 権限が必要です");
+		}
+
+		// deliveredAt が未来であること
+		if (deliveredAt <= new Date()) {
+			throw Errors.invalidRequest("配信希望日時は未来の日時を指定してください");
+		}
+
+		// 配信先企画の重複を排除
+		const uniqueProjectIds = [...new Set(projectIds)];
+
+		// 配信先企画が全て存在するか確認
+		const existingProjects = await prisma.project.findMany({
+			where: { id: { in: uniqueProjectIds }, deletedAt: null },
+			select: { id: true },
+		});
+		if (existingProjects.length !== uniqueProjectIds.length) {
+			const existingIds = new Set(existingProjects.map(p => p.id));
+			const missingIds = uniqueProjectIds.filter(id => !existingIds.has(id));
+			throw Errors.invalidRequest(
+				`存在しない企画が含まれています: ${missingIds.join(", ")}`
+			);
+		}
+
+		// Serializable トランザクション内で重複チェック + 作成を行い、
+		// 同時リクエストによる二重作成を防止する
+		const authorization = await prisma.$transaction(
+			async tx => {
+				const existingAuth = await tx.noticeAuthorization.findFirst({
+					where: { noticeId, status: { in: ["PENDING", "APPROVED"] } },
+				});
+				if (existingAuth) {
+					if (existingAuth.status === "APPROVED") {
+						throw Errors.invalidRequest("このお知らせは既に承認されています");
+					}
+					throw Errors.alreadyExists("既に承認待ちの申請があります");
+				}
+
+				const auth = await tx.noticeAuthorization.create({
+					data: {
+						noticeId,
+						requestedById: user.id,
+						requestedToId,
+						deliveredAt,
+					},
+				});
+
+				const deliveries = await Promise.all(
+					uniqueProjectIds.map(projectId =>
+						tx.noticeDelivery.create({
+							data: {
+								noticeAuthorizationId: auth.id,
+								projectId,
+							},
+						})
+					)
+				);
+
+				return { ...auth, deliveries };
+			},
+			{ isolationLevel: "Serializable" }
+		);
+
+		return c.json({ authorization }, 201);
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// PATCH /committee/notices/:noticeId/authorizations/:authorizationId
+// 承認 / 却下（requestedTo 本人のみ）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.patch(
+	"/:noticeId/authorizations/:authorizationId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { noticeId, authorizationId } =
+			noticeAuthorizationIdPathParamsSchema.parse({
+				noticeId: c.req.param("noticeId"),
+				authorizationId: c.req.param("authorizationId"),
+			});
+		const body = await c.req.json().catch(() => ({}));
+		const { status } = updateNoticeAuthorizationRequestSchema.parse(body);
+
+		const authorization = await prisma.noticeAuthorization.findFirst({
+			where: { id: authorizationId, noticeId },
+			include: { notice: { select: { deletedAt: true } } },
+		});
+
+		if (!authorization) {
+			throw Errors.notFound("承認申請が見つかりません");
+		}
+
+		// 削除済みお知らせの承認は不可
+		if (authorization.notice.deletedAt) {
+			throw Errors.invalidRequest("削除済みのお知らせは承認できません");
+		}
+
+		// requestedTo 本人のみ
+		if (authorization.requestedToId !== user.id) {
+			throw Errors.forbidden("この承認申請を操作する権限がありません");
+		}
+
+		// PENDING でなければ操作不可
+		if (authorization.status !== "PENDING") {
+			throw Errors.invalidRequest("この承認申請は既に処理済みです");
+		}
+
+		// 承認する場合、deliveredAt が未来であること
+		if (status === "APPROVED" && authorization.deliveredAt <= new Date()) {
+			throw Errors.invalidRequest(
+				"配信希望日時を過ぎているため承認できません。新しい日時で再申請してください"
+			);
+		}
+
+		// where に status: "PENDING" を含めることで、
+		// 同時リクエストによる二重承認を防止する
+		const updated = await prisma.noticeAuthorization.update({
+			where: { id: authorizationId, status: "PENDING" },
+			data: { status, decidedAt: new Date() },
+		});
+
+		return c.json({ authorization: updated });
+	}
+);
+
+export { committeeNoticeRoute };

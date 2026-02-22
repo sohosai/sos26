@@ -1,5 +1,5 @@
 import { TextArea as RadixTextArea, Text } from "@radix-ui/themes";
-import { useId } from "react";
+import { useCallback, useEffect, useId, useRef } from "react";
 import styles from "./TextArea.module.scss";
 
 /**
@@ -35,6 +35,7 @@ type TextAreaProps = {
 	rows?: number;
 	resize?: "none" | "vertical" | "horizontal" | "both";
 	name?: string;
+	autoGrow?: boolean;
 };
 
 export function TextArea({
@@ -49,9 +50,26 @@ export function TextArea({
 	rows,
 	resize = "vertical",
 	name,
+	autoGrow = false,
 }: TextAreaProps) {
 	const id = useId();
 	const errorId = `${id}-error`;
+
+	const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+	const adjustHeight = useCallback(() => {
+		const el = textareaRef.current;
+		if (!el) return;
+
+		el.style.height = "auto";
+		el.style.height = `${el.scrollHeight}px`;
+	}, []);
+
+	// 初回レンダリング時に自動で高さ調整(初期値としてテキストの入力があるとき用)
+	useEffect(() => {
+		if (!autoGrow) return;
+		adjustHeight();
+	}, [autoGrow, adjustHeight]);
 
 	return (
 		<div className={styles.container}>
@@ -75,6 +93,11 @@ export function TextArea({
 				name={name}
 				aria-invalid={!!error}
 				aria-describedby={error ? errorId : undefined}
+				ref={textareaRef}
+				onInput={e => {
+					if (autoGrow) adjustHeight();
+					onChange?.(e.currentTarget.value);
+				}}
 			/>
 
 			{error && (

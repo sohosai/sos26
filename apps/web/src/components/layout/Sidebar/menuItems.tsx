@@ -13,13 +13,21 @@ export const projectMenuItems: MenuItem[] = [
 		icon: <IconUsers size={18} />,
 		to: "/project/members",
 	},
-	{ label: "フォーム", icon: <IconFileText size={18} />, to: "/project/forms" },
+	{
+		label: "フォーム",
+		icon: <IconFileText size={18} />,
+		to: "/project/forms",
+	},
 	{
 		label: "問い合わせ",
 		icon: <IconMessageCircleQuestion size={18} />,
 		to: "/project/support",
 	},
-	{ label: "お知らせ", icon: <IconBell size={18} />, to: "/project/notice" },
+	{
+		label: "お知らせ",
+		icon: <IconBell size={18} />,
+		to: "/project/notice",
+	},
 ];
 
 export const committeeMenuItems: MenuItem[] = [

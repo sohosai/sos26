@@ -16,6 +16,7 @@
 		- [基本のカラム](#基本のカラム)
 		- [ColumnMeta](#columnmeta)
 	- [セルコンポーネント](#セルコンポーネント)
+		- [AvatarGroupCell](#avatargroupcell)
 		- [DateCell](#datecell)
 		- [EditableCell](#editablecell)
 		- [NameCell](#namecell)
@@ -42,6 +43,8 @@
 
 ```tsx
 import {
+	AvatarGroupCell,
+	type AvatarGroupItem,
 	DataTable,
 	DateCell,
 	EditableCell,
@@ -95,6 +98,7 @@ function UserTable() {
 | `initialSorting` | `SortingState` | `[]` | 初期ソート状態 |
 | `initialGlobalFilter` | `string` | `""` | 初期検索文字列 |
 | `onCellEdit` | `(row: T, columnId: string, value: unknown) => void` | - | セル編集時のコールバック。`row` は編集された行の元データオブジェクト |
+| `toolbarExtra` | `ReactNode` | - | ツールバーに追加する任意の要素（ボタンなど） |
 
 ### DataTableFeatures
 
@@ -154,6 +158,29 @@ TanStack Table の `meta` フィールドでセルの振る舞いを制御する
 | `tagColors` | `Record<string, string>` | TagCell のタグ→Radix カラー名マッピング |
 
 ## セルコンポーネント
+
+### AvatarGroupCell
+
+アバターグループ表示セル。`AvatarGroupItem[]`（`{ id, name }`）を受け取り、boring-avatars のアバターを横並びで表示する。読み取り専用。
+
+- 3人以下: 全員のアバターを表示
+- 4人以上: 先頭2人 + `+N` バッジを表示
+- クリックすると Popover で全メンバーの名前付きリストを表示
+- 0人の場合は `—` を表示
+
+```tsx
+import { AvatarGroupCell, type AvatarGroupItem } from "@/components/patterns";
+
+type Row = {
+	// ...
+	collaborators: AvatarGroupItem[];
+};
+
+columnHelper.accessor("collaborators", {
+	header: "共同編集者",
+	cell: AvatarGroupCell,
+}),
+```
 
 ### DateCell
 
@@ -311,11 +338,44 @@ columnHelper.accessor("tags", {
 />
 ```
 
+### ツールバーにカスタムボタンを追加
+
+`toolbarExtra` にボタン等を渡すと、検索・表示カラム・CSV出力の後ろに表示される。
+
+```tsx
+<DataTable
+	data={events}
+	columns={eventColumns}
+	toolbarExtra={
+		<Button intent="secondary" onClick={handleAdd}>
+			<IconPlus size={16} /> イベント追加
+		</Button>
+	}
+/>
+```
+
 ## 機能詳細
 
 ### ソート
 
 テーブルヘッダーをクリックすると昇順 → 降順 → ソート解除の順でトグルする。ヘッダーには `↑`（昇順）、`↓`（降順）、`↑↓`（未ソート）のインジケーターが表示される。
+
+ソートインジケーターとクリックハンドラはカラム単位で制御される。`enableSorting: false` を指定したカラムや `display()` カラムにはインジケーターが表示されず、クリックしてもソートされない。
+
+```tsx
+// ID カラムのソートを無効化
+columnHelper.accessor("id", {
+	header: "ID",
+	enableSorting: false,
+}),
+
+// アクションカラム（display() はデフォルトでソート無効）
+columnHelper.display({
+	id: "actions",
+	header: "",
+	cell: ({ row }) => <IconButton onClick={() => edit(row.original)}>...</IconButton>,
+}),
+```
 
 ### グローバル検索
 
@@ -395,7 +455,7 @@ const eventColumns = [
 
 **ポイント:**
 
-- `display()` はデータに紐づかない表示専用カラム（ソート・フィルタの対象外）
+- `display()` はデータに紐づかない表示専用カラム（ソート・フィルタの対象外、ソートインジケーターも非表示）
 - 編集ロジックはテーブルの外（親コンポーネント側）で管理する
 - セルコンポーネント自体に編集責務を持たせず、関心を分離する
 - `/dev/table/` のサンプル5（イベント一覧）で Dialog によるタグ編集の実装例を確認できる

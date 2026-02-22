@@ -1,0 +1,50 @@
+.content {
+	max-width: 560px;
+}
+
+.divider {
+	border: none;
+	border-top: 1px solid var(--gray-a6);
+	margin: var(--space-4) 0;
+}
+
+.body {
+	margin-top: 0;
+}
+
+.attachmentSection {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	margin-top: var(--space-4);
+}
+
+.attachmentList {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.attachmentItem {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1);
+	padding: var(--space-1) var(--space-2);
+	border-radius: var(--radius-2);
+	background: var(--gray-a3);
+	border: none;
+	cursor: pointer;
+	font: inherit;
+	width: fit-content;
+	color: var(--accent-11);
+
+	&:hover {
+		background: var(--gray-a4);
+	}
+}
+
+.actions {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: var(--space-4);
+}

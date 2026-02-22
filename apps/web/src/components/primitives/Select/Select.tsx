@@ -1,4 +1,5 @@
 import { Select as RadixSelect } from "@radix-ui/themes";
+import type { ReactNode } from "react";
 import styles from "./Select.module.scss";
 
 /**
@@ -13,6 +14,7 @@ import styles from "./Select.module.scss";
  * ## 付加している振る舞い
  * - options を配列で受け取り、統一的なレンダリング
  * - aria-label サポート（テーブルセルなど視覚的ラベルが不要な場合）
+ * - icon サポート（オプション項目にアイコンを表示）
  *
  * ## 例外を許す場合
  * - 複雑なカスタムドロップダウンが必要な場合は patterns/ で対応
@@ -21,6 +23,7 @@ import styles from "./Select.module.scss";
 type SelectOption = {
 	value: string;
 	label: string;
+	icon?: ReactNode;
 };
 
 type SelectProps = {
@@ -63,10 +66,21 @@ export function Select({
 				placeholder={placeholder}
 				aria-label={ariaLabel}
 			/>
-			<RadixSelect.Content>
+			<RadixSelect.Content position="popper">
 				{options.map(option => (
-					<RadixSelect.Item key={option.value} value={option.value}>
-						{option.label}
+					<RadixSelect.Item
+						key={option.value}
+						value={option.value}
+						textValue={option.label}
+					>
+						{option.icon ? (
+							<span className={styles.itemWithIcon}>
+								<span className={styles.itemIcon}>{option.icon}</span>
+								{option.label}
+							</span>
+						) : (
+							option.label
+						)}
 					</RadixSelect.Item>
 				))}
 			</RadixSelect.Content>
