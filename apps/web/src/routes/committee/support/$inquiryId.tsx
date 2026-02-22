@@ -12,8 +12,12 @@ import {
 	updateCommitteeInquiryStatus,
 	updateCommitteeInquiryViewers,
 } from "@/lib/api/committee-inquiry";
-import { listCommitteeMembers } from "@/lib/api/committee-member";
+import {
+	listCommitteeMemberPermissions,
+	listCommitteeMembers,
+} from "@/lib/api/committee-member";
 import { listCommitteeProjectMembers } from "@/lib/api/committee-project";
+import { useAuthStore } from "@/lib/auth";
 
 export const Route = createFileRoute("/committee/support/$inquiryId")({
 	component: CommitteeSupportDetailPage,
@@ -24,11 +28,28 @@ export const Route = createFileRoute("/committee/support/$inquiryId")({
 		],
 	}),
 	loader: async ({ params }) => {
+		const { committeeMember } = useAuthStore.getState();
 		const inquiryRes = await getCommitteeInquiry(params.inquiryId);
 		const [membersRes, projectMembersRes] = await Promise.all([
 			listCommitteeMembers(),
 			listCommitteeProjectMembers(inquiryRes.inquiry.projectId),
 		]);
+
+		// INQUIRY_ADMIN 権限チェック
+		let isAdmin = false;
+		if (committeeMember) {
+			try {
+				const permRes = await listCommitteeMemberPermissions(
+					committeeMember.id
+				);
+				isAdmin = permRes.permissions.some(
+					p => p.permission === "INQUIRY_ADMIN"
+				);
+			} catch {
+				// 権限取得失敗時は管理者でない扱い
+			}
+		}
+
 		return {
 			inquiry: inquiryRes.inquiry,
 			committeeMembers: membersRes.committeeMembers.map(m => ({
@@ -39,14 +60,17 @@ export const Route = createFileRoute("/committee/support/$inquiryId")({
 				id: m.userId,
 				name: m.name,
 			})),
+			isAdmin,
 		};
 	},
 });
 
 function CommitteeSupportDetailPage() {
 	const { inquiryId } = Route.useParams();
-	const { inquiry, committeeMembers, projectMembers } = Route.useLoaderData();
+	const { inquiry, committeeMembers, projectMembers, isAdmin } =
+		Route.useLoaderData();
 	const router = useRouter();
+	const { user } = useAuthStore();
 
 	if (!inquiry) {
 		return (
@@ -62,6 +86,10 @@ function CommitteeSupportDetailPage() {
 		);
 	}
 
+	const isAssigneeOrAdmin =
+		isAdmin ||
+		(!!user && inquiry.committeeAssignees.some(a => a.user.id === user.id));
+
 	return (
 		<SupportDetail
 			inquiry={inquiry}
@@ -70,6 +98,7 @@ function CommitteeSupportDetailPage() {
 			committeeMembers={committeeMembers}
 			projectMembers={projectMembers}
 			viewers={inquiry.viewers}
+			isAssigneeOrAdmin={isAssigneeOrAdmin}
 			onUpdateStatus={async status => {
 				try {
 					if (status === "RESOLVED") {

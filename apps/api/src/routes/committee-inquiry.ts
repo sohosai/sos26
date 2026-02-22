@@ -154,6 +154,7 @@ committeeInquiryRoute.post(
 			body: inquiryBody,
 			projectId,
 			projectAssigneeUserIds,
+			committeeAssigneeUserIds,
 		} = createCommitteeInquiryRequestSchema.parse(body);
 
 		// 企画の存在チェック
@@ -179,6 +180,21 @@ committeeInquiryRoute.post(
 			}
 		}
 
+		// 追加実委担当者が全て実委人かチェック
+		const uniqueCommitteeIds = [
+			...new Set((committeeAssigneeUserIds ?? []).filter(id => id !== user.id)),
+		];
+		for (const userId of uniqueCommitteeIds) {
+			const targetMember = await prisma.committeeMember.findFirst({
+				where: { userId, deletedAt: null },
+			});
+			if (!targetMember) {
+				throw Errors.invalidRequest(
+					"指定された実委担当者の中に実委人でないユーザーが含まれています"
+				);
+			}
+		}
+
 		const inquiry = await prisma.inquiry.create({
 			data: {
 				title,
@@ -195,6 +211,12 @@ committeeInquiryRoute.post(
 						...uniqueUserIds.map(userId => ({
 							userId,
 							side: "PROJECT" as const,
+							isCreator: false,
+						})),
+						// 追加実委担当者
+						...uniqueCommitteeIds.map(userId => ({
+							userId,
+							side: "COMMITTEE" as const,
 							isCreator: false,
 						})),
 					],

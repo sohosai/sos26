@@ -66,6 +66,8 @@ type SupportDetailProps = {
 	onRemoveAssignee: (assigneeId: string) => Promise<void>;
 	viewers?: ViewerDetail[];
 	onUpdateViewers?: (viewers: ViewerInput[]) => Promise<void>;
+	/** 実委側: 担当者 or 管理者かどうか（編集 UI の出し分け） */
+	isAssigneeOrAdmin?: boolean;
 };
 
 const statusConfig: Record<
@@ -97,6 +99,7 @@ export function SupportDetail({
 	onRemoveAssignee,
 	viewers,
 	onUpdateViewers,
+	isAssigneeOrAdmin = false,
 }: SupportDetailProps) {
 	const navigate = useNavigate();
 	const [replyText, setReplyText] = useState("");
@@ -107,6 +110,9 @@ export function SupportDetail({
 
 	const config = statusConfig[inquiry.status];
 	const StatusIcon = config.icon;
+
+	// 実委側で担当者/管理者の場合のみ編集 UI を表示
+	const canEditCommittee = viewerRole === "committee" && isAssigneeOrAdmin;
 
 	const handleSubmitReply = async () => {
 		if (!replyText.trim()) return;
@@ -265,10 +271,10 @@ export function SupportDetail({
 					<AssigneeList
 						assignees={inquiry.committeeAssignees}
 						variant="committee"
-						canEdit={viewerRole === "committee"}
+						canEdit={canEditCommittee}
 						onRemove={assigneeId => onRemoveAssignee(assigneeId)}
 					/>
-					{viewerRole === "committee" && (
+					{canEditCommittee && (
 						<Popover.Root
 							open={committeePopoverOpen}
 							onOpenChange={o => {
@@ -348,10 +354,10 @@ export function SupportDetail({
 					<AssigneeList
 						assignees={inquiry.projectAssignees}
 						variant="project"
-						canEdit={viewerRole === "committee" || viewerRole === "project"}
+						canEdit={canEditCommittee || viewerRole === "project"}
 						onRemove={assigneeId => onRemoveAssignee(assigneeId)}
 					/>
-					{(viewerRole === "committee" || viewerRole === "project") && (
+					{(canEditCommittee || viewerRole === "project") && (
 						<Popover.Root
 							open={projectPopoverOpen}
 							onOpenChange={o => {
@@ -433,7 +439,7 @@ export function SupportDetail({
 					</Text>
 				</div>
 
-				{viewerRole === "committee" && viewers && onUpdateViewers && (
+				{canEditCommittee && viewers && onUpdateViewers && (
 					<>
 						<Separator size="4" />
 						<ViewerSettings
@@ -444,7 +450,7 @@ export function SupportDetail({
 					</>
 				)}
 
-				{viewerRole === "committee" && (
+				{canEditCommittee && (
 					<>
 						<Separator size="4" />
 						{inquiry.status !== "RESOLVED" && (

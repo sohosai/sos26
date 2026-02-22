@@ -65,8 +65,28 @@ projectInquiryRoute.post(
 		const user = c.get("user");
 		const project = c.get("project");
 		const body = await c.req.json().catch(() => ({}));
-		const { title, body: inquiryBody } =
-			createProjectInquiryRequestSchema.parse(body);
+		const {
+			title,
+			body: inquiryBody,
+			coAssigneeUserIds,
+		} = createProjectInquiryRequestSchema.parse(body);
+
+		// 共同担当者が全て企画メンバーかチェック
+		const uniqueCoAssigneeIds = [
+			...new Set((coAssigneeUserIds ?? []).filter(id => id !== user.id)),
+		];
+		for (const userId of uniqueCoAssigneeIds) {
+			const isOwner = project.ownerId === userId;
+			const isSubOwner = project.subOwnerId === userId;
+			const isMember = await prisma.projectMember.findFirst({
+				where: { projectId: project.id, userId, deletedAt: null },
+			});
+			if (!isOwner && !isSubOwner && !isMember) {
+				throw Errors.invalidRequest(
+					"指定された共同担当者の中に企画メンバーでないユーザーが含まれています"
+				);
+			}
+		}
 
 		const inquiry = await prisma.inquiry.create({
 			data: {
@@ -77,11 +97,14 @@ projectInquiryRoute.post(
 				creatorRole: "PROJECT",
 				projectId: project.id,
 				assignees: {
-					create: {
-						userId: user.id,
-						side: "PROJECT",
-						isCreator: true,
-					},
+					create: [
+						{ userId: user.id, side: "PROJECT", isCreator: true },
+						...uniqueCoAssigneeIds.map(id => ({
+							userId: id,
+							side: "PROJECT" as const,
+							isCreator: false,
+						})),
+					],
 				},
 			},
 		});
