@@ -218,6 +218,14 @@ erDiagram
   String userId FK
   DateTime createdAt
 }
+"NoticeAttachment" {
+  String id PK
+  String noticeId FK
+  String fileId FK
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
 "Project" }o--|| "User" : owner
 "Project" }o--o| "User" : subOwner
 "ProjectMember" }o--|| "Project" : project
@@ -253,6 +261,8 @@ erDiagram
 "FormAnswerSelectedOption" }o--|| "FormItemOption" : formItemOption
 "NoticeReadStatus" }o--|| "NoticeDelivery" : noticeDelivery
 "NoticeReadStatus" }o--|| "User" : user
+"NoticeAttachment" }o--|| "Notice" : notice
+"NoticeAttachment" }o--|| "File" : file
 ```
 
 ### `EmailVerification`
@@ -536,3 +546,14 @@ Properties as follows:
 - `noticeDeliveryId`:
 - `userId`:
 - `createdAt`:
+
+### `NoticeAttachment`
+
+Properties as follows:
+
+- `id`:
+- `noticeId`:
+- `fileId`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
