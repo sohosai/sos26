@@ -90,6 +90,9 @@ export async function downloadFile(
 		? getFileContentUrl(fileId)
 		: await getAuthenticatedFileUrl(fileId);
 	const res = await fetch(url);
+	if (!res.ok) {
+		throw new Error(`ファイルの取得に失敗しました (${res.status})`);
+	}
 	const blob = await res.blob();
 	const objectUrl = URL.createObjectURL(blob);
 	const a = document.createElement("a");
