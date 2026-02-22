@@ -109,6 +109,21 @@ projectNoticeRoute.get(
 										},
 									},
 								},
+								attachments: {
+									where: { deletedAt: null },
+									include: {
+										file: {
+											select: {
+												id: true,
+												fileName: true,
+												mimeType: true,
+												size: true,
+												isPublic: true,
+											},
+										},
+									},
+									orderBy: { createdAt: "asc" },
+								},
 							},
 						},
 					},
@@ -133,6 +148,15 @@ projectNoticeRoute.get(
 				delivery.noticeAuthorization.notice.owner.committeeMember?.Bureau ?? "",
 			deliveredAt: delivery.noticeAuthorization.deliveredAt,
 			isRead: delivery.readStatuses.length > 0,
+			attachments: delivery.noticeAuthorization.notice.attachments.map(att => ({
+				id: att.id,
+				fileId: att.file.id,
+				fileName: att.file.fileName,
+				mimeType: att.file.mimeType,
+				size: att.file.size,
+				isPublic: att.file.isPublic,
+				createdAt: att.createdAt,
+			})),
 		};
 
 		return c.json({ notice });

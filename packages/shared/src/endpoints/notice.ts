@@ -1,6 +1,8 @@
 import {
 	addCollaboratorRequestSchema,
 	addCollaboratorResponseSchema,
+	addNoticeAttachmentRequestSchema,
+	addNoticeAttachmentResponseSchema,
 	createNoticeAuthorizationRequestSchema,
 	createNoticeAuthorizationResponseSchema,
 	createNoticeRequestSchema,
@@ -10,12 +12,14 @@ import {
 	getProjectNoticeResponseSchema,
 	listNoticesResponseSchema,
 	listProjectNoticesResponseSchema,
+	noticeAttachmentIdPathParamsSchema,
 	noticeAuthorizationIdPathParamsSchema,
 	noticeCollaboratorIdPathParamsSchema,
 	noticeIdPathParamsSchema,
 	projectNoticeIdPathParamsSchema,
 	readProjectNoticeResponseSchema,
 	removeCollaboratorResponseSchema,
+	removeNoticeAttachmentResponseSchema,
 	updateNoticeAuthorizationRequestSchema,
 	updateNoticeAuthorizationResponseSchema,
 	updateNoticeRequestSchema,
@@ -169,6 +173,49 @@ export const removeCollaboratorEndpoint: NoBodyEndpoint<
 	query: undefined,
 	request: undefined,
 	response: removeCollaboratorResponseSchema,
+} as const;
+
+// ─────────────────────────────────────────────────────────────
+// 実委側: 添付ファイル
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * POST /committee/notices/:noticeId/attachments
+ * 添付ファイルを追加（owner または共同編集者のみ）
+ */
+export const addNoticeAttachmentEndpoint: BodyEndpoint<
+	"POST",
+	"/committee/notices/:noticeId/attachments",
+	typeof noticeIdPathParamsSchema,
+	undefined,
+	typeof addNoticeAttachmentRequestSchema,
+	typeof addNoticeAttachmentResponseSchema
+> = {
+	method: "POST",
+	path: "/committee/notices/:noticeId/attachments",
+	pathParams: noticeIdPathParamsSchema,
+	query: undefined,
+	request: addNoticeAttachmentRequestSchema,
+	response: addNoticeAttachmentResponseSchema,
+} as const;
+
+/**
+ * DELETE /committee/notices/:noticeId/attachments/:attachmentId
+ * 添付ファイルを削除（owner または共同編集者のみ）
+ */
+export const removeNoticeAttachmentEndpoint: NoBodyEndpoint<
+	"DELETE",
+	"/committee/notices/:noticeId/attachments/:attachmentId",
+	typeof noticeAttachmentIdPathParamsSchema,
+	undefined,
+	typeof removeNoticeAttachmentResponseSchema
+> = {
+	method: "DELETE",
+	path: "/committee/notices/:noticeId/attachments/:attachmentId",
+	pathParams: noticeAttachmentIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: removeNoticeAttachmentResponseSchema,
 } as const;
 
 // ─────────────────────────────────────────────────────────────
