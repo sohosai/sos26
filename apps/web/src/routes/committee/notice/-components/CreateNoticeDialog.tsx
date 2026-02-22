@@ -229,7 +229,6 @@ export function CreateNoticeDialog({
 						/>
 						<Button
 							intent="secondary"
-							size="1"
 							onClick={() => fileInputRef.current?.click()}
 						>
 							<IconPaperclip size={14} />
