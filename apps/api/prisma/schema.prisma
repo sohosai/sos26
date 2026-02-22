@@ -274,8 +274,8 @@ model File {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  noticeAttachments   NoticeAttachment[]
-  inquiryAttachments  InquiryAttachment[]
+  noticeAttachments  NoticeAttachment[]
+  inquiryAttachments InquiryAttachment[]
 
   @@index([uploadedById])
   @@index([status])
