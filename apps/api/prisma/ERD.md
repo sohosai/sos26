@@ -269,6 +269,15 @@ erDiagram
   String targetId FK "nullable"
   DateTime createdAt
 }
+"InquiryAttachment" {
+  String id PK
+  String inquiryId FK
+  String commentId FK "nullable"
+  String fileId FK
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
 "Project" }o--|| "User" : owner
 "Project" }o--o| "User" : subOwner
 "ProjectMember" }o--|| "Project" : project
@@ -318,6 +327,9 @@ erDiagram
 "InquiryActivity" }o--|| "Inquiry" : inquiry
 "InquiryActivity" }o--|| "User" : actor
 "InquiryActivity" }o--o| "User" : target
+"InquiryAttachment" }o--|| "Inquiry" : inquiry
+"InquiryAttachment" }o--o| "InquiryComment" : comment
+"InquiryAttachment" }o--|| "File" : file
 ```
 
 ### `EmailVerification`
@@ -670,3 +682,15 @@ Properties as follows:
 - `actorId`:
 - `targetId`:
 - `createdAt`:
+
+### `InquiryAttachment`
+
+Properties as follows:
+
+- `id`:
+- `inquiryId`:
+- `commentId`:
+- `fileId`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:

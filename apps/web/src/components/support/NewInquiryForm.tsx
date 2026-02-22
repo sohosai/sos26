@@ -7,12 +7,14 @@ import {
 import {
 	IconCheck,
 	IconChevronDown,
+	IconPaperclip,
 	IconSearch,
 	IconX,
 } from "@tabler/icons-react";
 import Avatar from "boring-avatars";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button, TextArea, TextField } from "@/components/primitives";
+import { formatFileSize } from "@/lib/format";
 import styles from "./NewInquiryForm.module.scss";
 
 type UserSummary = { id: string; name: string };
@@ -41,6 +43,7 @@ type NewInquiryFormProps = {
 		projectId?: string;
 		projectAssigneeUserIds?: string[];
 		committeeAssigneeUserIds?: string[];
+		fileIds?: string[];
 	}) => Promise<void>;
 };
 
@@ -85,6 +88,9 @@ export function NewInquiryForm({
 	>([]);
 	const [committeePopoverOpen, setCommitteePopoverOpen] = useState(false);
 	const [committeeSearchQuery, setCommitteeSearchQuery] = useState("");
+	// ファイル添付
+	const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const reset = () => {
 		setTitle("");
@@ -98,6 +104,7 @@ export function NewInquiryForm({
 		setCoAssigneeSearchQuery("");
 		setSelectedCommitteeAssignees([]);
 		setCommitteeSearchQuery("");
+		setSelectedFiles([]);
 	};
 
 	const handleSelectProject = async (project: { id: string; name: string }) => {
@@ -117,7 +124,7 @@ export function NewInquiryForm({
 		}
 	};
 
-	const buildCommitteeParams = () => {
+	const buildCommitteeParams = (fileIds?: string[]) => {
 		if (!selectedProject || selectedProjectAssignees.length === 0) return null;
 		return {
 			title: title.trim(),
@@ -128,30 +135,51 @@ export function NewInquiryForm({
 				selectedCommitteeAssignees.length > 0
 					? selectedCommitteeAssignees.map(p => p.id)
 					: undefined,
+			fileIds,
 		};
 	};
 
-	const buildProjectParams = () => ({
+	const buildProjectParams = (fileIds?: string[]) => ({
 		title: title.trim(),
 		body: body.trim(),
 		coAssigneeUserIds:
 			selectedCoAssignees.length > 0
 				? selectedCoAssignees.map(p => p.id)
 				: undefined,
+		fileIds,
 	});
 
 	const handleSubmit = async () => {
 		if (!title.trim() || !body.trim()) return;
 
+		let fileIds: string[] | undefined;
+		if (selectedFiles.length > 0) {
+			const { uploadFile } = await import("@/lib/api/files");
+			const results = await Promise.all(selectedFiles.map(f => uploadFile(f)));
+			fileIds = results.map(r => r.file.id);
+		}
+
 		const params =
 			viewerRole === "committee"
-				? buildCommitteeParams()
-				: buildProjectParams();
+				? buildCommitteeParams(fileIds)
+				: buildProjectParams(fileIds);
 		if (!params) return;
 
 		await onSubmit(params);
 		reset();
 		onOpenChange(false);
+	};
+
+	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const { files } = e.target;
+		if (files) {
+			setSelectedFiles(prev => [...prev, ...Array.from(files)]);
+		}
+		e.target.value = "";
+	};
+
+	const removeFile = (index: number) => {
+		setSelectedFiles(prev => prev.filter((_, i) => i !== index));
 	};
 
 	const toggleProjectAssignee = (person: UserSummary) => {
@@ -393,6 +421,48 @@ export function NewInquiryForm({
 								/>
 							</div>
 						)}
+
+					{/* ファイル添付 */}
+					<div className={styles.fileSelectArea}>
+						<input
+							ref={fileInputRef}
+							type="file"
+							multiple
+							className={styles.fileInput}
+							onChange={handleFileSelect}
+						/>
+						<button
+							type="button"
+							className={styles.fileSelectButton}
+							onClick={() => fileInputRef.current?.click()}
+						>
+							<IconPaperclip size={14} />
+							<Text size="2">ファイルを添付</Text>
+						</button>
+						{selectedFiles.length > 0 && (
+							<div className={styles.selectedFileList}>
+								{selectedFiles.map((f, i) => (
+									<div
+										key={`${f.name}-${i}`}
+										className={styles.selectedFileItem}
+									>
+										<IconPaperclip size={14} />
+										<Text size="1">{f.name}</Text>
+										<Text size="1" color="gray">
+											({formatFileSize(f.size)})
+										</Text>
+										<button
+											type="button"
+											className={styles.selectedFileRemove}
+											onClick={() => removeFile(i)}
+										>
+											<IconX size={12} />
+										</button>
+									</div>
+								))}
+							</div>
+						)}
+					</div>
 
 					{viewerRole === "project" && (
 						<div className={styles.infoBox}>

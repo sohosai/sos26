@@ -84,6 +84,17 @@ export const inquiryActivitySchema = z.object({
 });
 export type InquiryActivity = z.infer<typeof inquiryActivitySchema>;
 
+export const inquiryAttachmentSchema = z.object({
+	id: z.cuid(),
+	fileId: z.string(),
+	fileName: z.string(),
+	mimeType: z.string(),
+	size: z.number(),
+	isPublic: z.boolean(),
+	createdAt: z.coerce.date(),
+});
+export type InquiryAttachment = z.infer<typeof inquiryAttachmentSchema>;
+
 // ─────────────────────────────────────────────────────────────
 // パスパラメータ
 // ─────────────────────────────────────────────────────────────
@@ -127,6 +138,7 @@ const commentWithUserSchema = inquiryCommentSchema
 	.pick({ id: true, body: true, createdAt: true })
 	.extend({
 		createdBy: userSummarySchema,
+		attachments: z.array(inquiryAttachmentSchema),
 	});
 
 /** アクティビティ + 操作者・対象者情報 */
@@ -167,6 +179,7 @@ export const createProjectInquiryRequestSchema = z.object({
 	title: z.string().min(1, "件名を入力してください"),
 	body: z.string().min(1, "内容を入力してください"),
 	coAssigneeUserIds: z.array(z.cuid()).optional(),
+	fileIds: z.array(z.string()).optional(),
 });
 export type CreateProjectInquiryRequest = z.infer<
 	typeof createProjectInquiryRequestSchema
@@ -202,6 +215,7 @@ export const getProjectInquiryResponseSchema = z.object({
 		committeeAssignees: z.array(assigneeWithUserSchema),
 		comments: z.array(commentWithUserSchema),
 		activities: z.array(activityWithUserSchema),
+		attachments: z.array(inquiryAttachmentSchema),
 	}),
 });
 export type GetProjectInquiryResponse = z.infer<
@@ -214,6 +228,7 @@ export type GetProjectInquiryResponse = z.infer<
 
 export const addInquiryCommentRequestSchema = z.object({
 	body: z.string().min(1, "コメントを入力してください"),
+	fileIds: z.array(z.string()).optional(),
 });
 export type AddInquiryCommentRequest = z.infer<
 	typeof addInquiryCommentRequestSchema
@@ -277,6 +292,7 @@ export const createCommitteeInquiryRequestSchema = z.object({
 		.array(z.cuid())
 		.min(1, "企画側担当者を1人以上指定してください"),
 	committeeAssigneeUserIds: z.array(z.cuid()).optional(),
+	fileIds: z.array(z.string()).optional(),
 });
 export type CreateCommitteeInquiryRequest = z.infer<
 	typeof createCommitteeInquiryRequestSchema
@@ -313,6 +329,7 @@ export const getCommitteeInquiryResponseSchema = z.object({
 		viewers: z.array(viewerDetailSchema),
 		comments: z.array(commentWithUserSchema),
 		activities: z.array(activityWithUserSchema),
+		attachments: z.array(inquiryAttachmentSchema),
 	}),
 });
 export type GetCommitteeInquiryResponse = z.infer<

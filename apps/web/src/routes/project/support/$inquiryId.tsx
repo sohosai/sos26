@@ -77,10 +77,11 @@ function ProjectSupportDetailPage() {
 					toast.error("ステータスの更新に失敗しました");
 				}
 			}}
-			onAddComment={async body => {
+			onAddComment={async (body, fileIds) => {
 				try {
 					await addProjectInquiryComment(selectedProjectId, inquiryId, {
 						body,
+						fileIds,
 					});
 					await router.invalidate();
 				} catch {

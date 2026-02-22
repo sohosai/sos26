@@ -74,6 +74,7 @@ function ProjectSupportListPage() {
 							title: params.title,
 							body: params.body,
 							coAssigneeUserIds: params.coAssigneeUserIds,
+							fileIds: params.fileIds,
 						});
 						await router.invalidate();
 						navigate({

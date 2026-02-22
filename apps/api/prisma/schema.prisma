@@ -274,7 +274,8 @@ model File {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  noticeAttachments NoticeAttachment[]
+  noticeAttachments   NoticeAttachment[]
+  inquiryAttachments  InquiryAttachment[]
 
   @@index([uploadedById])
   @@index([status])
@@ -748,10 +749,11 @@ model Inquiry {
   relatedFormId String?
   relatedForm   Form?   @relation(fields: [relatedFormId], references: [id])
 
-  assignees  InquiryAssignee[]
-  viewers    InquiryViewer[]
-  comments   InquiryComment[]
-  activities InquiryActivity[]
+  assignees   InquiryAssignee[]
+  viewers     InquiryViewer[]
+  comments    InquiryComment[]
+  activities  InquiryActivity[]
+  attachments InquiryAttachment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -812,6 +814,8 @@ model InquiryComment {
   createdById String
   createdBy   User   @relation("InquiryCommentCreatedBy", fields: [createdById], references: [id])
 
+  attachments InquiryAttachment[]
+
   createdAt DateTime @default(now())
 }
 
@@ -833,4 +837,27 @@ model InquiryActivity {
   target   User?   @relation("InquiryActivityTarget", fields: [targetId], references: [id])
 
   createdAt DateTime @default(now())
+}
+
+//お問い合わせの添付ファイル
+model InquiryAttachment {
+  id        String  @id @default(cuid())
+  inquiryId String
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  // null = 本文の添付、set = コメントの添付
+  commentId String?
+  comment   InquiryComment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  fileId String
+  file   File   @relation(fields: [fileId], references: [id])
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([inquiryId, fileId])
+  @@index([fileId])
+  @@index([commentId])
+  @@index([deletedAt])
 }

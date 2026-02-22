@@ -109,6 +109,7 @@ function CommitteeSupportListPage() {
 							projectId: params.projectId,
 							projectAssigneeUserIds: params.projectAssigneeUserIds,
 							committeeAssigneeUserIds: params.committeeAssigneeUserIds,
+							fileIds: params.fileIds,
 						});
 						await router.invalidate();
 						navigate({

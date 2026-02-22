@@ -10,6 +10,7 @@ import {
 import type {
 	Bureau,
 	GetProjectInquiryResponse,
+	InquiryAttachment,
 	InquiryStatus,
 	InquiryViewerScope,
 } from "@sos26/shared";
@@ -20,7 +21,9 @@ import {
 	IconCheck,
 	IconChevronDown,
 	IconCircleCheck,
+	IconDownload,
 	IconLoader,
+	IconPaperclip,
 	IconPlus,
 	IconSearch,
 	IconTrash,
@@ -28,8 +31,12 @@ import {
 } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 import Avatar from "boring-avatars";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button, TextArea } from "@/components/primitives";
+import { downloadFile, uploadFile } from "@/lib/api/files";
+import { formatFileSize } from "@/lib/format";
+import { useStorageUrl } from "@/lib/storage";
 import styles from "./SupportDetail.module.scss";
 
 type InquiryDetail = GetProjectInquiryResponse["inquiry"];
@@ -58,7 +65,7 @@ type SupportDetailProps = {
 	committeeMembers: { id: string; name: string }[];
 	projectMembers: { id: string; name: string }[];
 	onUpdateStatus: (status: "RESOLVED" | "IN_PROGRESS") => Promise<void>;
-	onAddComment: (body: string) => Promise<void>;
+	onAddComment: (body: string, fileIds?: string[]) => Promise<void>;
 	onAddAssignee: (
 		userId: string,
 		side: "PROJECT" | "COMMITTEE"
@@ -102,7 +109,6 @@ export function SupportDetail({
 	isAssigneeOrAdmin = false,
 }: SupportDetailProps) {
 	const navigate = useNavigate();
-	const [replyText, setReplyText] = useState("");
 	const [committeePopoverOpen, setCommitteePopoverOpen] = useState(false);
 	const [projectPopoverOpen, setProjectPopoverOpen] = useState(false);
 	const [committeeSearchQuery, setCommitteeSearchQuery] = useState("");
@@ -113,12 +119,6 @@ export function SupportDetail({
 
 	// 実委側で担当者/管理者の場合のみ編集 UI を表示
 	const canEditCommittee = viewerRole === "committee" && isAssigneeOrAdmin;
-
-	const handleSubmitReply = async () => {
-		if (!replyText.trim()) return;
-		await onAddComment(replyText.trim());
-		setReplyText("");
-	};
 
 	const toggleAssignee = async (
 		userId: string,
@@ -196,6 +196,7 @@ export function SupportDetail({
 						role={inquiry.creatorRole === "COMMITTEE" ? "committee" : "project"}
 						date={inquiry.createdAt}
 						body={inquiry.body}
+						attachments={inquiry.attachments}
 					/>
 
 					{timelineEntries.map(entry =>
@@ -206,6 +207,7 @@ export function SupportDetail({
 								role={getCommentRole(entry.data.createdBy)}
 								date={entry.data.createdAt}
 								body={entry.data.body}
+								attachments={entry.data.attachments}
 							/>
 						) : (
 							<ActivityItem key={entry.data.id} activity={entry.data} />
@@ -215,23 +217,8 @@ export function SupportDetail({
 
 				<Separator size="4" />
 
-				{/* 返信フォーム */}
 				{inquiry.status !== "RESOLVED" ? (
-					<section className={styles.replySection}>
-						<Heading size="3">コメントを追加</Heading>
-						<TextArea
-							label="返信内容"
-							placeholder="返信内容を入力..."
-							value={replyText}
-							onChange={setReplyText}
-							rows={3}
-						/>
-						<div className={styles.replyActions}>
-							<Button onClick={handleSubmitReply} disabled={!replyText.trim()}>
-								送信
-							</Button>
-						</div>
-					</section>
+					<ReplySection onAddComment={onAddComment} />
 				) : (
 					<section className={styles.replySection}>
 						<Text size="2" color="gray">
@@ -479,17 +466,116 @@ export function SupportDetail({
 
 /* ─── サブコンポーネント ─── */
 
+function ReplySection({
+	onAddComment,
+}: {
+	onAddComment: (body: string, fileIds?: string[]) => Promise<void>;
+}) {
+	const [replyText, setReplyText] = useState("");
+	const [replyFiles, setReplyFiles] = useState<File[]>([]);
+	const [replySending, setReplySending] = useState(false);
+	const replyFileInputRef = useRef<HTMLInputElement>(null);
+
+	const handleSubmitReply = async () => {
+		if (!replyText.trim()) return;
+		setReplySending(true);
+		try {
+			let fileIds: string[] | undefined;
+			if (replyFiles.length > 0) {
+				const results = await Promise.all(replyFiles.map(f => uploadFile(f)));
+				fileIds = results.map(r => r.file.id);
+			}
+			await onAddComment(replyText.trim(), fileIds);
+			setReplyText("");
+			setReplyFiles([]);
+		} catch {
+			toast.error("コメントの送信に失敗しました");
+		} finally {
+			setReplySending(false);
+		}
+	};
+
+	const handleReplyFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const { files } = e.target;
+		if (files) {
+			setReplyFiles(prev => [...prev, ...Array.from(files)]);
+		}
+		e.target.value = "";
+	};
+
+	const removeReplyFile = (index: number) => {
+		setReplyFiles(prev => prev.filter((_, i) => i !== index));
+	};
+
+	return (
+		<section className={styles.replySection}>
+			<Heading size="3">コメントを追加</Heading>
+			<TextArea
+				label="返信内容"
+				placeholder="返信内容を入力..."
+				value={replyText}
+				onChange={setReplyText}
+				rows={3}
+			/>
+			{replyFiles.length > 0 && (
+				<div className={styles.selectedFiles}>
+					{replyFiles.map((f, i) => (
+						<div key={`${f.name}-${i}`} className={styles.selectedFileItem}>
+							<IconPaperclip size={14} />
+							<Text size="1">{f.name}</Text>
+							<Text size="1" color="gray">
+								({formatFileSize(f.size)})
+							</Text>
+							<button
+								type="button"
+								className={styles.selectedFileRemove}
+								onClick={() => removeReplyFile(i)}
+							>
+								<IconX size={12} />
+							</button>
+						</div>
+					))}
+				</div>
+			)}
+			<div className={styles.replyActions}>
+				<input
+					ref={replyFileInputRef}
+					type="file"
+					multiple
+					className={styles.fileInput}
+					onChange={handleReplyFileSelect}
+				/>
+				<button
+					type="button"
+					className={styles.fileSelectButton}
+					onClick={() => replyFileInputRef.current?.click()}
+					disabled={replySending}
+				>
+					<IconPaperclip size={16} />
+				</button>
+				<Button
+					onClick={handleSubmitReply}
+					disabled={!replyText.trim() || replySending}
+				>
+					{replySending ? "送信中..." : "送信"}
+				</Button>
+			</div>
+		</section>
+	);
+}
+
 function TimelineItem({
 	name,
 	role,
 	date,
 	body,
+	attachments,
 }: {
 	name: string;
 	role: "project" | "committee";
-	affiliation?: string;
 	date: Date;
 	body: string;
+	attachments?: InquiryAttachment[];
 }) {
 	return (
 		<div className={styles.timelineItem}>
@@ -515,8 +601,46 @@ function TimelineItem({
 				<Text size="2" className={styles.timelineBody}>
 					{body}
 				</Text>
+				{attachments && attachments.length > 0 && (
+					<div className={styles.attachmentSection}>
+						{attachments.map(att =>
+							att.mimeType.startsWith("image/") ? (
+								<AttachmentImage key={att.id} attachment={att} />
+							) : (
+								<button
+									key={att.id}
+									type="button"
+									className={styles.attachmentItem}
+									onClick={() =>
+										downloadFile(att.fileId, att.fileName, att.isPublic).catch(
+											() => toast.error("ファイルの取得に失敗しました")
+										)
+									}
+								>
+									<IconDownload size={14} />
+									<Text size="2">{att.fileName}</Text>
+									<Text size="1" color="gray">
+										({formatFileSize(att.size)})
+									</Text>
+								</button>
+							)
+						)}
+					</div>
+				)}
 			</div>
 		</div>
+	);
+}
+
+function AttachmentImage({ attachment }: { attachment: InquiryAttachment }) {
+	const url = useStorageUrl(attachment.fileId, attachment.isPublic);
+	if (!url) return null;
+	return (
+		<img
+			src={url}
+			alt={attachment.fileName}
+			className={styles.attachmentImage}
+		/>
 	);
 }
 

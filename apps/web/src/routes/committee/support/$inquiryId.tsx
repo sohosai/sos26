@@ -113,9 +113,9 @@ function CommitteeSupportDetailPage() {
 					toast.error("ステータスの更新に失敗しました");
 				}
 			}}
-			onAddComment={async body => {
+			onAddComment={async (body, fileIds) => {
 				try {
-					await addCommitteeInquiryComment(inquiryId, { body });
+					await addCommitteeInquiryComment(inquiryId, { body, fileIds });
 					await router.invalidate();
 				} catch {
 					toast.error("コメントの送信に失敗しました");

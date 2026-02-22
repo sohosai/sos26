@@ -37,6 +37,40 @@ const assigneeInclude = {
 	user: { select: userSelect },
 } as const;
 
+const attachmentInclude = {
+	file: {
+		select: {
+			id: true,
+			fileName: true,
+			mimeType: true,
+			size: true,
+			isPublic: true,
+		},
+	},
+} as const;
+
+function formatAttachment(a: {
+	id: string;
+	createdAt: Date;
+	file: {
+		id: string;
+		fileName: string;
+		mimeType: string;
+		size: number;
+		isPublic: boolean;
+	};
+}) {
+	return {
+		id: a.id,
+		fileId: a.file.id,
+		fileName: a.file.fileName,
+		mimeType: a.file.mimeType,
+		size: a.file.size,
+		isPublic: a.file.isPublic,
+		createdAt: a.createdAt,
+	};
+}
+
 function formatAssignee(a: {
 	id: string;
 	side: string;
@@ -69,6 +103,7 @@ projectInquiryRoute.post(
 			title,
 			body: inquiryBody,
 			coAssigneeUserIds,
+			fileIds,
 		} = createProjectInquiryRequestSchema.parse(body);
 
 		// 共同担当者が全て企画メンバーかチェック
@@ -85,6 +120,21 @@ projectInquiryRoute.post(
 				throw Errors.invalidRequest(
 					"指定された共同担当者の中に企画メンバーでないユーザーが含まれています"
 				);
+			}
+		}
+
+		// 添付ファイルの存在・ステータスチェック
+		const uniqueFileIds = [...new Set(fileIds ?? [])];
+		if (uniqueFileIds.length > 0) {
+			const files = await prisma.file.findMany({
+				where: {
+					id: { in: uniqueFileIds },
+					status: "CONFIRMED",
+					deletedAt: null,
+				},
+			});
+			if (files.length !== uniqueFileIds.length) {
+				throw Errors.invalidRequest("指定されたファイルの一部が見つかりません");
 			}
 		}
 
@@ -105,6 +155,9 @@ projectInquiryRoute.post(
 							isCreator: false,
 						})),
 					],
+				},
+				attachments: {
+					create: uniqueFileIds.map(fileId => ({ fileId })),
 				},
 			},
 		});
@@ -187,7 +240,13 @@ projectInquiryRoute.get(
 				project: { select: { id: true, name: true } },
 				assignees: { include: assigneeInclude },
 				comments: {
-					include: { createdBy: { select: userSelect } },
+					include: {
+						createdBy: { select: userSelect },
+						attachments: {
+							where: { deletedAt: null },
+							include: attachmentInclude,
+						},
+					},
 					orderBy: { createdAt: "asc" },
 				},
 				activities: {
@@ -196,6 +255,10 @@ projectInquiryRoute.get(
 						target: { select: userSelect },
 					},
 					orderBy: { createdAt: "asc" },
+				},
+				attachments: {
+					where: { commentId: null, deletedAt: null },
+					include: attachmentInclude,
 				},
 			},
 		});
@@ -228,6 +291,7 @@ projectInquiryRoute.get(
 				body: cm.body,
 				createdAt: cm.createdAt,
 				createdBy: cm.createdBy,
+				attachments: cm.attachments.map(formatAttachment),
 			})),
 			activities: inquiry.activities.map(act => ({
 				id: act.id,
@@ -236,6 +300,7 @@ projectInquiryRoute.get(
 				actor: act.actor,
 				target: act.target,
 			})),
+			attachments: inquiry.attachments.map(formatAttachment),
 		};
 
 		return c.json({ inquiry: formatted });
@@ -258,7 +323,8 @@ projectInquiryRoute.post(
 			inquiryId: c.req.param("inquiryId"),
 		});
 		const body = await c.req.json().catch(() => ({}));
-		const { body: commentBody } = addInquiryCommentRequestSchema.parse(body);
+		const { body: commentBody, fileIds } =
+			addInquiryCommentRequestSchema.parse(body);
 
 		// 企画側担当者チェック
 		await requireProjectAssignee(inquiryId, user.id);
@@ -276,13 +342,62 @@ projectInquiryRoute.post(
 			);
 		}
 
-		const comment = await prisma.inquiryComment.create({
-			data: {
-				inquiryId,
-				body: commentBody,
-				createdById: user.id,
-			},
-			include: { createdBy: { select: userSelect } },
+		// 添付ファイルの存在・ステータスチェック
+		const uniqueFileIds = [...new Set(fileIds ?? [])];
+		if (uniqueFileIds.length > 0) {
+			const files = await prisma.file.findMany({
+				where: {
+					id: { in: uniqueFileIds },
+					status: "CONFIRMED",
+					deletedAt: null,
+				},
+			});
+			if (files.length !== uniqueFileIds.length) {
+				throw Errors.invalidRequest("指定されたファイルの一部が見つかりません");
+			}
+		}
+
+		const comment = await prisma.$transaction(async tx => {
+			const created = await tx.inquiryComment.create({
+				data: {
+					inquiryId,
+					body: commentBody,
+					createdById: user.id,
+				},
+				include: { createdBy: { select: userSelect } },
+			});
+
+			let attachments: {
+				id: string;
+				createdAt: Date;
+				file: {
+					id: string;
+					fileName: string;
+					mimeType: string;
+					size: number;
+					isPublic: boolean;
+				};
+			}[] = [];
+
+			if (uniqueFileIds.length > 0) {
+				await Promise.all(
+					uniqueFileIds.map(fileId =>
+						tx.inquiryAttachment.create({
+							data: {
+								inquiryId,
+								commentId: created.id,
+								fileId,
+							},
+						})
+					)
+				);
+				attachments = await tx.inquiryAttachment.findMany({
+					where: { commentId: created.id, deletedAt: null },
+					include: attachmentInclude,
+				});
+			}
+
+			return { ...created, attachments };
 		});
 
 		return c.json(
@@ -292,6 +407,7 @@ projectInquiryRoute.post(
 					body: comment.body,
 					createdAt: comment.createdAt,
 					createdBy: comment.createdBy,
+					attachments: comment.attachments.map(formatAttachment),
 				},
 			},
 			201
