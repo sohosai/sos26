@@ -23,8 +23,8 @@ export const Route = createFileRoute("/committee/support/$inquiryId")({
 	component: CommitteeSupportDetailPage,
 	head: () => ({
 		meta: [
-			{ title: "問い合わせ詳細 | 雙峰祭オンラインシステム" },
-			{ name: "description", content: "問い合わせ詳細" },
+			{ title: "おお問い合わせ詳細 | 雙峰祭オンラインシステム" },
+			{ name: "description", content: "お問い合わせ詳細" },
 		],
 	}),
 	loader: async ({ params }) => {
@@ -75,9 +75,9 @@ function CommitteeSupportDetailPage() {
 	if (!inquiry) {
 		return (
 			<div>
-				<Heading size="5">問い合わせが見つかりません</Heading>
+				<Heading size="5">お問い合わせが見つかりません</Heading>
 				<Text as="p" size="2" color="gray">
-					指定された問い合わせは存在しないか、削除された可能性があります。
+					指定されたお問い合わせは存在しないか、削除された可能性があります。
 				</Text>
 				<Link to="/committee/support">
 					<Button intent="secondary">一覧に戻る</Button>

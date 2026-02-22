@@ -11,14 +11,15 @@ import {
 	removeProjectInquiryAssignee,
 	reopenProjectInquiry,
 } from "@/lib/api/project-inquiry";
+import { useAuthStore } from "@/lib/auth";
 import { useProjectStore } from "@/lib/project/store";
 
 export const Route = createFileRoute("/project/support/$inquiryId")({
 	component: ProjectSupportDetailPage,
 	head: () => ({
 		meta: [
-			{ title: "問い合わせ詳細 | 雙峰祭オンラインシステム" },
-			{ name: "description", content: "問い合わせ詳細" },
+			{ title: "おお問い合わせ詳細 | 雙峰祭オンラインシステム" },
+			{ name: "description", content: "お問い合わせ詳細" },
 		],
 	}),
 	loader: async ({ params }) => {
@@ -43,13 +44,14 @@ function ProjectSupportDetailPage() {
 	const data = Route.useLoaderData();
 	const router = useRouter();
 	const { selectedProjectId } = useProjectStore();
+	const { user } = useAuthStore();
 
 	if (!data || !selectedProjectId) {
 		return (
 			<div>
-				<Heading size="5">問い合わせが見つかりません</Heading>
+				<Heading size="5">お問い合わせが見つかりません</Heading>
 				<Text as="p" size="2" color="gray">
-					指定された問い合わせは存在しないか、削除された可能性があります。
+					指定されたお問い合わせは存在しないか、削除された可能性があります。
 				</Text>
 				<Link to="/project/support">
 					<Button intent="secondary">一覧に戻る</Button>
@@ -60,6 +62,9 @@ function ProjectSupportDetailPage() {
 
 	const { inquiry, projectMembers } = data;
 
+	const isAssigneeOrAdmin =
+		!!user && inquiry.projectAssignees.some(a => a.user.id === user.id);
+
 	return (
 		<SupportDetail
 			inquiry={inquiry}
@@ -67,6 +72,7 @@ function ProjectSupportDetailPage() {
 			basePath="/project/support"
 			committeeMembers={[]}
 			projectMembers={projectMembers}
+			isAssigneeOrAdmin={isAssigneeOrAdmin}
 			onUpdateStatus={async status => {
 				try {
 					if (status === "IN_PROGRESS") {

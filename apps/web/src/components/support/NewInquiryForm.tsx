@@ -221,17 +221,17 @@ export function NewInquiryForm({
 			}}
 		>
 			<Dialog.Content maxWidth="640px">
-				<Dialog.Title>新しい問い合わせを作成</Dialog.Title>
+				<Dialog.Title>新しいおお問い合わせを作成</Dialog.Title>
 				<Dialog.Description size="2" color="gray">
 					{viewerRole === "project"
-						? "実行委員会への問い合わせを作成します"
-						: "企画への問い合わせを作成します"}
+						? "実行委員会へのおお問い合わせを作成します"
+						: "企画へのおお問い合わせを作成します"}
 				</Dialog.Description>
 
 				<div className={styles.form}>
 					<TextField
 						label="件名"
-						placeholder="問い合わせの件名を入力"
+						placeholder="お問い合わせの件名を入力"
 						value={title}
 						onChange={setTitle}
 						required
@@ -239,7 +239,7 @@ export function NewInquiryForm({
 
 					<TextArea
 						label="内容"
-						placeholder="問い合わせの内容を詳しく入力してください"
+						placeholder="お問い合わせの内容を詳しく入力してください"
 						value={body}
 						onChange={setBody}
 						rows={5}
@@ -253,7 +253,7 @@ export function NewInquiryForm({
 								対象企画を選択
 							</Text>
 							<Text size="1" color="gray">
-								この問い合わせの対象となる企画を選択してください
+								このお問い合わせの対象となる企画を選択してください
 							</Text>
 							<Popover.Root
 								open={projectSelectorOpen}
@@ -328,7 +328,7 @@ export function NewInquiryForm({
 								企画側の担当者を選択
 							</Text>
 							<Text size="1" color="gray">
-								この問い合わせに対応する企画側のメンバーを選択してください
+								このお問い合わせに対応する企画側のメンバーを選択してください
 							</Text>
 							{loadingMembers ? (
 								<Text size="1" color="gray">
@@ -488,7 +488,7 @@ export function NewInquiryForm({
 						キャンセル
 					</Button>
 					<Button onClick={handleSubmit} disabled={!canSubmit}>
-						問い合わせを作成
+						お問い合わせを作成
 					</Button>
 				</div>
 			</Dialog.Content>

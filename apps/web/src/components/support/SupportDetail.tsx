@@ -22,7 +22,7 @@ import {
 	IconChevronDown,
 	IconCircleCheck,
 	IconDownload,
-	IconLoader,
+	IconMessageDots,
 	IconPaperclip,
 	IconPlus,
 	IconSearch,
@@ -90,7 +90,7 @@ const statusConfig: Record<
 		color: "orange",
 		icon: IconAlertCircle,
 	},
-	IN_PROGRESS: { label: "対応中", color: "blue", icon: IconLoader },
+	IN_PROGRESS: { label: "対応中", color: "blue", icon: IconMessageDots },
 	RESOLVED: { label: "解決済み", color: "green", icon: IconCircleCheck },
 };
 
@@ -119,6 +119,8 @@ export function SupportDetail({
 
 	// 実委側で担当者/管理者の場合のみ編集 UI を表示
 	const canEditCommittee = viewerRole === "committee" && isAssigneeOrAdmin;
+	// 担当者/管理者のみコメント可能
+	const canComment = isAssigneeOrAdmin;
 
 	const toggleAssignee = async (
 		userId: string,
@@ -173,7 +175,7 @@ export function SupportDetail({
 					onClick={() => navigate({ to: basePath as string })}
 				>
 					<IconArrowLeft size={16} />
-					<Text size="2">問い合わせ一覧に戻る</Text>
+					<Text size="2">お問い合わせ一覧に戻る</Text>
 				</button>
 
 				<header className={styles.titleSection}>
@@ -218,11 +220,11 @@ export function SupportDetail({
 				<Separator size="4" />
 
 				{inquiry.status !== "RESOLVED" ? (
-					<ReplySection onAddComment={onAddComment} />
+					<ReplySection onAddComment={onAddComment} disabled={!canComment} />
 				) : (
 					<section className={styles.replySection}>
 						<Text size="2" color="gray">
-							この問い合わせは解決済みのため、コメントを追加できません。
+							このお問い合わせは解決済みのため、コメントを追加できません。
 						</Text>
 						{viewerRole === "project" && (
 							<Button
@@ -468,8 +470,10 @@ export function SupportDetail({
 
 function ReplySection({
 	onAddComment,
+	disabled,
 }: {
 	onAddComment: (body: string, fileIds?: string[]) => Promise<void>;
+	disabled?: boolean;
 }) {
 	const [replyText, setReplyText] = useState("");
 	const [replyFiles, setReplyFiles] = useState<File[]>([]);
@@ -477,7 +481,7 @@ function ReplySection({
 	const replyFileInputRef = useRef<HTMLInputElement>(null);
 
 	const handleSubmitReply = async () => {
-		if (!replyText.trim()) return;
+		if (!replyText.trim() || disabled) return;
 		setReplySending(true);
 		try {
 			let fileIds: string[] | undefined;
@@ -510,14 +514,20 @@ function ReplySection({
 	return (
 		<section className={styles.replySection}>
 			<Heading size="3">コメントを追加</Heading>
+			{disabled && (
+				<Text size="2" color="gray">
+					閲覧権限のため、コメントを送信できません。
+				</Text>
+			)}
 			<TextArea
 				label="返信内容"
 				placeholder="返信内容を入力..."
 				value={replyText}
 				onChange={setReplyText}
 				rows={3}
+				disabled={disabled}
 			/>
-			{replyFiles.length > 0 && (
+			{!disabled && replyFiles.length > 0 && (
 				<div className={styles.selectedFiles}>
 					{replyFiles.map((f, i) => (
 						<div key={`${f.name}-${i}`} className={styles.selectedFileItem}>
@@ -537,25 +547,30 @@ function ReplySection({
 					))}
 				</div>
 			)}
+			{!disabled && (
+				<div className={styles.replyFileArea}>
+					<input
+						ref={replyFileInputRef}
+						type="file"
+						multiple
+						className={styles.fileInput}
+						onChange={handleReplyFileSelect}
+					/>
+					<button
+						type="button"
+						className={styles.fileSelectButton}
+						onClick={() => replyFileInputRef.current?.click()}
+						disabled={replySending}
+					>
+						<IconPaperclip size={16} />
+						<Text size="2">ファイルを添付</Text>
+					</button>
+				</div>
+			)}
 			<div className={styles.replyActions}>
-				<input
-					ref={replyFileInputRef}
-					type="file"
-					multiple
-					className={styles.fileInput}
-					onChange={handleReplyFileSelect}
-				/>
-				<button
-					type="button"
-					className={styles.fileSelectButton}
-					onClick={() => replyFileInputRef.current?.click()}
-					disabled={replySending}
-				>
-					<IconPaperclip size={16} />
-				</button>
 				<Button
 					onClick={handleSubmitReply}
-					disabled={!replyText.trim() || replySending}
+					disabled={disabled || !replyText.trim() || replySending}
 				>
 					{replySending ? "送信中..." : "送信"}
 				</Button>

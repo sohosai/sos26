@@ -8,10 +8,10 @@ import {
 	IconCircleCheck,
 	IconCircleDot,
 	IconEye,
-	IconLoader,
+	IconMessageDots,
+	IconPlus,
 	IconSearch,
-	IconStar,
-	IconStarFilled,
+	IconUserCheck,
 } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 import Avatar from "boring-avatars";
@@ -44,7 +44,7 @@ const statusConfig: Record<
 		color: "orange",
 		icon: IconAlertCircle,
 	},
-	IN_PROGRESS: { label: "対応中", color: "blue", icon: IconLoader },
+	IN_PROGRESS: { label: "対応中", color: "blue", icon: IconMessageDots },
 	RESOLVED: { label: "解決済み", color: "green", icon: IconCircleCheck },
 };
 
@@ -85,13 +85,16 @@ export function SupportList({
 		<div className={styles.container}>
 			<div className={styles.header}>
 				<div className={styles.titleRow}>
-					<Heading size="6">問い合わせ</Heading>
-					<Button onClick={onNewInquiry}>新しい問い合わせ</Button>
+					<Heading size="6">お問い合わせ</Heading>
+					<Button onClick={onNewInquiry}>
+						<IconPlus size={16} />
+						新しいお問い合わせ
+					</Button>
 				</div>
 				<Text size="2" color="gray">
 					{isCommittee
-						? "企画からの問い合わせを管理します"
-						: "実行委員会への問い合わせを管理します"}
+						? "企画からのお問い合わせを管理します"
+						: "実行委員会へのお問い合わせを管理します"}
 				</Text>
 			</div>
 
@@ -198,9 +201,13 @@ function CommitteeOpenSections({
 		? inquiries.filter(inq => inq.status === "UNASSIGNED")
 		: [];
 
-	// セクション3: 閲覧中（自分が担当者ではなく対応中のもの）
+	// セクション3: 閲覧中（自分が担当者ではなく未解決のもの）
+	// 管理者は UNASSIGNED を専用セクションで表示するため除外
 	const viewingItems = inquiries.filter(
-		inq => inq.status === "IN_PROGRESS" && !isAssignedToMe(inq)
+		inq =>
+			inq.status !== "RESOLVED" &&
+			!isAssignedToMe(inq) &&
+			!(isAdmin && inq.status === "UNASSIGNED")
 	);
 
 	const hasAnyItems =
@@ -211,7 +218,7 @@ function CommitteeOpenSections({
 			<div className={styles.empty}>
 				<IconSearch size={40} />
 				<Text size="3" color="gray">
-					未完了の問い合わせはありません
+					未完了のお問い合わせはありません
 				</Text>
 			</div>
 		);
@@ -222,11 +229,11 @@ function CommitteeOpenSections({
 			{myItems.length > 0 && (
 				<section className={styles.section}>
 					<div className={styles.sectionTitle}>
-						<IconStarFilled size={14} />
+						<IconUserCheck size={14} />
 						<Text size="2" weight="medium">
 							自分の担当
 						</Text>
-						<Badge size="1" variant="soft">
+						<Badge size="1" variant="soft" radius="full">
 							{myItems.length}
 						</Badge>
 					</div>
@@ -251,7 +258,7 @@ function CommitteeOpenSections({
 						<Text size="2" weight="medium">
 							担当者未割り当て
 						</Text>
-						<Badge size="1" variant="soft" color="orange">
+						<Badge size="1" variant="soft" color="orange" radius="full">
 							{unassignedItems.length}
 						</Badge>
 					</div>
@@ -276,7 +283,7 @@ function CommitteeOpenSections({
 						<Text size="2" weight="medium">
 							閲覧中
 						</Text>
-						<Badge size="1" variant="soft" color="gray">
+						<Badge size="1" variant="soft" color="gray" radius="full">
 							{viewingItems.length}
 						</Badge>
 					</div>
@@ -313,7 +320,7 @@ function CommitteeResolvedList({
 			<div className={styles.empty}>
 				<IconSearch size={40} />
 				<Text size="3" color="gray">
-					解決済みの問い合わせはありません
+					解決済みのお問い合わせはありません
 				</Text>
 			</div>
 		);
@@ -348,7 +355,7 @@ function ProjectList({
 			<div className={styles.empty}>
 				<IconSearch size={40} />
 				<Text size="3" color="gray">
-					問い合わせはまだありません
+					お問い合わせはまだありません
 				</Text>
 			</div>
 		);
@@ -370,7 +377,7 @@ function ProjectList({
 				</ul>
 			) : (
 				<Text size="2" color="gray">
-					未解決の問い合わせはありません
+					未解決のお問い合わせはありません
 				</Text>
 			)}
 
@@ -411,9 +418,6 @@ function InquiryCard({
 	const navigate = useNavigate();
 	const config = statusConfig[inquiry.status];
 	const StatusIcon = config.icon;
-	const hasNoAssignee =
-		inquiry.committeeAssignees.length === 0 ||
-		inquiry.projectAssignees.length === 0;
 
 	const allAssignees: AssigneeInfo[] = [
 		...inquiry.committeeAssignees,
@@ -442,7 +446,7 @@ function InquiryCard({
 						</Text>
 						{isMyInquiry && showAssignees && (
 							<Tooltip content="自分が担当">
-								<IconStar size={14} className={styles.myBadge} />
+								<IconUserCheck size={14} className={styles.myBadge} />
 							</Tooltip>
 						)}
 					</span>
@@ -456,13 +460,6 @@ function InquiryCard({
 						<Badge color={config.color} size="1" variant="soft">
 							{config.label}
 						</Badge>
-						{showAssignees &&
-							hasNoAssignee &&
-							inquiry.status === "UNASSIGNED" && (
-								<Badge color="red" size="1" variant="soft">
-									担当者未設定
-								</Badge>
-							)}
 						{showAssignees && (
 							<span className={styles.assignees}>
 								{allAssignees.slice(0, 3).map(a => (

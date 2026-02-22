@@ -25,8 +25,8 @@ export const Route = createFileRoute("/committee/support/")({
 	component: CommitteeSupportListPage,
 	head: () => ({
 		meta: [
-			{ title: "問い合わせ | 雙峰祭オンラインシステム" },
-			{ name: "description", content: "問い合わせ管理" },
+			{ title: "お問い合わせ | 雙峰祭オンラインシステム" },
+			{ name: "description", content: "お問い合わせ管理" },
 		],
 	}),
 	loader: async () => {
@@ -117,7 +117,7 @@ function CommitteeSupportListPage() {
 							params: { inquiryId: inquiry.id },
 						});
 					} catch {
-						toast.error("問い合わせの作成に失敗しました");
+						toast.error("お問い合わせの作成に失敗しました");
 					}
 				}}
 			/>
