@@ -264,6 +264,8 @@ model File {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
+  noticeAttachments NoticeAttachment[]
+
   @@index([uploadedById])
   @@index([status])
   @@index([deletedAt])
@@ -285,6 +287,9 @@ model Notice {
 
   //配信許可など
   authorizations NoticeAuthorization[]
+
+  // 添付ファイル
+  attachments NoticeAttachment[]
 
   //タイトル
   title String @default("無題のお知らせ")
@@ -649,4 +654,22 @@ model NoticeReadStatus {
   createdAt DateTime @default(now())
 
   @@unique([noticeDeliveryId, userId])
+}
+
+//お知らせの添付ファイル
+model NoticeAttachment {
+  id       String @id @default(cuid())
+  noticeId String
+  fileId   String
+
+  notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  file   File   @relation(fields: [fileId], references: [id])
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([noticeId, fileId])
+  @@index([fileId])
+  @@index([deletedAt])
 }

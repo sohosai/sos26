@@ -1,7 +1,9 @@
 import {
 	addCollaboratorRequestSchema,
+	addNoticeAttachmentRequestSchema,
 	createNoticeAuthorizationRequestSchema,
 	createNoticeRequestSchema,
+	noticeAttachmentIdPathParamsSchema,
 	noticeAuthorizationIdPathParamsSchema,
 	noticeCollaboratorIdPathParamsSchema,
 	noticeIdPathParamsSchema,
@@ -120,6 +122,21 @@ committeeNoticeRoute.get(
 					},
 					orderBy: { createdAt: "desc" },
 				},
+				attachments: {
+					where: { deletedAt: null },
+					include: {
+						file: {
+							select: {
+								id: true,
+								fileName: true,
+								mimeType: true,
+								size: true,
+								isPublic: true,
+							},
+						},
+					},
+					orderBy: { createdAt: "asc" },
+				},
 			},
 		});
 
@@ -159,6 +176,15 @@ committeeNoticeRoute.get(
 					createdAt: del.createdAt,
 					project: del.project,
 				})),
+			})),
+			attachments: notice.attachments.map(att => ({
+				id: att.id,
+				fileId: att.file.id,
+				fileName: att.file.fileName,
+				mimeType: att.file.mimeType,
+				size: att.file.size,
+				isPublic: att.file.isPublic,
+				createdAt: att.createdAt,
 			})),
 		};
 
@@ -375,6 +401,188 @@ committeeNoticeRoute.delete(
 
 		await prisma.noticeCollaborator.update({
 			where: { id: collaboratorId },
+			data: { deletedAt: new Date() },
+		});
+
+		return c.json({ success: true as const });
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// POST /committee/notices/:noticeId/attachments
+// 添付ファイルを追加（owner または共同編集者のみ）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.post(
+	"/:noticeId/attachments",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { noticeId } = noticeIdPathParamsSchema.parse({
+			noticeId: c.req.param("noticeId"),
+		});
+		const body = await c.req.json().catch(() => ({}));
+		const { fileIds } = addNoticeAttachmentRequestSchema.parse(body);
+
+		const notice = await prisma.notice.findFirst({
+			where: { id: noticeId, deletedAt: null },
+			include: { collaborators: { where: { deletedAt: null } } },
+		});
+
+		if (!notice) {
+			throw Errors.notFound("お知らせが見つかりません");
+		}
+
+		const isOwner = notice.ownerId === user.id;
+		const isCollaborator = notice.collaborators.some(
+			col => col.userId === user.id
+		);
+		if (!isOwner && !isCollaborator) {
+			throw Errors.forbidden("添付ファイルの追加権限がありません");
+		}
+
+		// ファイルの存在・状態チェック
+		const uniqueFileIds = [...new Set(fileIds)];
+		const files = await prisma.file.findMany({
+			where: {
+				id: { in: uniqueFileIds },
+				status: "CONFIRMED",
+				deletedAt: null,
+			},
+			select: {
+				id: true,
+				fileName: true,
+				mimeType: true,
+				size: true,
+				isPublic: true,
+			},
+		});
+
+		if (files.length !== uniqueFileIds.length) {
+			throw Errors.invalidRequest(
+				"指定されたファイルの一部が存在しないか、アップロードが未完了です"
+			);
+		}
+
+		// 一括作成（ソフトデリート済みは再有効化）
+		const attachments = await Promise.all(
+			uniqueFileIds.map(async fileId => {
+				const existing = await prisma.noticeAttachment.findUnique({
+					where: { noticeId_fileId: { noticeId, fileId } },
+				});
+
+				if (existing) {
+					if (!existing.deletedAt) {
+						return prisma.noticeAttachment.findUniqueOrThrow({
+							where: { id: existing.id },
+							include: {
+								file: {
+									select: {
+										id: true,
+										fileName: true,
+										mimeType: true,
+										size: true,
+										isPublic: true,
+									},
+								},
+							},
+						});
+					}
+					return prisma.noticeAttachment.update({
+						where: { id: existing.id },
+						data: { deletedAt: null },
+						include: {
+							file: {
+								select: {
+									id: true,
+									fileName: true,
+									mimeType: true,
+									size: true,
+									isPublic: true,
+								},
+							},
+						},
+					});
+				}
+
+				return prisma.noticeAttachment.create({
+					data: { noticeId, fileId },
+					include: {
+						file: {
+							select: {
+								id: true,
+								fileName: true,
+								mimeType: true,
+								size: true,
+								isPublic: true,
+							},
+						},
+					},
+				});
+			})
+		);
+
+		return c.json(
+			{
+				attachments: attachments.map(att => ({
+					id: att.id,
+					fileId: att.file.id,
+					fileName: att.file.fileName,
+					mimeType: att.file.mimeType,
+					size: att.file.size,
+					isPublic: att.file.isPublic,
+					createdAt: att.createdAt,
+				})),
+			},
+			201
+		);
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// DELETE /committee/notices/:noticeId/attachments/:attachmentId
+// 添付ファイルを削除（owner または共同編集者のみ）
+// ─────────────────────────────────────────────────────────────
+committeeNoticeRoute.delete(
+	"/:noticeId/attachments/:attachmentId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { noticeId, attachmentId } = noticeAttachmentIdPathParamsSchema.parse(
+			{
+				noticeId: c.req.param("noticeId"),
+				attachmentId: c.req.param("attachmentId"),
+			}
+		);
+
+		const notice = await prisma.notice.findFirst({
+			where: { id: noticeId, deletedAt: null },
+			include: { collaborators: { where: { deletedAt: null } } },
+		});
+
+		if (!notice) {
+			throw Errors.notFound("お知らせが見つかりません");
+		}
+
+		const isOwner = notice.ownerId === user.id;
+		const isCollaborator = notice.collaborators.some(
+			col => col.userId === user.id
+		);
+		if (!isOwner && !isCollaborator) {
+			throw Errors.forbidden("添付ファイルの削除権限がありません");
+		}
+
+		const attachment = await prisma.noticeAttachment.findFirst({
+			where: { id: attachmentId, noticeId, deletedAt: null },
+		});
+
+		if (!attachment) {
+			throw Errors.notFound("添付ファイルが見つかりません");
+		}
+
+		await prisma.noticeAttachment.update({
+			where: { id: attachmentId },
 			data: { deletedAt: new Date() },
 		});
 

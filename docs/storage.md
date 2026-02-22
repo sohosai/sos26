@@ -159,12 +159,15 @@ User.avatarId    ProjectDocument.fileId
 
 非公開ファイルへのアクセス権は用途によって異なる。File テーブルはこれを知らないので、各機能モジュールが判定関数を登録する仕組みになっている。
 
-> 例（実際のルールは各機能の実装に依存する）:
->
-> | 用途 | アクセスできるユーザー |
-> |------|----------------------|
-> | お知らせ添付 | 配信先企画メンバー + owner/共同編集者 |
-> | フォーム回答添付 | 回答者本人 + フォームの owner/共同編集者 |
+#### 登録済みチェッカー
+
+| 用途 | ファイル | アクセスできるユーザー |
+|------|---------|----------------------|
+| お知らせ添付 | `lib/storage/checkers/notice.ts` | 実委人（全員） / 配信先企画のメンバー（承認済み & 配信日時到来） |
+
+新しいチェッカーを追加する場合は `lib/storage/checkers/` にファイルを作成し、`checkers/index.ts` に import を追加する。
+
+#### 仕組み
 
 ```typescript
 import { registerFileAccessChecker, canAccessFile } from "../lib/storage/access";
@@ -188,13 +191,13 @@ const hasAccess = await canAccessFile(fileId, user);
 **設計のポイント**:
 
 - **File テーブルは変更不要** — アクセス制御ロジックは各機能側に置く
-- **拡張が容易** — 新しい機能が増えたら `registerFileAccessChecker` で登録するだけ
+- **拡張が容易** — `lib/storage/checkers/` にファイルを追加し、`checkers/index.ts` で import するだけ
 - **チェッカーの独立性** — 各チェッカーは他のチェッカーを知らない。自分の管轄外なら `false` を返すだけ
 - **アップローダー本人は常にアクセス可** — チェッカーの前にチェックするため、どの機能にも紐づいていないファイルでも本人はアクセスできる
 
 **注意点**:
 
-- **登録タイミング**: アプリ起動時に全チェッカーが登録されている必要がある。`index.ts` での初期化順序に注意
+- **登録タイミング**: `checkers/index.ts` がアプリ起動時に読み込まれる必要がある
 - **パフォーマンス**: チェッカーが増えると DB クエリが増える。現時点では数個程度なので問題なし
 
 ---
@@ -256,6 +259,16 @@ const url = useStorageUrl(file.id, file.isPublic);
 {url && <a href={url} target="_blank">ダウンロード</a>}
 ```
 
+### ファイルダウンロード
+
+`downloadFile()` はファイルを Blob として取得し、ブラウザのダウンロードを実行する。別オリジン（S3 プロキシ経由）でも `download` 属性が機能するよう、Object URL を経由する。
+
+```typescript
+import { downloadFile } from "@/lib/api/files";
+
+await downloadFile(fileId, fileName, isPublic);
+```
+
 ### getAuthenticatedFileUrl 関数
 
 コンポーネント外（イベントハンドラ等）でトークン付き URL が必要な場合:
@@ -280,6 +293,8 @@ const url = await getAuthenticatedFileUrl(fileId);
 | `lib/storage/key.ts` | S3 キー生成、MIME → 拡張子マッピング |
 | `lib/storage/file-token.ts` | 署名付きトークンの生成・検証 |
 | `lib/storage/access.ts` | アクセスチェッカーレジストリ |
+| `lib/storage/checkers/index.ts` | チェッカー一括登録 |
+| `lib/storage/checkers/notice.ts` | お知らせ添付ファイル用アクセスチェッカー |
 | `lib/storage/cleanup.ts` | 古い PENDING レコードのクリーンアップ |
 
 ### 共有（SSOT）
