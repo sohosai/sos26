@@ -161,15 +161,15 @@
 	display: flex;
 	padding-top: 2px;
 
-	&[data-status="new"] {
+	&[data-status="UNASSIGNED"] {
 		color: var(--orange-9);
 	}
 
-	&[data-status="in_progress"] {
+	&[data-status="IN_PROGRESS"] {
 		color: var(--blue-9);
 	}
 
-	&[data-status="resolved"] {
+	&[data-status="RESOLVED"] {
 		color: var(--green-9);
 	}
 }

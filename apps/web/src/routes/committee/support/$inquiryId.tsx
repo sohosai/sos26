@@ -1,13 +1,18 @@
 import { Heading, Text } from "@radix-ui/themes";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { Button } from "@/components/primitives";
 import { SupportDetail } from "@/components/support/SupportDetail";
 import {
-	committeMembers,
-	currentCommitteeUser,
-	projectMembers,
-	useSupportStore,
-} from "@/mock/support";
+	addCommitteeInquiryAssignee,
+	addCommitteeInquiryComment,
+	getCommitteeInquiry,
+	removeCommitteeInquiryAssignee,
+	reopenCommitteeInquiry,
+	updateCommitteeInquiryStatus,
+} from "@/lib/api/committee-inquiry";
+import { listCommitteeMembers } from "@/lib/api/committee-member";
+import { listCommitteeProjectMembers } from "@/lib/api/committee-project";
 
 export const Route = createFileRoute("/committee/support/$inquiryId")({
 	component: CommitteeSupportDetailPage,
@@ -17,14 +22,30 @@ export const Route = createFileRoute("/committee/support/$inquiryId")({
 			{ name: "description", content: "問い合わせ詳細" },
 		],
 	}),
+	loader: async ({ params }) => {
+		const inquiryRes = await getCommitteeInquiry(params.inquiryId);
+		const [membersRes, projectMembersRes] = await Promise.all([
+			listCommitteeMembers(),
+			listCommitteeProjectMembers(inquiryRes.inquiry.projectId),
+		]);
+		return {
+			inquiry: inquiryRes.inquiry,
+			committeeMembers: membersRes.committeeMembers.map(m => ({
+				id: m.user.id,
+				name: m.user.name,
+			})),
+			projectMembers: projectMembersRes.members.map(m => ({
+				id: m.userId,
+				name: m.name,
+			})),
+		};
+	},
 });
 
 function CommitteeSupportDetailPage() {
 	const { inquiryId } = Route.useParams();
-	const { inquiries, updateStatus, addMessage, addAssignee, removeAssignee } =
-		useSupportStore();
-
-	const inquiry = inquiries.find(inq => inq.id === inquiryId);
+	const { inquiry, committeeMembers, projectMembers } = Route.useLoaderData();
+	const router = useRouter();
 
 	if (!inquiry) {
 		return (
@@ -45,20 +66,49 @@ function CommitteeSupportDetailPage() {
 			inquiry={inquiry}
 			viewerRole="committee"
 			basePath="/committee/support"
-			committeeMembers={committeMembers}
+			committeeMembers={committeeMembers}
 			projectMembers={projectMembers}
-			onUpdateStatus={status =>
-				updateStatus(inquiry.id, status, currentCommitteeUser)
-			}
-			onAddMessage={body =>
-				addMessage(inquiry.id, body, currentCommitteeUser, null)
-			}
-			onAddAssignee={(person, side) =>
-				addAssignee(inquiry.id, person, side, currentCommitteeUser)
-			}
-			onRemoveAssignee={(personId, side) =>
-				removeAssignee(inquiry.id, personId, side, currentCommitteeUser)
-			}
+			onUpdateStatus={async status => {
+				try {
+					if (status === "RESOLVED") {
+						await updateCommitteeInquiryStatus(inquiryId, {
+							status: "RESOLVED",
+						});
+					} else {
+						await reopenCommitteeInquiry(inquiryId);
+					}
+					await router.invalidate();
+				} catch {
+					toast.error("ステータスの更新に失敗しました");
+				}
+			}}
+			onAddComment={async body => {
+				try {
+					await addCommitteeInquiryComment(inquiryId, { body });
+					await router.invalidate();
+				} catch {
+					toast.error("コメントの送信に失敗しました");
+				}
+			}}
+			onAddAssignee={async (userId, side) => {
+				try {
+					await addCommitteeInquiryAssignee(inquiryId, {
+						userId,
+						side,
+					});
+					await router.invalidate();
+				} catch {
+					toast.error("担当者の追加に失敗しました");
+				}
+			}}
+			onRemoveAssignee={async assigneeId => {
+				try {
+					await removeCommitteeInquiryAssignee(inquiryId, assigneeId);
+					await router.invalidate();
+				} catch {
+					toast.error("担当者の削除に失敗しました");
+				}
+			}}
 		/>
 	);
 }

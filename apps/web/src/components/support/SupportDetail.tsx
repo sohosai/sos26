@@ -7,13 +7,13 @@ import {
 	Separator,
 	Text,
 } from "@radix-ui/themes";
+import type { GetProjectInquiryResponse, InquiryStatus } from "@sos26/shared";
 import {
 	IconAlertCircle,
 	IconArrowLeft,
 	IconCheck,
 	IconChevronDown,
 	IconCircleCheck,
-	IconFileText,
 	IconLoader,
 	IconSearch,
 	IconTrash,
@@ -22,19 +22,26 @@ import { useNavigate } from "@tanstack/react-router";
 import Avatar from "boring-avatars";
 import { useState } from "react";
 import { Button, TextArea } from "@/components/primitives";
-import type { Activity, Inquiry, InquiryStatus, Person } from "@/mock/support";
 import styles from "./SupportDetail.module.scss";
 
+type InquiryDetail = GetProjectInquiryResponse["inquiry"];
+type CommentInfo = InquiryDetail["comments"][number];
+type ActivityInfo = InquiryDetail["activities"][number];
+type AssigneeInfo = InquiryDetail["projectAssignees"][number];
+
 type SupportDetailProps = {
-	inquiry: Inquiry;
+	inquiry: InquiryDetail;
 	viewerRole: "project" | "committee";
 	basePath: string;
-	committeeMembers: Person[];
-	projectMembers: Person[];
-	onUpdateStatus: (status: InquiryStatus) => void;
-	onAddMessage: (body: string) => void;
-	onAddAssignee: (person: Person, side: "project" | "committee") => void;
-	onRemoveAssignee: (personId: string, side: "project" | "committee") => void;
+	committeeMembers: { id: string; name: string }[];
+	projectMembers: { id: string; name: string }[];
+	onUpdateStatus: (status: "RESOLVED" | "IN_PROGRESS") => Promise<void>;
+	onAddComment: (body: string) => Promise<void>;
+	onAddAssignee: (
+		userId: string,
+		side: "PROJECT" | "COMMITTEE"
+	) => Promise<void>;
+	onRemoveAssignee: (assigneeId: string) => Promise<void>;
 };
 
 const statusConfig: Record<
@@ -45,9 +52,13 @@ const statusConfig: Record<
 		icon: typeof IconAlertCircle;
 	}
 > = {
-	new: { label: "新規", color: "orange", icon: IconAlertCircle },
-	in_progress: { label: "対応中", color: "blue", icon: IconLoader },
-	resolved: { label: "解決済み", color: "green", icon: IconCircleCheck },
+	UNASSIGNED: {
+		label: "担当者未割り当て",
+		color: "orange",
+		icon: IconAlertCircle,
+	},
+	IN_PROGRESS: { label: "対応中", color: "blue", icon: IconLoader },
+	RESOLVED: { label: "解決済み", color: "green", icon: IconCircleCheck },
 };
 
 export function SupportDetail({
@@ -57,7 +68,7 @@ export function SupportDetail({
 	committeeMembers,
 	projectMembers,
 	onUpdateStatus,
-	onAddMessage,
+	onAddComment,
 	onAddAssignee,
 	onRemoveAssignee,
 }: SupportDetailProps) {
@@ -71,34 +82,55 @@ export function SupportDetail({
 	const config = statusConfig[inquiry.status];
 	const StatusIcon = config.icon;
 
-	const handleSubmitReply = () => {
+	const handleSubmitReply = async () => {
 		if (!replyText.trim()) return;
-		onAddMessage(replyText.trim());
+		await onAddComment(replyText.trim());
 		setReplyText("");
 	};
 
-	const toggleAssignee = (person: Person, side: "project" | "committee") => {
+	const toggleAssignee = async (
+		userId: string,
+		side: "PROJECT" | "COMMITTEE"
+	) => {
 		const assignees =
-			side === "committee"
+			side === "COMMITTEE"
 				? inquiry.committeeAssignees
 				: inquiry.projectAssignees;
-		const isAssigned = assignees.some(a => a.id === person.id);
-		if (isAssigned) {
-			onRemoveAssignee(person.id, side);
+		const existing = assignees.find(a => a.user.id === userId);
+		if (existing) {
+			await onRemoveAssignee(existing.id);
 		} else {
-			onAddAssignee(person, side);
+			await onAddAssignee(userId, side);
 		}
 	};
 
-	// メッセージとアクティビティを時系列で統合（GitHub issue 風）
+	// コメントとアクティビティを時系列で統合
 	type TimelineEntry =
-		| { kind: "message"; data: (typeof inquiry.messages)[number] }
-		| { kind: "activity"; data: Activity };
+		| { kind: "comment"; data: CommentInfo }
+		| { kind: "activity"; data: ActivityInfo };
 
 	const timelineEntries: TimelineEntry[] = [
-		...inquiry.messages.map(m => ({ kind: "message" as const, data: m })),
-		...inquiry.activities.map(a => ({ kind: "activity" as const, data: a })),
-	].sort((a, b) => a.data.createdAt.getTime() - b.data.createdAt.getTime());
+		...inquiry.comments.map(m => ({ kind: "comment" as const, data: m })),
+		...inquiry.activities.map(a => ({
+			kind: "activity" as const,
+			data: a,
+		})),
+	].sort(
+		(a, b) =>
+			new Date(a.data.createdAt).getTime() -
+			new Date(b.data.createdAt).getTime()
+	);
+
+	// コメント投稿者のロールを推定
+	const getCommentRole = (createdBy: {
+		id: string;
+		name: string;
+	}): "project" | "committee" => {
+		if (inquiry.committeeAssignees.some(a => a.user.id === createdBy.id)) {
+			return "committee";
+		}
+		return "project";
+	};
 
 	return (
 		<div className={styles.layout}>
@@ -120,10 +152,8 @@ export function SupportDetail({
 						<Heading size="5">{inquiry.title}</Heading>
 					</div>
 					<Text size="2" color="gray">
-						{inquiry.createdBy.name}
-						{(inquiry.createdBy.projectName || inquiry.createdBy.department) &&
-							`（${inquiry.createdBy.projectName ?? inquiry.createdBy.department}）`}{" "}
-						が {formatDateTime(inquiry.createdAt)} に作成
+						{inquiry.createdBy.name} が {formatDateTime(inquiry.createdAt)}{" "}
+						に作成
 					</Text>
 				</header>
 
@@ -131,24 +161,17 @@ export function SupportDetail({
 				<div className={styles.timeline}>
 					<TimelineItem
 						name={inquiry.createdBy.name}
-						role={inquiry.creatorRole}
-						affiliation={
-							inquiry.createdBy.projectName ?? inquiry.createdBy.department
-						}
+						role={inquiry.creatorRole === "COMMITTEE" ? "committee" : "project"}
 						date={inquiry.createdAt}
 						body={inquiry.body}
 					/>
 
 					{timelineEntries.map(entry =>
-						entry.kind === "message" ? (
+						entry.kind === "comment" ? (
 							<TimelineItem
 								key={entry.data.id}
 								name={entry.data.createdBy.name}
-								role={entry.data.createdBy.role}
-								affiliation={
-									entry.data.createdBy.projectName ??
-									entry.data.createdBy.department
-								}
+								role={getCommentRole(entry.data.createdBy)}
 								date={entry.data.createdAt}
 								body={entry.data.body}
 							/>
@@ -161,7 +184,7 @@ export function SupportDetail({
 				<Separator size="4" />
 
 				{/* 返信フォーム */}
-				{inquiry.status !== "resolved" ? (
+				{inquiry.status !== "RESOLVED" ? (
 					<section className={styles.replySection}>
 						<Heading size="3">コメントを追加</Heading>
 						<TextArea
@@ -185,7 +208,7 @@ export function SupportDetail({
 						{viewerRole === "project" && (
 							<Button
 								intent="secondary"
-								onClick={() => onUpdateStatus("in_progress")}
+								onClick={() => onUpdateStatus("IN_PROGRESS")}
 							>
 								再オープンする
 							</Button>
@@ -217,7 +240,7 @@ export function SupportDetail({
 						assignees={inquiry.committeeAssignees}
 						variant="committee"
 						canEdit={viewerRole === "committee"}
-						onRemove={id => onRemoveAssignee(id, "committee")}
+						onRemove={assigneeId => onRemoveAssignee(assigneeId)}
 					/>
 					{viewerRole === "committee" && (
 						<Popover.Root
@@ -257,30 +280,22 @@ export function SupportDetail({
 										.filter(person => {
 											const q = committeeSearchQuery.toLowerCase();
 											if (!q) return true;
-											return (
-												person.name.toLowerCase().includes(q) ||
-												(person.department?.toLowerCase().includes(q) ?? false)
-											);
+											return person.name.toLowerCase().includes(q);
 										})
 										.map(person => {
 											const isAssigned = inquiry.committeeAssignees.some(
-												a => a.id === person.id
+												a => a.user.id === person.id
 											);
 											return (
 												<button
 													key={person.id}
 													type="button"
 													className={`${styles.assignDropdownOption} ${isAssigned ? styles.assignDropdownOptionSelected : ""}`}
-													onClick={() => toggleAssignee(person, "committee")}
+													onClick={() => toggleAssignee(person.id, "COMMITTEE")}
 												>
 													<Avatar size={20} name={person.name} variant="beam" />
 													<div className={styles.assignDropdownOptionText}>
 														<Text size="2">{person.name}</Text>
-														{person.department && (
-															<Text size="1" color="gray">
-																{person.department}
-															</Text>
-														)}
 													</div>
 													{isAssigned && (
 														<IconCheck
@@ -307,10 +322,10 @@ export function SupportDetail({
 					<AssigneeList
 						assignees={inquiry.projectAssignees}
 						variant="project"
-						canEdit={viewerRole === "committee"}
-						onRemove={id => onRemoveAssignee(id, "project")}
+						canEdit={viewerRole === "committee" || viewerRole === "project"}
+						onRemove={assigneeId => onRemoveAssignee(assigneeId)}
 					/>
-					{viewerRole === "committee" && (
+					{(viewerRole === "committee" || viewerRole === "project") && (
 						<Popover.Root
 							open={projectPopoverOpen}
 							onOpenChange={o => {
@@ -348,30 +363,22 @@ export function SupportDetail({
 										.filter(person => {
 											const q = projectSearchQuery.toLowerCase();
 											if (!q) return true;
-											return (
-												person.name.toLowerCase().includes(q) ||
-												(person.projectName?.toLowerCase().includes(q) ?? false)
-											);
+											return person.name.toLowerCase().includes(q);
 										})
 										.map(person => {
 											const isAssigned = inquiry.projectAssignees.some(
-												a => a.id === person.id
+												a => a.user.id === person.id
 											);
 											return (
 												<button
 													key={person.id}
 													type="button"
 													className={`${styles.assignDropdownOption} ${isAssigned ? styles.assignDropdownOptionSelected : ""}`}
-													onClick={() => toggleAssignee(person, "project")}
+													onClick={() => toggleAssignee(person.id, "PROJECT")}
 												>
 													<Avatar size={20} name={person.name} variant="beam" />
 													<div className={styles.assignDropdownOptionText}>
 														<Text size="2">{person.name}</Text>
-														{person.projectName && (
-															<Text size="1" color="gray">
-																{person.projectName}
-															</Text>
-														)}
 													</div>
 													{isAssigned && (
 														<IconCheck
@@ -395,34 +402,27 @@ export function SupportDetail({
 					<Text size="2" weight="medium" color="gray">
 						関連フォーム
 					</Text>
-					{inquiry.relatedForm ? (
-						<div className={styles.formLink}>
-							<IconFileText size={16} />
-							<Text size="2">{inquiry.relatedForm.name}</Text>
-						</div>
-					) : (
-						<Text size="1" color="gray">
-							なし
-						</Text>
-					)}
+					<Text size="1" color="gray">
+						なし
+					</Text>
 				</div>
 
 				{viewerRole === "committee" && (
 					<>
 						<Separator size="4" />
-						{inquiry.status !== "resolved" && (
+						{inquiry.status !== "RESOLVED" && (
 							<Button
 								intent="secondary"
-								onClick={() => onUpdateStatus("resolved")}
+								onClick={() => onUpdateStatus("RESOLVED")}
 							>
 								<IconCheck size={16} />
 								解決済みにする
 							</Button>
 						)}
-						{inquiry.status === "resolved" && (
+						{inquiry.status === "RESOLVED" && (
 							<Button
 								intent="secondary"
-								onClick={() => onUpdateStatus("in_progress")}
+								onClick={() => onUpdateStatus("IN_PROGRESS")}
 							>
 								再オープンする
 							</Button>
@@ -439,7 +439,6 @@ export function SupportDetail({
 function TimelineItem({
 	name,
 	role,
-	affiliation,
 	date,
 	body,
 }: {
@@ -459,11 +458,6 @@ function TimelineItem({
 					<Text size="2" weight="medium">
 						{name}
 					</Text>
-					{affiliation && (
-						<Text size="1" color="gray">
-							{affiliation}
-						</Text>
-					)}
 					<Badge
 						size="1"
 						variant="soft"
@@ -483,33 +477,31 @@ function TimelineItem({
 	);
 }
 
-function getActivityText(activity: Activity): string {
+function getActivityText(activity: ActivityInfo): string {
 	const actor = activity.actor.name;
 	switch (activity.type) {
-		case "assignee_added": {
-			const side =
-				activity.targetSide === "committee" ? "実行委員会" : "企画側";
+		case "ASSIGNEE_ADDED": {
 			const target = activity.target?.name ?? "";
 			return actor === target
-				? `${actor} が ${side}の担当者になりました`
-				: `${actor} が ${target} を${side}の担当者に設定しました`;
+				? `${actor} が担当者になりました`
+				: `${actor} が ${target} を担当者に設定しました`;
 		}
-		case "assignee_removed": {
-			const side =
-				activity.targetSide === "committee" ? "実行委員会" : "企画側";
+		case "ASSIGNEE_REMOVED": {
 			const target = activity.target?.name ?? "";
 			return actor === target
-				? `${actor} が ${side}の担当者から外れました`
-				: `${actor} が ${target} を${side}の担当者から外しました`;
+				? `${actor} が担当者から外れました`
+				: `${actor} が ${target} を担当者から外しました`;
 		}
-		case "status_resolved":
+		case "STATUS_RESOLVED":
 			return `${actor} がこのお問い合わせを解決済みにしました`;
-		case "status_reopened":
+		case "STATUS_REOPENED":
 			return `${actor} がこのお問い合わせを再オープンしました`;
+		case "VIEWER_UPDATED":
+			return `${actor} が閲覧者設定を変更しました`;
 	}
 }
 
-function ActivityItem({ activity }: { activity: Activity }) {
+function ActivityItem({ activity }: { activity: ActivityInfo }) {
 	return (
 		<div className={styles.activityItem}>
 			<Text size="1" color="gray">
@@ -525,10 +517,10 @@ function AssigneeList({
 	canEdit,
 	onRemove,
 }: {
-	assignees: Person[];
+	assignees: AssigneeInfo[];
 	variant: "project" | "committee";
 	canEdit: boolean;
-	onRemove: (id: string) => void;
+	onRemove: (assigneeId: string) => void;
 }) {
 	if (assignees.length === 0) {
 		return (
@@ -540,25 +532,20 @@ function AssigneeList({
 
 	return (
 		<div className={styles.assigneeList}>
-			{assignees.map(p => (
-				<div key={p.id} className={styles.assigneeItem}>
+			{assignees.map(a => (
+				<div key={a.id} className={styles.assigneeItem}>
 					<span className={styles.sidebarAvatar} data-variant={variant}>
-						<Avatar size={20} name={p.name} variant="beam" />
+						<Avatar size={20} name={a.user.name} variant="beam" />
 					</span>
 					<div>
-						<Text size="2">{p.name}</Text>
-						{(p.projectName || p.department) && (
-							<Text size="1" color="gray" as="p">
-								{p.projectName ?? p.department}
-							</Text>
-						)}
+						<Text size="2">{a.user.name}</Text>
 					</div>
-					{canEdit && (
+					{canEdit && !a.isCreator && (
 						<IconButton
 							variant="ghost"
 							size="1"
 							color="red"
-							onClick={() => onRemove(p.id)}
+							onClick={() => onRemove(a.id)}
 						>
 							<IconTrash size={12} />
 						</IconButton>
@@ -570,10 +557,11 @@ function AssigneeList({
 }
 
 function formatDateTime(date: Date): string {
-	const y = date.getFullYear();
-	const m = (date.getMonth() + 1).toString().padStart(2, "0");
-	const d = date.getDate().toString().padStart(2, "0");
-	const h = date.getHours().toString().padStart(2, "0");
-	const min = date.getMinutes().toString().padStart(2, "0");
-	return `${y}/${m}/${d} ${h}:${min}`;
+	const d = new Date(date);
+	const y = d.getFullYear();
+	const m = (d.getMonth() + 1).toString().padStart(2, "0");
+	const day = d.getDate().toString().padStart(2, "0");
+	const h = d.getHours().toString().padStart(2, "0");
+	const min = d.getMinutes().toString().padStart(2, "0");
+	return `${y}/${m}/${day} ${h}:${min}`;
 }
