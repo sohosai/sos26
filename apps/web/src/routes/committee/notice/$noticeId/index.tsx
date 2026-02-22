@@ -25,18 +25,12 @@ import {
 } from "@/lib/api/committee-notice";
 import { downloadFile } from "@/lib/api/files";
 import { useAuthStore } from "@/lib/auth";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatFileSize } from "@/lib/format";
 import { getNoticeStatusFromAuth } from "@/lib/notice-status";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { CreateNoticeDialog } from "../-components/CreateNoticeDialog";
 import { NoticeDetailSidebar } from "./-components/NoticeDetailSidebar";
 import styles from "./index.module.scss";
-
-function formatFileSize(bytes: number): string {
-	if (bytes < 1024) return `${bytes} B`;
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 type NoticeDetail = GetNoticeResponse["notice"];
 

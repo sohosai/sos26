@@ -7,18 +7,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/primitives";
 import { downloadFile } from "@/lib/api/files";
 import { getProjectNotice, readProjectNotice } from "@/lib/api/project-notice";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatFileSize } from "@/lib/format";
 import { sanitizeHtml } from "@/lib/sanitize";
 import styles from "./NoticeDetailDialog.module.scss";
 
 const getBureauLabel = (bureau: string): string =>
 	bureauLabelMap[bureau as Bureau] ?? bureau;
-
-function formatFileSize(bytes: number): string {
-	if (bytes < 1024) return `${bytes} B`;
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 type Props = {
 	noticeId: string | null;

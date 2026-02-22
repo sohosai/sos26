@@ -12,13 +12,8 @@ import {
 	updateNotice,
 } from "@/lib/api/committee-notice";
 import { uploadFile } from "@/lib/api/files";
+import { formatFileSize } from "@/lib/format";
 import styles from "./CreateNoticeDialog.module.scss";
-
-function formatFileSize(bytes: number): string {
-	if (bytes < 1024) return `${bytes} B`;
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 type Props = {
 	open: boolean;
