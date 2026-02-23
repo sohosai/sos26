@@ -18,7 +18,7 @@ export const Route = createFileRoute("/project/support/$inquiryId")({
 	component: ProjectSupportDetailPage,
 	head: () => ({
 		meta: [
-			{ title: "おお問い合わせ詳細 | 雙峰祭オンラインシステム" },
+			{ title: "お問い合わせ詳細 | 雙峰祭オンラインシステム" },
 			{ name: "description", content: "お問い合わせ詳細" },
 		],
 	}),

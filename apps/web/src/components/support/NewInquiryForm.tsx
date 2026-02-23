@@ -221,11 +221,11 @@ export function NewInquiryForm({
 			}}
 		>
 			<Dialog.Content maxWidth="640px">
-				<Dialog.Title>新しいおお問い合わせを作成</Dialog.Title>
+				<Dialog.Title>新しい問い合わせを作成</Dialog.Title>
 				<Dialog.Description size="2" color="gray">
 					{viewerRole === "project"
-						? "実行委員会へのおお問い合わせを作成します"
-						: "企画へのおお問い合わせを作成します"}
+						? "実行委員会へのお問い合わせを作成します"
+						: "企画へのお問い合わせを作成します"}
 				</Dialog.Description>
 
 				<div className={styles.form}>
