@@ -584,6 +584,9 @@ projectInquiryRoute.delete(
 		if (!assignee) {
 			throw Errors.notFound("担当者が見つかりません");
 		}
+		if (assignee.side !== "PROJECT") {
+			throw Errors.forbidden("企画側の担当者のみ削除できます");
+		}
 		if (assignee.isCreator) {
 			throw Errors.invalidRequest("作成者は担当者から削除できません");
 		}
