@@ -79,11 +79,9 @@ export async function reopenProjectInquiry(
 	projectId: string,
 	inquiryId: string
 ): Promise<ReopenInquiryResponse> {
-	return callBodyApi(
-		reopenProjectInquiryEndpoint,
-		{ status: "RESOLVED" },
-		{ pathParams: { projectId, inquiryId } }
-	);
+	return callNoBodyApi(reopenProjectInquiryEndpoint, {
+		pathParams: { projectId, inquiryId },
+	});
 }
 
 /**

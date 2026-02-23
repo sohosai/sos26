@@ -23,7 +23,12 @@ import {
 	updateInquiryViewersResponseSchema,
 } from "../schemas/inquiry";
 import { projectIdPathParamsSchema } from "../schemas/project";
-import type { BodyEndpoint, GetEndpoint, NoBodyEndpoint } from "./types";
+import type {
+	BodyEndpoint,
+	Endpoint,
+	GetEndpoint,
+	NoBodyEndpoint,
+} from "./types";
 
 // ─────────────────────────────────────────────────────────────
 // 企画側: /project/:projectId/inquiries
@@ -108,20 +113,22 @@ export const addProjectInquiryCommentEndpoint: BodyEndpoint<
 /**
  * PATCH /project/:projectId/inquiries/:inquiryId/reopen
  * 企画側から再オープン（RESOLVED → IN_PROGRESS）
+ *
+ * bodyを持たないPATCHのため、BodyEndpoint/NoBodyEndpoint ではなく Endpoint を直接使用
  */
-export const reopenProjectInquiryEndpoint: BodyEndpoint<
+export const reopenProjectInquiryEndpoint: Endpoint<
 	"PATCH",
 	"/project/:projectId/inquiries/:inquiryId/reopen",
 	typeof projectInquiryIdPathParamsSchema,
 	undefined,
-	typeof updateInquiryStatusRequestSchema,
+	undefined,
 	typeof reopenInquiryResponseSchema
 > = {
 	method: "PATCH",
 	path: "/project/:projectId/inquiries/:inquiryId/reopen",
 	pathParams: projectInquiryIdPathParamsSchema,
 	query: undefined,
-	request: updateInquiryStatusRequestSchema,
+	request: undefined,
 	response: reopenInquiryResponseSchema,
 } as const;
 
@@ -270,20 +277,22 @@ export const updateCommitteeInquiryStatusEndpoint: BodyEndpoint<
 /**
  * PATCH /committee/inquiries/:inquiryId/reopen
  * 再オープン（RESOLVED → IN_PROGRESS）（担当者 or 管理者のみ）
+ *
+ * bodyを持たないPATCHのため、BodyEndpoint/NoBodyEndpoint ではなく Endpoint を直接使用
  */
-export const reopenCommitteeInquiryEndpoint: BodyEndpoint<
+export const reopenCommitteeInquiryEndpoint: Endpoint<
 	"PATCH",
 	"/committee/inquiries/:inquiryId/reopen",
 	typeof inquiryIdPathParamsSchema,
 	undefined,
-	typeof updateInquiryStatusRequestSchema,
+	undefined,
 	typeof reopenInquiryResponseSchema
 > = {
 	method: "PATCH",
 	path: "/committee/inquiries/:inquiryId/reopen",
 	pathParams: inquiryIdPathParamsSchema,
 	query: undefined,
-	request: updateInquiryStatusRequestSchema,
+	request: undefined,
 	response: reopenInquiryResponseSchema,
 } as const;
 

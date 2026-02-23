@@ -88,11 +88,9 @@ export async function updateCommitteeInquiryStatus(
 export async function reopenCommitteeInquiry(
 	inquiryId: string
 ): Promise<ReopenInquiryResponse> {
-	return callBodyApi(
-		reopenCommitteeInquiryEndpoint,
-		{ status: "RESOLVED" },
-		{ pathParams: { inquiryId } }
-	);
+	return callNoBodyApi(reopenCommitteeInquiryEndpoint, {
+		pathParams: { inquiryId },
+	});
 }
 
 /**
