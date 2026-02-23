@@ -8,9 +8,10 @@ import { FormItemList } from "./ItemList";
 type Props = {
 	initialForm: Form;
 	onSubmit?: (form: Form) => void;
+	loading: boolean;
 };
 
-export function FormEditor({ initialForm, onSubmit }: Props) {
+export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 	const [formName, setFormName] = useState(initialForm.name);
 	const [formDescription, setFormDescription] = useState(
 		initialForm.description ?? ""
@@ -92,7 +93,9 @@ export function FormEditor({ initialForm, onSubmit }: Props) {
 				<IconPlus size={16} stroke={1.5} />
 				項目を追加
 			</Button>
-			<Button onClick={handleSubmit}>保存</Button>
+			<Button onClick={handleSubmit} loading={loading}>
+				保存
+			</Button>
 		</div>
 	);
 }

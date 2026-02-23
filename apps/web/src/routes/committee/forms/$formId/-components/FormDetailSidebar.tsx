@@ -1,5 +1,5 @@
 import { Badge, Separator, Text } from "@radix-ui/themes";
-import type { GetNoticeResponse } from "@sos26/shared";
+import type { GetFormDetailResponse } from "@sos26/shared";
 import {
 	IconCheck,
 	IconPlus,
@@ -9,13 +9,13 @@ import {
 } from "@tabler/icons-react";
 import Avatar from "boring-avatars";
 import { useState } from "react";
-import { AddCollaboratorDialog } from "@/components/committee/AddCollaboratorDialog";
 import { Button, IconButton } from "@/components/primitives";
 import { formatDate } from "@/lib/format";
-import styles from "./NoticeDetailSidebar.module.scss";
-import { PublishRequestDialog } from "./PublishRequestDialog";
+import { AddCollaboratorDialog } from "../../../../../components/committee/AddCollaboratorDialog";
+import styles from "./FormDetailSidebar.module.scss";
+import { FormPublishRequestDialog } from "./FormPublishRequestDialog";
 
-type NoticeDetail = GetNoticeResponse["notice"];
+type FormDetail = GetFormDetailResponse["form"];
 
 type AvailableMember = {
 	userId: string;
@@ -28,8 +28,8 @@ type Approver = {
 };
 
 type Props = {
-	notice: NoticeDetail;
-	noticeId: string;
+	form: FormDetail;
+	formId: string;
 	userId: string;
 	isOwner: boolean;
 	canEdit: boolean;
@@ -45,9 +45,9 @@ type Props = {
 	onDelete: () => void;
 };
 
-export function NoticeDetailSidebar({
-	notice,
-	noticeId,
+export function FormDetailSidebar({
+	form,
+	formId,
 	userId,
 	isOwner,
 	canEdit,
@@ -67,17 +67,16 @@ export function NoticeDetailSidebar({
 	const [approvingId, setApprovingId] = useState<string | null>(null);
 	const [rejectingId, setRejectingId] = useState<string | null>(null);
 
-	const pendingAuth = notice.authorizations.find(a => a.status === "PENDING");
-	const approvedAuth = notice.authorizations.find(a => a.status === "APPROVED");
+	const pendingAuth = form.authorizations.find(a => a.status === "PENDING");
+	const approvedAuth = form.authorizations.find(a => a.status === "APPROVED");
 	const latestAuth = pendingAuth ?? approvedAuth;
 	const isApprover = pendingAuth?.requestedToId === userId;
-	const hasApprovedAuth = notice.authorizations.some(
+	const hasApprovedAuth = form.authorizations.some(
 		a => a.status === "APPROVED"
 	);
-	const hasPendingAuth = notice.authorizations.some(
-		a => a.status === "PENDING"
-	);
+	const hasPendingAuth = form.authorizations.some(a => a.status === "PENDING");
 	const canPublish = canEdit && !hasApprovedAuth && !hasPendingAuth;
+	const canEditForm = canEdit && !hasApprovedAuth;
 
 	const showAuthBox = canPublish || latestAuth;
 
@@ -92,9 +91,9 @@ export function NoticeDetailSidebar({
 							オーナー
 						</Text>
 						<div className={styles.ownerItem}>
-							<Avatar size={32} name={notice.owner.name} variant="beam" />
+							<Avatar size={32} name={form.owner.name} variant="beam" />
 							<Text size="2" weight="medium">
-								{notice.owner.name}
+								{form.owner.name}
 							</Text>
 						</div>
 					</div>
@@ -107,27 +106,27 @@ export function NoticeDetailSidebar({
 							<Text size="2" weight="medium" color="gray">
 								共同編集者
 							</Text>
-							{notice.collaborators.length > 0 && (
+							{form.collaborators.length > 0 && (
 								<Badge variant="soft" size="1">
-									{notice.collaborators.length}
+									{form.collaborators.length}
 								</Badge>
 							)}
 						</div>
-						{notice.collaborators.length === 0 ? (
+						{form.collaborators.length === 0 ? (
 							<Text size="1" color="gray">
 								なし
 							</Text>
 						) : (
 							<div className={styles.collaboratorList}>
-								{notice.collaborators.map(c => (
+								{form.collaborators.map(c => (
 									<div key={c.id} className={styles.collaboratorItem}>
 										<Avatar size={24} name={c.user.name} variant="beam" />
 										<Text size="2">{c.user.name}</Text>
 										{isOwner && (
 											<IconButton
 												aria-label={`${c.user.name}を削除`}
-												onClick={() => onRemoveCollaborator(c.id)}
-												disabled={removingId === c.id}
+												onClick={() => onRemoveCollaborator(c.user.id)}
+												disabled={removingId === c.user.id}
 											>
 												<IconTrash size={16} />
 											</IconButton>
@@ -148,15 +147,13 @@ export function NoticeDetailSidebar({
 						)}
 					</div>
 
-					{(canEdit || isOwner) && (
+					{canEditForm && (
 						<>
 							<Separator size="4" />
 							<div className={styles.actions}>
-								{canEdit && (
-									<Button intent="secondary" size="2" onClick={onEdit}>
-										編集
-									</Button>
-								)}
+								<Button intent="secondary" size="2" onClick={onEdit}>
+									編集
+								</Button>
 								{isOwner && (
 									<Button intent="ghost" size="2" onClick={onDelete}>
 										<IconTrash size={14} />
@@ -223,10 +220,10 @@ export function NoticeDetailSidebar({
 				onAdd={onAddCollaborator}
 			/>
 
-			<PublishRequestDialog
+			<FormPublishRequestDialog
 				open={publishRequestOpen}
 				onOpenChange={setPublishRequestOpen}
-				noticeId={noticeId}
+				formId={formId}
 				approvers={approvers}
 				onSuccess={onPublishSuccess}
 			/>
@@ -235,8 +232,8 @@ export function NoticeDetailSidebar({
 }
 
 type AuthDetailSectionProps = {
-	auth: NoticeDetail["authorizations"][number];
-	pendingAuth: NoticeDetail["authorizations"][number] | undefined;
+	auth: FormDetail["authorizations"][number];
+	pendingAuth: FormDetail["authorizations"][number] | undefined;
 	isApprover: boolean;
 	approvingId: string | null;
 	rejectingId: string | null;
@@ -285,22 +282,8 @@ function AuthDetailSection({
 				<Text size="2" color="gray">
 					公開希望日時
 				</Text>
-				<Text size="2">{formatDate(auth.deliveredAt, "datetime")}</Text>
+				<Text size="2">{formatDate(auth.scheduledSendAt, "datetime")}</Text>
 			</div>
-			{auth.deliveries.length > 0 && (
-				<div className={styles.authDetailRow}>
-					<Text size="2" color="gray">
-						配信先
-					</Text>
-					<div className={styles.projectTags}>
-						{auth.deliveries.map(d => (
-							<Badge key={d.id} variant="soft" size="1">
-								{d.project.name}
-							</Badge>
-						))}
-					</div>
-				</div>
-			)}
 			{isApprover && pendingAuth && (
 				<div className={styles.authorizationActions}>
 					<Button

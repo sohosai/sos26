@@ -35,6 +35,7 @@ import { Route as AuthRegisterIndexRouteImport } from './routes/auth/register/in
 import { Route as AuthLoginIndexRouteImport } from './routes/auth/login/index'
 import { Route as DevUiComponentsIndexRouteImport } from './routes/dev/ui/components/index'
 import { Route as CommitteeNoticeNoticeIdIndexRouteImport } from './routes/committee/notice/$noticeId/index'
+import { Route as CommitteeFormsFormIdIndexRouteImport } from './routes/committee/forms/$formId/index'
 import { Route as AuthRegisterVerifyIndexRouteImport } from './routes/auth/register/verify/index'
 import { Route as AuthRegisterSetupIndexRouteImport } from './routes/auth/register/setup/index'
 
@@ -170,6 +171,12 @@ const CommitteeNoticeNoticeIdIndexRoute =
     path: '/notice/$noticeId/',
     getParentRoute: () => CommitteeRouteRoute,
   } as any)
+const CommitteeFormsFormIdIndexRoute =
+  CommitteeFormsFormIdIndexRouteImport.update({
+    id: '/forms/$formId/',
+    path: '/forms/$formId/',
+    getParentRoute: () => CommitteeRouteRoute,
+  } as any)
 const AuthRegisterVerifyIndexRoute = AuthRegisterVerifyIndexRouteImport.update({
   id: '/register/verify/',
   path: '/register/verify/',
@@ -208,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/project/notice/': typeof ProjectNoticeIndexRoute
   '/auth/register/setup/': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify/': typeof AuthRegisterVerifyIndexRoute
+  '/committee/forms/$formId/': typeof CommitteeFormsFormIdIndexRoute
   '/committee/notice/$noticeId/': typeof CommitteeNoticeNoticeIdIndexRoute
   '/dev/ui/components/': typeof DevUiComponentsIndexRoute
 }
@@ -235,6 +243,7 @@ export interface FileRoutesByTo {
   '/project/notice': typeof ProjectNoticeIndexRoute
   '/auth/register/setup': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify': typeof AuthRegisterVerifyIndexRoute
+  '/committee/forms/$formId': typeof CommitteeFormsFormIdIndexRoute
   '/committee/notice/$noticeId': typeof CommitteeNoticeNoticeIdIndexRoute
   '/dev/ui/components': typeof DevUiComponentsIndexRoute
 }
@@ -266,6 +275,7 @@ export interface FileRoutesById {
   '/project/notice/': typeof ProjectNoticeIndexRoute
   '/auth/register/setup/': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify/': typeof AuthRegisterVerifyIndexRoute
+  '/committee/forms/$formId/': typeof CommitteeFormsFormIdIndexRoute
   '/committee/notice/$noticeId/': typeof CommitteeNoticeNoticeIdIndexRoute
   '/dev/ui/components/': typeof DevUiComponentsIndexRoute
 }
@@ -298,6 +308,7 @@ export interface FileRouteTypes {
     | '/project/notice/'
     | '/auth/register/setup/'
     | '/auth/register/verify/'
+    | '/committee/forms/$formId/'
     | '/committee/notice/$noticeId/'
     | '/dev/ui/components/'
   fileRoutesByTo: FileRoutesByTo
@@ -325,6 +336,7 @@ export interface FileRouteTypes {
     | '/project/notice'
     | '/auth/register/setup'
     | '/auth/register/verify'
+    | '/committee/forms/$formId'
     | '/committee/notice/$noticeId'
     | '/dev/ui/components'
   id:
@@ -355,6 +367,7 @@ export interface FileRouteTypes {
     | '/project/notice/'
     | '/auth/register/setup/'
     | '/auth/register/verify/'
+    | '/committee/forms/$formId/'
     | '/committee/notice/$noticeId/'
     | '/dev/ui/components/'
   fileRoutesById: FileRoutesById
@@ -553,6 +566,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CommitteeNoticeNoticeIdIndexRouteImport
       parentRoute: typeof CommitteeRouteRoute
     }
+    '/committee/forms/$formId/': {
+      id: '/committee/forms/$formId/'
+      path: '/forms/$formId'
+      fullPath: '/committee/forms/$formId/'
+      preLoaderRoute: typeof CommitteeFormsFormIdIndexRouteImport
+      parentRoute: typeof CommitteeRouteRoute
+    }
     '/auth/register/verify/': {
       id: '/auth/register/verify/'
       path: '/register/verify'
@@ -595,6 +615,7 @@ interface CommitteeRouteRouteChildren {
   CommitteeFormsIndexRoute: typeof CommitteeFormsIndexRoute
   CommitteeMembersIndexRoute: typeof CommitteeMembersIndexRoute
   CommitteeNoticeIndexRoute: typeof CommitteeNoticeIndexRoute
+  CommitteeFormsFormIdIndexRoute: typeof CommitteeFormsFormIdIndexRoute
   CommitteeNoticeNoticeIdIndexRoute: typeof CommitteeNoticeNoticeIdIndexRoute
 }
 
@@ -603,6 +624,7 @@ const CommitteeRouteRouteChildren: CommitteeRouteRouteChildren = {
   CommitteeFormsIndexRoute: CommitteeFormsIndexRoute,
   CommitteeMembersIndexRoute: CommitteeMembersIndexRoute,
   CommitteeNoticeIndexRoute: CommitteeNoticeIndexRoute,
+  CommitteeFormsFormIdIndexRoute: CommitteeFormsFormIdIndexRoute,
   CommitteeNoticeNoticeIdIndexRoute: CommitteeNoticeNoticeIdIndexRoute,
 }
 
