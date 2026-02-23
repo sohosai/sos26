@@ -1,14 +1,10 @@
 import { Badge, Heading, Text, Tooltip } from "@radix-ui/themes";
-import type {
-	InquiryStatus,
-	ListProjectInquiriesResponse,
-} from "@sos26/shared";
+import type { ListProjectInquiriesResponse } from "@sos26/shared";
 import {
 	IconAlertCircle,
 	IconCircleCheck,
 	IconCircleDot,
 	IconEye,
-	IconMessageDots,
 	IconPlus,
 	IconSearch,
 	IconUserCheck,
@@ -17,6 +13,7 @@ import { useNavigate } from "@tanstack/react-router";
 import Avatar from "boring-avatars";
 import { useState } from "react";
 import { Button, TextField } from "@/components/primitives";
+import { statusConfig } from "./constants";
 import styles from "./SupportList.module.scss";
 
 type InquirySummary = ListProjectInquiriesResponse["inquiries"][number];
@@ -29,23 +26,6 @@ type SupportListProps = {
 	basePath: string;
 	onNewInquiry: () => void;
 	isAdmin?: boolean;
-};
-
-const statusConfig: Record<
-	InquiryStatus,
-	{
-		label: string;
-		color: "orange" | "blue" | "green";
-		icon: typeof IconAlertCircle;
-	}
-> = {
-	UNASSIGNED: {
-		label: "担当者未割り当て",
-		color: "orange",
-		icon: IconAlertCircle,
-	},
-	IN_PROGRESS: { label: "対応中", color: "blue", icon: IconMessageDots },
-	RESOLVED: { label: "解決済み", color: "green", icon: IconCircleCheck },
 };
 
 type CommitteeTab = "open" | "resolved";

@@ -17,6 +17,7 @@ import {
 } from "@tabler/icons-react";
 import Avatar from "boring-avatars";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button, TextArea, TextField } from "@/components/primitives";
 import { formatFileSize } from "@/lib/format";
 import styles from "./NewInquiryForm.module.scss";
@@ -201,6 +202,8 @@ export function NewInquiryForm({
 			await onSubmit(params);
 			reset();
 			onOpenChange(false);
+		} catch {
+			toast.error("お問い合わせの作成に失敗しました");
 		} finally {
 			setIsSubmitting(false);
 		}

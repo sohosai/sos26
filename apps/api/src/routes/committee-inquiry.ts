@@ -809,17 +809,39 @@ committeeInquiryRoute.delete(
 			throw Errors.invalidRequest("作成者は担当者から削除できません");
 		}
 
-		await prisma.$transaction([
-			prisma.inquiryAssignee.delete({ where: { id: assigneeId } }),
-			prisma.inquiryActivity.create({
+		await prisma.$transaction(async tx => {
+			await tx.inquiryAssignee.delete({ where: { id: assigneeId } });
+
+			await tx.inquiryActivity.create({
 				data: {
 					inquiryId,
 					type: "ASSIGNEE_REMOVED",
 					actorId: user.id,
 					targetId: assignee.userId,
 				},
-			}),
-		]);
+			});
+
+			// 実委側担当者が0人になったら IN_PROGRESS → UNASSIGNED に自動遷移
+			if (assignee.side === "COMMITTEE") {
+				const remainingCommittee = await tx.inquiryAssignee.count({
+					where: {
+						inquiryId,
+						side: "COMMITTEE",
+					},
+				});
+				if (remainingCommittee === 0) {
+					const inquiry = await tx.inquiry.findFirstOrThrow({
+						where: { id: inquiryId },
+					});
+					if (inquiry.status === "IN_PROGRESS") {
+						await tx.inquiry.update({
+							where: { id: inquiryId },
+							data: { status: "UNASSIGNED" },
+						});
+					}
+				}
+			}
+		});
 
 		return c.json({ success: true as const });
 	}

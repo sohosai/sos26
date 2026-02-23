@@ -11,18 +11,14 @@ import type {
 	Bureau,
 	GetProjectInquiryResponse,
 	InquiryAttachment,
-	InquiryStatus,
 	InquiryViewerScope,
 } from "@sos26/shared";
 import { bureauLabelMap } from "@sos26/shared";
 import {
-	IconAlertCircle,
 	IconArrowLeft,
 	IconCheck,
 	IconChevronDown,
-	IconCircleCheck,
 	IconDownload,
-	IconMessageDots,
 	IconPaperclip,
 	IconPlus,
 	IconSearch,
@@ -37,6 +33,7 @@ import { Button, TextArea } from "@/components/primitives";
 import { downloadFile, uploadFile } from "@/lib/api/files";
 import { formatFileSize } from "@/lib/format";
 import { useStorageUrl } from "@/lib/storage";
+import { statusConfig } from "./constants";
 import styles from "./SupportDetail.module.scss";
 
 type InquiryDetail = GetProjectInquiryResponse["inquiry"];
@@ -76,23 +73,6 @@ type SupportDetailProps = {
 	onUpdateViewers?: (viewers: ViewerInput[]) => Promise<void>;
 	/** 実委側: 担当者 or 管理者かどうか（編集 UI の出し分け） */
 	isAssigneeOrAdmin?: boolean;
-};
-
-const statusConfig: Record<
-	InquiryStatus,
-	{
-		label: string;
-		color: "orange" | "blue" | "green";
-		icon: typeof IconAlertCircle;
-	}
-> = {
-	UNASSIGNED: {
-		label: "担当者未割り当て",
-		color: "orange",
-		icon: IconAlertCircle,
-	},
-	IN_PROGRESS: { label: "対応中", color: "blue", icon: IconMessageDots },
-	RESOLVED: { label: "解決済み", color: "green", icon: IconCircleCheck },
 };
 
 export function SupportDetail({
