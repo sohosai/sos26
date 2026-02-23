@@ -4,7 +4,6 @@ import {
 	useRouter,
 } from "@tanstack/react-router";
 import { useState } from "react";
-import { toast } from "sonner";
 import { NewInquiryForm } from "@/components/support/NewInquiryForm";
 import { SupportList } from "@/components/support/SupportList";
 import {
@@ -101,25 +100,21 @@ function CommitteeSupportListPage() {
 				onLoadProjectMembers={handleLoadProjectMembers}
 				committeeMembers={committeeMembers}
 				onSubmit={async params => {
-					try {
-						if (!params.projectId || !params.projectAssigneeUserIds) return;
-						const { inquiry } = await createCommitteeInquiry({
-							title: params.title,
-							body: params.body,
-							projectId: params.projectId,
-							projectAssigneeUserIds: params.projectAssigneeUserIds,
-							committeeAssigneeUserIds: params.committeeAssigneeUserIds,
-							fileIds: params.fileIds,
-							viewers: params.viewers,
-						});
-						await router.invalidate();
-						navigate({
-							to: "/committee/support/$inquiryId",
-							params: { inquiryId: inquiry.id },
-						});
-					} catch {
-						toast.error("お問い合わせの作成に失敗しました");
-					}
+					if (!params.projectId || !params.projectAssigneeUserIds) return;
+					const { inquiry } = await createCommitteeInquiry({
+						title: params.title,
+						body: params.body,
+						projectId: params.projectId,
+						projectAssigneeUserIds: params.projectAssigneeUserIds,
+						committeeAssigneeUserIds: params.committeeAssigneeUserIds,
+						fileIds: params.fileIds,
+						viewers: params.viewers,
+					});
+					await router.invalidate();
+					navigate({
+						to: "/committee/support/$inquiryId",
+						params: { inquiryId: inquiry.id },
+					});
 				}}
 			/>
 		</>

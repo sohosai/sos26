@@ -4,7 +4,6 @@ import {
 	useRouter,
 } from "@tanstack/react-router";
 import { useState } from "react";
-import { toast } from "sonner";
 import { NewInquiryForm } from "@/components/support/NewInquiryForm";
 import { SupportList } from "@/components/support/SupportList";
 import { listProjectMembers } from "@/lib/api/project";
@@ -69,21 +68,17 @@ function ProjectSupportListPage() {
 				currentUser={currentUser}
 				projectMembers={projectMembers}
 				onSubmit={async params => {
-					try {
-						const { inquiry } = await createProjectInquiry(selectedProjectId, {
-							title: params.title,
-							body: params.body,
-							coAssigneeUserIds: params.coAssigneeUserIds,
-							fileIds: params.fileIds,
-						});
-						await router.invalidate();
-						navigate({
-							to: "/project/support/$inquiryId",
-							params: { inquiryId: inquiry.id },
-						});
-					} catch {
-						toast.error("お問い合わせの作成に失敗しました");
-					}
+					const { inquiry } = await createProjectInquiry(selectedProjectId, {
+						title: params.title,
+						body: params.body,
+						coAssigneeUserIds: params.coAssigneeUserIds,
+						fileIds: params.fileIds,
+					});
+					await router.invalidate();
+					navigate({
+						to: "/project/support/$inquiryId",
+						params: { inquiryId: inquiry.id },
+					});
 				}}
 			/>
 		</>
