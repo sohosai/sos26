@@ -428,13 +428,14 @@ export function SupportDetail({
 					</Text>
 				</div>
 
-				{canEditCommittee && viewers && onUpdateViewers && (
+				{viewerRole === "committee" && viewers && (
 					<>
 						<Separator size="4" />
 						<ViewerSettings
 							viewers={viewers}
 							committeeMembers={committeeMembers}
 							onUpdate={onUpdateViewers}
+							readOnly={!canEditCommittee}
 						/>
 					</>
 				)}
@@ -749,10 +750,12 @@ function ViewerSettings({
 	viewers,
 	committeeMembers,
 	onUpdate,
+	readOnly = false,
 }: {
 	viewers: ViewerDetail[];
 	committeeMembers: { id: string; name: string }[];
-	onUpdate: (viewers: ViewerInput[]) => Promise<void>;
+	onUpdate?: (viewers: ViewerInput[]) => Promise<void>;
+	readOnly?: boolean;
 }) {
 	const [addMode, setAddMode] = useState<
 		"idle" | "BUREAU" | "INDIVIDUAL" | null
@@ -774,15 +777,18 @@ function ViewerSettings({
 	);
 
 	const handleSetAll = async () => {
+		if (!onUpdate) return;
 		await onUpdate([{ scope: "ALL" }]);
 	};
 
 	const handleRemoveViewer = async (viewerId: string) => {
+		if (!onUpdate) return;
 		const remaining = viewers.filter(v => v.id !== viewerId);
 		await onUpdate(viewersToInputs(remaining));
 	};
 
 	const handleAddBureau = async (bureau: Bureau) => {
+		if (!onUpdate) return;
 		if (viewers.some(v => v.scope === "BUREAU" && v.bureauValue === bureau)) {
 			return;
 		}
@@ -795,6 +801,7 @@ function ViewerSettings({
 	};
 
 	const handleAddIndividual = async (userId: string) => {
+		if (!onUpdate) return;
 		if (viewers.some(v => v.scope === "INDIVIDUAL" && v.user?.id === userId)) {
 			return;
 		}
@@ -845,20 +852,22 @@ function ViewerSettings({
 							<Badge size="1" variant="soft" color={getScopeColor(v.scope)}>
 								{getViewerLabel(v)}
 							</Badge>
-							<IconButton
-								variant="ghost"
-								size="1"
-								color="gray"
-								onClick={() => handleRemoveViewer(v.id)}
-							>
-								<IconX size={12} />
-							</IconButton>
+							{!readOnly && (
+								<IconButton
+									variant="ghost"
+									size="1"
+									color="gray"
+									onClick={() => handleRemoveViewer(v.id)}
+								>
+									<IconX size={12} />
+								</IconButton>
+							)}
 						</div>
 					))}
 				</div>
 			)}
 
-			{!hasAllScope && (
+			{!readOnly && !hasAllScope && (
 				<Popover.Root
 					open={addMode !== "idle" && addMode !== null}
 					onOpenChange={o => {
