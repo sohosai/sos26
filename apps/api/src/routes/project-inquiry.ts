@@ -465,10 +465,16 @@ projectInquiryRoute.patch(
 			);
 		}
 
+		// 実委側担当者がいれば IN_PROGRESS、いなければ UNASSIGNED
+		const committeeAssigneeCount = await prisma.inquiryAssignee.count({
+			where: { inquiryId, side: "COMMITTEE" },
+		});
+		const newStatus = committeeAssigneeCount > 0 ? "IN_PROGRESS" : "UNASSIGNED";
+
 		const [updated] = await prisma.$transaction([
 			prisma.inquiry.update({
 				where: { id: inquiryId },
-				data: { status: "IN_PROGRESS" },
+				data: { status: newStatus },
 			}),
 			prisma.inquiryActivity.create({
 				data: {
