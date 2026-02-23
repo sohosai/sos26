@@ -4,6 +4,7 @@ export * from "./endpoints/committee-member";
 export * from "./endpoints/committee-project";
 export * from "./endpoints/notice";
 export * from "./endpoints/project";
+export * from "./endpoints/project-form";
 export * from "./endpoints/push";
 export * from "./endpoints/types";
 export * from "./errors";

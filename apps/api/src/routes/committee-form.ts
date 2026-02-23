@@ -307,19 +307,24 @@ committeeFormRoute.patch(
 // DELETE /form/:formId
 // フォームを論理削除
 // ─────────────────────────────────────────
-committeeFormRoute.delete("/:formId", requireAuth, async c => {
-	const { formId } = c.req.param();
-	const userId = c.get("user").id;
+committeeFormRoute.delete(
+	"/:formId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const { formId } = c.req.param();
+		const userId = c.get("user").id;
 
-	await requireOwner(formId, userId);
+		await requireOwner(formId, userId);
 
-	await prisma.form.update({
-		where: { id: formId },
-		data: { deletedAt: new Date() },
-	});
+		await prisma.form.update({
+			where: { id: formId },
+			data: { deletedAt: new Date() },
+		});
 
-	return c.json({ success: true as const });
-});
+		return c.json({ success: true as const });
+	}
+);
 
 // ─────────────────────────────────────────────────────────────
 // 共同編集者
@@ -332,6 +337,7 @@ committeeFormRoute.delete("/:formId", requireAuth, async c => {
 committeeFormRoute.post(
 	"/:formId/collaborators/:userId",
 	requireAuth,
+	requireCommitteeMember,
 	async c => {
 		const { formId, userId: targetUserId } = c.req.param();
 		const userId = c.get("user").id;
@@ -380,6 +386,7 @@ committeeFormRoute.post(
 committeeFormRoute.delete(
 	"/:formId/collaborators/:userId",
 	requireAuth,
+	requireCommitteeMember,
 	async c => {
 		const { formId, userId: targetUserId } = c.req.param();
 		const userId = c.get("user").id;
@@ -409,61 +416,66 @@ committeeFormRoute.delete(
 // POST /form/:formId/authorizations
 // 配信承認をリクエスト
 // ─────────────────────────────────────────
-committeeFormRoute.post("/:formId/authorizations", requireAuth, async c => {
-	const { formId } = c.req.param();
-	const userId = c.get("user").id;
+committeeFormRoute.post(
+	"/:formId/authorizations",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const { formId } = c.req.param();
+		const userId = c.get("user").id;
 
-	await requireWriteAccess(formId, userId);
+		await requireWriteAccess(formId, userId);
 
-	const body = await c.req.json().catch(() => ({}));
-	const { projectIds, requestedToId, ...data } =
-		requestFormAuthorizationRequestSchema.parse(body);
+		const body = await c.req.json().catch(() => ({}));
+		const { projectIds, requestedToId, ...data } =
+			requestFormAuthorizationRequestSchema.parse(body);
 
-	// 承認依頼先ユーザーの存在確認
-	const requestedTo = await prisma.user.findFirst({
-		where: { id: requestedToId, deletedAt: null },
-	});
-	if (!requestedTo)
-		throw Errors.notFound("承認依頼先のユーザーが見つかりません");
+		// 承認依頼先ユーザーの存在確認
+		const requestedTo = await prisma.user.findFirst({
+			where: { id: requestedToId, deletedAt: null },
+		});
+		if (!requestedTo)
+			throw Errors.notFound("承認依頼先のユーザーが見つかりません");
 
-	// 承認依頼先が実委人かつ FORM_DELIVER 権限を持っているか確認
-	const committeeMember = await prisma.committeeMember.findFirst({
-		where: {
-			userId: requestedToId,
-			deletedAt: null,
-			permissions: {
-				some: { permission: "FORM_DELIVER" },
+		// 承認依頼先が実委人かつ FORM_DELIVER 権限を持っているか確認
+		const committeeMember = await prisma.committeeMember.findFirst({
+			where: {
+				userId: requestedToId,
+				deletedAt: null,
+				permissions: {
+					some: { permission: "FORM_DELIVER" },
+				},
 			},
-		},
-	});
-	if (!committeeMember) {
-		throw Errors.invalidRequest(
-			"承認依頼先のユーザーにフォーム配信権限がありません"
-		);
-	}
+		});
+		if (!committeeMember) {
+			throw Errors.invalidRequest(
+				"承認依頼先のユーザーにフォーム配信権限がありません"
+			);
+		}
 
-	// 配信先企画の存在確認
-	const projects = await prisma.project.findMany({
-		where: { id: { in: projectIds }, deletedAt: null },
-	});
-	if (projects.length !== projectIds.length) {
-		throw Errors.notFound("指定された企画の一部が見つかりません");
-	}
+		// 配信先企画の存在確認
+		const projects = await prisma.project.findMany({
+			where: { id: { in: projectIds }, deletedAt: null },
+		});
+		if (projects.length !== projectIds.length) {
+			throw Errors.notFound("指定された企画の一部が見つかりません");
+		}
 
-	const authorization = await prisma.formAuthorization.create({
-		data: {
-			formId,
-			requestedById: userId,
-			requestedToId,
-			...data,
-			deliveries: {
-				create: projectIds.map(projectId => ({ projectId })),
+		const authorization = await prisma.formAuthorization.create({
+			data: {
+				formId,
+				requestedById: userId,
+				requestedToId,
+				...data,
+				deliveries: {
+					create: projectIds.map(projectId => ({ projectId })),
+				},
 			},
-		},
-	});
+		});
 
-	return c.json({ authorization });
-});
+		return c.json({ authorization });
+	}
+);
 
 // ─────────────────────────────────────────
 // POST /form/:formId/authorizations/:authorizationId/approve
@@ -472,6 +484,7 @@ committeeFormRoute.post("/:formId/authorizations", requireAuth, async c => {
 committeeFormRoute.post(
 	"/:formId/authorizations/:authorizationId/approve",
 	requireAuth,
+	requireCommitteeMember,
 	async c => {
 		const { formId, authorizationId } = c.req.param();
 		const userId = c.get("user").id;
@@ -508,6 +521,7 @@ committeeFormRoute.post(
 committeeFormRoute.post(
 	"/:formId/authorizations/:authorizationId/reject",
 	requireAuth,
+	requireCommitteeMember,
 	async c => {
 		const { formId, authorizationId } = c.req.param();
 		const userId = c.get("user").id;

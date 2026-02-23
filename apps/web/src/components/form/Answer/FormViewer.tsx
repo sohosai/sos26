@@ -8,14 +8,24 @@ import styles from "./FormViewer.module.scss";
 
 type Props = {
 	form: Form;
-	onSubmit?: (answers: FormAnswers) => void;
+	onSubmit?: (answers: FormAnswers) => Promise<void>;
+	initialAnswers?: FormAnswers;
+	onSaveDraft?: (answers: FormAnswers) => Promise<void>;
 	onClose?: () => void;
 };
 
-export function FormViewer({ form, onSubmit, onClose }: Props) {
-	const [answers, setAnswers] = useState<FormAnswers>({});
+export function FormViewer({
+	form,
+	onSubmit,
+	initialAnswers = {},
+	onSaveDraft,
+	onClose,
+}: Props) {
+	const [answers, setAnswers] = useState<FormAnswers>(initialAnswers);
 	const [errors, setErrors] = useState<Record<string, string>>({});
 	const [submitted, setSubmitted] = useState(false);
+	const [isSavingDraft, setIsSavingDraft] = useState(false);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const updateAnswer = (itemId: string, value: FormAnswerValue) => {
 		setAnswers(prev => ({ ...prev, [itemId]: value }));
@@ -43,15 +53,25 @@ export function FormViewer({ form, onSubmit, onClose }: Props) {
 		return Object.keys(newErrors).length === 0;
 	};
 
-	const handleSaveDraft = () => {
-		// TODO: 下書きを保存する処理を実装
+	const handleSaveDraft = async () => {
+		setIsSavingDraft(true);
+		try {
+			await onSaveDraft?.(answers);
+		} finally {
+			setIsSavingDraft(false);
+		}
 	};
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!validate()) return;
-		setSubmitted(true);
-		onSubmit?.(answers);
+		setIsSubmitting(true);
+		try {
+			await onSubmit?.(answers);
+			setSubmitted(true);
+		} finally {
+			setIsSubmitting(false);
+		}
 	};
 
 	if (submitted) {
@@ -96,10 +116,18 @@ export function FormViewer({ form, onSubmit, onClose }: Props) {
 			</ul>
 
 			<div className={styles.footer}>
-				<Button intent="secondary" type="button" onClick={handleSaveDraft}>
+				<Button
+					intent="secondary"
+					type="button"
+					onClick={handleSaveDraft}
+					loading={isSavingDraft}
+					disabled={isSubmitting}
+				>
 					下書きを保存
 				</Button>
-				<Button type="submit">送信する</Button>
+				<Button type="submit" loading={isSubmitting} disabled={isSavingDraft}>
+					送信する
+				</Button>
 			</div>
 		</form>
 	);

@@ -7,14 +7,18 @@ type Props = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	form: Form | null;
-	onSubmit?: (answers: FormAnswers) => void;
+	initialAnswers?: FormAnswers;
+	onSubmit?: (answers: FormAnswers) => Promise<void>;
+	onSaveDraft?: (answers: FormAnswers) => Promise<void>;
 };
 
 export function FormAnswerDialog({
 	open,
 	onOpenChange,
 	form,
+	initialAnswers,
 	onSubmit,
+	onSaveDraft,
 }: Props) {
 	if (!form) return null;
 	return (
@@ -26,9 +30,9 @@ export function FormAnswerDialog({
 				<div className={styles.dialogInner}>
 					<FormViewer
 						form={form}
-						onSubmit={answers => {
-							onSubmit?.(answers);
-						}}
+						initialAnswers={initialAnswers}
+						onSubmit={onSubmit}
+						onSaveDraft={onSaveDraft}
 						onClose={() => onOpenChange(false)}
 					/>
 				</div>

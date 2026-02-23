@@ -334,3 +334,161 @@ export const rejectFormAuthorizationResponseSchema = z.object({
 export type RejectFormAuthorizationResponse = z.infer<
 	typeof rejectFormAuthorizationResponseSchema
 >;
+
+// ─────────────────────────────────────────────────────────────
+// 企画側
+// ─────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────
+// パスパラメーター（企画側）
+// ─────────────────────────────────────────────────────────────
+
+export const projectFormPathParamsSchema = z.object({
+	projectId: z.string().min(1),
+	formDeliveryId: z.string().min(1),
+});
+
+export const projectFormResponsePathParamsSchema = z.object({
+	projectId: z.string().min(1),
+	formDeliveryId: z.string().min(1),
+	responseId: z.string().min(1),
+});
+
+// ─────────────────────────────────────────────────────────────
+// 企画側: GET /project/:projectId/forms
+// 自分の企画に配信されたフォーム一覧
+// ─────────────────────────────────────────────────────────────
+
+export const listProjectFormsResponseSchema = z.object({
+	forms: z.array(
+		z.object({
+			formDeliveryId: z.string(),
+			formId: z.string(),
+			title: z.string(),
+			description: z.string().nullable(),
+			scheduledSendAt: z.coerce.date(),
+			deadlineAt: z.coerce.date().nullable(),
+			allowLateResponse: z.boolean(),
+			// 自分の回答状況
+			response: z
+				.object({
+					id: z.string(),
+					submittedAt: z.coerce.date().nullable(),
+				})
+				.nullable(),
+		})
+	),
+});
+export type ListProjectFormsResponse = z.infer<
+	typeof listProjectFormsResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// 企画側: GET /project/:projectId/forms/:formDeliveryId
+// フォーム詳細（項目含む）+ 自分の回答
+// ─────────────────────────────────────────────────────────────
+
+// 企画側に返す項目スキーマ（DBメタ不要）
+const projectFormItemOptionSchema = z.object({
+	id: z.string(),
+	label: z.string(),
+	sortOrder: z.number().int(),
+});
+
+const projectFormItemSchema = z.object({
+	id: z.string(),
+	label: z.string(),
+	type: formItemTypeSchema,
+	required: z.boolean(),
+	sortOrder: z.number().int(),
+	options: z.array(projectFormItemOptionSchema),
+});
+
+// 回答値スキーマ
+const formAnswerSchema = z.object({
+	formItemId: z.string(),
+	textValue: z.string().nullable(),
+	numberValue: z.number().nullable(),
+	fileUrl: z.string().nullable(),
+	selectedOptionIds: z.array(z.string()),
+});
+
+export const getProjectFormResponseSchema = z.object({
+	form: z.object({
+		formDeliveryId: z.string(),
+		formId: z.string(),
+		title: z.string(),
+		description: z.string().nullable(),
+		scheduledSendAt: z.coerce.date(),
+		deadlineAt: z.coerce.date().nullable(),
+		allowLateResponse: z.boolean(),
+		items: z.array(projectFormItemSchema),
+		// 既存の回答（下書き含む）
+		response: z
+			.object({
+				id: z.string(),
+				submittedAt: z.coerce.date().nullable(),
+				answers: z.array(formAnswerSchema),
+			})
+			.nullable(),
+	}),
+});
+export type GetProjectFormResponse = z.infer<
+	typeof getProjectFormResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// 企画側: POST /project/:projectId/forms/:formDeliveryId/responses
+// 回答を作成（下書き or 提出）
+// ─────────────────────────────────────────────────────────────
+
+const formAnswerInputSchema = z.object({
+	formItemId: z.string().min(1),
+	textValue: z.string().nullable().optional(),
+	numberValue: z.number().nullable().optional(),
+	fileUrl: z.string().nullable().optional(),
+	selectedOptionIds: z.array(z.string()).optional(),
+});
+
+export const createFormResponseRequestSchema = z.object({
+	answers: z.array(formAnswerInputSchema),
+	submit: z.boolean().default(false), // false=下書き, true=提出
+});
+export type CreateFormResponseRequest = z.infer<
+	typeof createFormResponseRequestSchema
+>;
+
+export const createFormResponseResponseSchema = z.object({
+	response: z.object({
+		id: z.string(),
+		submittedAt: z.coerce.date().nullable(),
+		answers: z.array(formAnswerSchema),
+	}),
+});
+export type CreateFormResponseResponse = z.infer<
+	typeof createFormResponseResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// 企画側: PATCH /project/:projectId/forms/:formDeliveryId/responses/:responseId
+// 回答を更新（下書き編集 or 提出）
+// ─────────────────────────────────────────────────────────────
+
+export const updateFormResponseRequestSchema = z.object({
+	answers: z.array(formAnswerInputSchema),
+	submit: z.boolean().default(false),
+});
+export type UpdateFormResponseRequest = z.infer<
+	typeof updateFormResponseRequestSchema
+>;
+
+export const updateFormResponseResponseSchema = z.object({
+	response: z.object({
+		id: z.string(),
+		submittedAt: z.coerce.date().nullable(),
+		answers: z.array(formAnswerSchema),
+	}),
+});
+export type UpdateFormResponseResponse = z.infer<
+	typeof updateFormResponseResponseSchema
+>;

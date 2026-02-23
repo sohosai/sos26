@@ -9,6 +9,7 @@ import { committeeMemberRoute } from "./routes/committee-member";
 import { committeeNoticeRoute } from "./routes/committee-notice";
 import { committeeProjectRoute } from "./routes/committee-project";
 import { projectRoute } from "./routes/project";
+import { projectFormRoute } from "./routes/project-form";
 import { projectNoticeRoute } from "./routes/project-notice";
 import { pushRoute } from "./routes/push";
 
@@ -44,6 +45,7 @@ app.route("/committee/notices", committeeNoticeRoute);
 app.route("committee/forms", committeeFormRoute);
 app.route("/project", projectRoute);
 app.route("/project", projectNoticeRoute);
+app.route("/project/:projectId/forms", projectFormRoute);
 app.route("/push", pushRoute);
 
 export { app };

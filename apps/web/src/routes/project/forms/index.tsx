@@ -1,47 +1,212 @@
-import { Heading, Text } from "@radix-ui/themes";
+import { Badge, Heading, Text } from "@radix-ui/themes";
+import { IconEdit } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { FormAnswerDialog } from "@/components/form/Answer/AnswerDialog";
-import { volunteerEntryFormMock } from "@/components/form/formMock";
-import type { Form } from "@/components/form/type";
+import { createColumnHelper } from "@tanstack/react-table";
+import { useCallback, useEffect, useState } from "react";
+import { DataTable, DateCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
-import { useAuthStore } from "@/lib/auth";
+import { listProjectForms } from "@/lib/api/project-form";
+import { useProjectStore } from "@/lib/project/store";
+import { ProjectFormAnswerDialog } from "./-conponents/ProjectFormAnswerDialog";
 import styles from "./index.module.scss";
+
+type FormRow = {
+	formDeliveryId: string;
+	title: string;
+	description: string | null;
+	scheduledSendAt: Date;
+	deadlineAt: Date | null;
+	allowLateResponse: boolean;
+	responseId: string | null;
+	submittedAt: Date | null;
+};
+
+const columnHelper = createColumnHelper<FormRow>();
 
 export const Route = createFileRoute("/project/forms/")({
 	component: RouteComponent,
+	head: () => ({
+		meta: [{ title: "申請回答 | 雙峰祭オンラインシステム" }],
+	}),
+	loader: async () => {
+		const { selectedProjectId } = useProjectStore.getState();
+		if (!selectedProjectId) return { forms: [] as FormRow[] };
+		const res = await listProjectForms(selectedProjectId);
+		return {
+			forms: res.forms.map(f => ({
+				formDeliveryId: f.formDeliveryId,
+				title: f.title,
+				description: f.description,
+				scheduledSendAt: f.scheduledSendAt,
+				deadlineAt: f.deadlineAt,
+				allowLateResponse: f.allowLateResponse,
+				responseId: f.response?.id ?? null,
+				submittedAt: f.response?.submittedAt ?? null,
+			})),
+		};
+	},
 });
 
 function RouteComponent() {
-	const { user } = useAuthStore();
+	const { forms: initialForms } = Route.useLoaderData();
+	const [forms, setForms] = useState<FormRow[]>(initialForms);
+	const { selectedProjectId } = useProjectStore();
 
-	const [dialogOpen, setDialogOpen] = useState(false);
-	const [answeringForm, setAnsweringForm] = useState<Form | null>(null);
+	useEffect(() => {
+		setForms(initialForms);
+	}, [initialForms]);
 
-	const handleAnswer = () => {
-		setAnsweringForm(volunteerEntryFormMock);
-		setDialogOpen(true);
-	};
+	const [answeringDeliveryId, setAnsweringDeliveryId] = useState<string | null>(
+		null
+	);
 
-	const handleSubmit = async () => {
-		// todo:送信時の処理を書く
-	};
+	const handleDraftSaved = useCallback(
+		(deliveryId: string, responseId: string) => {
+			setForms(prev =>
+				prev.map(f =>
+					f.formDeliveryId === deliveryId ? { ...f, responseId } : f
+				)
+			);
+		},
+		[]
+	);
+
+	const handleSubmitSuccess = useCallback((deliveryId: string) => {
+		setForms(prev =>
+			prev.map(f =>
+				f.formDeliveryId === deliveryId ? { ...f, submittedAt: new Date() } : f
+			)
+		);
+		setAnsweringDeliveryId(null);
+	}, []);
+
+	const columns = [
+		columnHelper.accessor("title", {
+			header: "フォーム名",
+		}),
+		columnHelper.accessor("scheduledSendAt", {
+			header: "配信日時",
+			cell: DateCell,
+			meta: { dateFormat: "datetime" },
+		}),
+		columnHelper.accessor("deadlineAt", {
+			header: "回答期限",
+			cell: ctx => {
+				const val = ctx.getValue();
+				if (!val)
+					return (
+						<Text size="2" color="gray">
+							なし
+						</Text>
+					);
+				return <DateCell {...ctx} />;
+			},
+			meta: { dateFormat: "datetime" },
+		}),
+		columnHelper.accessor("submittedAt", {
+			header: "回答状況",
+			cell: ctx => {
+				const submittedAt = ctx.getValue();
+				const { allowLateResponse, deadlineAt, responseId } = ctx.row.original;
+				const isExpired =
+					deadlineAt && !allowLateResponse && new Date() > deadlineAt;
+
+				if (submittedAt) {
+					return (
+						<Badge variant="soft" color="green">
+							提出済み
+						</Badge>
+					);
+				}
+				if (isExpired) {
+					return (
+						<Badge variant="soft" color="red">
+							期限切れ
+						</Badge>
+					);
+				}
+				if (responseId) {
+					return (
+						<Badge variant="soft" color="yellow">
+							下書きあり
+						</Badge>
+					);
+				}
+				return (
+					<Badge variant="soft" color="gray">
+						未回答
+					</Badge>
+				);
+			},
+		}),
+		columnHelper.display({
+			id: "actions",
+			header: "操作",
+			cell: ({ row }) => {
+				const {
+					// submittedAt,
+					allowLateResponse,
+					deadlineAt,
+					formDeliveryId,
+					responseId,
+				} = row.original;
+				const isExpired =
+					deadlineAt && !allowLateResponse && new Date() > deadlineAt;
+				const isDisabled = !!isExpired;
+
+				return (
+					<Button
+						intent="secondary"
+						size="1"
+						onClick={() => setAnsweringDeliveryId(formDeliveryId)}
+						disabled={isDisabled}
+					>
+						<IconEdit size={16} />
+						{responseId ? "回答を編集" : "回答する"}
+					</Button>
+				);
+			},
+			enableSorting: false,
+		}),
+	];
 
 	return (
 		<div className={styles.page}>
-			<Heading size="6">申請回答</Heading>
-			<Text as="p" color="gray">
-				ようこそ、{user?.name} さん
-			</Text>
+			<div className={styles.header}>
+				<Heading size="6">申請回答</Heading>
+				<Text size="2" color="gray">
+					実委人から配信されたフォームに回答できます。
+				</Text>
+			</div>
 
-			<Button onClick={handleAnswer}>申請に回答する</Button>
-
-			<FormAnswerDialog
-				open={dialogOpen}
-				onOpenChange={setDialogOpen}
-				form={answeringForm}
-				onSubmit={handleSubmit}
+			<DataTable<FormRow>
+				data={forms}
+				columns={columns}
+				features={{
+					sorting: true,
+					globalFilter: true,
+					columnVisibility: false,
+					selection: false,
+					copy: false,
+					csvExport: false,
+				}}
+				initialSorting={[{ id: "scheduledSendAt", desc: true }]}
 			/>
+
+			{answeringDeliveryId && selectedProjectId && (
+				<ProjectFormAnswerDialog
+					open={!!answeringDeliveryId}
+					onOpenChange={open => {
+						if (!open) setAnsweringDeliveryId(null);
+					}}
+					projectId={selectedProjectId}
+					formDeliveryId={answeringDeliveryId}
+					onSubmitSuccess={() => handleSubmitSuccess(answeringDeliveryId)}
+					onDraftSaved={responseId =>
+						handleDraftSaved(answeringDeliveryId, responseId)
+					}
+				/>
+			)}
 		</div>
 	);
 }
