@@ -259,6 +259,7 @@ erDiagram
   String inquiryId FK
   String body
   String createdById FK
+  String senderRole
   DateTime createdAt
 }
 "InquiryActivity" {
@@ -670,6 +671,7 @@ Properties as follows:
 - `inquiryId`:
 - `body`:
 - `createdById`:
+- `senderRole`:
 - `createdAt`:
 
 ### `InquiryActivity`

@@ -155,17 +155,6 @@ export function SupportDetail({
 			new Date(b.data.createdAt).getTime()
 	);
 
-	// コメント投稿者のロールを推定
-	const getCommentRole = (createdBy: {
-		id: string;
-		name: string;
-	}): "project" | "committee" => {
-		if (inquiry.committeeAssignees.some(a => a.user.id === createdBy.id)) {
-			return "committee";
-		}
-		return "project";
-	};
-
 	return (
 		<div className={styles.layout}>
 			<div className={styles.main}>
@@ -206,7 +195,11 @@ export function SupportDetail({
 							<TimelineItem
 								key={entry.data.id}
 								name={entry.data.createdBy.name}
-								role={getCommentRole(entry.data.createdBy)}
+								role={
+									entry.data.senderRole === "COMMITTEE"
+										? "committee"
+										: "project"
+								}
 								date={entry.data.createdAt}
 								body={entry.data.body}
 								attachments={entry.data.attachments}

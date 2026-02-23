@@ -814,6 +814,9 @@ model InquiryComment {
   createdById String
   createdBy   User   @relation("InquiryCommentCreatedBy", fields: [createdById], references: [id])
 
+  // 投稿時のロール（"PROJECT" | "COMMITTEE"）
+  senderRole String @default("PROJECT")
+
   attachments InquiryAttachment[]
 
   createdAt DateTime @default(now())

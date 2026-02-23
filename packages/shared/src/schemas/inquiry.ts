@@ -70,6 +70,7 @@ export const inquiryCommentSchema = z.object({
 	inquiryId: z.cuid(),
 	body: z.string(),
 	createdById: z.cuid(),
+	senderRole: inquiryCreatorRoleSchema,
 	createdAt: z.coerce.date(),
 });
 export type InquiryComment = z.infer<typeof inquiryCommentSchema>;
@@ -135,7 +136,7 @@ const assigneeWithUserSchema = inquiryAssigneeSchema
 
 /** コメント + 投稿者情報 */
 const commentWithUserSchema = inquiryCommentSchema
-	.pick({ id: true, body: true, createdAt: true })
+	.pick({ id: true, body: true, senderRole: true, createdAt: true })
 	.extend({
 		createdBy: userSummarySchema,
 		attachments: z.array(inquiryAttachmentSchema),

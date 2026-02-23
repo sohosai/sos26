@@ -289,6 +289,7 @@ projectInquiryRoute.get(
 			comments: inquiry.comments.map(cm => ({
 				id: cm.id,
 				body: cm.body,
+				senderRole: cm.senderRole,
 				createdAt: cm.createdAt,
 				createdBy: cm.createdBy,
 				attachments: cm.attachments.map(formatAttachment),
@@ -363,6 +364,7 @@ projectInquiryRoute.post(
 					inquiryId,
 					body: commentBody,
 					createdById: user.id,
+					senderRole: "PROJECT",
 				},
 				include: { createdBy: { select: userSelect } },
 			});
@@ -405,6 +407,7 @@ projectInquiryRoute.post(
 				comment: {
 					id: comment.id,
 					body: comment.body,
+					senderRole: comment.senderRole,
 					createdAt: comment.createdAt,
 					createdBy: comment.createdBy,
 					attachments: comment.attachments.map(formatAttachment),
