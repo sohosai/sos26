@@ -234,6 +234,7 @@ committeeInquiryRoute.post(
 			const files = await prisma.file.findMany({
 				where: {
 					id: { in: uniqueFileIds },
+					uploadedById: user.id,
 					status: "CONFIRMED",
 					deletedAt: null,
 				},
@@ -512,6 +513,7 @@ committeeInquiryRoute.post(
 			const files = await prisma.file.findMany({
 				where: {
 					id: { in: uniqueFileIds },
+					uploadedById: user.id,
 					status: "CONFIRMED",
 					deletedAt: null,
 				},
@@ -613,8 +615,8 @@ committeeInquiryRoute.patch(
 		if (!inquiry) {
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
-		if (inquiry.status === "RESOLVED") {
-			throw Errors.invalidRequest("既に解決済みです");
+		if (inquiry.status !== "IN_PROGRESS") {
+			throw Errors.invalidRequest("対応中のお問い合わせのみ解決済みにできます");
 		}
 
 		const [updated] = await prisma.$transaction([

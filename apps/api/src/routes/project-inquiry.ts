@@ -139,6 +139,7 @@ projectInquiryRoute.post(
 			const files = await prisma.file.findMany({
 				where: {
 					id: { in: uniqueFileIds },
+					uploadedById: user.id,
 					status: "CONFIRMED",
 					deletedAt: null,
 				},
@@ -359,6 +360,7 @@ projectInquiryRoute.post(
 			const files = await prisma.file.findMany({
 				where: {
 					id: { in: uniqueFileIds },
+					uploadedById: user.id,
 					status: "CONFIRMED",
 					deletedAt: null,
 				},

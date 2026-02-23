@@ -110,11 +110,19 @@ export function SupportDetail({
 				"自分自身を担当者から外すと、このお問い合わせにアクセスできなくなる可能性があります。よろしいですか？"
 			);
 			if (!confirmed) return;
-			await onRemoveAssignee(assigneeId);
-			navigate({ to: basePath as string });
+			try {
+				await onRemoveAssignee(assigneeId);
+				navigate({ to: basePath as string });
+			} catch {
+				toast.error("担当者の削除に失敗しました");
+			}
 			return;
 		}
-		await onRemoveAssignee(assigneeId);
+		try {
+			await onRemoveAssignee(assigneeId);
+		} catch {
+			toast.error("担当者の削除に失敗しました");
+		}
 	};
 
 	const toggleAssignee = async (
