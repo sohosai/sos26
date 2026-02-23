@@ -107,16 +107,12 @@ function ProjectSupportDetailPage() {
 				}
 			}}
 			onRemoveAssignee={async assigneeId => {
-				try {
-					await removeProjectInquiryAssignee(
-						selectedProjectId,
-						inquiryId,
-						assigneeId
-					);
-					await router.invalidate();
-				} catch {
-					toast.error("担当者の削除に失敗しました");
-				}
+				await removeProjectInquiryAssignee(
+					selectedProjectId,
+					inquiryId,
+					assigneeId
+				);
+				await router.invalidate();
 			}}
 		/>
 	);

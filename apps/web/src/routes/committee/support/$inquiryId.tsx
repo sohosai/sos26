@@ -134,12 +134,8 @@ function CommitteeSupportDetailPage() {
 				}
 			}}
 			onRemoveAssignee={async assigneeId => {
-				try {
-					await removeCommitteeInquiryAssignee(inquiryId, assigneeId);
-					await router.invalidate();
-				} catch {
-					toast.error("担当者の削除に失敗しました");
-				}
+				await removeCommitteeInquiryAssignee(inquiryId, assigneeId);
+				await router.invalidate();
 			}}
 			onUpdateViewers={async viewers => {
 				try {
