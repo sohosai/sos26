@@ -95,6 +95,7 @@ function CommitteeSupportDetailPage() {
 			inquiry={inquiry}
 			viewerRole="committee"
 			basePath="/committee/support"
+			currentUserId={user?.id ?? ""}
 			committeeMembers={committeeMembers}
 			projectMembers={projectMembers}
 			viewers={inquiry.viewers}

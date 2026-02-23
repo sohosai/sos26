@@ -70,6 +70,7 @@ function ProjectSupportDetailPage() {
 			inquiry={inquiry}
 			viewerRole="project"
 			basePath="/project/support"
+			currentUserId={user?.id ?? ""}
 			committeeMembers={[]}
 			projectMembers={projectMembers}
 			isAssigneeOrAdmin={isAssigneeOrAdmin}

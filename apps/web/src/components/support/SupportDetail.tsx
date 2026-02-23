@@ -62,6 +62,7 @@ type SupportDetailProps = {
 	inquiry: InquiryDetail;
 	viewerRole: "project" | "committee";
 	basePath: string;
+	currentUserId: string;
 	committeeMembers: { id: string; name: string }[];
 	projectMembers: { id: string; name: string }[];
 	onUpdateStatus: (status: "RESOLVED" | "IN_PROGRESS") => Promise<void>;
@@ -98,6 +99,7 @@ export function SupportDetail({
 	inquiry,
 	viewerRole,
 	basePath,
+	currentUserId,
 	committeeMembers,
 	projectMembers,
 	onUpdateStatus,
@@ -122,6 +124,19 @@ export function SupportDetail({
 	// 担当者/管理者のみコメント可能
 	const canComment = isAssigneeOrAdmin;
 
+	const handleRemoveAssignee = async (assigneeId: string, userId: string) => {
+		if (userId === currentUserId) {
+			const confirmed = window.confirm(
+				"自分自身を担当者から外すと、このお問い合わせにアクセスできなくなる可能性があります。よろしいですか？"
+			);
+			if (!confirmed) return;
+			await onRemoveAssignee(assigneeId);
+			navigate({ to: basePath as string });
+			return;
+		}
+		await onRemoveAssignee(assigneeId);
+	};
+
 	const toggleAssignee = async (
 		userId: string,
 		side: "PROJECT" | "COMMITTEE"
@@ -132,7 +147,7 @@ export function SupportDetail({
 				: inquiry.projectAssignees;
 		const existing = assignees.find(a => a.user.id === userId);
 		if (existing) {
-			await onRemoveAssignee(existing.id);
+			await handleRemoveAssignee(existing.id, userId);
 		} else {
 			await onAddAssignee(userId, side);
 		}
@@ -254,7 +269,9 @@ export function SupportDetail({
 						assignees={inquiry.committeeAssignees}
 						variant="committee"
 						canEdit={canEditCommittee}
-						onRemove={assigneeId => onRemoveAssignee(assigneeId)}
+						onRemove={(assigneeId, userId) =>
+							handleRemoveAssignee(assigneeId, userId)
+						}
 					/>
 					{canEditCommittee && (
 						<Popover.Root
@@ -340,7 +357,9 @@ export function SupportDetail({
 						assignees={inquiry.projectAssignees}
 						variant="project"
 						canEdit={canEditCommittee || viewerRole === "project"}
-						onRemove={assigneeId => onRemoveAssignee(assigneeId)}
+						onRemove={(assigneeId, userId) =>
+							handleRemoveAssignee(assigneeId, userId)
+						}
 					/>
 					{(canEditCommittee || viewerRole === "project") && (
 						<Popover.Root
@@ -702,7 +721,7 @@ function AssigneeList({
 	assignees: AssigneeInfo[];
 	variant: "project" | "committee";
 	canEdit: boolean;
-	onRemove: (assigneeId: string) => void;
+	onRemove: (assigneeId: string, userId: string) => void;
 }) {
 	if (assignees.length === 0) {
 		return (
@@ -727,7 +746,7 @@ function AssigneeList({
 							variant="ghost"
 							size="1"
 							color="red"
-							onClick={() => onRemove(a.id)}
+							onClick={() => onRemove(a.id, a.user.id)}
 						>
 							<IconTrash size={12} />
 						</IconButton>
