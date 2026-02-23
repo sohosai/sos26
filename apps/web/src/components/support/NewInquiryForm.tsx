@@ -113,6 +113,8 @@ export function NewInquiryForm({
 	// ファイル添付
 	const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	// 送信状態
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const reset = () => {
 		setTitle("");
@@ -175,25 +177,33 @@ export function NewInquiryForm({
 		fileIds,
 	});
 
+	const uploadFiles = async (files: File[]): Promise<string[]> => {
+		const { uploadFile } = await import("@/lib/api/files");
+		const results = await Promise.all(files.map(f => uploadFile(f)));
+		return results.map(r => r.file.id);
+	};
+
+	const buildParams = (fileIds?: string[]) =>
+		viewerRole === "committee"
+			? buildCommitteeParams(fileIds)
+			: buildProjectParams(fileIds);
+
 	const handleSubmit = async () => {
-		if (!title.trim() || !body.trim()) return;
+		if (!canSubmit) return;
 
-		let fileIds: string[] | undefined;
-		if (selectedFiles.length > 0) {
-			const { uploadFile } = await import("@/lib/api/files");
-			const results = await Promise.all(selectedFiles.map(f => uploadFile(f)));
-			fileIds = results.map(r => r.file.id);
+		setIsSubmitting(true);
+		try {
+			const fileIds =
+				selectedFiles.length > 0 ? await uploadFiles(selectedFiles) : undefined;
+			const params = buildParams(fileIds);
+			if (!params) return;
+
+			await onSubmit(params);
+			reset();
+			onOpenChange(false);
+		} finally {
+			setIsSubmitting(false);
 		}
-
-		const params =
-			viewerRole === "committee"
-				? buildCommitteeParams(fileIds)
-				: buildProjectParams(fileIds);
-		if (!params) return;
-
-		await onSubmit(params);
-		reset();
-		onOpenChange(false);
 	};
 
 	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -462,46 +472,12 @@ export function NewInquiryForm({
 						)}
 
 					{/* ファイル添付 */}
-					<div className={styles.fileSelectArea}>
-						<input
-							ref={fileInputRef}
-							type="file"
-							multiple
-							className={styles.fileInput}
-							onChange={handleFileSelect}
-						/>
-						<button
-							type="button"
-							className={styles.fileSelectButton}
-							onClick={() => fileInputRef.current?.click()}
-						>
-							<IconPaperclip size={14} />
-							<Text size="2">ファイルを添付</Text>
-						</button>
-						{selectedFiles.length > 0 && (
-							<div className={styles.selectedFileList}>
-								{selectedFiles.map((f, i) => (
-									<div
-										key={`${f.name}-${i}`}
-										className={styles.selectedFileItem}
-									>
-										<IconPaperclip size={14} />
-										<Text size="1">{f.name}</Text>
-										<Text size="1" color="gray">
-											({formatFileSize(f.size)})
-										</Text>
-										<button
-											type="button"
-											className={styles.selectedFileRemove}
-											onClick={() => removeFile(i)}
-										>
-											<IconX size={12} />
-										</button>
-									</div>
-								))}
-							</div>
-						)}
-					</div>
+					<FileAttachmentArea
+						fileInputRef={fileInputRef}
+						selectedFiles={selectedFiles}
+						onFileSelect={handleFileSelect}
+						onRemoveFile={removeFile}
+					/>
 
 					{viewerRole === "project" && (
 						<div className={styles.infoBox}>
@@ -526,8 +502,12 @@ export function NewInquiryForm({
 					<Button intent="ghost" onClick={() => onOpenChange(false)}>
 						キャンセル
 					</Button>
-					<Button onClick={handleSubmit} disabled={!canSubmit}>
-						お問い合わせを作成
+					<Button
+						onClick={handleSubmit}
+						disabled={!canSubmit || isSubmitting}
+						loading={isSubmitting}
+					>
+						{isSubmitting ? "送信中..." : "お問い合わせを作成"}
 					</Button>
 				</div>
 			</Dialog.Content>
@@ -536,6 +516,58 @@ export function NewInquiryForm({
 }
 
 /* ─── 共通サブコンポーネント ─── */
+
+function FileAttachmentArea({
+	fileInputRef,
+	selectedFiles,
+	onFileSelect,
+	onRemoveFile,
+}: {
+	fileInputRef: React.RefObject<HTMLInputElement | null>;
+	selectedFiles: File[];
+	onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+	onRemoveFile: (index: number) => void;
+}) {
+	return (
+		<div className={styles.fileSelectArea}>
+			<input
+				ref={fileInputRef}
+				type="file"
+				multiple
+				className={styles.fileInput}
+				onChange={onFileSelect}
+			/>
+			<button
+				type="button"
+				className={styles.fileSelectButton}
+				onClick={() => fileInputRef.current?.click()}
+			>
+				<IconPaperclip size={14} />
+				<Text size="2">ファイルを添付</Text>
+			</button>
+			{selectedFiles.length > 0 && (
+				<div className={styles.selectedFileList}>
+					{selectedFiles.map((f, i) => (
+						<div key={`${f.name}-${i}`} className={styles.selectedFileItem}>
+							<IconPaperclip size={14} />
+							<Text size="1">{f.name}</Text>
+							<Text size="1" color="gray">
+								({formatFileSize(f.size)})
+							</Text>
+							<button
+								type="button"
+								className={styles.selectedFileRemove}
+								onClick={() => onRemoveFile(i)}
+							>
+								<IconX size={12} />
+							</button>
+						</div>
+					))}
+				</div>
+			)}
+		</div>
+	);
+}
 
 function AssigneePopover({
 	open,
