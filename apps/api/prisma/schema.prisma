@@ -799,6 +799,9 @@ model InquiryViewer {
   user   User?   @relation("InquiryViewer", fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
+
+  @@index([inquiryId])
+  @@index([userId])
 }
 
 model InquiryComment {
@@ -820,6 +823,8 @@ model InquiryComment {
   attachments InquiryAttachment[]
 
   createdAt DateTime @default(now())
+
+  @@index([inquiryId])
 }
 
 model InquiryActivity {
@@ -840,6 +845,8 @@ model InquiryActivity {
   target   User?   @relation("InquiryActivityTarget", fields: [targetId], references: [id])
 
   createdAt DateTime @default(now())
+
+  @@index([inquiryId])
 }
 
 //お問い合わせの添付ファイル

@@ -94,24 +94,6 @@ async function canViewInquiry(
 	return false;
 }
 
-/** インラインで閲覧者マッチングを行う（DB アクセスなし） */
-function matchesViewerScope(
-	viewers: {
-		scope: string;
-		bureauValue: string | null;
-		userId: string | null;
-	}[],
-	userId: string,
-	bureau: string
-): boolean {
-	for (const viewer of viewers) {
-		if (viewer.scope === "ALL") return true;
-		if (viewer.scope === "BUREAU" && viewer.bureauValue === bureau) return true;
-		if (viewer.scope === "INDIVIDUAL" && viewer.userId === userId) return true;
-	}
-	return false;
-}
-
 // ─────────────────────────────────────────────────────────────
 // レスポンス整形ヘルパー
 // ─────────────────────────────────────────────────────────────
@@ -203,13 +185,21 @@ committeeInquiryRoute.post(
 
 		// 企画側担当者が全て企画メンバーかチェック
 		const uniqueUserIds = [...new Set(projectAssigneeUserIds)];
-		for (const userId of uniqueUserIds) {
-			const isOwner = project.ownerId === userId;
-			const isSubOwner = project.subOwnerId === userId;
-			const isMember = await prisma.projectMember.findFirst({
-				where: { projectId, userId, deletedAt: null },
+		const ownerIds = new Set(
+			[project.ownerId, project.subOwnerId].filter(Boolean)
+		);
+		const nonOwnerIds = uniqueUserIds.filter(id => !ownerIds.has(id));
+		if (nonOwnerIds.length > 0) {
+			const members = await prisma.projectMember.findMany({
+				where: {
+					projectId,
+					userId: { in: nonOwnerIds },
+					deletedAt: null,
+				},
+				select: { userId: true },
 			});
-			if (!isOwner && !isSubOwner && !isMember) {
+			const memberUserIds = new Set(members.map(m => m.userId));
+			if (nonOwnerIds.some(id => !memberUserIds.has(id))) {
 				throw Errors.invalidRequest(
 					"指定された企画側担当者の中に企画メンバーでないユーザーが含まれています"
 				);
@@ -220,11 +210,18 @@ committeeInquiryRoute.post(
 		const uniqueCommitteeIds = [
 			...new Set((committeeAssigneeUserIds ?? []).filter(id => id !== user.id)),
 		];
-		for (const userId of uniqueCommitteeIds) {
-			const targetMember = await prisma.committeeMember.findFirst({
-				where: { userId, deletedAt: null },
+		if (uniqueCommitteeIds.length > 0) {
+			const committeeMembers = await prisma.committeeMember.findMany({
+				where: {
+					userId: { in: uniqueCommitteeIds },
+					deletedAt: null,
+				},
+				select: { userId: true },
 			});
-			if (!targetMember) {
+			const committeeMemberUserIds = new Set(
+				committeeMembers.map(m => m.userId)
+			);
+			if (uniqueCommitteeIds.some(id => !committeeMemberUserIds.has(id))) {
 				throw Errors.invalidRequest(
 					"指定された実委担当者の中に実委人でないユーザーが含まれています"
 				);
@@ -299,35 +296,57 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 
 	const admin = await isInquiryAdmin(committeeMember.id);
 
-	// 管理者は全件、それ以外はフィルタリング
-	const allInquiries = await prisma.inquiry.findMany({
+	// 管理者は全件、それ以外はDB側でフィルタリング
+	const inquiries = await prisma.inquiry.findMany({
+		where: admin
+			? undefined
+			: {
+					OR: [
+						// 実委側担当者として割り当てられている
+						{
+							assignees: {
+								some: {
+									userId: user.id,
+									side: "COMMITTEE" as const,
+								},
+							},
+						},
+						// 閲覧者: 全員
+						{
+							viewers: {
+								some: { scope: "ALL" as const },
+							},
+						},
+						// 閲覧者: 同じ局
+						{
+							viewers: {
+								some: {
+									scope: "BUREAU" as const,
+									bureauValue: committeeMember.Bureau,
+								},
+							},
+						},
+						// 閲覧者: 個人指定
+						{
+							viewers: {
+								some: {
+									scope: "INDIVIDUAL" as const,
+									userId: user.id,
+								},
+							},
+						},
+					],
+				},
 		include: {
 			createdBy: { select: userSelect },
 			project: { select: { id: true, name: true } },
 			assignees: { include: assigneeInclude },
-			viewers: true,
 			_count: { select: { comments: true } },
 		},
 		orderBy: { updatedAt: "desc" },
 	});
 
-	// 管理者でない場合はフィルタリング
-	const filtered = admin
-		? allInquiries
-		: allInquiries.filter(inq => {
-				// 実委側担当者
-				if (
-					inq.assignees.some(
-						a => a.userId === user.id && a.side === "COMMITTEE"
-					)
-				)
-					return true;
-
-				// 閲覧者チェック
-				return matchesViewerScope(inq.viewers, user.id, committeeMember.Bureau);
-			});
-
-	const formatted = filtered.map(inq => ({
+	const formatted = inquiries.map(inq => ({
 		id: inq.id,
 		title: inq.title,
 		status: inq.status,

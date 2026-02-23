@@ -110,16 +110,26 @@ projectInquiryRoute.post(
 		const uniqueCoAssigneeIds = [
 			...new Set((coAssigneeUserIds ?? []).filter(id => id !== user.id)),
 		];
-		for (const userId of uniqueCoAssigneeIds) {
-			const isOwner = project.ownerId === userId;
-			const isSubOwner = project.subOwnerId === userId;
-			const isMember = await prisma.projectMember.findFirst({
-				where: { projectId: project.id, userId, deletedAt: null },
-			});
-			if (!isOwner && !isSubOwner && !isMember) {
-				throw Errors.invalidRequest(
-					"指定された共同担当者の中に企画メンバーでないユーザーが含まれています"
-				);
+		if (uniqueCoAssigneeIds.length > 0) {
+			const ownerIds = new Set(
+				[project.ownerId, project.subOwnerId].filter(Boolean)
+			);
+			const nonOwnerIds = uniqueCoAssigneeIds.filter(id => !ownerIds.has(id));
+			if (nonOwnerIds.length > 0) {
+				const members = await prisma.projectMember.findMany({
+					where: {
+						projectId: project.id,
+						userId: { in: nonOwnerIds },
+						deletedAt: null,
+					},
+					select: { userId: true },
+				});
+				const memberUserIds = new Set(members.map(m => m.userId));
+				if (nonOwnerIds.some(id => !memberUserIds.has(id))) {
+					throw Errors.invalidRequest(
+						"指定された共同担当者の中に企画メンバーでないユーザーが含まれています"
+					);
+				}
 			}
 		}
 
