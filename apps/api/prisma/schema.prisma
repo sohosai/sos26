@@ -814,8 +814,8 @@ model InquiryComment {
   createdById String
   createdBy   User   @relation("InquiryCommentCreatedBy", fields: [createdById], references: [id])
 
-  // 投稿時のロール（"PROJECT" | "COMMITTEE"）
-  senderRole String @default("PROJECT")
+  // 投稿時のロール
+  senderRole InquiryCreatorRole @default(PROJECT)
 
   attachments InquiryAttachment[]
 

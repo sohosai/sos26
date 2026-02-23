@@ -285,11 +285,28 @@ export type RemoveInquiryAssigneeResponse = z.infer<
 // 閲覧者入力スキーマ（作成・更新で共用）
 // ─────────────────────────────────────────────────────────────
 
-export const viewerInputSchema = z.object({
-	scope: inquiryViewerScopeSchema,
-	bureauValue: bureauSchema.optional(),
-	userId: z.cuid().optional(),
-});
+export const viewerInputSchema = z
+	.object({
+		scope: inquiryViewerScopeSchema,
+		bureauValue: bureauSchema.optional(),
+		userId: z.cuid().optional(),
+	})
+	.superRefine((data, ctx) => {
+		if (data.scope === "BUREAU" && !data.bureauValue) {
+			ctx.addIssue({
+				code: "custom",
+				message: "局を指定してください",
+				path: ["bureauValue"],
+			});
+		}
+		if (data.scope === "INDIVIDUAL" && !data.userId) {
+			ctx.addIssue({
+				code: "custom",
+				message: "ユーザーを指定してください",
+				path: ["userId"],
+			});
+		}
+	});
 export type ViewerInput = z.infer<typeof viewerInputSchema>;
 
 // ─────────────────────────────────────────────────────────────
