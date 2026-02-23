@@ -281,6 +281,17 @@ export type RemoveInquiryAssigneeResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
+// 閲覧者入力スキーマ（作成・更新で共用）
+// ─────────────────────────────────────────────────────────────
+
+export const viewerInputSchema = z.object({
+	scope: inquiryViewerScopeSchema,
+	bureauValue: bureauSchema.optional(),
+	userId: z.cuid().optional(),
+});
+export type ViewerInput = z.infer<typeof viewerInputSchema>;
+
+// ─────────────────────────────────────────────────────────────
 // 実委側: POST /committee/inquiries
 // ─────────────────────────────────────────────────────────────
 
@@ -293,6 +304,7 @@ export const createCommitteeInquiryRequestSchema = z.object({
 		.min(1, "企画側担当者を1人以上指定してください"),
 	committeeAssigneeUserIds: z.array(z.cuid()).optional(),
 	fileIds: z.array(z.string()).optional(),
+	viewers: z.array(viewerInputSchema).optional(),
 });
 export type CreateCommitteeInquiryRequest = z.infer<
 	typeof createCommitteeInquiryRequestSchema
@@ -357,12 +369,6 @@ export type UpdateInquiryStatusResponse = z.infer<
 // ─────────────────────────────────────────────────────────────
 // 実委側: PUT /committee/inquiries/:inquiryId/viewers
 // ─────────────────────────────────────────────────────────────
-
-const viewerInputSchema = z.object({
-	scope: inquiryViewerScopeSchema,
-	bureauValue: bureauSchema.optional(),
-	userId: z.cuid().optional(),
-});
 
 export const updateInquiryViewersRequestSchema = z.object({
 	viewers: z.array(viewerInputSchema),

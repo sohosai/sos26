@@ -190,6 +190,7 @@ committeeInquiryRoute.post(
 			projectAssigneeUserIds,
 			committeeAssigneeUserIds,
 			fileIds,
+			viewers: viewerInputs,
 		} = createCommitteeInquiryRequestSchema.parse(body);
 
 		// 企画の存在チェック
@@ -273,6 +274,13 @@ committeeInquiryRoute.post(
 				},
 				attachments: {
 					create: uniqueFileIds.map(fileId => ({ fileId })),
+				},
+				viewers: {
+					create: (viewerInputs ?? []).map(input => ({
+						scope: input.scope,
+						bureauValue: input.bureauValue ?? null,
+						userId: input.userId ?? null,
+					})),
 				},
 			},
 		});
