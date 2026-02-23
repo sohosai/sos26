@@ -369,6 +369,12 @@ projectInquiryRoute.post(
 				include: { createdBy: { select: userSelect } },
 			});
 
+			// 親の updatedAt を更新（一覧の並び順に反映するため）
+			await tx.inquiry.update({
+				where: { id: inquiryId },
+				data: { updatedAt: new Date() },
+			});
+
 			let attachments: {
 				id: string;
 				createdAt: Date;
