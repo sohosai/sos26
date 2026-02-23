@@ -305,7 +305,10 @@ export function SupportDetail({
 													key={person.id}
 													type="button"
 													className={`${styles.assignDropdownOption} ${isAssigned ? styles.assignDropdownOptionSelected : ""}`}
-													onClick={() => toggleAssignee(person.id, "COMMITTEE")}
+													onClick={() => {
+														toggleAssignee(person.id, "COMMITTEE");
+														setCommitteePopoverOpen(false);
+													}}
 												>
 													<Avatar size={20} name={person.name} variant="beam" />
 													<div className={styles.assignDropdownOptionText}>
@@ -388,7 +391,10 @@ export function SupportDetail({
 													key={person.id}
 													type="button"
 													className={`${styles.assignDropdownOption} ${isAssigned ? styles.assignDropdownOptionSelected : ""}`}
-													onClick={() => toggleAssignee(person.id, "PROJECT")}
+													onClick={() => {
+														toggleAssignee(person.id, "PROJECT");
+														setProjectPopoverOpen(false);
+													}}
 												>
 													<Avatar size={20} name={person.name} variant="beam" />
 													<div className={styles.assignDropdownOptionText}>
