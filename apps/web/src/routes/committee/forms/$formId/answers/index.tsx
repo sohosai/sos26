@@ -1,10 +1,11 @@
 import { Badge, type BadgeProps, Heading, Text } from "@radix-ui/themes";
-import { IconEye } from "@tabler/icons-react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { IconArrowLeft, IconEye } from "@tabler/icons-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { DataTable, DateCell, NameCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { getFormDetail, listFormResponses } from "@/lib/api/committee-form";
+import styles from "./index.module.scss";
 
 type AnswerRow = {
 	id: string;
@@ -91,6 +92,7 @@ function RouteComponent() {
 	const { items, rows } = Route.useLoaderData();
 	const formId = Route.useParams().formId;
 	const columnHelper = createColumnHelper<AnswerRow>();
+	const navigate = useNavigate();
 
 	const columns = [
 		columnHelper.accessor("projectName", {
@@ -170,6 +172,14 @@ function RouteComponent() {
 
 	return (
 		<div>
+			<button
+				type="button"
+				className={styles.backLink}
+				onClick={() => navigate({ to: "/committee/forms" })}
+			>
+				<IconArrowLeft size={16} />
+				<Text size="2">フォーム詳細に戻る</Text>
+			</button>
 			<div style={{ marginBottom: 16 }}>
 				<Heading size="5">回答一覧</Heading>
 				<Text size="2" color="gray">

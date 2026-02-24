@@ -1,54 +1,91 @@
-import { Heading, Text } from "@radix-ui/themes";
-import { createFileRoute } from "@tanstack/react-router";
-import { listFormResponses } from "@/lib/api/committee-form";
+import { Heading, Separator, Text } from "@radix-ui/themes";
+import { IconArrowLeft } from "@tabler/icons-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { AnswerField } from "@/components/form/Answer/AnswerField";
+import { formDetailToForm } from "@/components/form/convert";
+import { getFormDetail, listFormResponses } from "@/lib/api/committee-form";
+import { responseToAnswers } from "@/lib/form";
+import { formatDate } from "@/lib/format";
+import styles from "./index.module.scss";
 
 export const Route = createFileRoute(
 	"/committee/forms/$formId/answers/$answerId/"
 )({
 	component: RouteComponent,
-	loader: async ({ params }) => {
-		const res = await listFormResponses(params.formId);
-		const answer = res.responses.find(r => r.id === params.answerId);
-		if (!answer) throw new Error("Not found");
+	head: () => ({
+		meta: [{ title: "回答詳細 | 雙峰祭オンラインシステム" }],
+	}),
 
-		return { answer };
+	loader: async ({ params }) => {
+		const [formRes, responsesRes] = await Promise.all([
+			getFormDetail(params.formId),
+			listFormResponses(params.formId),
+		]);
+
+		const response = responsesRes.responses.find(r => r.id === params.answerId);
+		if (!response) throw new Error("回答が見つかりません");
+
+		const form = formDetailToForm(formRes.form);
+		const answers = responseToAnswers(response, form);
+
+		return { form, response, answers };
 	},
 });
 
 function RouteComponent() {
-	const { answer } = Route.useLoaderData();
+	const { formId } = Route.useParams();
+	const { form, response, answers } = Route.useLoaderData();
+	const navigate = useNavigate();
 
 	return (
-		<div>
-			<Heading size="5">回答詳細</Heading>
+		<div className={styles.page}>
+			<button
+				type="button"
+				className={styles.backLink}
+				onClick={() =>
+					navigate({
+						to: "/committee/forms/$formId/answers",
+						params: { formId },
+					})
+				}
+			>
+				<IconArrowLeft size={16} />
+				<Text size="2">回答一覧に戻る</Text>
+			</button>
 
-			<div style={{ marginTop: 16 }}>
-				<Text size="2" color="gray">
-					回答者
-				</Text>
-				<Text size="3">{answer.respondent.name}</Text>
-			</div>
+			<header className={styles.header}>
+				<Heading size="5">{form.name}</Heading>
+				<div className={styles.meta}>
+					<Text size="2" color="gray">
+						企画: {response.project.name}
+					</Text>
+					<Text size="2" color="gray">
+						提出日時:{" "}
+						{response.submittedAt
+							? formatDate(response.submittedAt, "datetime")
+							: "—"}
+					</Text>
+				</div>
+				{form.description && (
+					<Text size="2" color="gray">
+						{form.description}
+					</Text>
+				)}
+			</header>
 
-			<div style={{ marginTop: 24 }}>
-				{answer.answers.map(a => (
-					<div key={a.formItemId} style={{ marginBottom: 20 }}>
-						<Text size="2" weight="medium">
-							{a.formItemId}
-						</Text>
+			<Separator size="4" />
 
-						{a.textValue && <Text>{a.textValue}</Text>}
-						{a.numberValue != null && <Text>{a.numberValue}</Text>}
-						{a.selectedOptions.length > 0 && (
-							<Text>{a.selectedOptions.map(o => o.label).join(", ")}</Text>
-						)}
-						{a.fileUrl && (
-							<a href={a.fileUrl} target="_blank" rel="noreferrer">
-								<Text color="blue">ファイルを開く</Text>
-							</a>
-						)}
-					</div>
+			<ul className={styles.itemList}>
+				{form.items.map(item => (
+					<li key={item.id} className={styles.itemCard}>
+						<AnswerField
+							item={item}
+							value={answers[item.id]}
+							onChange={() => {}}
+						/>
+					</li>
 				))}
-			</div>
+			</ul>
 		</div>
 	);
 }

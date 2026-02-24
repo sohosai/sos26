@@ -1,8 +1,3 @@
-import type {
-	CreateFormResponseRequest,
-	FormItemType,
-	GetProjectFormResponse,
-} from "@sos26/shared";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FormAnswerDialog } from "@/components/form/Answer/AnswerDialog";
@@ -13,99 +8,7 @@ import {
 	getProjectForm,
 	updateFormResponse,
 } from "@/lib/api/project-form";
-
-function responseToAnswers(
-	response: NonNullable<GetProjectFormResponse["form"]["response"]>,
-	form: Form
-): FormAnswers {
-	const itemTypeMap = new Map<string, FormItemType>(
-		// toUpperCase() してからMapに入れる
-		form.items.map(i => [i.id, i.type.toUpperCase() as FormItemType])
-	);
-
-	const answers: FormAnswers = {};
-
-	for (const answer of response.answers) {
-		const type = itemTypeMap.get(answer.formItemId);
-		if (!type) continue;
-
-		switch (type) {
-			case "SELECT":
-				answers[answer.formItemId] = answer.selectedOptionIds[0] ?? "";
-				break;
-			case "CHECKBOX":
-				answers[answer.formItemId] = answer.selectedOptionIds;
-				break;
-			case "NUMBER":
-				if (answer.numberValue !== null) {
-					answers[answer.formItemId] = answer.numberValue;
-				}
-				break;
-			case "FILE":
-				if (answer.fileUrl !== null) {
-					answers[answer.formItemId] = answer.fileUrl;
-				}
-				break;
-			case "TEXT":
-			case "TEXTAREA":
-			default:
-				if (answer.textValue !== null) {
-					answers[answer.formItemId] = answer.textValue;
-				}
-				break;
-		}
-	}
-
-	return answers;
-}
-
-function buildAnswerBody(
-	answers: FormAnswers,
-	form: Form,
-	submit: boolean
-): CreateFormResponseRequest {
-	const itemTypeMap = new Map<string, FormItemType>(
-		// toUpperCase() してからMapに入れる
-		form.items.map(i => [i.id, i.type.toUpperCase() as FormItemType])
-	);
-
-	return {
-		submit,
-		answers: Object.entries(answers).map(([formItemId, value]) => {
-			const type = itemTypeMap.get(formItemId);
-
-			if (!type) return { formItemId };
-
-			switch (type) {
-				case "TEXT":
-				case "TEXTAREA":
-					return { formItemId, textValue: value as string };
-
-				case "NUMBER":
-					return { formItemId, numberValue: value as number };
-
-				case "SELECT":
-					return {
-						formItemId,
-						selectedOptionIds:
-							typeof value === "string" ? [value] : (value as string[]),
-					};
-
-				case "CHECKBOX":
-					return {
-						formItemId,
-						selectedOptionIds: Array.isArray(value) ? value : [value as string],
-					};
-
-				case "FILE":
-					return { formItemId, fileUrl: value as string };
-
-				default:
-					return { formItemId };
-			}
-		}),
-	};
-}
+import { buildAnswerBody, responseToAnswers } from "@/lib/form";
 
 type Props = {
 	open: boolean;
