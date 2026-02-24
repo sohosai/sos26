@@ -53,7 +53,7 @@ async function requireAssigneeOrAdmin(
 }
 
 /**
- * 閲覧権限チェック（仕様 9 章の判定ロジック）
+ * 閲覧権限チェック
  * 1. INQUIRY_ADMIN → 閲覧可能
  * 2. 実委側担当者 → 閲覧可能
  * 3. 閲覧者に含まれる → 閲覧可能
