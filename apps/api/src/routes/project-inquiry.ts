@@ -177,7 +177,7 @@ projectInquiryRoute.post(
 			},
 		});
 
-		notifyInquiryCreatedByProject({
+		void notifyInquiryCreatedByProject({
 			inquiryId: inquiry.id,
 			inquiryTitle: title,
 			projectName: project.name,
@@ -446,7 +446,7 @@ projectInquiryRoute.post(
 			return { ...created, attachments };
 		});
 
-		notifyInquiryCommentAdded({
+		void notifyInquiryCommentAdded({
 			inquiryId,
 			inquiryTitle: inquiry.title,
 			commenterUserId: user.id,

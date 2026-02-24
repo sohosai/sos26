@@ -288,7 +288,7 @@ committeeInquiryRoute.post(
 			},
 		});
 
-		notifyInquiryCreatedByCommittee({
+		void notifyInquiryCreatedByCommittee({
 			inquiryId: inquiry.id,
 			inquiryTitle: title,
 			creatorName: user.name,
@@ -602,7 +602,7 @@ committeeInquiryRoute.post(
 			return { ...created, attachments };
 		});
 
-		notifyInquiryCommentAdded({
+		void notifyInquiryCommentAdded({
 			inquiryId,
 			inquiryTitle: inquiry.title,
 			commenterUserId: user.id,
@@ -820,7 +820,7 @@ committeeInquiryRoute.post(
 			return created;
 		});
 
-		notifyInquiryAssigneeAdded({
+		void notifyInquiryAssigneeAdded({
 			addedUserId: userId,
 			inquiryId,
 			inquiryTitle: inquiry.title,

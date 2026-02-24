@@ -719,7 +719,7 @@ committeeNoticeRoute.post(
 			{ isolationLevel: "Serializable" }
 		);
 
-		notifyNoticeAuthorizationRequested({
+		void notifyNoticeAuthorizationRequested({
 			approverUserId: requestedToId,
 			requesterName: user.name,
 			noticeId,
@@ -787,7 +787,7 @@ committeeNoticeRoute.patch(
 			data: { status, decidedAt: new Date() },
 		});
 
-		notifyNoticeAuthorizationDecided({
+		void notifyNoticeAuthorizationDecided({
 			requestedByUserId: authorization.requestedById,
 			noticeId,
 			noticeTitle: authorization.notice.title,

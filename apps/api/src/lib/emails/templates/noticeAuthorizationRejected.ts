@@ -7,6 +7,8 @@ export function noticeAuthorizationRejectedTemplate(params: {
 お知らせタイトル: ${params.noticeTitle}
 
 内容を修正のうえ、再度申請してください。
+
+以下のURLからご確認ください。
 ${params.url}
 
 ------------------------------------------------------------------------

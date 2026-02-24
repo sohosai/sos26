@@ -13,7 +13,7 @@ export async function notifyInquiryCreatedByProject(input: {
 		const adminPermissions = await prisma.committeeMemberPermission.findMany({
 			where: {
 				permission: "INQUIRY_ADMIN",
-				committeeMember: { deletedAt: null },
+				committeeMember: { deletedAt: null, user: { deletedAt: null } },
 			},
 			select: {
 				committeeMember: {
