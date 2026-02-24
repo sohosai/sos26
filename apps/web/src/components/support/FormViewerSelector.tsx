@@ -8,6 +8,7 @@ import type { Bureau, InquiryViewerScope } from "@sos26/shared";
 import { bureauLabelMap } from "@sos26/shared";
 import { IconCheck, IconPlus, IconSearch, IconX } from "@tabler/icons-react";
 import Avatar from "boring-avatars";
+import { useState } from "react";
 import styles from "./NewInquiryForm.module.scss";
 
 type ViewerInput = {
@@ -27,19 +28,15 @@ export function FormViewerSelector({
 	selectedViewers,
 	onChangeViewers,
 	committeeMembers,
-	addMode,
-	onAddModeChange,
-	memberSearchQuery,
-	onMemberSearchChange,
 }: {
 	selectedViewers: ViewerInput[];
 	onChangeViewers: (viewers: ViewerInput[]) => void;
 	committeeMembers: UserSummary[];
-	addMode: "idle" | "BUREAU" | "INDIVIDUAL";
-	onAddModeChange: (mode: "idle" | "BUREAU" | "INDIVIDUAL") => void;
-	memberSearchQuery: string;
-	onMemberSearchChange: (q: string) => void;
 }) {
+	const [addMode, setAddMode] = useState<"idle" | "BUREAU" | "INDIVIDUAL">(
+		"idle"
+	);
+	const [memberSearchQuery, setMemberSearchQuery] = useState("");
 	const hasAllScope = selectedViewers.some(v => v.scope === "ALL");
 
 	const handleSetAll = () => {
@@ -57,7 +54,7 @@ export function FormViewerSelector({
 			...selectedViewers.filter(v => v.scope !== "ALL"),
 			{ scope: "BUREAU", bureauValue: bureau },
 		]);
-		onAddModeChange("idle");
+		setAddMode("idle");
 	};
 
 	const handleAddIndividual = (userId: string) => {
@@ -69,8 +66,8 @@ export function FormViewerSelector({
 			...selectedViewers.filter(v => v.scope !== "ALL"),
 			{ scope: "INDIVIDUAL", userId },
 		]);
-		onAddModeChange("idle");
-		onMemberSearchChange("");
+		setAddMode("idle");
+		setMemberSearchQuery("");
 	};
 
 	const handleRemoveViewer = (index: number) => {
@@ -137,8 +134,8 @@ export function FormViewerSelector({
 					open={addMode !== "idle"}
 					onOpenChange={o => {
 						if (!o) {
-							onAddModeChange("idle");
-							onMemberSearchChange("");
+							setAddMode("idle");
+							setMemberSearchQuery("");
 						}
 					}}
 				>
@@ -154,7 +151,7 @@ export function FormViewerSelector({
 							<button
 								type="button"
 								className={styles.viewerAddButton}
-								onClick={() => onAddModeChange("BUREAU")}
+								onClick={() => setAddMode("BUREAU")}
 							>
 								<IconPlus size={12} />
 								局を追加
@@ -164,7 +161,7 @@ export function FormViewerSelector({
 							<button
 								type="button"
 								className={styles.viewerAddButton}
-								onClick={() => onAddModeChange("INDIVIDUAL")}
+								onClick={() => setAddMode("INDIVIDUAL")}
 							>
 								<IconPlus size={12} />
 								個人を追加
@@ -210,7 +207,7 @@ export function FormViewerSelector({
 										placeholder="検索..."
 										size="2"
 										value={memberSearchQuery}
-										onChange={e => onMemberSearchChange(e.target.value)}
+										onChange={e => setMemberSearchQuery(e.target.value)}
 									>
 										<RadixTextField.Slot>
 											<IconSearch size={14} />

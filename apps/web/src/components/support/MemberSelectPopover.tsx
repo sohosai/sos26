@@ -6,31 +6,33 @@ import {
 	IconX,
 } from "@tabler/icons-react";
 import Avatar from "boring-avatars";
+import { useState } from "react";
 import styles from "./NewInquiryForm.module.scss";
 
 type UserSummary = { id: string; name: string };
 
 export function MemberSelectPopover({
-	open,
-	onOpenChange,
 	members,
 	selected,
-	searchQuery,
-	onSearchChange,
 	onToggle,
 	triggerLabel,
 }: {
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
 	members: UserSummary[];
 	selected: UserSummary[];
-	searchQuery: string;
-	onSearchChange: (q: string) => void;
 	onToggle: (person: UserSummary) => void;
 	triggerLabel: string;
 }) {
+	const [open, setOpen] = useState(false);
+	const [searchQuery, setSearchQuery] = useState("");
+
 	return (
-		<Popover.Root open={open} onOpenChange={onOpenChange}>
+		<Popover.Root
+			open={open}
+			onOpenChange={o => {
+				setOpen(o);
+				if (!o) setSearchQuery("");
+			}}
+		>
 			<Popover.Trigger>
 				<button type="button" className={styles.assignTrigger}>
 					<Text size="2" color="gray">
@@ -49,7 +51,7 @@ export function MemberSelectPopover({
 						placeholder="検索..."
 						size="2"
 						value={searchQuery}
-						onChange={e => onSearchChange(e.target.value)}
+						onChange={e => setSearchQuery(e.target.value)}
 					>
 						<RadixTextField.Slot>
 							<IconSearch size={14} />

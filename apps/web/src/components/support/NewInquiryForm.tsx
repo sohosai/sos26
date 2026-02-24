@@ -68,26 +68,14 @@ export function NewInquiryForm({
 	const [selectedProjectAssignees, setSelectedProjectAssignees] = useState<
 		UserSummary[]
 	>([]);
-	const [projectSearchQuery, setProjectSearchQuery] = useState("");
-	const [projectPopoverOpen, setProjectPopoverOpen] = useState(false);
-	const [projectSelectorOpen, setProjectSelectorOpen] = useState(false);
-	const [projectSelectorQuery, setProjectSelectorQuery] = useState("");
 	const [loadingMembers, setLoadingMembers] = useState(false);
 	const [selectedCoAssignees, setSelectedCoAssignees] = useState<UserSummary[]>(
 		[]
 	);
-	const [coAssigneePopoverOpen, setCoAssigneePopoverOpen] = useState(false);
-	const [coAssigneeSearchQuery, setCoAssigneeSearchQuery] = useState("");
 	const [selectedCommitteeAssignees, setSelectedCommitteeAssignees] = useState<
 		UserSummary[]
 	>([]);
-	const [committeePopoverOpen, setCommitteePopoverOpen] = useState(false);
-	const [committeeSearchQuery, setCommitteeSearchQuery] = useState("");
 	const [selectedViewers, setSelectedViewers] = useState<ViewerInput[]>([]);
-	const [viewerAddMode, setViewerAddMode] = useState<
-		"idle" | "BUREAU" | "INDIVIDUAL"
-	>("idle");
-	const [viewerMemberSearchQuery, setViewerMemberSearchQuery] = useState("");
 	const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,23 +86,15 @@ export function NewInquiryForm({
 		setSelectedProject(null);
 		setLoadedProjectMembers([]);
 		setSelectedProjectAssignees([]);
-		setProjectSearchQuery("");
-		setProjectSelectorQuery("");
 		setSelectedCoAssignees([]);
-		setCoAssigneeSearchQuery("");
 		setSelectedCommitteeAssignees([]);
-		setCommitteeSearchQuery("");
 		setSelectedViewers([]);
-		setViewerAddMode("idle");
-		setViewerMemberSearchQuery("");
 		setSelectedFiles([]);
 	};
 
 	const handleSelectProject = async (project: { id: string; name: string }) => {
 		setSelectedProject(project);
 		setSelectedProjectAssignees([]);
-		setProjectSelectorOpen(false);
-		setProjectSelectorQuery("");
 
 		if (onLoadProjectMembers) {
 			setLoadingMembers(true);
@@ -262,13 +242,6 @@ export function NewInquiryForm({
 						<ProjectSelector
 							projects={projects}
 							selectedProject={selectedProject}
-							open={projectSelectorOpen}
-							onOpenChange={o => {
-								setProjectSelectorOpen(o);
-								if (!o) setProjectSelectorQuery("");
-							}}
-							searchQuery={projectSelectorQuery}
-							onSearchChange={setProjectSelectorQuery}
 							onSelect={handleSelectProject}
 						/>
 					)}
@@ -289,15 +262,8 @@ export function NewInquiryForm({
 							) : (
 								<>
 									<MemberSelectPopover
-										open={projectPopoverOpen}
-										onOpenChange={o => {
-											setProjectPopoverOpen(o);
-											if (!o) setProjectSearchQuery("");
-										}}
 										members={loadedProjectMembers}
 										selected={selectedProjectAssignees}
-										searchQuery={projectSearchQuery}
-										onSearchChange={setProjectSearchQuery}
 										onToggle={toggleProjectAssignee}
 										triggerLabel="担当者を選択..."
 									/>
@@ -322,17 +288,10 @@ export function NewInquiryForm({
 									あなた以外に実委側の担当者を追加する場合に選択してください
 								</Text>
 								<MemberSelectPopover
-									open={committeePopoverOpen}
-									onOpenChange={o => {
-										setCommitteePopoverOpen(o);
-										if (!o) setCommitteeSearchQuery("");
-									}}
 									members={committeeMembers.filter(
 										m => m.id !== currentUser.id
 									)}
 									selected={selectedCommitteeAssignees}
-									searchQuery={committeeSearchQuery}
-									onSearchChange={setCommitteeSearchQuery}
 									onToggle={toggleCommitteeAssignee}
 									triggerLabel="実委担当者を追加..."
 								/>
@@ -349,10 +308,6 @@ export function NewInquiryForm({
 							selectedViewers={selectedViewers}
 							onChangeViewers={setSelectedViewers}
 							committeeMembers={committeeMembers}
-							addMode={viewerAddMode}
-							onAddModeChange={setViewerAddMode}
-							memberSearchQuery={viewerMemberSearchQuery}
-							onMemberSearchChange={setViewerMemberSearchQuery}
 						/>
 					)}
 
@@ -368,15 +323,8 @@ export function NewInquiryForm({
 									自企画のメンバーを共同担当者として追加できます
 								</Text>
 								<MemberSelectPopover
-									open={coAssigneePopoverOpen}
-									onOpenChange={o => {
-										setCoAssigneePopoverOpen(o);
-										if (!o) setCoAssigneeSearchQuery("");
-									}}
 									members={projectMembers.filter(m => m.id !== currentUser.id)}
 									selected={selectedCoAssignees}
-									searchQuery={coAssigneeSearchQuery}
-									onSearchChange={setCoAssigneeSearchQuery}
 									onToggle={toggleCoAssignee}
 									triggerLabel="共同担当者を追加..."
 								/>
@@ -436,20 +384,21 @@ export function NewInquiryForm({
 function ProjectSelector({
 	projects,
 	selectedProject,
-	open,
-	onOpenChange,
-	searchQuery,
-	onSearchChange,
 	onSelect,
 }: {
 	projects: { id: string; name: string }[];
 	selectedProject: { id: string; name: string } | null;
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
-	searchQuery: string;
-	onSearchChange: (q: string) => void;
 	onSelect: (project: { id: string; name: string }) => void;
 }) {
+	const [open, setOpen] = useState(false);
+	const [searchQuery, setSearchQuery] = useState("");
+
+	const handleSelect = (project: { id: string; name: string }) => {
+		onSelect(project);
+		setOpen(false);
+		setSearchQuery("");
+	};
+
 	return (
 		<div className={styles.assignSection}>
 			<Text size="2" weight="medium">
@@ -458,7 +407,13 @@ function ProjectSelector({
 			<Text size="1" color="gray">
 				このお問い合わせの対象となる企画を選択してください
 			</Text>
-			<Popover.Root open={open} onOpenChange={onOpenChange}>
+			<Popover.Root
+				open={open}
+				onOpenChange={o => {
+					setOpen(o);
+					if (!o) setSearchQuery("");
+				}}
+			>
 				<Popover.Trigger>
 					<button type="button" className={styles.assignTrigger}>
 						<Text size="2" color="gray">
@@ -477,7 +432,7 @@ function ProjectSelector({
 							placeholder="企画名で検索..."
 							size="2"
 							value={searchQuery}
-							onChange={e => onSearchChange(e.target.value)}
+							onChange={e => setSearchQuery(e.target.value)}
 						>
 							<RadixTextField.Slot>
 								<IconSearch size={14} />
@@ -497,8 +452,10 @@ function ProjectSelector({
 									<button
 										key={project.id}
 										type="button"
-										className={`${styles.assignOption} ${isSelected ? styles.assignOptionSelected : ""}`}
-										onClick={() => onSelect(project)}
+										className={`${styles.assignOption} ${
+											isSelected ? styles.assignOptionSelected : ""
+										}`}
+										onClick={() => handleSelect(project)}
 									>
 										<div className={styles.assignOptionText}>
 											<Text size="2">{project.name}</Text>
