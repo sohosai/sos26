@@ -18,6 +18,7 @@ import {
 	removeProjectMember,
 } from "@/lib/api/project";
 import { useAuthStore } from "@/lib/auth";
+import { formatDate } from "@/lib/format";
 import { useProject, useProjectStore } from "@/lib/project/store";
 import styles from "./index.module.scss";
 
@@ -173,7 +174,7 @@ function RouteComponent() {
 		}),
 		memberColumnHelper.accessor("joinedAt", {
 			header: "参加日",
-			cell: info => new Date(info.getValue()).toLocaleDateString(),
+			cell: info => formatDate(new Date(info.getValue()), "date"),
 		}),
 	];
 
