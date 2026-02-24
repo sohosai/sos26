@@ -226,6 +226,64 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"Inquiry" {
+  String id PK
+  String title
+  String body
+  InquiryStatus status
+  String createdById FK
+  InquiryCreatorRole creatorRole
+  String projectId FK
+  String relatedFormId FK "nullable"
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"InquiryAssignee" {
+  String id PK
+  String inquiryId FK
+  String userId FK
+  InquiryAssigneeSide side
+  Boolean isCreator
+  DateTime assignedAt
+  DateTime deletedAt "nullable"
+}
+"InquiryViewer" {
+  String id PK
+  String inquiryId FK
+  InquiryViewerScope scope
+  Bureau bureauValue "nullable"
+  String userId FK "nullable"
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+}
+"InquiryComment" {
+  String id PK
+  String inquiryId FK
+  String body
+  String createdById FK
+  InquiryCreatorRole senderRole
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+}
+"InquiryActivity" {
+  String id PK
+  String inquiryId FK
+  InquiryActivityType type
+  String actorId FK
+  String targetId FK "nullable"
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+}
+"InquiryAttachment" {
+  String id PK
+  String inquiryId FK
+  String commentId FK "nullable"
+  String fileId FK
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
 "Project" }o--|| "User" : owner
 "Project" }o--o| "User" : subOwner
 "ProjectMember" }o--|| "Project" : project
@@ -263,6 +321,21 @@ erDiagram
 "NoticeReadStatus" }o--|| "User" : user
 "NoticeAttachment" }o--|| "Notice" : notice
 "NoticeAttachment" }o--|| "File" : file
+"Inquiry" }o--|| "User" : createdBy
+"Inquiry" }o--|| "Project" : project
+"Inquiry" }o--o| "Form" : relatedForm
+"InquiryAssignee" }o--|| "Inquiry" : inquiry
+"InquiryAssignee" }o--|| "User" : user
+"InquiryViewer" }o--|| "Inquiry" : inquiry
+"InquiryViewer" }o--o| "User" : user
+"InquiryComment" }o--|| "Inquiry" : inquiry
+"InquiryComment" }o--|| "User" : createdBy
+"InquiryActivity" }o--|| "Inquiry" : inquiry
+"InquiryActivity" }o--|| "User" : actor
+"InquiryActivity" }o--o| "User" : target
+"InquiryAttachment" }o--|| "Inquiry" : inquiry
+"InquiryAttachment" }o--o| "InquiryComment" : comment
+"InquiryAttachment" }o--|| "File" : file
 ```
 
 ### `EmailVerification`
@@ -553,6 +626,82 @@ Properties as follows:
 
 - `id`:
 - `noticeId`:
+- `fileId`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `Inquiry`
+
+Properties as follows:
+
+- `id`:
+- `title`:
+- `body`:
+- `status`:
+- `createdById`:
+- `creatorRole`:
+- `projectId`:
+- `relatedFormId`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `InquiryAssignee`
+
+Properties as follows:
+
+- `id`:
+- `inquiryId`:
+- `userId`:
+- `side`:
+- `isCreator`:
+- `assignedAt`:
+- `deletedAt`:
+
+### `InquiryViewer`
+
+Properties as follows:
+
+- `id`:
+- `inquiryId`:
+- `scope`:
+- `bureauValue`:
+- `userId`:
+- `deletedAt`:
+- `createdAt`:
+
+### `InquiryComment`
+
+Properties as follows:
+
+- `id`:
+- `inquiryId`:
+- `body`:
+- `createdById`:
+- `senderRole`:
+- `deletedAt`:
+- `createdAt`:
+
+### `InquiryActivity`
+
+Properties as follows:
+
+- `id`:
+- `inquiryId`:
+- `type`:
+- `actorId`:
+- `targetId`:
+- `deletedAt`:
+- `createdAt`:
+
+### `InquiryAttachment`
+
+Properties as follows:
+
+- `id`:
+- `inquiryId`:
+- `commentId`:
 - `fileId`:
 - `deletedAt`:
 - `createdAt`:

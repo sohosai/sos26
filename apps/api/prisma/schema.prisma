@@ -84,6 +84,14 @@ model User {
   // リレーション: ファイル
   files File[]
 
+  // Inquiry関連
+  createdInquiries          Inquiry[]         @relation("InquiryCreatedBy")
+  inquiryAssignments        InquiryAssignee[] @relation("InquiryAssignee")
+  inquiryViewerEntries      InquiryViewer[]   @relation("InquiryViewer")
+  inquiryComments           InquiryComment[]  @relation("InquiryCommentCreatedBy")
+  inquiryActivitiesAsActor  InquiryActivity[] @relation("InquiryActivityActor")
+  inquiryActivitiesAsTarget InquiryActivity[] @relation("InquiryActivityTarget")
+
   @@unique([firebaseUid, deletedAt])
   @@unique([email, deletedAt])
 }
@@ -131,6 +139,7 @@ model Project {
   projectMembers   ProjectMember[]
   noticeDeliveries NoticeDelivery[]
   formDeliveries   FormDelivery[]
+  inquiries        Inquiry[]
 
   @@index([ownerId])
   @@index([subOwnerId])
@@ -190,6 +199,7 @@ enum CommitteePermission {
   NOTICE_DELIVER // お知らせ配信
   NOTICE_APPROVE // お知らせ承認
   FORM_DELIVER // フォーム配信
+  INQUIRY_ADMIN // お問い合わせ管理
 }
 
 //実委人の権限管理Table
@@ -264,7 +274,8 @@ model File {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  noticeAttachments NoticeAttachment[]
+  noticeAttachments  NoticeAttachment[]
+  inquiryAttachments InquiryAttachment[]
 
   @@index([uploadedById])
   @@index([status])
@@ -428,6 +439,9 @@ model Form {
 
   //フォーム項目
   items FormItem[]
+
+  // お問い合わせ関連
+  inquiries Inquiry[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -671,5 +685,199 @@ model NoticeAttachment {
 
   @@unique([noticeId, fileId])
   @@index([fileId])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// お問い合わせ関連
+// ─────────────────────────────────────────────────────────────
+
+enum InquiryStatus {
+  UNASSIGNED // 担当者未割り当て
+  IN_PROGRESS // 対応中
+  RESOLVED // 解決済み
+}
+
+enum InquiryCreatorRole {
+  PROJECT // 企画人
+  COMMITTEE // 実委人
+}
+
+enum InquiryAssigneeSide {
+  PROJECT // 企画側
+  COMMITTEE // 実委側
+}
+
+enum InquiryViewerScope {
+  ALL // 全員
+  BUREAU // 特定局
+  INDIVIDUAL // 個人
+}
+
+enum InquiryActivityType {
+  ASSIGNEE_ADDED // 担当者追加
+  ASSIGNEE_REMOVED // 担当者削除
+  VIEWER_UPDATED // 閲覧者変更
+  STATUS_RESOLVED // 解決済みに変更
+  STATUS_REOPENED // 再オープン
+}
+
+model Inquiry {
+  id String @id @default(cuid())
+
+  // 件名
+  title String
+
+  // 内容
+  body String
+
+  // ステータス
+  status InquiryStatus @default(UNASSIGNED)
+
+  // 作成者
+  createdById String
+  createdBy   User   @relation("InquiryCreatedBy", fields: [createdById], references: [id])
+
+  // 作成者のロール
+  creatorRole InquiryCreatorRole
+
+  // 関連する企画
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+
+  // 問い合わせに紐づくフォーム
+  relatedFormId String?
+  relatedForm   Form?   @relation(fields: [relatedFormId], references: [id])
+
+  assignees   InquiryAssignee[]
+  viewers     InquiryViewer[]
+  comments    InquiryComment[]
+  activities  InquiryActivity[]
+  attachments InquiryAttachment[]
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model InquiryAssignee {
+  id String @id @default(cuid())
+
+  inquiryId String
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation("InquiryAssignee", fields: [userId], references: [id])
+
+  // 企画側 or 実委側
+  side InquiryAssigneeSide
+
+  // 作成者かどうか（削除不可フラグ）
+  isCreator Boolean @default(false)
+
+  assignedAt DateTime  @default(now())
+  deletedAt  DateTime?
+
+  @@unique([inquiryId, userId, deletedAt])
+  @@index([inquiryId])
+}
+
+model InquiryViewer {
+  id String @id @default(cuid())
+
+  inquiryId String
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  // 閲覧者スコープ
+  scope InquiryViewerScope
+
+  // scope = BUREAU の場合の局
+  bureauValue Bureau?
+
+  // scope = INDIVIDUAL の場合のユーザー
+  userId String?
+  user   User?   @relation("InquiryViewer", fields: [userId], references: [id])
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([inquiryId])
+  @@index([userId])
+  @@index([deletedAt])
+}
+
+model InquiryComment {
+  id String @id @default(cuid())
+
+  inquiryId String
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  // コメント内容
+  body String
+
+  // 投稿者
+  createdById String
+  createdBy   User   @relation("InquiryCommentCreatedBy", fields: [createdById], references: [id])
+
+  // 投稿時のロール
+  senderRole InquiryCreatorRole @default(PROJECT)
+
+  attachments InquiryAttachment[]
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([inquiryId])
+  @@index([deletedAt])
+}
+
+model InquiryActivity {
+  id String @id @default(cuid())
+
+  inquiryId String
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  // アクティビティの種類
+  type InquiryActivityType
+
+  // 操作者
+  actorId String
+  actor   User   @relation("InquiryActivityActor", fields: [actorId], references: [id])
+
+  // 対象者（担当者追加・削除時）
+  targetId String?
+  target   User?   @relation("InquiryActivityTarget", fields: [targetId], references: [id])
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([inquiryId])
+  @@index([deletedAt])
+}
+
+//お問い合わせの添付ファイル
+model InquiryAttachment {
+  id        String  @id @default(cuid())
+  inquiryId String
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  // null = 本文の添付、set = コメントの添付
+  commentId String?
+  comment   InquiryComment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  fileId String
+  file   File   @relation(fields: [fileId], references: [id])
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([inquiryId, fileId])
+  @@index([fileId])
+  @@index([commentId])
   @@index([deletedAt])
 }

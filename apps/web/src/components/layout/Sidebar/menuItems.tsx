@@ -1,6 +1,7 @@
 import {
 	IconBell,
 	IconFileText,
+	IconMessageCircleQuestion,
 	IconTable,
 	IconUsers,
 } from "@tabler/icons-react";
@@ -16,6 +17,11 @@ export const projectMenuItems: MenuItem[] = [
 		label: "フォーム",
 		icon: <IconFileText size={18} />,
 		to: "/project/forms",
+	},
+	{
+		label: "問い合わせ",
+		icon: <IconMessageCircleQuestion size={18} />,
+		to: "/project/support",
 	},
 	{
 		label: "お知らせ",
@@ -39,6 +45,11 @@ export const committeeMenuItems: MenuItem[] = [
 		label: "フォーム",
 		icon: <IconFileText size={18} />,
 		to: "/committee/forms",
+	},
+	{
+		label: "問い合わせ",
+		icon: <IconMessageCircleQuestion size={18} />,
+		to: "/committee/support",
 	},
 	{ label: "お知らせ", icon: <IconBell size={18} />, to: "/committee/notice" },
 ];
