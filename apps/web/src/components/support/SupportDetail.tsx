@@ -31,7 +31,7 @@ import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button, TextArea } from "@/components/primitives";
 import { downloadFile, uploadFile } from "@/lib/api/files";
-import { formatFileSize } from "@/lib/format";
+import { formatDate, formatFileSize } from "@/lib/format";
 import { useStorageUrl } from "@/lib/storage";
 import { statusConfig } from "./constants";
 import styles from "./SupportDetail.module.scss";
@@ -178,8 +178,8 @@ export function SupportDetail({
 						<Heading size="5">{inquiry.title}</Heading>
 					</div>
 					<Text size="2" color="gray">
-						{inquiry.createdBy.name} が {formatDateTime(inquiry.createdAt)}{" "}
-						に作成
+						{inquiry.createdBy.name} が{" "}
+						{formatDate(inquiry.createdAt, "datetime")} に作成
 					</Text>
 				</header>
 
@@ -617,7 +617,7 @@ function TimelineItem({
 						{role === "committee" ? "実行委員" : "企画者"}
 					</Badge>
 					<Text size="1" color="gray" className={styles.timelineHeaderMeta}>
-						{formatDateTime(date)}
+						{formatDate(date, "datetime")}
 					</Text>
 				</div>
 				<Text size="2" className={styles.timelineBody}>
@@ -694,7 +694,8 @@ function ActivityItem({ activity }: { activity: ActivityInfo }) {
 	return (
 		<div className={styles.activityItem}>
 			<Text size="1" color="gray">
-				{getActivityText(activity)} — {formatDateTime(activity.createdAt)}
+				{getActivityText(activity)} —{" "}
+				{formatDate(activity.createdAt, "datetime")}
 			</Text>
 		</div>
 	);
@@ -1002,14 +1003,4 @@ function ViewerSettings({
 			)}
 		</div>
 	);
-}
-
-function formatDateTime(date: Date): string {
-	const d = new Date(date);
-	const y = d.getFullYear();
-	const m = (d.getMonth() + 1).toString().padStart(2, "0");
-	const day = d.getDate().toString().padStart(2, "0");
-	const h = d.getHours().toString().padStart(2, "0");
-	const min = d.getMinutes().toString().padStart(2, "0");
-	return `${y}/${m}/${day} ${h}:${min}`;
 }

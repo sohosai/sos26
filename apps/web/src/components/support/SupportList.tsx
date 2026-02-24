@@ -13,6 +13,7 @@ import { useNavigate } from "@tanstack/react-router";
 import Avatar from "boring-avatars";
 import { useState } from "react";
 import { Button, TextField } from "@/components/primitives";
+import { formatDate } from "@/lib/format";
 import { statusConfig } from "./constants";
 import styles from "./SupportList.module.scss";
 
@@ -432,7 +433,7 @@ function InquiryCard({
 					</span>
 
 					<Text size="1" color="gray">
-						{formatDate(inquiry.createdAt)} に作成
+						{formatDate(inquiry.createdAt, "datetime")} に作成
 						{inquiry.commentCount > 0 && ` / ${inquiry.commentCount}件の返信`}
 					</Text>
 
@@ -461,12 +462,4 @@ function InquiryCard({
 			</button>
 		</li>
 	);
-}
-
-function formatDate(date: Date): string {
-	const m = (date.getMonth() + 1).toString().padStart(2, "0");
-	const d = date.getDate().toString().padStart(2, "0");
-	const h = date.getHours().toString().padStart(2, "0");
-	const min = date.getMinutes().toString().padStart(2, "0");
-	return `${m}/${d} ${h}:${min}`;
 }
