@@ -1,4 +1,4 @@
-import { Heading, Text } from "@radix-ui/themes";
+import { AlertDialog, Heading, Text } from "@radix-ui/themes";
 import {
 	type Bureau,
 	bureauLabelMap,
@@ -167,12 +167,17 @@ function RouteComponent() {
 	const { members: initialMembers } = Route.useLoaderData();
 	const [members, setMembers] = useState<CommitteeMemberRow[]>(initialMembers);
 	const { user } = useAuthStore();
+	const [selfRevokeConfirmOpen, setSelfRevokeConfirmOpen] = useState(false);
+	const [pendingRevoke, setPendingRevoke] = useState<{
+		memberId: string;
+		permission: CommitteePermission;
+	} | null>(null);
 
 	useEffect(() => {
 		setMembers(initialMembers);
 	}, [initialMembers]);
 
-	const handleTogglePermission = async (
+	const executeToggle = async (
 		memberId: string,
 		permission: CommitteePermission,
 		currentlyHas: boolean
@@ -198,6 +203,33 @@ function RouteComponent() {
 		} catch {
 			toast.error("権限の変更に失敗しました");
 		}
+	};
+
+	const handleTogglePermission = async (
+		memberId: string,
+		permission: CommitteePermission,
+		currentlyHas: boolean
+	) => {
+		// 自分自身から MEMBER_EDIT を外す場合は確認ダイアログを表示
+		const member = members.find(m => m.id === memberId);
+		if (
+			currentlyHas &&
+			permission === "MEMBER_EDIT" &&
+			member?.userId === user?.id
+		) {
+			setPendingRevoke({ memberId, permission });
+			setSelfRevokeConfirmOpen(true);
+			return;
+		}
+
+		await executeToggle(memberId, permission, currentlyHas);
+	};
+
+	const handleConfirmSelfRevoke = async () => {
+		if (!pendingRevoke) return;
+		await executeToggle(pendingRevoke.memberId, pendingRevoke.permission, true);
+		setSelfRevokeConfirmOpen(false);
+		setPendingRevoke(null);
 	};
 
 	const handleDelete = async (memberId: string) => {
@@ -265,14 +297,6 @@ function RouteComponent() {
 			<DataTable<CommitteeMemberRow>
 				data={members}
 				columns={columns}
-				features={{
-					sorting: true,
-					globalFilter: true,
-					columnVisibility: false,
-					selection: false,
-					copy: false,
-					csvExport: false,
-				}}
 				initialSorting={[
 					{
 						id: "joinedAt",
@@ -280,6 +304,29 @@ function RouteComponent() {
 					},
 				]}
 			/>
+
+			{/* 自分からメンバー編集権限を外す確認ダイアログ */}
+			<AlertDialog.Root
+				open={selfRevokeConfirmOpen}
+				onOpenChange={setSelfRevokeConfirmOpen}
+			>
+				<AlertDialog.Content maxWidth="400px">
+					<AlertDialog.Title>権限の削除</AlertDialog.Title>
+					<AlertDialog.Description size="2">
+						自分自身から「メンバー編集」権限を外すと、このページにアクセスできなくなります。本当に実行しますか？
+					</AlertDialog.Description>
+					<div className={styles.confirmActions}>
+						<AlertDialog.Cancel>
+							<Button intent="secondary" size="2">
+								キャンセル
+							</Button>
+						</AlertDialog.Cancel>
+						<Button intent="danger" size="2" onClick={handleConfirmSelfRevoke}>
+							権限を削除する
+						</Button>
+					</div>
+				</AlertDialog.Content>
+			</AlertDialog.Root>
 		</div>
 	);
 }
