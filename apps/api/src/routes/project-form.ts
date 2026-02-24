@@ -1,6 +1,7 @@
 import {
 	type CreateFormResponseRequest,
 	createFormResponseRequestSchema,
+	type FormItemType,
 	projectFormPathParamsSchema,
 	projectFormResponsePathParamsSchema,
 	updateFormResponseRequestSchema,
@@ -68,29 +69,83 @@ const checkDeadline = (
 const upsertAnswers = async (
 	tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
 	responseId: string,
-	answers: CreateFormResponseRequest["answers"]
+	answers: CreateFormResponseRequest["answers"],
+	formItems: { id: string; type: FormItemType }[]
 ) => {
+	const itemTypeMap = new Map(formItems.map(i => [i.id, i.type]));
 	// 既存回答を全削除して再作成（シンプルな全置き換え）
 	await tx.formAnswer.deleteMany({ where: { formResponseId: responseId } });
 
 	for (const answer of answers) {
-		const { selectedOptionIds, ...answerData } = answer;
-		await tx.formAnswer.create({
-			data: {
-				formResponseId: responseId,
-				formItemId: answer.formItemId,
-				textValue: answerData.textValue ?? null,
-				numberValue: answerData.numberValue ?? null,
-				fileUrl: answerData.fileUrl ?? null,
-				selectedOptions: selectedOptionIds?.length
-					? {
-							create: selectedOptionIds.map(formItemOptionId => ({
-								formItemOptionId,
+		// const { selectedOptionIds, ...answerData } = answer;
+		// await tx.formAnswer.create({
+		// 	data: {
+		// 		formResponseId: responseId,
+		// 		formItemId: answer.formItemId,
+		// 		textValue: answerData.textValue ?? null,
+		// 		numberValue: answerData.numberValue ?? null,
+		// 		fileUrl: answerData.fileUrl ?? null,
+		// 		selectedOptions: selectedOptionIds?.length
+		// 			? {
+		// 					create: selectedOptionIds.map(formItemOptionId => ({
+		// 						formItemOptionId,
+		// 					})),
+		// 				}
+		// 			: undefined,
+		// },
+		// });
+		const type = itemTypeMap.get(answer.formItemId);
+		if (!type) {
+			throw Errors.invalidRequest("不正な設問IDです");
+		}
+
+		switch (type) {
+			case "TEXT":
+			case "TEXTAREA":
+				await tx.formAnswer.create({
+					data: {
+						formResponseId: responseId,
+						formItemId: answer.formItemId,
+						textValue: answer.textValue ?? null,
+					},
+				});
+				break;
+
+			case "NUMBER":
+				await tx.formAnswer.create({
+					data: {
+						formResponseId: responseId,
+						formItemId: answer.formItemId,
+						numberValue: answer.numberValue ?? null,
+					},
+				});
+				break;
+
+			case "FILE":
+				await tx.formAnswer.create({
+					data: {
+						formResponseId: responseId,
+						formItemId: answer.formItemId,
+						fileUrl: answer.fileUrl ?? null,
+					},
+				});
+				break;
+
+			case "SELECT":
+			case "CHECKBOX":
+				await tx.formAnswer.create({
+					data: {
+						formResponseId: responseId,
+						formItemId: answer.formItemId,
+						selectedOptions: {
+							create: (answer.selectedOptionIds ?? []).map(id => ({
+								formItemOptionId: id,
 							})),
-						}
-					: undefined,
-			},
-		});
+						},
+					},
+				});
+				break;
+		}
 	}
 };
 
@@ -273,7 +328,12 @@ projectFormRoute.post(
 				},
 			});
 
-			await upsertAnswers(tx, created.id, answers);
+			await upsertAnswers(
+				tx,
+				created.id,
+				answers,
+				delivery.formAuthorization.form.items
+			);
 			return formatResponse(tx, created.id);
 		});
 
@@ -316,7 +376,12 @@ projectFormRoute.patch(
 				data: { submittedAt: submit ? new Date() : null },
 			});
 
-			await upsertAnswers(tx, responseId, answers);
+			await upsertAnswers(
+				tx,
+				responseId,
+				answers,
+				delivery.formAuthorization.form.items
+			);
 			return formatResponse(tx, responseId);
 		});
 

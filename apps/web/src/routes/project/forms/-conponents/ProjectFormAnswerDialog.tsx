@@ -1,3 +1,8 @@
+import type {
+	CreateFormResponseRequest,
+	FormItemType,
+	GetProjectFormResponse,
+} from "@sos26/shared";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FormAnswerDialog } from "@/components/form/Answer/AnswerDialog";
@@ -9,37 +14,95 @@ import {
 	updateFormResponse,
 } from "@/lib/api/project-form";
 
-type ProjectFormResponse = Awaited<
-	ReturnType<typeof getProjectForm>
->["form"]["response"];
-
 function responseToAnswers(
-	response: NonNullable<ProjectFormResponse>
+	response: NonNullable<GetProjectFormResponse["form"]["response"]>,
+	form: Form
 ): FormAnswers {
+	const itemTypeMap = new Map<string, FormItemType>(
+		// toUpperCase() してからMapに入れる
+		form.items.map(i => [i.id, i.type.toUpperCase() as FormItemType])
+	);
+
 	const answers: FormAnswers = {};
+
 	for (const answer of response.answers) {
-		if (answer.selectedOptionIds.length > 0) {
-			answers[answer.formItemId] = answer.selectedOptionIds;
-		} else if (answer.textValue !== null) {
-			answers[answer.formItemId] = answer.textValue;
-		} else if (answer.numberValue !== null) {
-			answers[answer.formItemId] = answer.numberValue;
-		} else if (answer.fileUrl !== null) {
-			answers[answer.formItemId] = answer.fileUrl;
+		const type = itemTypeMap.get(answer.formItemId);
+		if (!type) continue;
+
+		switch (type) {
+			case "SELECT":
+				answers[answer.formItemId] = answer.selectedOptionIds[0] ?? "";
+				break;
+			case "CHECKBOX":
+				answers[answer.formItemId] = answer.selectedOptionIds;
+				break;
+			case "NUMBER":
+				if (answer.numberValue !== null) {
+					answers[answer.formItemId] = answer.numberValue;
+				}
+				break;
+			case "FILE":
+				if (answer.fileUrl !== null) {
+					answers[answer.formItemId] = answer.fileUrl;
+				}
+				break;
+			case "TEXT":
+			case "TEXTAREA":
+			default:
+				if (answer.textValue !== null) {
+					answers[answer.formItemId] = answer.textValue;
+				}
+				break;
 		}
 	}
+
 	return answers;
 }
 
-function buildAnswerBody(answers: FormAnswers, submit: boolean) {
+function buildAnswerBody(
+	answers: FormAnswers,
+	form: Form,
+	submit: boolean
+): CreateFormResponseRequest {
+	const itemTypeMap = new Map<string, FormItemType>(
+		// toUpperCase() してからMapに入れる
+		form.items.map(i => [i.id, i.type.toUpperCase() as FormItemType])
+	);
+
 	return {
 		submit,
 		answers: Object.entries(answers).map(([formItemId, value]) => {
-			if (typeof value === "string") return { formItemId, textValue: value };
-			if (typeof value === "number") return { formItemId, numberValue: value };
-			if (Array.isArray(value))
-				return { formItemId, selectedOptionIds: value as string[] };
-			return { formItemId };
+			const type = itemTypeMap.get(formItemId);
+
+			if (!type) return { formItemId };
+
+			switch (type) {
+				case "TEXT":
+				case "TEXTAREA":
+					return { formItemId, textValue: value as string };
+
+				case "NUMBER":
+					return { formItemId, numberValue: value as number };
+
+				case "SELECT":
+					return {
+						formItemId,
+						selectedOptionIds:
+							typeof value === "string" ? [value] : (value as string[]),
+					};
+
+				case "CHECKBOX":
+					return {
+						formItemId,
+						selectedOptionIds: Array.isArray(value) ? value : [value as string],
+					};
+
+				case "FILE":
+					return { formItemId, fileUrl: value as string };
+
+				default:
+					return { formItemId };
+			}
 		}),
 	};
 }
@@ -75,14 +138,16 @@ export function ProjectFormAnswerDialog({
 				// formDetailToForm と互換の形に変換
 				// GetProjectFormResponse の form は GetFormDetailResponse["form"] と
 				// items/options の構造が同じなのでキャストして流用
-				setForm(
-					formDetailToForm(
-						res.form as unknown as Parameters<typeof formDetailToForm>[0]
-					)
+				const convertedForm = formDetailToForm(
+					res.form as unknown as Parameters<typeof formDetailToForm>[0]
 				);
+
+				setForm(convertedForm);
 				setResponseId(res.form.response?.id ?? null);
 				setInitialAnswers(
-					res.form.response ? responseToAnswers(res.form.response) : {}
+					res.form.response
+						? responseToAnswers(res.form.response, convertedForm)
+						: {}
 				);
 			})
 			.catch(() => {
@@ -95,7 +160,8 @@ export function ProjectFormAnswerDialog({
 	}, [open, projectId, formDeliveryId]);
 
 	const handleSaveDraft = async (answers: FormAnswers) => {
-		const body = buildAnswerBody(answers, false);
+		if (!form) return;
+		const body = buildAnswerBody(answers, form, false);
 		if (responseId) {
 			await updateFormResponse(projectId, formDeliveryId, responseId, body);
 			toast.success("下書きを保存しました");
@@ -108,7 +174,8 @@ export function ProjectFormAnswerDialog({
 	};
 
 	const handleSubmit = async (answers: FormAnswers) => {
-		const body = buildAnswerBody(answers, true);
+		if (!form) return;
+		const body = buildAnswerBody(answers, form, true);
 		if (responseId) {
 			await updateFormResponse(projectId, formDeliveryId, responseId, body);
 		} else {

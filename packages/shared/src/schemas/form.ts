@@ -191,14 +191,19 @@ export type CreateFormResponse = z.infer<typeof createFormResponseSchema>;
 // GET /committee/forms/list
 // ─────────────────────────────────────────────────────────────
 
+const formSummarySchema = z.object({
+	id: z.string(),
+	title: z.string(),
+	description: z.string().nullable(),
+	updatedAt: z.coerce.date(),
+
+	owner: userSummarySchema,
+	collaborators: z.array(userSummarySchema),
+	authorization: authorizationSummarySchema.nullable(),
+});
+
 export const listMyFormsResponseSchema = z.object({
-	forms: z.array(
-		formSchema.extend({
-			owner: userSummarySchema,
-			collaborators: z.array(userSummarySchema),
-			authorization: authorizationSummarySchema.nullable(),
-		})
-	),
+	forms: z.array(formSummarySchema),
 });
 export type ListMyFormsResponse = z.infer<typeof listMyFormsResponseSchema>;
 
@@ -333,6 +338,43 @@ export const rejectFormAuthorizationResponseSchema = z.object({
 });
 export type RejectFormAuthorizationResponse = z.infer<
 	typeof rejectFormAuthorizationResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// GET /committee/forms/:formId/responses
+// フォームの回答一覧（共同編集者のみ）
+// ─────────────────────────────────────────────────────────────
+
+export const formResponseAnswerSchema = z.object({
+	formItemId: z.string(),
+	textValue: z.string().nullable(),
+	numberValue: z.number().nullable(),
+	fileUrl: z.string().nullable(),
+	selectedOptions: z.array(
+		z.object({
+			id: z.string(),
+			label: z.string(),
+		})
+	),
+});
+
+export const formResponseSummarySchema = z.object({
+	id: z.string(),
+	respondent: z.object({ id: z.string(), name: z.string() }),
+	project: z.object({
+		id: z.string(),
+		name: z.string(),
+	}),
+	submittedAt: z.coerce.date().nullable(),
+	createdAt: z.coerce.date(),
+	answers: z.array(formResponseAnswerSchema),
+});
+
+export const listFormResponsesResponseSchema = z.object({
+	responses: z.array(formResponseSummarySchema),
+});
+export type ListFormResponsesResponse = z.infer<
+	typeof listFormResponsesResponseSchema
 >;
 
 // ─────────────────────────────────────────────────────────────

@@ -11,7 +11,9 @@ import {
 	deleteFormEndpoint,
 	type GetFormDetailResponse,
 	getFormDetailEndpoint,
+	type ListFormResponsesResponse,
 	type ListMyFormsResponse,
+	listFormResponsesEndpoint,
 	listMyFormsEndpoint,
 	type RejectFormAuthorizationResponse,
 	type RemoveFormCollaboratorResponse,
@@ -155,4 +157,14 @@ export async function rejectFormAuthorization(
 	return callBodyApi(rejectFormAuthorizationEndpoint, undefined, {
 		pathParams: { formId, authorizationId },
 	});
+}
+
+/**
+ * GET /form/:formId/responses
+ * 回答一覧（owner または共同編集者のみ）
+ */
+export async function listFormResponses(
+	formId: string
+): Promise<ListFormResponsesResponse> {
+	return callGetApi(listFormResponsesEndpoint, { pathParams: { formId } });
 }

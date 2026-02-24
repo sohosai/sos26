@@ -92,51 +92,32 @@ committeeFormRoute.get(
 	requireCommitteeMember,
 	async c => {
 		const forms = await prisma.form.findMany({
-			where: {
-				deletedAt: null,
-			},
-			include: {
-				// フォーム項目
-				items: {
-					include: {
-						options: true,
-					},
-					orderBy: { sortOrder: "asc" },
-				},
+			where: { deletedAt: null },
+			select: {
+				id: true,
+				title: true,
+				description: true,
+				updatedAt: true,
 
-				// オーナー
 				owner: {
-					select: {
-						id: true,
-						name: true,
-					},
+					select: { id: true, name: true },
 				},
 
-				// 共同編集者
 				collaborators: {
 					where: { deletedAt: null },
 					select: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-							},
-						},
+						user: { select: { id: true, name: true } },
 					},
 				},
 
-				// 最新の承認情報のみ
 				authorizations: {
-					include: {
-						requestedTo: {
-							select: {
-								id: true,
-								name: true,
-							},
-						},
-					},
 					orderBy: { createdAt: "desc" },
 					take: 1,
+					include: {
+						requestedTo: {
+							select: { id: true, name: true },
+						},
+					},
 				},
 			},
 			orderBy: { updatedAt: "desc" },
@@ -548,6 +529,88 @@ committeeFormRoute.post(
 		});
 
 		return c.json({ authorization: updated });
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// GET /form/:formId/responses
+// 回答一覧（owner または共同編集者のみ）
+// ─────────────────────────────────────────────────────────────
+committeeFormRoute.get(
+	"/:formId/responses",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const { formId } = c.req.param();
+		const userId = c.get("user").id;
+
+		// owner または共同編集者のみ閲覧可
+		const form = await prisma.form.findFirst({
+			where: { id: formId, deletedAt: null },
+			include: {
+				collaborators: { where: { deletedAt: null } },
+			},
+		});
+		if (!form) throw Errors.notFound("フォームが見つかりません");
+
+		const isOwner = form.ownerId === userId;
+		const isCollaborator = form.collaborators.some(c => c.userId === userId);
+		if (!isOwner && !isCollaborator) {
+			throw Errors.forbidden("回答の閲覧は作成者・共同編集者のみ可能です");
+		}
+
+		const responses = await prisma.formResponse.findMany({
+			where: {
+				formDelivery: { formAuthorization: { formId } },
+				submittedAt: { not: null }, // 提出済みのみ
+			},
+			include: {
+				respondent: { select: { id: true, name: true } },
+				formDelivery: {
+					include: {
+						project: {
+							select: {
+								id: true,
+								name: true,
+							},
+						},
+					},
+				},
+				answers: {
+					include: {
+						selectedOptions: {
+							include: {
+								formItemOption: { select: { id: true, label: true } },
+							},
+						},
+					},
+				},
+			},
+			orderBy: { submittedAt: "desc" },
+		});
+
+		return c.json({
+			responses: responses.map(r => ({
+				id: r.id,
+				respondent: r.respondent,
+				project: {
+					id: r.formDelivery.project.id,
+					name: r.formDelivery.project.name,
+				},
+				submittedAt: r.submittedAt,
+				createdAt: r.createdAt,
+				answers: r.answers.map(a => ({
+					formItemId: a.formItemId,
+					textValue: a.textValue,
+					numberValue: a.numberValue,
+					fileUrl: a.fileUrl,
+					selectedOptions: a.selectedOptions.map(s => ({
+						id: s.formItemOption.id,
+						label: s.formItemOption.label,
+					})),
+				})),
+			})),
+		});
 	}
 );
 

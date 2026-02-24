@@ -10,6 +10,7 @@ import {
 	formCollaboratorPathParamsSchema,
 	formIdPathParamsSchema,
 	getFormDetailResponseSchema,
+	listFormResponsesResponseSchema,
 	listMyFormsResponseSchema,
 	rejectFormAuthorizationRequestSchema,
 	rejectFormAuthorizationResponseSchema,
@@ -237,4 +238,18 @@ export const rejectFormAuthorizationEndpoint: BodyEndpoint<
 	query: undefined,
 	request: rejectFormAuthorizationRequestSchema,
 	response: rejectFormAuthorizationResponseSchema,
+} as const;
+
+export const listFormResponsesEndpoint: GetEndpoint<
+	"/committee/forms/:formId/responses",
+	typeof formIdPathParamsSchema,
+	undefined,
+	typeof listFormResponsesResponseSchema
+> = {
+	method: "GET",
+	path: "/committee/forms/:formId/responses",
+	pathParams: formIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: listFormResponsesResponseSchema,
 } as const;

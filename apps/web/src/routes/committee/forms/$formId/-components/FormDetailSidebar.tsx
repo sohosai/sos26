@@ -7,6 +7,7 @@ import {
 	IconTrash,
 	IconX,
 } from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
 import Avatar from "boring-avatars";
 import { useState } from "react";
 import { Button, IconButton } from "@/components/primitives";
@@ -209,6 +210,22 @@ export function FormDetailSidebar({
 								}}
 							/>
 						)}
+					</aside>
+				)}
+
+				{/* ボックス3: 回答確認 */}
+				{hasApprovedAuth && (
+					<aside className={styles.sidebar}>
+						<Link
+							to="/committee/forms/$formId/answers"
+							params={{ formId: formId }}
+						>
+							<div className={styles.section}>
+								<Button intent="primary" size="2">
+									回答を確認する
+								</Button>
+							</div>
+						</Link>
 					</aside>
 				)}
 			</div>
