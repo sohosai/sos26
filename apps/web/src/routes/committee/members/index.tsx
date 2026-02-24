@@ -1,10 +1,10 @@
-import { Heading, Popover, Text } from "@radix-ui/themes";
+import { Heading, Text } from "@radix-ui/themes";
 import {
 	type Bureau,
 	bureauLabelMap,
 	type CommitteePermission,
 } from "@sos26/shared";
-import { IconDotsVertical, IconTrash } from "@tabler/icons-react";
+import { IconTrash } from "@tabler/icons-react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useEffect, useState } from "react";
@@ -116,22 +116,10 @@ function MemberActionsCell({
 	}
 
 	return (
-		<Popover.Root>
-			<Popover.Trigger>
-				<button type="button" className={styles.trigger}>
-					<IconDotsVertical size={16} />
-				</button>
-			</Popover.Trigger>
-
-			<Popover.Content align="start" sideOffset={4}>
-				<div className={styles.menu}>
-					<Button intent="ghost" size="2" onClick={() => onDelete(member.id)}>
-						<IconTrash size={16} />
-						削除
-					</Button>
-				</div>
-			</Popover.Content>
-		</Popover.Root>
+		<Button intent="ghost" size="1" onClick={() => onDelete(member.id)}>
+			<IconTrash size={16} />
+			削除
+		</Button>
 	);
 }
 
@@ -253,7 +241,7 @@ function RouteComponent() {
 		}),
 		memberColumnHelper.display({
 			id: "actions",
-			header: "",
+			header: "操作",
 			cell: ({ row }) => (
 				<MemberActionsCell
 					member={row.original}
@@ -261,6 +249,7 @@ function RouteComponent() {
 					onDelete={handleDelete}
 				/>
 			),
+			enableSorting: false,
 		}),
 	];
 
