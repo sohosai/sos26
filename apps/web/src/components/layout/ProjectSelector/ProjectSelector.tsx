@@ -63,7 +63,10 @@ export function ProjectSelector({
 	};
 
 	const trigger = (
-		<button type="button" className={styles.trigger}>
+		<button
+			type="button"
+			className={`${styles.trigger} ${collapsed ? styles.collapsed : ""}`}
+		>
 			<span className={styles.icon}>
 				{selectedProject ? (
 					<Avatar size={26} name={selectedProject.name} variant="beam" />
