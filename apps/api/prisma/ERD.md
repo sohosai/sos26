@@ -235,6 +235,7 @@ erDiagram
   InquiryCreatorRole creatorRole
   String projectId FK
   String relatedFormId FK "nullable"
+  DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -245,6 +246,7 @@ erDiagram
   InquiryAssigneeSide side
   Boolean isCreator
   DateTime assignedAt
+  DateTime deletedAt "nullable"
 }
 "InquiryViewer" {
   String id PK
@@ -252,6 +254,7 @@ erDiagram
   InquiryViewerScope scope
   Bureau bureauValue "nullable"
   String userId FK "nullable"
+  DateTime deletedAt "nullable"
   DateTime createdAt
 }
 "InquiryComment" {
@@ -259,7 +262,8 @@ erDiagram
   String inquiryId FK
   String body
   String createdById FK
-  String senderRole
+  InquiryCreatorRole senderRole
+  DateTime deletedAt "nullable"
   DateTime createdAt
 }
 "InquiryActivity" {
@@ -268,6 +272,7 @@ erDiagram
   InquiryActivityType type
   String actorId FK
   String targetId FK "nullable"
+  DateTime deletedAt "nullable"
   DateTime createdAt
 }
 "InquiryAttachment" {
@@ -638,6 +643,7 @@ Properties as follows:
 - `creatorRole`:
 - `projectId`:
 - `relatedFormId`:
+- `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
 
@@ -651,6 +657,7 @@ Properties as follows:
 - `side`:
 - `isCreator`:
 - `assignedAt`:
+- `deletedAt`:
 
 ### `InquiryViewer`
 
@@ -661,6 +668,7 @@ Properties as follows:
 - `scope`:
 - `bureauValue`:
 - `userId`:
+- `deletedAt`:
 - `createdAt`:
 
 ### `InquiryComment`
@@ -672,6 +680,7 @@ Properties as follows:
 - `body`:
 - `createdById`:
 - `senderRole`:
+- `deletedAt`:
 - `createdAt`:
 
 ### `InquiryActivity`
@@ -683,6 +692,7 @@ Properties as follows:
 - `type`:
 - `actorId`:
 - `targetId`:
+- `deletedAt`:
 - `createdAt`:
 
 ### `InquiryAttachment`

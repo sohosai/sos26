@@ -9,7 +9,7 @@ async function matchesViewerScope(
 	committeeMember: CommitteeMember
 ): Promise<boolean> {
 	const viewers = await prisma.inquiryViewer.findMany({
-		where: { inquiryId },
+		where: { inquiryId, deletedAt: null },
 	});
 
 	for (const viewer of viewers) {
@@ -41,7 +41,7 @@ async function checkCommitteeAccess(
 
 	// 実委側担当者
 	const committeeAssignee = await prisma.inquiryAssignee.findFirst({
-		where: { inquiryId, userId, side: "COMMITTEE" },
+		where: { inquiryId, userId, side: "COMMITTEE", deletedAt: null },
 	});
 	if (committeeAssignee) return true;
 
@@ -81,7 +81,7 @@ registerFileAccessChecker(async (fileId, user) => {
 
 	// 企画側担当者
 	const projectAssignee = await prisma.inquiryAssignee.findFirst({
-		where: { inquiryId, userId: user.id, side: "PROJECT" },
+		where: { inquiryId, userId: user.id, side: "PROJECT", deletedAt: null },
 	});
 	return !!projectAssignee;
 });

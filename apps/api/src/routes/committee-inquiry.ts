@@ -34,7 +34,7 @@ async function isCommitteeAssignee(
 	userId: string
 ): Promise<boolean> {
 	const assignee = await prisma.inquiryAssignee.findFirst({
-		where: { inquiryId, userId, side: "COMMITTEE" },
+		where: { inquiryId, userId, side: "COMMITTEE", deletedAt: null },
 	});
 	return !!assignee;
 }
@@ -72,7 +72,7 @@ async function canViewInquiry(
 
 	// 3. 閲覧者チェック
 	const viewers = await prisma.inquiryViewer.findMany({
-		where: { inquiryId },
+		where: { inquiryId, deletedAt: null },
 	});
 
 	for (const viewer of viewers) {
@@ -300,8 +300,9 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 	// 管理者は全件、それ以外はDB側でフィルタリング
 	const inquiries = await prisma.inquiry.findMany({
 		where: admin
-			? undefined
+			? { deletedAt: null }
 			: {
+					deletedAt: null,
 					OR: [
 						// 実委側担当者として割り当てられている
 						{
@@ -309,13 +310,14 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 								some: {
 									userId: user.id,
 									side: "COMMITTEE" as const,
+									deletedAt: null,
 								},
 							},
 						},
 						// 閲覧者: 全員
 						{
 							viewers: {
-								some: { scope: "ALL" as const },
+								some: { scope: "ALL" as const, deletedAt: null },
 							},
 						},
 						// 閲覧者: 同じ局
@@ -324,6 +326,7 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 								some: {
 									scope: "BUREAU" as const,
 									bureauValue: committeeMember.Bureau,
+									deletedAt: null,
 								},
 							},
 						},
@@ -333,6 +336,7 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 								some: {
 									scope: "INDIVIDUAL" as const,
 									userId: user.id,
+									deletedAt: null,
 								},
 							},
 						},
@@ -341,8 +345,15 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 		include: {
 			createdBy: { select: userSelect },
 			project: { select: { id: true, name: true } },
-			assignees: { include: assigneeInclude },
-			_count: { select: { comments: true } },
+			assignees: {
+				where: { deletedAt: null },
+				include: assigneeInclude,
+			},
+			_count: {
+				select: {
+					comments: { where: { deletedAt: null } },
+				},
+			},
 		},
 		orderBy: { updatedAt: "desc" },
 	});
@@ -389,15 +400,20 @@ committeeInquiryRoute.get(
 		}
 
 		const inquiry = await prisma.inquiry.findFirst({
-			where: { id: inquiryId },
+			where: { id: inquiryId, deletedAt: null },
 			include: {
 				createdBy: { select: userSelect },
 				project: { select: { id: true, name: true } },
-				assignees: { include: assigneeInclude },
+				assignees: {
+					where: { deletedAt: null },
+					include: assigneeInclude,
+				},
 				viewers: {
+					where: { deletedAt: null },
 					include: { user: { select: userSelect } },
 				},
 				comments: {
+					where: { deletedAt: null },
 					include: {
 						createdBy: { select: userSelect },
 						attachments: {
@@ -408,6 +424,7 @@ committeeInquiryRoute.get(
 					orderBy: { createdAt: "asc" },
 				},
 				activities: {
+					where: { deletedAt: null },
 					include: {
 						actor: { select: userSelect },
 						target: { select: userSelect },
@@ -496,7 +513,7 @@ committeeInquiryRoute.post(
 
 		// ステータスチェック
 		const inquiry = await prisma.inquiry.findFirst({
-			where: { id: inquiryId },
+			where: { id: inquiryId, deletedAt: null },
 		});
 		if (!inquiry) {
 			throw Errors.notFound("お問い合わせが見つかりません");
@@ -610,7 +627,7 @@ committeeInquiryRoute.patch(
 		await requireAssigneeOrAdmin(inquiryId, user.id, committeeMember);
 
 		const inquiry = await prisma.inquiry.findFirst({
-			where: { id: inquiryId },
+			where: { id: inquiryId, deletedAt: null },
 		});
 		if (!inquiry) {
 			throw Errors.notFound("お問い合わせが見つかりません");
@@ -656,7 +673,7 @@ committeeInquiryRoute.patch(
 		await requireAssigneeOrAdmin(inquiryId, user.id, committeeMember);
 
 		const inquiry = await prisma.inquiry.findFirst({
-			where: { id: inquiryId },
+			where: { id: inquiryId, deletedAt: null },
 		});
 		if (!inquiry) {
 			throw Errors.notFound("お問い合わせが見つかりません");
@@ -669,7 +686,7 @@ committeeInquiryRoute.patch(
 
 		// 実委側担当者がいれば IN_PROGRESS、いなければ UNASSIGNED
 		const committeeAssigneeCount = await prisma.inquiryAssignee.count({
-			where: { inquiryId, side: "COMMITTEE" },
+			where: { inquiryId, side: "COMMITTEE", deletedAt: null },
 		});
 		const newStatus = committeeAssigneeCount > 0 ? "IN_PROGRESS" : "UNASSIGNED";
 
@@ -713,15 +730,15 @@ committeeInquiryRoute.post(
 		await requireAssigneeOrAdmin(inquiryId, user.id, committeeMember);
 
 		const inquiry = await prisma.inquiry.findFirst({
-			where: { id: inquiryId },
+			where: { id: inquiryId, deletedAt: null },
 		});
 		if (!inquiry) {
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
 
 		// 既に担当者かチェック
-		const existing = await prisma.inquiryAssignee.findUnique({
-			where: { inquiryId_userId: { inquiryId, userId } },
+		const existing = await prisma.inquiryAssignee.findFirst({
+			where: { inquiryId, userId, deletedAt: null },
 		});
 		if (existing) {
 			throw Errors.alreadyExists("既に担当者です");
@@ -808,7 +825,7 @@ committeeInquiryRoute.delete(
 		await requireAssigneeOrAdmin(inquiryId, user.id, committeeMember);
 
 		const assignee = await prisma.inquiryAssignee.findFirst({
-			where: { id: assigneeId, inquiryId },
+			where: { id: assigneeId, inquiryId, deletedAt: null },
 		});
 		if (!assignee) {
 			throw Errors.notFound("担当者が見つかりません");
@@ -818,7 +835,10 @@ committeeInquiryRoute.delete(
 		}
 
 		await prisma.$transaction(async tx => {
-			await tx.inquiryAssignee.delete({ where: { id: assigneeId } });
+			await tx.inquiryAssignee.update({
+				where: { id: assigneeId },
+				data: { deletedAt: new Date() },
+			});
 
 			await tx.inquiryActivity.create({
 				data: {
@@ -835,6 +855,7 @@ committeeInquiryRoute.delete(
 					where: {
 						inquiryId,
 						side: "COMMITTEE",
+						deletedAt: null,
 					},
 				});
 				if (remainingCommittee === 0) {
@@ -878,7 +899,7 @@ committeeInquiryRoute.put(
 		await requireAssigneeOrAdmin(inquiryId, user.id, committeeMember);
 
 		const inquiry = await prisma.inquiry.findFirst({
-			where: { id: inquiryId },
+			where: { id: inquiryId, deletedAt: null },
 		});
 		if (!inquiry) {
 			throw Errors.notFound("お問い合わせが見つかりません");

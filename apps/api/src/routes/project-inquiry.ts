@@ -19,7 +19,7 @@ const projectInquiryRoute = new Hono<AuthEnv>();
 
 async function requireProjectAssignee(inquiryId: string, userId: string) {
 	const assignee = await prisma.inquiryAssignee.findFirst({
-		where: { inquiryId, userId, side: "PROJECT" },
+		where: { inquiryId, userId, side: "PROJECT", deletedAt: null },
 	});
 	if (!assignee) {
 		throw Errors.forbidden("この問い合わせの担当者ではありません");
@@ -192,13 +192,23 @@ projectInquiryRoute.get(
 		const inquiries = await prisma.inquiry.findMany({
 			where: {
 				projectId: project.id,
-				assignees: { some: { userId: user.id, side: "PROJECT" } },
+				deletedAt: null,
+				assignees: {
+					some: { userId: user.id, side: "PROJECT", deletedAt: null },
+				},
 			},
 			include: {
 				createdBy: { select: userSelect },
 				project: { select: { id: true, name: true } },
-				assignees: { include: assigneeInclude },
-				_count: { select: { comments: true } },
+				assignees: {
+					where: { deletedAt: null },
+					include: assigneeInclude,
+				},
+				_count: {
+					select: {
+						comments: { where: { deletedAt: null } },
+					},
+				},
 			},
 			orderBy: { updatedAt: "desc" },
 		});
@@ -245,12 +255,16 @@ projectInquiryRoute.get(
 		await requireProjectAssignee(inquiryId, user.id);
 
 		const inquiry = await prisma.inquiry.findFirst({
-			where: { id: inquiryId, projectId: project.id },
+			where: { id: inquiryId, projectId: project.id, deletedAt: null },
 			include: {
 				createdBy: { select: userSelect },
 				project: { select: { id: true, name: true } },
-				assignees: { include: assigneeInclude },
+				assignees: {
+					where: { deletedAt: null },
+					include: assigneeInclude,
+				},
 				comments: {
+					where: { deletedAt: null },
 					include: {
 						createdBy: { select: userSelect },
 						attachments: {
@@ -261,6 +275,7 @@ projectInquiryRoute.get(
 					orderBy: { createdAt: "asc" },
 				},
 				activities: {
+					where: { deletedAt: null },
 					include: {
 						actor: { select: userSelect },
 						target: { select: userSelect },
@@ -343,7 +358,7 @@ projectInquiryRoute.post(
 
 		// ステータスチェック
 		const inquiry = await prisma.inquiry.findFirst({
-			where: { id: inquiryId, projectId: project.id },
+			where: { id: inquiryId, projectId: project.id, deletedAt: null },
 		});
 		if (!inquiry) {
 			throw Errors.notFound("お問い合わせが見つかりません");
@@ -456,7 +471,7 @@ projectInquiryRoute.patch(
 		await requireProjectAssignee(inquiryId, user.id);
 
 		const inquiry = await prisma.inquiry.findFirst({
-			where: { id: inquiryId, projectId: project.id },
+			where: { id: inquiryId, projectId: project.id, deletedAt: null },
 		});
 		if (!inquiry) {
 			throw Errors.notFound("お問い合わせが見つかりません");
@@ -469,7 +484,7 @@ projectInquiryRoute.patch(
 
 		// 実委側担当者がいれば IN_PROGRESS、いなければ UNASSIGNED
 		const committeeAssigneeCount = await prisma.inquiryAssignee.count({
-			where: { inquiryId, side: "COMMITTEE" },
+			where: { inquiryId, side: "COMMITTEE", deletedAt: null },
 		});
 		const newStatus = committeeAssigneeCount > 0 ? "IN_PROGRESS" : "UNASSIGNED";
 
@@ -537,15 +552,15 @@ projectInquiryRoute.post(
 		}
 
 		// 既に担当者かチェック
-		const existing = await prisma.inquiryAssignee.findUnique({
-			where: { inquiryId_userId: { inquiryId, userId } },
+		const existing = await prisma.inquiryAssignee.findFirst({
+			where: { inquiryId, userId, deletedAt: null },
 		});
 		if (existing) {
 			throw Errors.alreadyExists("既に担当者です");
 		}
 
 		const inquiry = await prisma.inquiry.findFirst({
-			where: { id: inquiryId, projectId: project.id },
+			where: { id: inquiryId, projectId: project.id, deletedAt: null },
 		});
 		if (!inquiry) {
 			throw Errors.notFound("お問い合わせが見つかりません");
@@ -596,14 +611,14 @@ projectInquiryRoute.delete(
 
 		// お問い合わせの存在チェック
 		const inquiry = await prisma.inquiry.findFirst({
-			where: { id: inquiryId, projectId: project.id },
+			where: { id: inquiryId, projectId: project.id, deletedAt: null },
 		});
 		if (!inquiry) {
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
 
 		const assignee = await prisma.inquiryAssignee.findFirst({
-			where: { id: assigneeId, inquiryId },
+			where: { id: assigneeId, inquiryId, deletedAt: null },
 		});
 		if (!assignee) {
 			throw Errors.notFound("担当者が見つかりません");
@@ -616,7 +631,10 @@ projectInquiryRoute.delete(
 		}
 
 		await prisma.$transaction([
-			prisma.inquiryAssignee.delete({ where: { id: assigneeId } }),
+			prisma.inquiryAssignee.update({
+				where: { id: assigneeId },
+				data: { deletedAt: new Date() },
+			}),
 			prisma.inquiryActivity.create({
 				data: {
 					inquiryId,

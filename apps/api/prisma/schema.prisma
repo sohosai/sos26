@@ -755,11 +755,13 @@ model Inquiry {
   activities  InquiryActivity[]
   attachments InquiryAttachment[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([projectId])
   @@index([status])
+  @@index([deletedAt])
 }
 
 model InquiryAssignee {
@@ -777,9 +779,11 @@ model InquiryAssignee {
   // 作成者かどうか（削除不可フラグ）
   isCreator Boolean @default(false)
 
-  assignedAt DateTime @default(now())
+  assignedAt DateTime  @default(now())
+  deletedAt  DateTime?
 
-  @@unique([inquiryId, userId])
+  @@unique([inquiryId, userId, deletedAt])
+  @@index([inquiryId])
 }
 
 model InquiryViewer {
@@ -798,10 +802,12 @@ model InquiryViewer {
   userId String?
   user   User?   @relation("InquiryViewer", fields: [userId], references: [id])
 
-  createdAt DateTime @default(now())
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
 
   @@index([inquiryId])
   @@index([userId])
+  @@index([deletedAt])
 }
 
 model InquiryComment {
@@ -822,9 +828,11 @@ model InquiryComment {
 
   attachments InquiryAttachment[]
 
-  createdAt DateTime @default(now())
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
 
   @@index([inquiryId])
+  @@index([deletedAt])
 }
 
 model InquiryActivity {
@@ -844,9 +852,11 @@ model InquiryActivity {
   targetId String?
   target   User?   @relation("InquiryActivityTarget", fields: [targetId], references: [id])
 
-  createdAt DateTime @default(now())
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
 
   @@index([inquiryId])
+  @@index([deletedAt])
 }
 
 //お問い合わせの添付ファイル
