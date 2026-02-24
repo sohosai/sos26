@@ -10,6 +10,11 @@ import {
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
+import {
+	notifyInquiryAssigneeAdded,
+	notifyInquiryCommentAdded,
+	notifyInquiryCreatedByCommittee,
+} from "../lib/notifications";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -281,6 +286,13 @@ committeeInquiryRoute.post(
 					})),
 				},
 			},
+		});
+
+		void notifyInquiryCreatedByCommittee({
+			inquiryId: inquiry.id,
+			inquiryTitle: title,
+			creatorName: user.name,
+			projectAssigneeUserIds: uniqueUserIds,
 		});
 
 		return c.json({ inquiry }, 201);
@@ -590,6 +602,14 @@ committeeInquiryRoute.post(
 			return { ...created, attachments };
 		});
 
+		void notifyInquiryCommentAdded({
+			inquiryId,
+			inquiryTitle: inquiry.title,
+			commenterUserId: user.id,
+			commenterName: user.name,
+			commentBodyPreview: commentBody.slice(0, 200),
+		});
+
 		return c.json(
 			{
 				comment: {
@@ -798,6 +818,13 @@ committeeInquiryRoute.post(
 			}
 
 			return created;
+		});
+
+		void notifyInquiryAssigneeAdded({
+			addedUserId: userId,
+			inquiryId,
+			inquiryTitle: inquiry.title,
+			side,
 		});
 
 		return c.json({ assignee: formatAssignee(assignee) }, 201);
