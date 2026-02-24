@@ -7,6 +7,10 @@ import {
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
+import {
+	notifyInquiryCommentAdded,
+	notifyInquiryCreatedByProject,
+} from "../lib/notifications";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -171,6 +175,13 @@ projectInquiryRoute.post(
 					create: uniqueFileIds.map(fileId => ({ fileId })),
 				},
 			},
+		});
+
+		notifyInquiryCreatedByProject({
+			inquiryId: inquiry.id,
+			inquiryTitle: title,
+			projectName: project.name,
+			creatorName: user.name,
 		});
 
 		return c.json({ inquiry }, 201);
@@ -433,6 +444,14 @@ projectInquiryRoute.post(
 			}
 
 			return { ...created, attachments };
+		});
+
+		notifyInquiryCommentAdded({
+			inquiryId,
+			inquiryTitle: inquiry.title,
+			commenterUserId: user.id,
+			commenterName: user.name,
+			commentBodyPreview: commentBody.slice(0, 200),
 		});
 
 		return c.json(

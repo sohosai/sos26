@@ -1,3 +1,7 @@
+/**
+ * 既に登録済みのメールアドレスで再登録しようとしたとき、ログインURLを案内するメール
+ * トリガー: POST /auth/register（既存ユーザーの場合）
+ */
 import { z } from "zod";
 import { sendEmail } from "../providers/sendgridClient";
 import { alreadyRegisteredTemplate } from "../templates/alreadyRegistered";

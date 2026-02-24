@@ -12,6 +12,10 @@ import {
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
+import {
+	notifyNoticeAuthorizationDecided,
+	notifyNoticeAuthorizationRequested,
+} from "../lib/notifications";
 import { prisma } from "../lib/prisma";
 import { sanitizeHtml } from "../lib/sanitize";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
@@ -715,6 +719,14 @@ committeeNoticeRoute.post(
 			{ isolationLevel: "Serializable" }
 		);
 
+		notifyNoticeAuthorizationRequested({
+			approverUserId: requestedToId,
+			requesterName: user.name,
+			noticeId,
+			noticeTitle: notice.title,
+			deliveredAt,
+		});
+
 		return c.json({ authorization }, 201);
 	}
 );
@@ -739,7 +751,7 @@ committeeNoticeRoute.patch(
 
 		const authorization = await prisma.noticeAuthorization.findFirst({
 			where: { id: authorizationId, noticeId },
-			include: { notice: { select: { deletedAt: true } } },
+			include: { notice: { select: { deletedAt: true, title: true } } },
 		});
 
 		if (!authorization) {
@@ -773,6 +785,14 @@ committeeNoticeRoute.patch(
 		const updated = await prisma.noticeAuthorization.update({
 			where: { id: authorizationId, status: "PENDING" },
 			data: { status, decidedAt: new Date() },
+		});
+
+		notifyNoticeAuthorizationDecided({
+			requestedByUserId: authorization.requestedById,
+			noticeId,
+			noticeTitle: authorization.notice.title,
+			status,
+			deliveredAt: authorization.deliveredAt,
 		});
 
 		return c.json({ authorization: updated });
