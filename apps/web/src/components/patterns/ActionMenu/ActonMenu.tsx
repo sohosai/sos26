@@ -1,5 +1,6 @@
 import { Popover } from "@radix-ui/themes";
 import { IconDotsVertical } from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Button } from "@/components/primitives";
 import styles from "./ActionMenu.module.scss";
@@ -10,6 +11,10 @@ export type ActionItem<T> = {
 	icon?: ReactNode;
 	disabled?: boolean;
 	hidden?: boolean;
+	href?: {
+		to: string;
+		params: Record<string, string>;
+	};
 	onClick: (item: T) => void | Promise<void>;
 };
 
@@ -34,18 +39,32 @@ export function ActionsMenu<T>({ item, actions }: ActionsMenuProps<T>) {
 
 			<Popover.Content align="start" sideOffset={4}>
 				<div className={styles.menu}>
-					{visibleActions.map(action => (
-						<Button
-							key={action.key}
-							intent="ghost"
-							size="2"
-							disabled={action.disabled}
-							onClick={() => action.onClick(item)}
-						>
-							{action.icon}
-							{action.label}
-						</Button>
-					))}
+					{visibleActions.map(action => {
+						const content = (
+							<Button
+								key={action.key}
+								intent="ghost"
+								size="2"
+								disabled={action.disabled}
+								onClick={() => action.onClick?.(item)}
+							>
+								{action.icon}
+								{action.label}
+							</Button>
+						);
+
+						return action.href ? (
+							<Link
+								key={action.key}
+								to={action.href.to}
+								params={action.href.params}
+							>
+								{content}
+							</Link>
+						) : (
+							<div key={action.key}>{content}</div>
+						);
+					})}
 				</div>
 			</Popover.Content>
 		</Popover.Root>
