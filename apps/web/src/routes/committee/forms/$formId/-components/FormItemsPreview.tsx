@@ -11,7 +11,12 @@ export function FormItemsPreview({ items }: Props) {
 		<ul className={styles.itemList}>
 			{items.map(item => (
 				<li key={item.id} className={styles.itemCard}>
-					<AnswerField item={item} value={undefined} onChange={() => {}} />
+					<AnswerField
+						item={item}
+						value={undefined}
+						onChange={() => {}}
+						disabled
+					/>
 				</li>
 			))}
 		</ul>

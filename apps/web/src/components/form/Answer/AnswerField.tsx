@@ -12,9 +12,10 @@ type FieldProps = {
 	item: FormItem;
 	value: FormAnswerValue | undefined;
 	onChange: (val: FormAnswerValue) => void;
+	disabled?: boolean;
 };
 
-export function AnswerField({ item, value, onChange }: FieldProps) {
+export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 	switch (item.type) {
 		case "text":
 			return (
@@ -24,6 +25,7 @@ export function AnswerField({ item, value, onChange }: FieldProps) {
 					value={(value as string) ?? ""}
 					onChange={value => onChange(value)}
 					required={item.required}
+					disabled={disabled}
 				/>
 			);
 
@@ -38,6 +40,7 @@ export function AnswerField({ item, value, onChange }: FieldProps) {
 					required={item.required}
 					resize="none"
 					autoGrow
+					disabled={disabled}
 				/>
 			);
 
@@ -48,6 +51,7 @@ export function AnswerField({ item, value, onChange }: FieldProps) {
 					value={value as number | null}
 					onChange={onChange}
 					required={item.required}
+					disabled={disabled}
 					// 必要になったら有効化
 					// allowDecimal // 小数許可
 					// allowNegative // 負の数許可
@@ -61,6 +65,7 @@ export function AnswerField({ item, value, onChange }: FieldProps) {
 					value={value as File | null}
 					onChange={onChange}
 					required={item.required}
+					disabled={disabled}
 				/>
 			);
 
@@ -72,6 +77,7 @@ export function AnswerField({ item, value, onChange }: FieldProps) {
 					onValueChange={val => onChange(val)}
 					required={item.required}
 					name={item.id}
+					disabled={disabled}
 				>
 					{(item.options ?? []).map(option => (
 						<RadioGroupItem key={option.id} value={option.id}>
@@ -89,6 +95,7 @@ export function AnswerField({ item, value, onChange }: FieldProps) {
 					onValueChange={val => onChange(val)}
 					required={item.required}
 					name={item.id}
+					disabled={disabled}
 				>
 					{(item.options ?? []).map(option => (
 						<CheckboxGroupItem key={option.id} value={option.id}>
