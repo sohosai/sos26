@@ -301,6 +301,29 @@ function AuthDetailSection({
 				</Text>
 				<Text size="2">{formatDate(auth.scheduledSendAt, "datetime")}</Text>
 			</div>
+			{auth.deadlineAt && (
+				<>
+					<div className={styles.authDetailRow}>
+						<Text size="2" color="gray">
+							回答期限
+						</Text>
+						<Text size="2">{formatDate(auth.deadlineAt, "datetime")}</Text>
+					</div>
+					<div className={styles.authDetailRow}>
+						<Text size="2" color="gray">
+							遅延提出
+						</Text>
+						<Text size="2">{auth.allowLateResponse ? "許可" : "不可"}</Text>
+					</div>
+				</>
+			)}
+
+			<div className={styles.authDetailRow}>
+				<Text size="2" color="gray">
+					回答
+				</Text>
+				<Text size="2">{auth.required ? "必須" : "任意"}</Text>
+			</div>
 			{isApprover && pendingAuth && (
 				<div className={styles.authorizationActions}>
 					<Button

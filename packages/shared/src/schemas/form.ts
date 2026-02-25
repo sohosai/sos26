@@ -84,6 +84,7 @@ export const formAuthorizationSchema = z.object({
 	scheduledSendAt: z.coerce.date(),
 	deadlineAt: z.coerce.date().nullable(),
 	allowLateResponse: z.boolean(),
+	required: z.boolean(),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 });
