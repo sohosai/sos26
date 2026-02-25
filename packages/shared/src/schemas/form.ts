@@ -154,6 +154,47 @@ const authorizationDetailSchema = formAuthorizationSchema.extend({
 	),
 });
 
+/** 回答スキーマを組み立てるため */
+const baseAnswerSchema = {
+	formItemId: z.string().min(1),
+	type: formItemTypeSchema,
+};
+const textAnswerSchema = z.object({
+	...baseAnswerSchema,
+	type: z.literal("TEXT"),
+	textValue: z.string().nullable(),
+});
+
+const textareaAnswerSchema = z.object({
+	...baseAnswerSchema,
+	type: z.literal("TEXTAREA"),
+	textValue: z.string().nullable(),
+});
+
+const numberAnswerSchema = z.object({
+	...baseAnswerSchema,
+	type: z.literal("NUMBER"),
+	numberValue: z.number().nullable(),
+});
+
+const fileAnswerSchema = z.object({
+	...baseAnswerSchema,
+	type: z.literal("FILE"),
+	fileUrl: z.string().nullable(),
+});
+
+const selectAnswerSchema = z.object({
+	...baseAnswerSchema,
+	type: z.literal("SELECT"),
+	selectedOptionIds: z.array(z.string()),
+});
+
+const checkboxAnswerSchema = z.object({
+	...baseAnswerSchema,
+	type: z.literal("CHECKBOX"),
+	selectedOptionIds: z.array(z.string()),
+});
+
 // ─────────────────────────────────────────────────────────────
 // POST /committee/forms/create
 // ─────────────────────────────────────────────────────────────
@@ -222,7 +263,7 @@ export type GetFormDetailResponse = z.infer<typeof getFormDetailResponseSchema>;
 
 // 更新リクエスト用のitem入力スキーマ
 export const updateFormItemInputSchema = z.object({
-	id: z.string().min(1),
+	id: z.string().min(1).optional(),
 	label: z.string().min(1),
 	type: formItemTypeSchema,
 	required: z.boolean().default(false),
@@ -233,14 +274,7 @@ export const updateFormItemInputSchema = z.object({
 export const updateFormDetailRequestSchema = z.object({
 	title: z.string().min(1).optional(),
 	description: z.string().nullable().optional(),
-	items: z
-		.array(
-			updateFormItemInputSchema.extend({
-				// 更新時は必須/新規作成の場合は不要
-				id: z.string().optional(),
-			})
-		)
-		.optional(),
+	items: z.array(updateFormItemInputSchema).optional(),
 });
 export type UpdateFormDetailRequest = z.infer<
 	typeof updateFormDetailRequestSchema
@@ -490,13 +524,22 @@ export type GetProjectFormResponse = z.infer<
 // 回答を作成（下書き or 提出）
 // ─────────────────────────────────────────────────────────────
 
-const formAnswerInputSchema = z.object({
-	formItemId: z.string().min(1),
-	textValue: z.string().nullable().optional(),
-	numberValue: z.number().nullable().optional(),
-	fileUrl: z.string().nullable().optional(),
-	selectedOptionIds: z.array(z.string()).optional(),
-});
+// const formAnswerInputSchema = z.object({
+// 	formItemId: z.string().min(1),
+// 	textValue: z.string().nullable().optional(),
+// 	numberValue: z.number().nullable().optional(),
+// 	fileUrl: z.string().nullable().optional(),
+// 	selectedOptionIds: z.array(z.string()).optional(),
+// });
+
+export const formAnswerInputSchema = z.discriminatedUnion("type", [
+	textAnswerSchema,
+	textareaAnswerSchema,
+	numberAnswerSchema,
+	fileAnswerSchema,
+	selectAnswerSchema,
+	checkboxAnswerSchema,
+]);
 
 export const createFormResponseRequestSchema = z.object({
 	answers: z.array(formAnswerInputSchema),

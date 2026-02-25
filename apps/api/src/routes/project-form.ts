@@ -82,7 +82,7 @@ const upsertAnswers = async (
 			throw Errors.invalidRequest("不正な設問IDです");
 		}
 
-		switch (type) {
+		switch (answer.type) {
 			case "TEXT":
 			case "TEXTAREA":
 				await tx.formAnswer.create({
@@ -156,7 +156,7 @@ function assertSelectedOptionsValid(
 		}
 
 		// SELECT / CHECKBOX 以外は無視
-		if (meta.type !== "SELECT" && meta.type !== "CHECKBOX") {
+		if (answer.type !== "SELECT" && answer.type !== "CHECKBOX") {
 			continue;
 		}
 
@@ -220,7 +220,7 @@ function assertRequiredAnswered(
 		const isEmpty = (() => {
 			if (!answer) return true;
 
-			switch (item.type) {
+			switch (answer.type) {
 				case "TEXT":
 				case "TEXTAREA":
 					return !answer.textValue;

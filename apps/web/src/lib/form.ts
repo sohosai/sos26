@@ -73,7 +73,9 @@ export function buildAnswerBody(
 		submit,
 		answers: Object.entries(answers).map(([formItemId, value]) => {
 			const type = itemTypeMap.get(formItemId);
-			if (!type) return { formItemId };
+			if (!type) {
+				throw new Error(`Unknown formItemId: ${formItemId}`);
+			}
 			return buildSingleAnswer(formItemId, value, type);
 		}),
 	};
@@ -97,18 +99,21 @@ function buildSingleAnswer(
 	switch (type) {
 		case "TEXT":
 		case "TEXTAREA":
-			return { formItemId, textValue: value as string };
+			return { type, formItemId, textValue: value as string };
 		case "NUMBER":
-			return { formItemId, numberValue: value as number };
+			return { type, formItemId, numberValue: value as number };
 		case "SELECT":
 		case "CHECKBOX":
 			return {
+				type,
 				formItemId,
 				selectedOptionIds: normalizeOptionIds(value),
 			};
 		case "FILE":
-			return { formItemId, fileUrl: value as string };
-		default:
-			return { formItemId };
+			return { type, formItemId, fileUrl: value as string };
 	}
+	return assertNever(type);
+}
+function assertNever(x: never): never {
+	throw new Error(`Unsupported FormItemType: ${x}`);
 }
