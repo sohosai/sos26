@@ -1,6 +1,6 @@
 import { Text } from "@radix-ui/themes";
-import { IconCheck } from "@tabler/icons-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/primitives";
 import type { Form, FormAnswers, FormAnswerValue } from "../type";
 import { AnswerField } from "./AnswerField";
@@ -11,7 +11,6 @@ type Props = {
 	onSubmit?: (answers: FormAnswers) => Promise<void>;
 	initialAnswers?: FormAnswers;
 	onSaveDraft?: (answers: FormAnswers) => Promise<void>;
-	onClose?: () => void;
 };
 
 export function FormViewer({
@@ -19,11 +18,9 @@ export function FormViewer({
 	onSubmit,
 	initialAnswers = {},
 	onSaveDraft,
-	onClose,
 }: Props) {
 	const [answers, setAnswers] = useState<FormAnswers>(initialAnswers);
 	const [errors, setErrors] = useState<Record<string, string>>({});
-	const [submitted, setSubmitted] = useState(false);
 	const [isSavingDraft, setIsSavingDraft] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -57,6 +54,9 @@ export function FormViewer({
 		setIsSavingDraft(true);
 		try {
 			await onSaveDraft?.(answers);
+			toast.success("下書きを保存しました");
+		} catch {
+			toast.error("下書きの保存に失敗しました");
 		} finally {
 			setIsSavingDraft(false);
 		}
@@ -68,26 +68,13 @@ export function FormViewer({
 		setIsSubmitting(true);
 		try {
 			await onSubmit?.(answers);
-			setSubmitted(true);
+			toast.success("送信しました");
+		} catch {
+			toast.error("送信に失敗しました");
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
-
-	if (submitted) {
-		return (
-			<div className={styles.complete}>
-				<span className={styles.completeHeader}>
-					<IconCheck size={24} />
-					<Text size="5" weight="bold">
-						送信しました
-					</Text>
-				</span>
-				<Text size="2">ご回答ありがとうございました。</Text>
-				<Button onClick={onClose}>閉じる</Button>
-			</div>
-		);
-	}
 
 	return (
 		<form className={styles.root} onSubmit={handleSubmit} noValidate>

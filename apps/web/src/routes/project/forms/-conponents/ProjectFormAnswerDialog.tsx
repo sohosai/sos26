@@ -67,12 +67,10 @@ export function ProjectFormAnswerDialog({
 		const body = buildAnswerBody(answers, form, false);
 		if (responseId) {
 			await updateFormResponse(projectId, formDeliveryId, responseId, body);
-			toast.success("下書きを保存しました");
 		} else {
 			const res = await createFormResponse(projectId, formDeliveryId, body);
 			setResponseId(res.response.id);
 			onDraftSaved(res.response.id);
-			toast.success("下書きを保存しました");
 		}
 	};
 
