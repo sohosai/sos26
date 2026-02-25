@@ -54,15 +54,28 @@ export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 	};
 
 	const handleSubmit = () => {
-		const invalidItem = items.find(item => {
+		const invalidChoiceItem = items.find(item => {
 			if (item.type === "checkbox" || item.type === "select") {
-				return !item.options || item.options.length === 0;
+				if (!item.options || item.options.length === 0) return true;
+				if (item.options.some(opt => opt.label.trim() === "")) return true;
 			}
 			return false;
 		});
 
-		if (invalidItem) {
-			toast.error("選択式の項目には、少なくとも1つの選択肢を追加してください");
+		if (invalidChoiceItem) {
+			toast.error("選択式の項目には、空でない選択肢を1つ以上追加してください");
+			return;
+		}
+
+		if (formName.trim() === "") {
+			toast.error("フォーム名を入力してください");
+			return;
+		}
+
+		const emptyLabelItem = items.find(item => item.label.trim() === "");
+
+		if (emptyLabelItem) {
+			toast.error("すべての設問に項目名を入力してください");
 			return;
 		}
 
