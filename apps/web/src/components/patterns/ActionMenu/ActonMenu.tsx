@@ -15,7 +15,7 @@ export type ActionItem<T> = {
 		to: string;
 		params: Record<string, string>;
 	};
-	onClick: (item: T) => void | Promise<void>;
+	onClick?: (item: T) => void | Promise<void>;
 };
 
 type ActionsMenuProps<T> = {
