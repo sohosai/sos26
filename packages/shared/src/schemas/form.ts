@@ -233,7 +233,14 @@ export const updateFormItemInputSchema = z.object({
 export const updateFormDetailRequestSchema = z.object({
 	title: z.string().min(1).optional(),
 	description: z.string().nullable().optional(),
-	items: z.array(updateFormItemInputSchema).optional(),
+	items: z
+		.array(
+			updateFormItemInputSchema.extend({
+				// 更新時は必須/新規作成の場合は不要
+				id: z.string().optional(),
+			})
+		)
+		.optional(),
 });
 export type UpdateFormDetailRequest = z.infer<
 	typeof updateFormDetailRequestSchema
