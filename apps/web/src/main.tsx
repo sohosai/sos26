@@ -26,7 +26,7 @@ createRoot(rootElement).render(
 	<StrictMode>
 		<Theme accentColor="indigo" grayColor="slate" panelBackground="solid">
 			<RouterProvider router={router} />
-			<Toaster />
 		</Theme>
+		<Toaster />
 	</StrictMode>
 );
