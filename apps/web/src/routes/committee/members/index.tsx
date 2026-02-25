@@ -4,7 +4,7 @@ import {
 	bureauLabelMap,
 	type CommitteePermission,
 } from "@sos26/shared";
-import { IconTrash } from "@tabler/icons-react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useEffect, useState } from "react";
@@ -12,12 +12,15 @@ import { toast } from "sonner";
 import { DataTable, NameCell, TagCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import {
+	createCommitteeMember,
 	deleteCommitteeMember,
 	grantCommitteeMemberPermission,
 	listCommitteeMembers,
 	revokeCommitteeMemberPermission,
 } from "@/lib/api/committee-member";
 import { useAuthStore } from "@/lib/auth";
+import { formatDate } from "@/lib/format";
+import { AddMemberDialog } from "./-components/AddMemberDialog";
 import styles from "./index.module.scss";
 
 // ─────────────────────────────────────────────────────────────
@@ -40,6 +43,7 @@ const permissionLabelMap: Record<CommitteePermission, string> = {
 	NOTICE_DELIVER: "お知らせ配信",
 	NOTICE_APPROVE: "お知らせ承認",
 	FORM_DELIVER: "フォーム配信",
+	INQUIRY_ADMIN: "お問い合わせ管理",
 };
 
 const bureauColorMap: Record<string, string> = {
@@ -131,13 +135,11 @@ const memberColumnHelper = createColumnHelper<CommitteeMemberRow>();
 
 export const Route = createFileRoute("/committee/members/")({
 	component: RouteComponent,
-	beforeLoad: async () => {
+	loader: async () => {
 		const { user } = useAuthStore.getState();
-		if (!user) return;
-
 		const data = await listCommitteeMembers();
-		const me = data.committeeMembers.find(m => m.userId === user.id);
 
+		const me = data.committeeMembers.find(m => m.userId === user?.id);
 		const hasMemberEdit = me?.permissions.some(
 			p => p.permission === "MEMBER_EDIT"
 		);
@@ -145,9 +147,7 @@ export const Route = createFileRoute("/committee/members/")({
 		if (!hasMemberEdit) {
 			throw redirect({ to: "/forbidden" });
 		}
-	},
-	loader: async () => {
-		const data = await listCommitteeMembers();
+
 		return {
 			members: data.committeeMembers.map(m => ({
 				id: m.id,
@@ -172,6 +172,9 @@ function RouteComponent() {
 		memberId: string;
 		permission: CommitteePermission;
 	} | null>(null);
+	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+	const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+	const [addMemberOpen, setAddMemberOpen] = useState(false);
 
 	useEffect(() => {
 		setMembers(initialMembers);
@@ -232,14 +235,46 @@ function RouteComponent() {
 		setPendingRevoke(null);
 	};
 
-	const handleDelete = async (memberId: string) => {
+	const handleDeleteClick = (memberId: string) => {
+		setPendingDeleteId(memberId);
+		setDeleteConfirmOpen(true);
+	};
+
+	const handleConfirmDelete = async () => {
+		if (!pendingDeleteId) return;
 		try {
-			await deleteCommitteeMember(memberId);
-			setMembers(prev => prev.filter(m => m.id !== memberId));
+			await deleteCommitteeMember(pendingDeleteId);
+			setMembers(prev => prev.filter(m => m.id !== pendingDeleteId));
 			toast.success("メンバーを削除しました");
 		} catch {
 			toast.error("メンバーの削除に失敗しました");
+		} finally {
+			setDeleteConfirmOpen(false);
+			setPendingDeleteId(null);
 		}
+	};
+
+	const handleAddMember = async (body: {
+		userId: string;
+		Bureau: Bureau;
+		isExecutive?: boolean;
+	}) => {
+		const result = await createCommitteeMember(body);
+		// リストを再取得して反映
+		const data = await listCommitteeMembers();
+		setMembers(
+			data.committeeMembers.map(m => ({
+				id: m.id,
+				userId: m.userId,
+				name: m.user.name,
+				email: m.user.email,
+				bureau: [bureauLabelMap[m.Bureau as Bureau]],
+				permissions: m.permissions.map(p => p.permission),
+				isExecutive: m.isExecutive,
+				joinedAt: new Date(m.joinedAt),
+			}))
+		);
+		return result;
 	};
 
 	const columns = [
@@ -269,7 +304,7 @@ function RouteComponent() {
 		}),
 		memberColumnHelper.accessor("joinedAt", {
 			header: "参加日",
-			cell: info => new Date(info.getValue()).toLocaleDateString(),
+			cell: info => formatDate(new Date(info.getValue()), "date"),
 		}),
 		memberColumnHelper.display({
 			id: "actions",
@@ -278,7 +313,7 @@ function RouteComponent() {
 				<MemberActionsCell
 					member={row.original}
 					currentUserId={user?.id ?? ""}
-					onDelete={handleDelete}
+					onDelete={handleDeleteClick}
 				/>
 			),
 			enableSorting: false,
@@ -290,7 +325,7 @@ function RouteComponent() {
 			<div className={styles.header}>
 				<Heading size="6">実委人メンバー管理</Heading>
 				<Text size="2" color="gray">
-					実委人メンバーの権限編集・削除ができます。
+					実委人メンバーの追加・権限編集・削除ができます。
 				</Text>
 			</div>
 
@@ -303,6 +338,16 @@ function RouteComponent() {
 						desc: false,
 					},
 				]}
+				toolbarExtra={
+					<Button
+						intent="primary"
+						size="2"
+						onClick={() => setAddMemberOpen(true)}
+					>
+						<IconPlus size={16} />
+						メンバーを追加
+					</Button>
+				}
 			/>
 
 			{/* 自分からメンバー編集権限を外す確認ダイアログ */}
@@ -327,6 +372,36 @@ function RouteComponent() {
 					</div>
 				</AlertDialog.Content>
 			</AlertDialog.Root>
+
+			{/* メンバー削除確認ダイアログ */}
+			<AlertDialog.Root
+				open={deleteConfirmOpen}
+				onOpenChange={setDeleteConfirmOpen}
+			>
+				<AlertDialog.Content maxWidth="400px">
+					<AlertDialog.Title>メンバーの削除</AlertDialog.Title>
+					<AlertDialog.Description size="2">
+						このメンバーを削除しますか？削除すると、付与されている権限もすべて失われます。
+					</AlertDialog.Description>
+					<div className={styles.confirmActions}>
+						<AlertDialog.Cancel>
+							<Button intent="secondary" size="2">
+								キャンセル
+							</Button>
+						</AlertDialog.Cancel>
+						<Button intent="danger" size="2" onClick={handleConfirmDelete}>
+							削除する
+						</Button>
+					</div>
+				</AlertDialog.Content>
+			</AlertDialog.Root>
+
+			{/* メンバー追加ダイアログ */}
+			<AddMemberDialog
+				open={addMemberOpen}
+				onOpenChange={setAddMemberOpen}
+				onSubmit={handleAddMember}
+			/>
 		</div>
 	);
 }
