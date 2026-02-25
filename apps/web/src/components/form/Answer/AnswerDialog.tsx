@@ -33,7 +33,6 @@ export function FormAnswerDialog({
 						initialAnswers={initialAnswers}
 						onSubmit={onSubmit}
 						onSaveDraft={onSaveDraft}
-						onClose={() => onOpenChange(false)}
 					/>
 				</div>
 			</Dialog.Content>
