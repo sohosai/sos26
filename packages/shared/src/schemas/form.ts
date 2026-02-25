@@ -105,11 +105,6 @@ export const formIdPathParamsSchema = z.object({
 	formId: z.string().min(1),
 });
 
-export const formItemPathParamsSchema = z.object({
-	formId: z.string().min(1),
-	itemId: z.string().min(1),
-});
-
 export const formCollaboratorPathParamsSchema = z.object({
 	formId: z.string().min(1),
 	userId: z.string().min(1),
@@ -224,9 +219,9 @@ export type GetFormDetailResponse = z.infer<typeof getFormDetailResponseSchema>;
 // PATCH /committee/forms/:formId/detail
 // ─────────────────────────────────────────────────────────────
 
-// 更新リクエスト用のitem入力スキーマ（idはオプション、DBメタは不要）
+// 更新リクエスト用のitem入力スキーマ
 export const updateFormItemInputSchema = z.object({
-	id: z.string().optional(), // 既存itemはid付き、新規はなし
+	id: z.string().min(1),
 	label: z.string().min(1),
 	type: formItemTypeSchema,
 	required: z.boolean().default(false),
@@ -297,6 +292,7 @@ export const requestFormAuthorizationRequestSchema = z.object({
 	scheduledSendAt: z.coerce.date(),
 	deadlineAt: z.coerce.date().nullable().optional(),
 	allowLateResponse: z.boolean().default(false),
+	required: z.boolean().default(true),
 	projectIds: z.array(z.string().min(1)).min(1),
 });
 export type RequestFormAuthorizationRequest = z.infer<
