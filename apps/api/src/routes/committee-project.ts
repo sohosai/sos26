@@ -52,6 +52,7 @@ committeeProjectRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 
 	const result = projects.map(p => ({
 		id: p.id,
+		number: p.number,
 		name: p.name,
 		namePhonetic: p.namePhonetic,
 		organizationName: p.organizationName,
@@ -100,6 +101,7 @@ committeeProjectRoute.get(
 
 		const result = {
 			id: project.id,
+			number: project.number,
 			name: project.name,
 			namePhonetic: project.namePhonetic,
 			organizationName: project.organizationName,

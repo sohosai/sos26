@@ -86,6 +86,7 @@ const mockCommitteeMember: CommitteeMember = {
 
 const mockProject: Project = {
 	id: "clppppppppppppppppp",
+	number: 1,
 	name: "テスト企画",
 	namePhonetic: "テストキカク",
 	organizationName: "テスト団体",

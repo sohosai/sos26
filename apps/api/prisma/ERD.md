@@ -36,6 +36,7 @@ erDiagram
 }
 "Project" {
   String id PK
+  Int number UK
   String name UK
   String namePhonetic
   String organizationName
@@ -378,6 +379,7 @@ Properties as follows:
 Properties as follows:
 
 - `id`:
+- `number`:
 - `name`:
 - `namePhonetic`:
 - `organizationName`:
