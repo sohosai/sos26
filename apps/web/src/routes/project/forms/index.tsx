@@ -73,14 +73,17 @@ function RouteComponent() {
 		[]
 	);
 
-	const handleSubmitSuccess = useCallback((deliveryId: string) => {
-		setForms(prev =>
-			prev.map(f =>
-				f.formDeliveryId === deliveryId ? { ...f, submittedAt: new Date() } : f
-			)
-		);
-		setAnsweringDeliveryId(null);
-	}, []);
+	const handleSubmitSuccess = useCallback(
+		(deliveryId: string, submittedAt: Date | null) => {
+			setForms(prev =>
+				prev.map(f =>
+					f.formDeliveryId === deliveryId ? { ...f, submittedAt } : f
+				)
+			);
+			setAnsweringDeliveryId(null);
+		},
+		[]
+	);
 
 	const columns = [
 		columnHelper.accessor("title", {
@@ -211,7 +214,9 @@ function RouteComponent() {
 					}}
 					projectId={selectedProjectId}
 					formDeliveryId={answeringDeliveryId}
-					onSubmitSuccess={() => handleSubmitSuccess(answeringDeliveryId)}
+					onSubmitSuccess={(submittedAt: Date | null) =>
+						handleSubmitSuccess(answeringDeliveryId, submittedAt)
+					}
 					onDraftSaved={responseId =>
 						handleDraftSaved(answeringDeliveryId, responseId)
 					}

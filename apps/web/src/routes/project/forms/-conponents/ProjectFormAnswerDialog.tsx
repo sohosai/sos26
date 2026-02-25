@@ -15,7 +15,7 @@ type Props = {
 	onOpenChange: (open: boolean) => void;
 	projectId: string;
 	formDeliveryId: string;
-	onSubmitSuccess: () => void;
+	onSubmitSuccess: (submittedAt: Date | null) => void;
 	onDraftSaved: (responseId: string) => void;
 };
 
@@ -78,11 +78,21 @@ export function ProjectFormAnswerDialog({
 		if (!form) return;
 		const body = buildAnswerBody(answers, form, true);
 		if (responseId) {
-			await updateFormResponse(projectId, formDeliveryId, responseId, body);
+			const response = await updateFormResponse(
+				projectId,
+				formDeliveryId,
+				responseId,
+				body
+			).then(res => res.response);
+			onSubmitSuccess(response.submittedAt);
 		} else {
-			await createFormResponse(projectId, formDeliveryId, body);
+			const response = await createFormResponse(
+				projectId,
+				formDeliveryId,
+				body
+			).then(res => res.response);
+			onSubmitSuccess(response.submittedAt);
 		}
-		onSubmitSuccess();
 	};
 
 	return (
