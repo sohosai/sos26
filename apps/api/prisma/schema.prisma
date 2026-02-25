@@ -110,6 +110,9 @@ enum ProjectType {
 model Project {
   id String @id @default(cuid())
 
+  //企画番号
+  number Int @unique @default(autoincrement())
+
   //企画名
   name         String @unique
   namePhonetic String
