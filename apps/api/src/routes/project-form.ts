@@ -22,11 +22,17 @@ const getDeliveryOrThrow = async (
 	projectId: string,
 	formDeliveryId: string
 ) => {
+	const now = new Date();
 	const delivery = await prisma.formDelivery.findFirst({
 		where: {
 			id: formDeliveryId,
 			projectId,
-			formAuthorization: { status: "APPROVED" },
+			formAuthorization: {
+				status: "APPROVED",
+				scheduledSendAt: {
+					lte: now,
+				},
+			},
 		},
 		include: {
 			formAuthorization: {
@@ -349,6 +355,7 @@ projectFormRoute.get(
 					id: item.id,
 					label: item.label,
 					type: item.type,
+					description: item.description,
 					required: item.required,
 					sortOrder: item.sortOrder,
 					options: item.options

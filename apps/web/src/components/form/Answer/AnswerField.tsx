@@ -18,7 +18,9 @@ type FieldProps = {
 
 export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 	const Label = () => <Text size="2">{item.label}</Text>;
-	const Description = () => <Text size="1">{item.description}</Text>;
+	const Description = () => {
+		return item.description && <Text size="1">{item.description}</Text>;
+	};
 	switch (item.type) {
 		case "TEXT":
 			return (
