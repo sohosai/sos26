@@ -202,7 +202,7 @@ function CommitteeMemberDevPage() {
 											style={{ display: "block", whiteSpace: "nowrap" }}
 										>
 											<input
-												type="checkbox"
+												type="CHECKBOX"
 												checked={(permissionsMap[m.id] ?? []).includes(
 													opt.value
 												)}

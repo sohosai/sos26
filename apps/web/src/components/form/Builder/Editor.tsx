@@ -25,7 +25,7 @@ export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 					{
 						id: crypto.randomUUID(),
 						label: "",
-						type: "text",
+						type: "TEXT",
 						required: false,
 					},
 				]
@@ -37,7 +37,7 @@ export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 			{
 				id: crypto.randomUUID(),
 				label: "",
-				type: "text",
+				type: "TEXT",
 				required: false,
 			},
 		]);
@@ -55,7 +55,7 @@ export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 
 	const handleSubmit = () => {
 		const invalidChoiceItem = items.find(item => {
-			if (item.type === "checkbox" || item.type === "select") {
+			if (item.type === "CHECKBOX" || item.type === "SELECT") {
 				if (!item.options || item.options.length === 0) return true;
 				if (item.options.some(opt => opt.label.trim() === "")) return true;
 			}

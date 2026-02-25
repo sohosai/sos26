@@ -20,27 +20,27 @@ const ICON_SIZE = 16;
 
 const FIELD_TYPES = [
 	{
-		value: "text",
+		value: "TEXT",
 		label: "テキスト（短文）",
 		icon: <IconTextSize size={ICON_SIZE} />,
 	},
 	{
-		value: "textarea",
+		value: "TEXTAREA",
 		label: "テキスト（長文）",
 		icon: <IconAlignLeft size={ICON_SIZE} />,
 	},
 	{
-		value: "select",
+		value: "SELECT",
 		label: "単一選択",
 		icon: <IconCircleDot size={ICON_SIZE} />,
 	},
 	{
-		value: "checkbox",
+		value: "CHECKBOX",
 		label: "複数選択",
 		icon: <IconSquareCheck size={ICON_SIZE} />,
 	},
-	{ value: "number", label: "数値", icon: <IconNumbers size={ICON_SIZE} /> },
-	{ value: "file", label: "ファイル", icon: <IconFile size={ICON_SIZE} /> },
+	{ value: "NUMBER", label: "数値", icon: <IconNumbers size={ICON_SIZE} /> },
+	{ value: "FILE", label: "ファイル", icon: <IconFile size={ICON_SIZE} /> },
 ];
 
 type Props = {

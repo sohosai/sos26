@@ -1,36 +1,15 @@
-import type { GetFormDetailResponse } from "@sos26/shared";
 import { useEffect, useState } from "react";
 import { FormEditDialog } from "@/components/form/Builder/EditDialog";
 import type { Form } from "@/components/form/type";
 import { updateFormDetail } from "@/lib/api/committee-form";
 
-type FormDetail = GetFormDetailResponse["form"];
-
 type Props = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	formId: string;
-	initialValues: FormDetail;
+	initialValues: Form;
 	onSuccess?: () => Promise<void>;
 };
-
-function formDetailToForm(detail: FormDetail): Form {
-	return {
-		id: detail.id,
-		name: detail.title,
-		description: detail.description ?? undefined,
-		items: detail.items.map(item => ({
-			id: item.id,
-			label: item.label,
-			type: item.type.toLowerCase() as Lowercase<typeof item.type>,
-			required: item.required,
-			options: item.options.map(opt => ({
-				id: opt.id,
-				label: opt.label,
-			})),
-		})),
-	};
-}
 
 export function EditFormDialog({
 	open,
@@ -39,13 +18,13 @@ export function EditFormDialog({
 	initialValues,
 	onSuccess,
 }: Props) {
-	const [form, setForm] = useState<Form>(() => formDetailToForm(initialValues));
+	const [form, setForm] = useState<Form>(initialValues);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	// ダイアログを開いたタイミングで初期値にリセット
 	useEffect(() => {
 		if (open) {
-			setForm(formDetailToForm(initialValues));
+			setForm(initialValues);
 		}
 	}, [open, initialValues]);
 
@@ -58,7 +37,7 @@ export function EditFormDialog({
 				items: submitted.items.map((item, index) => ({
 					id: item.id || undefined, // 既存itemはidを送る、新規は省略
 					label: item.label,
-					type: item.type.toUpperCase() as Uppercase<typeof item.type>,
+					type: item.type,
 					required: item.required,
 					sortOrder: index,
 					options: item.options?.map((opt, i) => ({

@@ -1,10 +1,4 @@
-export type FormItemType =
-	| "text"
-	| "textarea"
-	| "select"
-	| "checkbox"
-	| "number"
-	| "file";
+import type { FormItemType } from "@sos26/shared";
 
 export type FormAnswerValue = string | number | string[] | File | null;
 

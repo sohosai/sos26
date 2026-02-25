@@ -44,6 +44,7 @@ export function FileUploadField({
 					ref={inputRef}
 					type="file"
 					className={styles.fileInput}
+					required
 					onChange={e => {
 						const file = e.target.files?.[0] ?? null;
 						onChange(file);

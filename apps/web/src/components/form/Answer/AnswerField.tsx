@@ -17,7 +17,7 @@ type FieldProps = {
 
 export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 	switch (item.type) {
-		case "text":
+		case "TEXT":
 			return (
 				<TextField
 					label={item.label}
@@ -29,7 +29,7 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 				/>
 			);
 
-		case "textarea":
+		case "TEXTAREA":
 			return (
 				<TextArea
 					label={item.label}
@@ -44,7 +44,7 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 				/>
 			);
 
-		case "number":
+		case "NUMBER":
 			return (
 				<NumberField
 					label={item.label}
@@ -58,7 +58,7 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 				/>
 			);
 
-		case "file":
+		case "FILE":
 			return (
 				<FileUploadField
 					label={item.label}
@@ -69,7 +69,7 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 				/>
 			);
 
-		case "select":
+		case "SELECT":
 			return (
 				<RadioGroup
 					label={item.label}
@@ -87,7 +87,7 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 				</RadioGroup>
 			);
 
-		case "checkbox":
+		case "CHECKBOX":
 			return (
 				<CheckboxGroup
 					label={item.label}

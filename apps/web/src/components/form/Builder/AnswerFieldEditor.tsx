@@ -13,7 +13,7 @@ type Props = {
 
 export function AnswerFieldEditor({ item, onUpdate }: Props) {
 	switch (item.type) {
-		case "text":
+		case "TEXT":
 			return (
 				<div className={styles.preview}>
 					<TextField
@@ -25,7 +25,7 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 				</div>
 			);
 
-		case "textarea":
+		case "TEXTAREA":
 			return (
 				<div className={styles.preview}>
 					{/* 入力用では textarea だが、こちらでは入力を行わないため、見た目のみ */}
@@ -38,7 +38,7 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 				</div>
 			);
 
-		case "number":
+		case "NUMBER":
 			return (
 				<div className={styles.preview}>
 					<TextField
@@ -50,7 +50,7 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 				</div>
 			);
 
-		case "file":
+		case "FILE":
 			return (
 				<div className={styles.preview}>
 					<FileUploadField
@@ -63,13 +63,13 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 				</div>
 			);
 
-		case "select":
-		case "checkbox":
+		case "SELECT":
+		case "CHECKBOX":
 			return (
 				<div className={styles.options}>
 					{(item.options ?? []).map((option, index) => (
 						<div key={option.id} className={styles.optionRow}>
-							{item.type === "select" ? (
+							{item.type === "SELECT" ? (
 								<Radio disabled value={""} />
 							) : (
 								<Checkbox disabled />

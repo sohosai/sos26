@@ -7,7 +7,7 @@ import { DataTable, DateCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { listProjectForms } from "@/lib/api/project-form";
 import { useProjectStore } from "@/lib/project/store";
-import { ProjectFormAnswerDialog } from "./-conponents/ProjectFormAnswerDialog";
+import { ProjectFormAnswerDialog } from "./-components/ProjectFormAnswerDialog";
 import styles from "./index.module.scss";
 
 type FormRow = {

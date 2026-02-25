@@ -15,7 +15,7 @@ export function ProjectFormToForm(form: GetProjectFormResponse): Form {
 			.map(item => ({
 				id: item.id,
 				label: item.label,
-				type: item.type.toLowerCase() as Lowercase<typeof item.type>,
+				type: item.type,
 				required: item.required,
 				options: item.options
 					.sort((a, b) => a.sortOrder - b.sortOrder)
@@ -38,7 +38,7 @@ export function formDetailToForm(formDetail: GetFormDetailResponse): Form {
 			.map(item => ({
 				id: item.id,
 				label: item.label,
-				type: item.type.toLowerCase() as Lowercase<typeof item.type>,
+				type: item.type,
 				required: item.required,
 				options: item.options
 					.sort((a, b) => a.sortOrder - b.sortOrder)
