@@ -2,9 +2,9 @@ import { Heading, Separator, Text } from "@radix-ui/themes";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AnswerField } from "@/components/form/Answer/AnswerField";
-import { formDetailToForm } from "@/components/form/convert";
 import { getFormDetail, listFormResponses } from "@/lib/api/committee-form";
-import { responseToAnswers } from "@/lib/form";
+import { formDetailToForm } from "@/lib/form/convert";
+import { responseToAnswers } from "@/lib/form/utils";
 import { formatDate } from "@/lib/format";
 import styles from "./index.module.scss";
 

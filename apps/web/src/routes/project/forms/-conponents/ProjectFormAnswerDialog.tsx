@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FormAnswerDialog } from "@/components/form/Answer/AnswerDialog";
-import { ProjectFormToForm } from "@/components/form/convert";
 import type { Form, FormAnswers } from "@/components/form/type";
 import {
 	createFormResponse,
 	getProjectForm,
 	updateFormResponse,
 } from "@/lib/api/project-form";
-import { buildAnswerBody, responseToAnswers } from "@/lib/form";
+import { ProjectFormToForm } from "@/lib/form/convert";
+import { buildAnswerBody, responseToAnswers } from "@/lib/form/utils";
 
 type Props = {
 	open: boolean;

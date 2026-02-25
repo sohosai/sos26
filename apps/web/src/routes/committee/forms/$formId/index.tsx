@@ -7,7 +7,6 @@ import {
 } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { formDetailToForm } from "@/components/form/convert";
 import { Button } from "@/components/primitives";
 import {
 	addFormCollaborator,
@@ -19,6 +18,7 @@ import {
 } from "@/lib/api/committee-form";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { useAuthStore } from "@/lib/auth";
+import { formDetailToForm } from "@/lib/form/convert";
 import { formatDate } from "@/lib/format";
 import { EditFormDialog } from "./-components/EditFormDialog";
 import { FormDetailSidebar } from "./-components/FormDetailSidebar";

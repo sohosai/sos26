@@ -17,7 +17,10 @@ import {
 import { Button } from "@/components/primitives";
 import { listMyForms } from "@/lib/api/committee-form";
 import { useAuthStore } from "@/lib/auth";
-import { type FormStatusInfo, getFormStatusFromAuth } from "@/lib/form-status";
+import {
+	type FormStatusInfo,
+	getFormStatusFromAuth,
+} from "@/lib/form/form-status";
 import { CreateFormDialog } from "./-components/CreateFormDialog";
 import styles from "./index.module.scss";
 
