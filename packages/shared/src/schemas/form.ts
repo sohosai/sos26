@@ -407,6 +407,7 @@ export const listProjectFormsResponseSchema = z.object({
 			description: z.string().nullable(),
 			scheduledSendAt: z.coerce.date(),
 			deadlineAt: z.coerce.date().nullable(),
+			required: z.boolean(),
 			allowLateResponse: z.boolean(),
 			// 自分の回答状況
 			response: z
@@ -461,6 +462,7 @@ export const getProjectFormResponseSchema = z.object({
 		scheduledSendAt: z.coerce.date(),
 		deadlineAt: z.coerce.date().nullable(),
 		allowLateResponse: z.boolean(),
+		required: z.boolean(),
 		items: z.array(projectFormItemSchema),
 		// 既存の回答（下書き含む）
 		response: z

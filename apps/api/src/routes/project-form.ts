@@ -222,6 +222,7 @@ projectFormRoute.get("/", requireAuth, requireProjectMember, async c => {
 			scheduledSendAt: d.formAuthorization.scheduledSendAt,
 			deadlineAt: d.formAuthorization.deadlineAt,
 			allowLateResponse: d.formAuthorization.allowLateResponse,
+			required: d.formAuthorization.required,
 			response: d.responses[0] ?? null,
 		})),
 	});
@@ -261,6 +262,7 @@ projectFormRoute.get(
 				scheduledSendAt: delivery.formAuthorization.scheduledSendAt,
 				deadlineAt: delivery.formAuthorization.deadlineAt,
 				allowLateResponse: delivery.formAuthorization.allowLateResponse,
+				required: delivery.formAuthorization.required,
 				items: form.items.map(item => ({
 					id: item.id,
 					label: item.label,

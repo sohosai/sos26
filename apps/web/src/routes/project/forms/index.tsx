@@ -17,6 +17,7 @@ type FormRow = {
 	scheduledSendAt: Date;
 	deadlineAt: Date | null;
 	allowLateResponse: boolean;
+	required: boolean;
 	responseId: string | null;
 	submittedAt: Date | null;
 };
@@ -40,6 +41,7 @@ export const Route = createFileRoute("/project/forms/")({
 				scheduledSendAt: f.scheduledSendAt,
 				deadlineAt: f.deadlineAt,
 				allowLateResponse: f.allowLateResponse,
+				required: f.required,
 				responseId: f.response?.id ?? null,
 				submittedAt: f.response?.submittedAt ?? null,
 			})),
@@ -88,6 +90,14 @@ function RouteComponent() {
 			header: "配信日時",
 			cell: DateCell,
 			meta: { dateFormat: "datetime" },
+		}),
+		columnHelper.accessor("required", {
+			header: "回答必須",
+			cell: ctx => (
+				<Badge variant="soft" color={ctx.getValue() ? "red" : "gray"}>
+					{ctx.getValue() ? "必須" : "任意"}
+				</Badge>
+			),
 		}),
 		columnHelper.accessor("deadlineAt", {
 			header: "回答期限",
