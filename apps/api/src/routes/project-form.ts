@@ -186,10 +186,17 @@ projectFormRoute.get("/", requireAuth, requireProjectMember, async c => {
 	const projectId = c.req.param("projectId");
 	const userId = c.get("user").id;
 
+	const now = new Date();
+
 	const deliveries = await prisma.formDelivery.findMany({
 		where: {
 			projectId,
-			formAuthorization: { status: "APPROVED" },
+			formAuthorization: {
+				status: "APPROVED",
+				scheduledSendAt: {
+					lte: now,
+				},
+			},
 		},
 		include: {
 			formAuthorization: {
