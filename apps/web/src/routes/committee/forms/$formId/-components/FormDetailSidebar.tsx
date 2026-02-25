@@ -100,18 +100,11 @@ export function FormDetailSidebar({
 	const isApprover =
 		latestAuth?.status === "PENDING" && latestAuth.requestedToId === userId;
 
-	const canPublish = resolveFormPermissions({
+	const { canPublish, canEditForm, canViewAnswers } = resolveFormPermissions({
 		canEdit,
 		statusCode: statusInfo.code,
 	});
-	const canEditForm = resolveFormPermissions({
-		canEdit,
-		statusCode: statusInfo.code,
-	});
-	const canViewAnswers = resolveFormPermissions({
-		canEdit,
-		statusCode: statusInfo.code,
-	});
+
 	const showAuthBox =
 		canPublish || (latestAuth && latestAuth?.status === "PENDING");
 
