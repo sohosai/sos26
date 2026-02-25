@@ -25,7 +25,7 @@ export const Route = createFileRoute(
 		const response = responsesRes.responses.find(r => r.id === params.answerId);
 		if (!response) throw new Error("回答が見つかりません");
 
-		const form = formDetailToForm(formRes.form);
+		const form = formDetailToForm(formRes);
 		const answers = responseToAnswers(response, form);
 
 		return { form, response, answers };
@@ -82,6 +82,7 @@ function RouteComponent() {
 							item={item}
 							value={answers[item.id]}
 							onChange={() => {}}
+							disabled
 						/>
 					</li>
 				))}

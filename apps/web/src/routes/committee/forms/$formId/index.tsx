@@ -73,7 +73,7 @@ function RouteComponent() {
 		)
 		.map(m => ({ userId: m.user.id, name: m.user.name }));
 
-	const previewForm = useMemo(() => formDetailToForm(form), [form]);
+	const previewForm = useMemo(() => formDetailToForm({ form: form }), [form]);
 
 	const handleAddCollaborator = async (userId: string) => {
 		try {

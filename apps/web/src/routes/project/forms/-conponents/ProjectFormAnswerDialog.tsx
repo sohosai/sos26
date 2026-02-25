@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FormAnswerDialog } from "@/components/form/Answer/AnswerDialog";
-import { formDetailToForm } from "@/components/form/convert";
+import { ProjectFormToForm } from "@/components/form/convert";
 import type { Form, FormAnswers } from "@/components/form/type";
 import {
 	createFormResponse,
@@ -38,12 +38,7 @@ export function ProjectFormAnswerDialog({
 		getProjectForm(projectId, formDeliveryId)
 			.then(res => {
 				if (cancelled) return;
-				// formDetailToForm と互換の形に変換
-				// GetProjectFormResponse の form は GetFormDetailResponse["form"] と
-				// items/options の構造が同じなのでキャストして流用
-				const convertedForm = formDetailToForm(
-					res.form as unknown as Parameters<typeof formDetailToForm>[0]
-				);
+				const convertedForm = ProjectFormToForm(res);
 
 				setForm(convertedForm);
 				setResponseId(res.form.response?.id ?? null);
