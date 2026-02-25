@@ -116,15 +116,17 @@ export function FormViewer({
 			</ul>
 
 			<div className={styles.footer}>
-				<Button
-					intent="secondary"
-					type="button"
-					onClick={handleSaveDraft}
-					loading={isSavingDraft}
-					disabled={isSubmitting}
-				>
-					下書きを保存
-				</Button>
+				{onSaveDraft && (
+					<Button
+						intent="secondary"
+						type="button"
+						onClick={handleSaveDraft}
+						loading={isSavingDraft}
+						disabled={isSubmitting}
+					>
+						下書きを保存
+					</Button>
+				)}
 				<Button type="submit" loading={isSubmitting} disabled={isSavingDraft}>
 					送信する
 				</Button>
