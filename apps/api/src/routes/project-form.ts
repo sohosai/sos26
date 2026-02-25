@@ -1,6 +1,7 @@
 import {
 	type CreateFormResponseRequest,
 	createFormResponseRequestSchema,
+	type FormItem,
 	type FormItemType,
 	projectFormPathParamsSchema,
 	projectFormResponsePathParamsSchema,
@@ -130,6 +131,46 @@ const upsertAnswers = async (
 		}
 	}
 };
+
+// ─────────────────────────────────────────────────────────────
+// ヘルパー: 回答で含まれないIdをはじく
+// ─────────────────────────────────────────────────────────────
+function assertSelectedOptionsValid(
+	formItems: FormItem[],
+	answers: CreateFormResponseRequest["answers"]
+) {
+	const itemMap = new Map(
+		formItems.map(item => [
+			item.id,
+			{
+				type: item.type,
+				optionIds: new Set(item.options.map(o => o.id)),
+			},
+		])
+	);
+
+	for (const answer of answers) {
+		const meta = itemMap.get(answer.formItemId);
+		if (!meta) {
+			throw Errors.invalidRequest("不正な設問IDです");
+		}
+
+		// SELECT / CHECKBOX 以外は無視
+		if (meta.type !== "SELECT" && meta.type !== "CHECKBOX") {
+			continue;
+		}
+
+		const ids = answer.selectedOptionIds ?? [];
+
+		for (const id of ids) {
+			if (!meta.optionIds.has(id)) {
+				throw Errors.invalidRequest(
+					`不正な選択肢IDです（formItemId: ${answer.formItemId}）`
+				);
+			}
+		}
+	}
+}
 
 // ─────────────────────────────────────────────────────────────
 // ヘルパー: レスポンス整形
@@ -347,6 +388,8 @@ projectFormRoute.post(
 		const body = await c.req.json().catch(() => ({}));
 		const { answers, submit } = createFormResponseRequestSchema.parse(body);
 
+		assertSelectedOptionsValid(delivery.formAuthorization.form.items, answers);
+
 		if (submit) {
 			checkDeadline(delivery.formAuthorization);
 			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
@@ -409,6 +452,8 @@ projectFormRoute.patch(
 
 		const body = await c.req.json().catch(() => ({}));
 		const { answers, submit } = updateFormResponseRequestSchema.parse(body);
+
+		assertSelectedOptionsValid(delivery.formAuthorization.form.items, answers);
 
 		if (submit) {
 			checkDeadline(delivery.formAuthorization);
