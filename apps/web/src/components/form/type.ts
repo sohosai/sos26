@@ -14,6 +14,7 @@ export type FormItemOption = {
 export type FormItem = {
 	id: string;
 	label: string;
+	description?: string;
 	type: FormItemType;
 	required: boolean;
 	options?: FormItemOption[];

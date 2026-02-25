@@ -11,7 +11,13 @@ import {
 	IconTextSize,
 	IconTrash,
 } from "@tabler/icons-react";
-import { IconButton, Select, Switch, TextField } from "@/components/primitives";
+import {
+	IconButton,
+	Select,
+	Switch,
+	TextArea,
+	TextField,
+} from "@/components/primitives";
 import type { FormItem } from "../type";
 import { AnswerFieldEditor } from "./AnswerFieldEditor";
 import styles from "./ItemEditor.module.scss";
@@ -123,6 +129,17 @@ export function FormItemEditor({
 								}
 							/>
 						</div>
+
+						{/* 説明 */}
+						<TextArea
+							label=""
+							aria-label={`説明 ${index + 1}`}
+							value={item.description}
+							onChange={value => onUpdate(item.id, { description: value })}
+							placeholder={`説明を入力してください（任意）`}
+							autoGrow
+							resize="none"
+						/>
 
 						{/* 解答欄 */}
 						<AnswerFieldEditor

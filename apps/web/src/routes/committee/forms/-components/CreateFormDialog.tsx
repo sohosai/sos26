@@ -36,6 +36,7 @@ export function CreateFormDialog({ open, onOpenChange, onSuccess }: Props) {
 				items: form.items.map((item, index) => ({
 					label: item.label,
 					type: item.type.toUpperCase() as Uppercase<typeof item.type>,
+					description: item.description ?? null,
 					required: item.required,
 					sortOrder: index,
 					options: item.options?.map((opt, i) => ({

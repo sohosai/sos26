@@ -37,6 +37,7 @@ export function EditFormDialog({
 				items: submitted.items.map((item, index) => ({
 					id: item.id || undefined, // 既存itemはidを送る、新規は省略
 					label: item.label,
+					description: item.description ?? null,
 					type: item.type,
 					required: item.required,
 					sortOrder: index,

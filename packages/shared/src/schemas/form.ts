@@ -42,8 +42,9 @@ export const formItemSchema = z.object({
 	id: z.string(),
 	formId: z.string(),
 	label: z.string().min(1),
+	description: z.string().nullable(),
 	type: formItemTypeSchema,
-	required: z.boolean(),
+	required: z.boolean().default(false),
 	sortOrder: z.number().int(),
 	options: z.array(formItemOptionSchema),
 	createdAt: z.coerce.date(),
@@ -204,13 +205,15 @@ export const createFormItemOptionInputSchema = z.object({
 	sortOrder: z.number().int(),
 });
 
-export const createFormItemInputSchema = z.object({
-	label: z.string().min(1),
-	type: formItemTypeSchema,
-	required: z.boolean().default(false),
-	sortOrder: z.number().int(),
-	options: z.array(createFormItemOptionInputSchema).optional(),
-});
+export const createFormItemInputSchema = formItemSchema
+	.pick({
+		label: true,
+		description: true,
+		type: true,
+		required: true,
+		sortOrder: true,
+	})
+	.extend({ options: z.array(createFormItemOptionInputSchema).optional() });
 
 export const createFormRequestSchema = z.object({
 	title: z.string().min(1).default("無題のフォーム"),
@@ -262,13 +265,8 @@ export type GetFormDetailResponse = z.infer<typeof getFormDetailResponseSchema>;
 // ─────────────────────────────────────────────────────────────
 
 // 更新リクエスト用のitem入力スキーマ
-export const updateFormItemInputSchema = z.object({
+export const updateFormItemInputSchema = createFormItemInputSchema.extend({
 	id: z.string().min(1).optional(),
-	label: z.string().min(1),
-	type: formItemTypeSchema,
-	required: z.boolean().default(false),
-	sortOrder: z.number().int(),
-	options: z.array(createFormItemOptionInputSchema).optional(),
 });
 
 export const updateFormDetailRequestSchema = z.object({
@@ -469,7 +467,7 @@ export type ListProjectFormsResponse = z.infer<
 // フォーム詳細（項目含む）+ 自分の回答
 // ─────────────────────────────────────────────────────────────
 
-// 企画側に返す項目スキーマ（DBメタ不要）
+// 企画側に返す項目スキーマ
 const projectFormItemOptionSchema = z.object({
 	id: z.string(),
 	label: z.string(),
@@ -479,6 +477,7 @@ const projectFormItemOptionSchema = z.object({
 const projectFormItemSchema = z.object({
 	id: z.string(),
 	label: z.string(),
+	description: z.string().nullable(),
 	type: formItemTypeSchema,
 	required: z.boolean(),
 	sortOrder: z.number().int(),
@@ -523,14 +522,6 @@ export type GetProjectFormResponse = z.infer<
 // 企画側: POST /project/:projectId/forms/:formDeliveryId/responses
 // 回答を作成（下書き or 提出）
 // ─────────────────────────────────────────────────────────────
-
-// const formAnswerInputSchema = z.object({
-// 	formItemId: z.string().min(1),
-// 	textValue: z.string().nullable().optional(),
-// 	numberValue: z.number().nullable().optional(),
-// 	fileUrl: z.string().nullable().optional(),
-// 	selectedOptionIds: z.array(z.string()).optional(),
-// });
 
 export const formAnswerInputSchema = z.discriminatedUnion("type", [
 	textAnswerSchema,

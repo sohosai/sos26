@@ -88,6 +88,7 @@ export function FormViewer({
 			<ul className={styles.itemList}>
 				{form.items.map(item => (
 					<li key={item.id} className={styles.itemCard}>
+						<Text size="2">{item.description}</Text>
 						<AnswerField
 							item={item}
 							value={answers[item.id]}

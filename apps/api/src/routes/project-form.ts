@@ -1,7 +1,6 @@
 import {
 	type CreateFormResponseRequest,
 	createFormResponseRequestSchema,
-	type FormItem,
 	type FormItemType,
 	projectFormPathParamsSchema,
 	projectFormResponsePathParamsSchema,
@@ -35,7 +34,15 @@ const getDeliveryOrThrow = async (
 					form: {
 						include: {
 							items: {
-								include: { options: true },
+								select: {
+									id: true,
+									label: true,
+									description: true,
+									type: true,
+									required: true,
+									sortOrder: true,
+									options: true,
+								},
 								orderBy: { sortOrder: "asc" },
 							},
 						},
@@ -136,7 +143,11 @@ const upsertAnswers = async (
 // ヘルパー: 回答で含まれないIdをはじく
 // ─────────────────────────────────────────────────────────────
 function assertSelectedOptionsValid(
-	formItems: FormItem[],
+	formItems: {
+		id: string;
+		type: FormItemType;
+		options: { id: string }[];
+	}[],
 	answers: CreateFormResponseRequest["answers"]
 ) {
 	const itemMap = new Map(
