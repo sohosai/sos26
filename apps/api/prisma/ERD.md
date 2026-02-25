@@ -133,6 +133,7 @@ erDiagram
   String id PK
   String formId FK
   String label
+  String description "nullable"
   FormItemType type
   Boolean required
   Int sortOrder
@@ -412,6 +413,7 @@ Properties as follows:
 - `id`:
 - `formId`:
 - `label`:
+- `description`:
 - `type`:
 - `required`:
 - `sortOrder`:

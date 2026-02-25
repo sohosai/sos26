@@ -408,6 +408,9 @@ model FormItem {
   //質問文
   label String
 
+  //説明
+  description String?
+
   //回答タイプ
   type FormItemType
 
@@ -514,8 +517,8 @@ model FormAuthorization {
   //フォーム自体を回答必須にするか
   required Boolean @default(true)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
   deliveries FormDelivery[]
 }
 
