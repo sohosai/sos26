@@ -1,5 +1,6 @@
 import { IconPlus } from "@tabler/icons-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button, TextArea, TextField } from "@/components/primitives";
 import type { Form, FormItem } from "../type";
 import styles from "./Editor.module.scss";
@@ -53,6 +54,18 @@ export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 	};
 
 	const handleSubmit = () => {
+		const invalidItem = items.find(item => {
+			if (item.type === "checkbox" || item.type === "select") {
+				return !item.options || item.options.length === 0;
+			}
+			return false;
+		});
+
+		if (invalidItem) {
+			toast.error("選択式の項目には、少なくとも1つの選択肢を追加してください");
+			return;
+		}
+
 		const form: Form = {
 			id: initialForm.id,
 			name: formName.trim(),
