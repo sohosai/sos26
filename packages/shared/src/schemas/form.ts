@@ -252,7 +252,7 @@ export const getFormDetailResponseSchema = z.object({
 	form: formSchema.extend({
 		owner: userSummarySchema,
 		collaborators: z.array(collaboratorWithUserSchema),
-		authorizations: z.array(authorizationDetailSchema),
+		authorizationDetail: authorizationDetailSchema.nullable(),
 	}),
 });
 export type GetFormDetailResponse = z.infer<typeof getFormDetailResponseSchema>;

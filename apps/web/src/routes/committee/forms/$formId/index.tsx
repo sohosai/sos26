@@ -169,7 +169,6 @@ function RouteComponent() {
 
 			<FormDetailSidebar
 				form={form}
-				formId={formId}
 				userId={user?.id ?? ""}
 				isOwner={isOwner}
 				canEdit={canEdit}

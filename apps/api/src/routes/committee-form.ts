@@ -162,6 +162,8 @@ committeeFormRoute.get(
 					},
 				},
 				authorizations: {
+					orderBy: { createdAt: "desc" },
+					take: 1,
 					include: {
 						requestedBy: { select: { id: true, name: true } },
 						requestedTo: { select: { id: true, name: true } },
@@ -171,7 +173,6 @@ committeeFormRoute.get(
 							},
 						},
 					},
-					orderBy: { createdAt: "desc" },
 				},
 			},
 		});
@@ -180,7 +181,13 @@ committeeFormRoute.get(
 			throw Errors.notFound("フォームが見つかりません");
 		}
 
-		return c.json({ form });
+		return c.json({
+			form: {
+				...form,
+				authorizationDetail: form.authorizations[0] ?? null,
+				authorizations: undefined,
+			},
+		});
 	}
 );
 

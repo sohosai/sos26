@@ -10,9 +10,10 @@ import {
 import { Link } from "@tanstack/react-router";
 import Avatar from "boring-avatars";
 import { useState } from "react";
+import { AddCollaboratorDialog } from "@/components/committee/AddCollaboratorDialog";
 import { Button, IconButton } from "@/components/primitives";
+import { getFormStatusFromAuth } from "@/lib/form/form-status";
 import { formatDate } from "@/lib/format";
-import { AddCollaboratorDialog } from "../../../../../components/committee/AddCollaboratorDialog";
 import styles from "./FormDetailSidebar.module.scss";
 import { FormPublishRequestDialog } from "./FormPublishRequestDialog";
 
@@ -28,9 +29,27 @@ type Approver = {
 	name: string;
 };
 
+function resolveFormPermissions(params: {
+	canEdit: boolean;
+	statusCode: string;
+}) {
+	const { canEdit, statusCode } = params;
+
+	return {
+		// 公開申請できるのは「下書き or 却下」のみ
+		canPublish:
+			canEdit && (statusCode === "DRAFT" || statusCode === "REJECTED"),
+		// 編集できるのは「承認済み以外」
+		canEditForm:
+			canEdit && statusCode !== "PUBLISHED" && statusCode !== "SCHEDULED",
+		// 回答確認は「公開済み」または「期限切れ」
+		canViewAnswers:
+			canEdit && (statusCode === "PUBLISHED" || statusCode === "EXPIRED"),
+	};
+}
+
 type Props = {
 	form: FormDetail;
-	formId: string;
 	userId: string;
 	isOwner: boolean;
 	canEdit: boolean;
@@ -48,7 +67,6 @@ type Props = {
 
 export function FormDetailSidebar({
 	form,
-	formId,
 	userId,
 	isOwner,
 	canEdit,
@@ -68,18 +86,34 @@ export function FormDetailSidebar({
 	const [approvingId, setApprovingId] = useState<string | null>(null);
 	const [rejectingId, setRejectingId] = useState<string | null>(null);
 
-	const pendingAuth = form.authorizations.find(a => a.status === "PENDING");
-	const approvedAuth = form.authorizations.find(a => a.status === "APPROVED");
-	const latestAuth = pendingAuth ?? approvedAuth;
-	const isApprover = pendingAuth?.requestedToId === userId;
-	const hasApprovedAuth = form.authorizations.some(
-		a => a.status === "APPROVED"
+	const latestAuth = form.authorizationDetail;
+	const statusInfo = getFormStatusFromAuth(
+		latestAuth
+			? {
+					status: latestAuth.status,
+					deliveredAt: latestAuth.scheduledSendAt,
+					allowLateResponse: latestAuth.allowLateResponse,
+					deadlineAt: latestAuth.deadlineAt,
+				}
+			: null
 	);
-	const hasPendingAuth = form.authorizations.some(a => a.status === "PENDING");
-	const canPublish = canEdit && !hasApprovedAuth && !hasPendingAuth;
-	const canEditForm = canEdit && !hasApprovedAuth;
+	const isApprover =
+		latestAuth?.status === "PENDING" && latestAuth.requestedToId === userId;
 
-	const showAuthBox = canPublish || latestAuth;
+	const canPublish = resolveFormPermissions({
+		canEdit,
+		statusCode: statusInfo.code,
+	});
+	const canEditForm = resolveFormPermissions({
+		canEdit,
+		statusCode: statusInfo.code,
+	});
+	const canViewAnswers = resolveFormPermissions({
+		canEdit,
+		statusCode: statusInfo.code,
+	});
+	const showAuthBox =
+		canPublish || (latestAuth && latestAuth?.status === "PENDING");
 
 	return (
 		<>
@@ -185,10 +219,10 @@ export function FormDetailSidebar({
 							</div>
 						)}
 
-						{latestAuth && (
+						{latestAuth && latestAuth?.status === "PENDING" && (
 							<AuthDetailSection
 								auth={latestAuth}
-								pendingAuth={pendingAuth}
+								pendingAuth={latestAuth}
 								isApprover={isApprover}
 								approvingId={approvingId}
 								rejectingId={rejectingId}
@@ -214,11 +248,11 @@ export function FormDetailSidebar({
 				)}
 
 				{/* ボックス3: 回答確認 */}
-				{hasApprovedAuth && (
+				{canViewAnswers && (
 					<aside className={styles.sidebar}>
 						<Link
 							to="/committee/forms/$formId/answers"
-							params={{ formId: formId }}
+							params={{ formId: form.id }}
 						>
 							<div className={styles.section}>
 								<Button intent="primary" size="2">
@@ -240,7 +274,7 @@ export function FormDetailSidebar({
 			<FormPublishRequestDialog
 				open={publishRequestOpen}
 				onOpenChange={setPublishRequestOpen}
-				formId={formId}
+				formId={form.id}
 				approvers={approvers}
 				onSuccess={onPublishSuccess}
 			/>
@@ -249,8 +283,8 @@ export function FormDetailSidebar({
 }
 
 type AuthDetailSectionProps = {
-	auth: FormDetail["authorizations"][number];
-	pendingAuth: FormDetail["authorizations"][number] | undefined;
+	auth: FormDetail["authorizationDetail"];
+	pendingAuth: FormDetail["authorizationDetail"] | undefined;
 	isApprover: boolean;
 	approvingId: string | null;
 	rejectingId: string | null;
@@ -267,6 +301,9 @@ function AuthDetailSection({
 	onApprove,
 	onReject,
 }: AuthDetailSectionProps) {
+	if (!auth) {
+		return null;
+	}
 	return (
 		<div className={styles.section}>
 			<Text size="2" weight="medium" color="gray">
