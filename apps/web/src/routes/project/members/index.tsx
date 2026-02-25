@@ -1,15 +1,14 @@
-import { Heading, Popover } from "@radix-ui/themes";
-import {
-	IconDotsVertical,
-	IconPlus,
-	IconTrash,
-	IconUserUp,
-} from "@tabler/icons-react";
+import { Heading } from "@radix-ui/themes";
+import { IconPlus, IconTrash, IconUserUp } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DataTable, TagCell } from "@/components/patterns";
+import {
+	type ActionItem,
+	ActionsMenu,
+} from "@/components/patterns/ActionMenu/ActonMenu";
 import { Button } from "@/components/primitives";
 import { InviteMemberDialog } from "@/components/project/members/InviteMemberDialog";
 import {
@@ -19,7 +18,6 @@ import {
 } from "@/lib/api/project";
 import { useAuthStore } from "@/lib/auth";
 import { useProject, useProjectStore } from "@/lib/project/store";
-import styles from "./index.module.scss";
 
 export type MemberRow = {
 	userId: string;
@@ -30,58 +28,27 @@ export type MemberRow = {
 	joinedAt: Date;
 };
 
-type MemberActionsCellProps = {
-	member: MemberRow;
-	hasSubOwner: boolean;
-	onAssign: (memberId: string) => void;
-	onDelete: (memberId: string) => void;
-};
-
-export function MemberActionsCell({
-	member,
-	hasSubOwner,
-	onAssign,
-	onDelete,
-}: MemberActionsCellProps) {
-	if (member.role === "OWNER") {
-		return null;
-	}
-	return (
-		<Popover.Root>
-			<Popover.Trigger>
-				{/* 色を表の中身で揃えたいため、<IconButton>は使わない */}
-				<button type="button" className={styles.trigger}>
-					<IconDotsVertical size={16} />
-				</button>
-			</Popover.Trigger>
-
-			<Popover.Content align="start" sideOffset={4}>
-				<div className={styles.menu}>
-					{!hasSubOwner && (
-						<Button
-							intent="ghost"
-							size="2"
-							onClick={() => onAssign(member.userId)}
-						>
-							<IconUserUp size={16} />
-							副責任者に指名
-						</Button>
-					)}
-					{member.role === "MEMBER" && (
-						<Button
-							intent="ghost"
-							size="2"
-							onClick={() => onDelete(member.userId)}
-						>
-							<IconTrash size={16} />
-							削除
-						</Button>
-					)}
-				</div>
-			</Popover.Content>
-		</Popover.Root>
-	);
-}
+const buildMemberActions = (
+	member: MemberRow,
+	hasSubOwner: boolean,
+	onAssign: (id: string) => void,
+	onDelete: (id: string) => void
+): ActionItem<MemberRow>[] => [
+	{
+		key: "assign-sub-owner",
+		label: "副責任者に指名",
+		icon: <IconUserUp size={16} />,
+		hidden: member.role !== "MEMBER" || hasSubOwner,
+		onClick: m => onAssign(m.userId),
+	},
+	{
+		key: "delete-member",
+		label: "削除",
+		icon: <IconTrash size={16} />,
+		hidden: member.role !== "MEMBER",
+		onClick: m => onDelete(m.userId),
+	},
+];
 
 const roleLabelMap: Record<MemberRow["role"], string> = {
 	OWNER: "責任者",
@@ -184,11 +151,14 @@ function RouteComponent() {
 					id: "actions",
 					header: "",
 					cell: ({ row }) => (
-						<MemberActionsCell
-							member={row.original}
-							hasSubOwner={hasSubOwner}
-							onAssign={handleAssign}
-							onDelete={handleDeleteMember}
+						<ActionsMenu
+							item={row.original}
+							actions={buildMemberActions(
+								row.original,
+								hasSubOwner,
+								handleAssign,
+								handleDeleteMember
+							)}
 						/>
 					),
 				}),
