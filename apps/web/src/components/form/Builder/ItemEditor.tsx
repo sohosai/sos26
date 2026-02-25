@@ -117,6 +117,7 @@ export function FormItemEditor({
 							</div>
 							<Switch
 								label="必須"
+								checked={item.required}
 								onCheckedChange={checked =>
 									onUpdate(item.id, { required: checked })
 								}
