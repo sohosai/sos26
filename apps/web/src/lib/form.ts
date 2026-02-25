@@ -32,7 +32,7 @@ function resolveResponseValue(
 		case "CHECKBOX":
 			return getSelectedOptionIds(answer);
 		case "NUMBER":
-			return answer.numberValue ?? 0;
+			return answer.numberValue;
 		case "FILE":
 			return answer.fileUrl ?? "";
 		default:
@@ -79,6 +79,16 @@ export function buildAnswerBody(
 	};
 }
 
+function normalizeOptionIds(value: FormAnswerValue): string[] {
+	if (Array.isArray(value)) {
+		return value.filter(v => v !== "");
+	}
+	if (typeof value === "string" && value !== "") {
+		return [value];
+	}
+	return [];
+}
+
 function buildSingleAnswer(
 	formItemId: string,
 	value: FormAnswerValue,
@@ -91,15 +101,10 @@ function buildSingleAnswer(
 		case "NUMBER":
 			return { formItemId, numberValue: value as number };
 		case "SELECT":
-			return {
-				formItemId,
-				selectedOptionIds:
-					typeof value === "string" ? [value] : (value as string[]),
-			};
 		case "CHECKBOX":
 			return {
 				formItemId,
-				selectedOptionIds: Array.isArray(value) ? value : [value as string],
+				selectedOptionIds: normalizeOptionIds(value),
 			};
 		case "FILE":
 			return { formItemId, fileUrl: value as string };

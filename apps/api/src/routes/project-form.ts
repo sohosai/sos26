@@ -50,11 +50,10 @@ const getDeliveryOrThrow = async (
 // ヘルパー: 回答期限チェック
 // ─────────────────────────────────────────────────────────────
 
-const checkDeadline = (
-	auth: { deadlineAt: Date | null; allowLateResponse: boolean },
-	isSubmit: boolean
-) => {
-	if (!isSubmit) return; // 下書き保存は期限チェックしない
+const checkDeadline = (auth: {
+	deadlineAt: Date | null;
+	allowLateResponse: boolean;
+}) => {
 	if (!auth.deadlineAt) return; // 期限なし
 	if (auth.allowLateResponse) return; // 遅延提出許可あり
 	if (auth.deadlineAt < new Date()) {
@@ -77,23 +76,6 @@ const upsertAnswers = async (
 	await tx.formAnswer.deleteMany({ where: { formResponseId: responseId } });
 
 	for (const answer of answers) {
-		// const { selectedOptionIds, ...answerData } = answer;
-		// await tx.formAnswer.create({
-		// 	data: {
-		// 		formResponseId: responseId,
-		// 		formItemId: answer.formItemId,
-		// 		textValue: answerData.textValue ?? null,
-		// 		numberValue: answerData.numberValue ?? null,
-		// 		fileUrl: answerData.fileUrl ?? null,
-		// 		selectedOptions: selectedOptionIds?.length
-		// 			? {
-		// 					create: selectedOptionIds.map(formItemOptionId => ({
-		// 						formItemOptionId,
-		// 					})),
-		// 				}
-		// 			: undefined,
-		// },
-		// });
 		const type = itemTypeMap.get(answer.formItemId);
 		if (!type) {
 			throw Errors.invalidRequest("不正な設問IDです");
@@ -178,6 +160,54 @@ const formatResponse = async (
 		})),
 	};
 };
+
+function assertRequiredAnswered(
+	formItems: {
+		id: string;
+		type: FormItemType;
+		required: boolean;
+	}[],
+	answers: CreateFormResponseRequest["answers"]
+) {
+	const answerMap = new Map(answers.map(a => [a.formItemId, a]));
+
+	for (const item of formItems) {
+		if (!item.required) continue;
+
+		const answer = answerMap.get(item.id);
+
+		const isEmpty = (() => {
+			if (!answer) return true;
+
+			switch (item.type) {
+				case "TEXT":
+				case "TEXTAREA":
+					return !answer.textValue;
+
+				case "NUMBER":
+					return answer.numberValue == null;
+
+				case "FILE":
+					return !answer.fileUrl;
+
+				case "SELECT":
+				case "CHECKBOX":
+					return (
+						!answer.selectedOptionIds || answer.selectedOptionIds.length === 0
+					);
+
+				default:
+					return true;
+			}
+		})();
+
+		if (isEmpty) {
+			throw Errors.invalidRequest(
+				`必須項目が未入力です（formItemId: ${item.id}）`
+			);
+		}
+	}
+}
 // ─────────────────────────────────────────────────────────────
 // GET /project/:projectId/forms
 // ─────────────────────────────────────────────────────────────
@@ -317,7 +347,10 @@ projectFormRoute.post(
 		const body = await c.req.json().catch(() => ({}));
 		const { answers, submit } = createFormResponseRequestSchema.parse(body);
 
-		checkDeadline(delivery.formAuthorization, submit);
+		if (submit) {
+			checkDeadline(delivery.formAuthorization);
+			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
+		}
 
 		const existing = await prisma.formResponse.findFirst({
 			where: { formDeliveryId, respondentId: userId },
@@ -377,7 +410,10 @@ projectFormRoute.patch(
 		const body = await c.req.json().catch(() => ({}));
 		const { answers, submit } = updateFormResponseRequestSchema.parse(body);
 
-		checkDeadline(delivery.formAuthorization, submit);
+		if (submit) {
+			checkDeadline(delivery.formAuthorization);
+			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
+		}
 
 		const response = await prisma.$transaction(async tx => {
 			await tx.formResponse.update({
