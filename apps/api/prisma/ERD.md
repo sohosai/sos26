@@ -166,6 +166,7 @@ erDiagram
   DateTime scheduledSendAt
   DateTime deadlineAt "nullable"
   Boolean allowLateResponse
+  Boolean required
   DateTime createdAt
   DateTime updatedAt
 }
@@ -453,6 +454,7 @@ Properties as follows:
 - `scheduledSendAt`:
 - `deadlineAt`:
 - `allowLateResponse`:
+- `required`:
 - `createdAt`:
 - `updatedAt`:
 

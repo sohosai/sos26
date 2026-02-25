@@ -511,6 +511,9 @@ model FormAuthorization {
   //期限後の回答を許可するか
   allowLateResponse Boolean @default(false)
 
+  //フォーム自体を回答必須にするか
+  required Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
