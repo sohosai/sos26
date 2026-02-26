@@ -56,6 +56,17 @@ export const noticeDeliverySchema = z.object({
 });
 export type NoticeDelivery = z.infer<typeof noticeDeliverySchema>;
 
+export const noticeAttachmentSchema = z.object({
+	id: z.cuid(),
+	fileId: z.string(),
+	fileName: z.string(),
+	mimeType: z.string(),
+	size: z.number(),
+	isPublic: z.boolean(),
+	createdAt: z.coerce.date(),
+});
+export type NoticeAttachment = z.infer<typeof noticeAttachmentSchema>;
+
 // ─────────────────────────────────────────────────────────────
 // パスパラメータ
 // ─────────────────────────────────────────────────────────────
@@ -72,6 +83,11 @@ export const noticeAuthorizationIdPathParamsSchema = z.object({
 export const noticeCollaboratorIdPathParamsSchema = z.object({
 	noticeId: z.cuid(),
 	collaboratorId: z.cuid(),
+});
+
+export const noticeAttachmentIdPathParamsSchema = z.object({
+	noticeId: z.cuid(),
+	attachmentId: z.cuid(),
 });
 
 export const projectNoticeIdPathParamsSchema = z.object({
@@ -154,6 +170,7 @@ export const getNoticeResponseSchema = z.object({
 		owner: userSummarySchema,
 		collaborators: z.array(collaboratorWithUserSchema),
 		authorizations: z.array(authorizationDetailSchema),
+		attachments: z.array(noticeAttachmentSchema),
 	}),
 });
 export type GetNoticeResponse = z.infer<typeof getNoticeResponseSchema>;
@@ -284,10 +301,40 @@ export const getProjectNoticeResponseSchema = z.object({
 		ownerBureau: z.string(),
 		deliveredAt: z.coerce.date(),
 		isRead: z.boolean(),
+		attachments: z.array(noticeAttachmentSchema),
 	}),
 });
 export type GetProjectNoticeResponse = z.infer<
 	typeof getProjectNoticeResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// POST /committee/notices/:noticeId/attachments
+// ─────────────────────────────────────────────────────────────
+
+export const addNoticeAttachmentRequestSchema = z.object({
+	fileIds: z.array(z.string()).min(1, "ファイルを1つ以上指定してください"),
+});
+export type AddNoticeAttachmentRequest = z.infer<
+	typeof addNoticeAttachmentRequestSchema
+>;
+
+export const addNoticeAttachmentResponseSchema = z.object({
+	attachments: z.array(noticeAttachmentSchema),
+});
+export type AddNoticeAttachmentResponse = z.infer<
+	typeof addNoticeAttachmentResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// DELETE /committee/notices/:noticeId/attachments/:attachmentId
+// ─────────────────────────────────────────────────────────────
+
+export const removeNoticeAttachmentResponseSchema = z.object({
+	success: z.literal(true),
+});
+export type RemoveNoticeAttachmentResponse = z.infer<
+	typeof removeNoticeAttachmentResponseSchema
 >;
 
 // ─────────────────────────────────────────────────────────────

@@ -1,11 +1,13 @@
 import { Dialog, Text } from "@radix-ui/themes";
-import type { Bureau } from "@sos26/shared";
+import type { Bureau, NoticeAttachment } from "@sos26/shared";
 import { bureauLabelMap } from "@sos26/shared";
+import { IconDownload, IconPaperclip } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
+import { downloadFile } from "@/lib/api/files";
 import { getProjectNotice, readProjectNotice } from "@/lib/api/project-notice";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatFileSize } from "@/lib/format";
 import { sanitizeHtml } from "@/lib/sanitize";
 import styles from "./NoticeDetailDialog.module.scss";
 
@@ -28,6 +30,7 @@ export function NoticeDetailDialog({
 	const [title, setTitle] = useState("");
 	const [body, setBody] = useState<string | null>(null);
 	const [meta, setMeta] = useState("");
+	const [attachments, setAttachments] = useState<NoticeAttachment[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
 
 	useEffect(() => {
@@ -43,6 +46,7 @@ export function NoticeDetailDialog({
 				setMeta(
 					`${formatDate(new Date(res.notice.deliveredAt), "datetime")}　${getBureauLabel(res.notice.ownerBureau)}`
 				);
+				setAttachments(res.notice.attachments);
 
 				if (!res.notice.isRead) {
 					readProjectNotice(projectId, noticeId).then(() => {
@@ -73,6 +77,7 @@ export function NoticeDetailDialog({
 			setTitle("");
 			setBody(null);
 			setMeta("");
+			setAttachments([]);
 		}
 	};
 
@@ -101,6 +106,43 @@ export function NoticeDetailDialog({
 								本文なし
 							</Text>
 						)}
+
+						{attachments.length > 0 && (
+							<div className={styles.attachmentSection}>
+								<Text size="2" weight="medium" color="gray">
+									<IconPaperclip
+										size={14}
+										style={{ verticalAlign: "middle" }}
+									/>{" "}
+									添付ファイル
+								</Text>
+								<div className={styles.attachmentList}>
+									{attachments.map(att => (
+										<button
+											key={att.id}
+											type="button"
+											className={styles.attachmentItem}
+											onClick={() =>
+												downloadFile(
+													att.fileId,
+													att.fileName,
+													att.isPublic
+												).catch(() =>
+													toast.error("ファイルの取得に失敗しました")
+												)
+											}
+										>
+											<IconDownload size={14} />
+											<Text size="2">{att.fileName}</Text>
+											<Text size="1" color="gray">
+												({formatFileSize(att.size)})
+											</Text>
+										</button>
+									))}
+								</div>
+							</div>
+						)}
+
 						<div className={styles.actions}>
 							<Dialog.Close>
 								<Button intent="secondary">閉じる</Button>

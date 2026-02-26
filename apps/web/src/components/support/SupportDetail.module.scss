@@ -1,0 +1,429 @@
+.layout {
+	display: grid;
+	grid-template-columns: 1fr 280px;
+	gap: var(--space-6);
+	max-width: 1100px;
+
+	@media (max-width: 768px) {
+		grid-template-columns: 1fr;
+	}
+}
+
+.main {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-5);
+	min-width: 0;
+}
+
+/* ─── Back link ─── */
+
+.backLink {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	color: var(--accent-11);
+	cursor: pointer;
+	width: fit-content;
+	background: none;
+	border: none;
+	padding: 0;
+	font: inherit;
+
+	&:hover {
+		text-decoration: underline;
+	}
+
+	&:focus-visible {
+		text-decoration: underline;
+	}
+}
+
+/* ─── Title ─── */
+
+.titleSection {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.titleRow {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--space-3);
+}
+
+.statusIcon {
+	flex-shrink: 0;
+	display: flex;
+	padding-top: 2px;
+
+	&[data-status="UNASSIGNED"] {
+		color: var(--orange-9);
+	}
+
+	&[data-status="IN_PROGRESS"] {
+		color: var(--blue-9);
+	}
+
+	&[data-status="RESOLVED"] {
+		color: var(--green-9);
+	}
+}
+
+/* ─── Timeline ─── */
+
+.timeline {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+}
+
+.timelineItem {
+	display: flex;
+	gap: var(--space-3);
+}
+
+.avatar {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	flex-shrink: 0;
+
+	svg {
+		border-radius: var(--radius-full);
+	}
+}
+
+.timelineContent {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	background-color: var(--gray-1);
+	border: 1px solid var(--gray-6);
+	border-radius: var(--radius-3);
+	min-width: 0;
+	overflow: hidden;
+}
+
+.timelineHeader {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	flex-wrap: wrap;
+	padding: var(--space-2) var(--space-4);
+	background-color: var(--gray-2);
+	border-bottom: 1px solid var(--gray-6);
+}
+
+.timelineHeaderMeta {
+	margin-left: auto;
+}
+
+.timelineBody {
+	white-space: pre-wrap;
+	word-break: break-word;
+	padding: var(--space-3) var(--space-4);
+}
+
+.activityItem {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-4);
+	padding-left: calc(28px + var(--space-3));
+	border-left: 2px solid var(--gray-6);
+	margin-left: 13px;
+}
+
+/* ─── Reply ─── */
+
+.replySection {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.replyActions {
+	display: flex;
+	justify-content: flex-end;
+}
+
+/* ─── Sidebar ─── */
+
+.sidebar {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+	padding: var(--space-4);
+	background-color: var(--gray-1);
+	border: 1px solid var(--gray-6);
+	border-radius: var(--radius-3);
+	height: fit-content;
+	position: sticky;
+	top: var(--space-4);
+}
+
+.sidebarSection {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.sidebarSectionHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.assigneeList {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.assigneeItem {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.sidebarAvatar {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	flex-shrink: 0;
+
+	svg {
+		border-radius: var(--radius-full);
+	}
+}
+
+.formLink {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-3);
+	background-color: var(--gray-3);
+	border-radius: var(--radius-2);
+	color: var(--gray-12);
+}
+
+/* ─── Assign Popover ─── */
+
+.assignTrigger {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	padding: var(--space-1) var(--space-2);
+	border: 1px dashed var(--gray-6);
+	border-radius: var(--radius-2);
+	background: none;
+	cursor: pointer;
+	color: var(--gray-11);
+	transition: border-color 0.15s;
+
+	&:hover {
+		border-color: var(--accent-7);
+	}
+}
+
+.assignPopover {
+	width: 280px;
+	padding: 0;
+}
+
+.assignSearch {
+	padding: var(--space-2);
+	border-bottom: 1px solid var(--gray-6);
+}
+
+.assignList {
+	display: flex;
+	flex-direction: column;
+	max-height: 200px;
+	overflow-y: auto;
+}
+
+.assignDropdownOption {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	width: 100%;
+	padding: var(--space-2) var(--space-3);
+	border: none;
+	background: none;
+	cursor: pointer;
+	color: var(--gray-12);
+	text-align: left;
+	transition: background-color 0.1s;
+
+	&:hover {
+		background-color: var(--gray-a4);
+	}
+}
+
+.assignDropdownOptionSelected {
+	background-color: var(--accent-a3);
+}
+
+.assignDropdownOptionText {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-width: 0;
+}
+
+.assignDropdownOptionCheck {
+	margin-left: auto;
+	color: var(--accent-9);
+	flex-shrink: 0;
+}
+
+/* ─── Viewer Settings ─── */
+
+.viewerList {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.viewerItem {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-2);
+}
+
+.viewerActions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-1);
+}
+
+/* ─── Attachments ─── */
+
+.attachmentSection {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	padding: var(--space-3) var(--space-4);
+	border-top: 1px solid var(--gray-6);
+}
+
+.attachmentItem {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-1) var(--space-2);
+	border: 1px solid var(--gray-6);
+	border-radius: var(--radius-2);
+	background: none;
+	cursor: pointer;
+	color: var(--gray-12);
+	transition: background-color 0.1s;
+
+	&:hover {
+		background-color: var(--gray-3);
+	}
+}
+
+.attachmentImage {
+	max-width: 100%;
+	max-height: 300px;
+	border-radius: var(--radius-2);
+	object-fit: contain;
+}
+
+/* ─── File Upload ─── */
+
+.fileInput {
+	display: none;
+}
+
+.replyFileArea {
+	display: flex;
+}
+
+.fileSelectButton {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-1) var(--space-3);
+	border: 1px dashed var(--gray-7);
+	border-radius: var(--radius-2);
+	background: none;
+	cursor: pointer;
+	color: var(--gray-11);
+	font-size: var(--font-size-2);
+	transition: border-color 0.15s, color 0.15s, background-color 0.15s;
+
+	&:hover {
+		border-color: var(--accent-8);
+		color: var(--accent-11);
+		background-color: var(--accent-2);
+	}
+
+	&:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+}
+
+.selectedFiles {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.selectedFileItem {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-1) var(--space-2);
+	background-color: var(--gray-2);
+	border-radius: var(--radius-2);
+	color: var(--gray-12);
+}
+
+.selectedFileRemove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: auto;
+	padding: 0;
+	border: none;
+	background: none;
+	cursor: pointer;
+	color: var(--gray-9);
+	border-radius: var(--radius-1);
+
+	&:hover {
+		color: var(--gray-12);
+		background-color: var(--gray-4);
+	}
+}
+
+.viewerAddButton {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1);
+	padding: var(--space-1) var(--space-2);
+	border: 1px dashed var(--gray-6);
+	border-radius: var(--radius-2);
+	background: none;
+	cursor: pointer;
+	color: var(--gray-11);
+	font-size: var(--font-size-1);
+	transition: border-color 0.15s, color 0.15s;
+
+	&:hover {
+		border-color: var(--accent-7);
+		color: var(--accent-11);
+	}
+}

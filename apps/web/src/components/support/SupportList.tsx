@@ -1,0 +1,465 @@
+import { Badge, Heading, Text, Tooltip } from "@radix-ui/themes";
+import type { ListProjectInquiriesResponse } from "@sos26/shared";
+import {
+	IconAlertCircle,
+	IconCircleCheck,
+	IconCircleDot,
+	IconEye,
+	IconPlus,
+	IconSearch,
+	IconUserCheck,
+} from "@tabler/icons-react";
+import { useNavigate } from "@tanstack/react-router";
+import Avatar from "boring-avatars";
+import { useState } from "react";
+import { Button, TextField } from "@/components/primitives";
+import { formatDate } from "@/lib/format";
+import { statusConfig } from "./constants";
+import styles from "./SupportList.module.scss";
+
+type InquirySummary = ListProjectInquiriesResponse["inquiries"][number];
+type AssigneeInfo = InquirySummary["projectAssignees"][number];
+
+type SupportListProps = {
+	inquiries: InquirySummary[];
+	currentUser: { id: string; name: string };
+	viewerRole: "project" | "committee";
+	basePath: string;
+	onNewInquiry: () => void;
+	isAdmin?: boolean;
+};
+
+type CommitteeTab = "open" | "resolved";
+
+export function SupportList({
+	inquiries,
+	currentUser,
+	viewerRole,
+	basePath,
+	onNewInquiry,
+	isAdmin = false,
+}: SupportListProps) {
+	const [activeTab, setActiveTab] = useState<CommitteeTab>("open");
+	const [searchQuery, setSearchQuery] = useState("");
+	const isCommittee = viewerRole === "committee";
+
+	const searched = searchQuery
+		? inquiries.filter(inq => inq.title.includes(searchQuery))
+		: inquiries;
+
+	const isAssignedToMe = (inq: InquirySummary) => {
+		const assignees = isCommittee
+			? inq.committeeAssignees
+			: inq.projectAssignees;
+		return assignees.some(a => a.user.id === currentUser.id);
+	};
+
+	const myCount = searched.filter(
+		inq => inq.status !== "RESOLVED" && isAssignedToMe(inq)
+	).length;
+
+	// 企画者側: 未解決 / 解決済みに分割
+	const openItems = searched.filter(inq => inq.status !== "RESOLVED");
+	const resolvedItems = searched.filter(inq => inq.status === "RESOLVED");
+
+	return (
+		<div className={styles.container}>
+			<div className={styles.header}>
+				<div className={styles.titleRow}>
+					<Heading size="6">お問い合わせ</Heading>
+					<Button onClick={onNewInquiry}>
+						<IconPlus size={16} />
+						新しいお問い合わせ
+					</Button>
+				</div>
+				<Text size="2" color="gray">
+					{isCommittee
+						? "企画からのお問い合わせを管理します"
+						: "実行委員会へのお問い合わせを管理します"}
+				</Text>
+			</div>
+
+			<div className={styles.toolbar}>
+				{isCommittee && (
+					<CommitteeTabs
+						activeTab={activeTab}
+						myCount={myCount}
+						onChangeTab={setActiveTab}
+					/>
+				)}
+				<div className={styles.search}>
+					<TextField
+						label="検索"
+						placeholder="キーワードで検索..."
+						value={searchQuery}
+						onChange={setSearchQuery}
+						type="search"
+					/>
+				</div>
+			</div>
+
+			{isCommittee ? (
+				activeTab === "open" ? (
+					<CommitteeOpenSections
+						inquiries={searched}
+						currentUser={currentUser}
+						basePath={basePath}
+						isAdmin={isAdmin}
+					/>
+				) : (
+					<CommitteeResolvedList
+						inquiries={searched}
+						basePath={basePath}
+						isAssignedToMe={isAssignedToMe}
+					/>
+				)
+			) : (
+				<ProjectList
+					openItems={openItems}
+					resolvedItems={resolvedItems}
+					basePath={basePath}
+				/>
+			)}
+		</div>
+	);
+}
+
+/* ─── サブコンポーネント ─── */
+
+function CommitteeTabs({
+	activeTab,
+	myCount,
+	onChangeTab,
+}: {
+	activeTab: CommitteeTab;
+	myCount: number;
+	onChangeTab: (tab: CommitteeTab) => void;
+}) {
+	return (
+		<nav className={styles.tabs} aria-label="フィルター">
+			<button
+				type="button"
+				className={`${styles.tab} ${activeTab === "open" ? styles.tabActive : ""}`}
+				onClick={() => onChangeTab("open")}
+			>
+				<IconCircleDot size={14} />
+				未完了
+				{myCount > 0 && <span className={styles.tabBadge}>{myCount}</span>}
+			</button>
+			<button
+				type="button"
+				className={`${styles.tab} ${activeTab === "resolved" ? styles.tabActive : ""}`}
+				onClick={() => onChangeTab("resolved")}
+			>
+				<IconCircleCheck size={14} />
+				解決済み
+			</button>
+		</nav>
+	);
+}
+
+function CommitteeOpenSections({
+	inquiries,
+	currentUser,
+	basePath,
+	isAdmin,
+}: {
+	inquiries: InquirySummary[];
+	currentUser: { id: string; name: string };
+	basePath: string;
+	isAdmin: boolean;
+}) {
+	const isAssignedToMe = (inq: InquirySummary) =>
+		inq.committeeAssignees.some(a => a.user.id === currentUser.id);
+
+	// セクション1: 自分の担当（実委側担当者かつ未解決）
+	const myItems = inquiries.filter(
+		inq => inq.status !== "RESOLVED" && isAssignedToMe(inq)
+	);
+
+	// セクション2: 担当者未割り当て（INQUIRY_ADMIN のみ）
+	const unassignedItems = isAdmin
+		? inquiries.filter(inq => inq.status === "UNASSIGNED")
+		: [];
+
+	// セクション3: 閲覧中（自分が担当者ではなく未解決のもの）
+	// 管理者は UNASSIGNED を専用セクションで表示するため除外
+	const viewingItems = inquiries.filter(
+		inq =>
+			inq.status !== "RESOLVED" &&
+			!isAssignedToMe(inq) &&
+			!(isAdmin && inq.status === "UNASSIGNED")
+	);
+
+	const hasAnyItems =
+		myItems.length > 0 || unassignedItems.length > 0 || viewingItems.length > 0;
+
+	if (!hasAnyItems) {
+		return (
+			<div className={styles.empty}>
+				<IconSearch size={40} />
+				<Text size="3" color="gray">
+					未完了のお問い合わせはありません
+				</Text>
+			</div>
+		);
+	}
+
+	return (
+		<div className={styles.sections}>
+			{myItems.length > 0 && (
+				<section className={styles.section}>
+					<div className={styles.sectionTitle}>
+						<IconUserCheck size={14} />
+						<Text size="2" weight="medium">
+							自分の担当
+						</Text>
+						<Badge size="1" variant="soft" radius="full">
+							{myItems.length}
+						</Badge>
+					</div>
+					<ul className={styles.list}>
+						{myItems.map(inq => (
+							<InquiryCard
+								key={inq.id}
+								inquiry={inq}
+								basePath={basePath}
+								isMyInquiry
+								showAssignees
+							/>
+						))}
+					</ul>
+				</section>
+			)}
+
+			{unassignedItems.length > 0 && (
+				<section className={`${styles.section} ${styles.sectionHighlight}`}>
+					<div className={styles.sectionTitle}>
+						<IconAlertCircle size={14} />
+						<Text size="2" weight="medium">
+							担当者未割り当て
+						</Text>
+						<Badge size="1" variant="soft" color="orange" radius="full">
+							{unassignedItems.length}
+						</Badge>
+					</div>
+					<ul className={styles.list}>
+						{unassignedItems.map(inq => (
+							<InquiryCard
+								key={inq.id}
+								inquiry={inq}
+								basePath={basePath}
+								isMyInquiry={false}
+								showAssignees
+							/>
+						))}
+					</ul>
+				</section>
+			)}
+
+			{viewingItems.length > 0 && (
+				<section className={styles.section}>
+					<div className={styles.sectionTitle}>
+						<IconEye size={14} />
+						<Text size="2" weight="medium">
+							閲覧中
+						</Text>
+						<Badge size="1" variant="soft" color="gray" radius="full">
+							{viewingItems.length}
+						</Badge>
+					</div>
+					<ul className={styles.list}>
+						{viewingItems.map(inq => (
+							<InquiryCard
+								key={inq.id}
+								inquiry={inq}
+								basePath={basePath}
+								isMyInquiry={false}
+								showAssignees
+							/>
+						))}
+					</ul>
+				</section>
+			)}
+		</div>
+	);
+}
+
+function CommitteeResolvedList({
+	inquiries,
+	basePath,
+	isAssignedToMe,
+}: {
+	inquiries: InquirySummary[];
+	basePath: string;
+	isAssignedToMe: (inq: InquirySummary) => boolean;
+}) {
+	const items = inquiries.filter(inq => inq.status === "RESOLVED");
+
+	if (items.length === 0) {
+		return (
+			<div className={styles.empty}>
+				<IconSearch size={40} />
+				<Text size="3" color="gray">
+					解決済みのお問い合わせはありません
+				</Text>
+			</div>
+		);
+	}
+
+	return (
+		<ul className={styles.list}>
+			{items.map(inq => (
+				<InquiryCard
+					key={inq.id}
+					inquiry={inq}
+					basePath={basePath}
+					isMyInquiry={isAssignedToMe(inq)}
+					showAssignees
+				/>
+			))}
+		</ul>
+	);
+}
+
+function ProjectList({
+	openItems,
+	resolvedItems,
+	basePath,
+}: {
+	openItems: InquirySummary[];
+	resolvedItems: InquirySummary[];
+	basePath: string;
+}) {
+	if (openItems.length === 0 && resolvedItems.length === 0) {
+		return (
+			<div className={styles.empty}>
+				<IconSearch size={40} />
+				<Text size="3" color="gray">
+					お問い合わせはまだありません
+				</Text>
+			</div>
+		);
+	}
+
+	return (
+		<>
+			{openItems.length > 0 ? (
+				<ul className={styles.list}>
+					{openItems.map(inq => (
+						<InquiryCard
+							key={inq.id}
+							inquiry={inq}
+							basePath={basePath}
+							isMyInquiry={false}
+							showAssignees={false}
+						/>
+					))}
+				</ul>
+			) : (
+				<Text size="2" color="gray">
+					未解決のお問い合わせはありません
+				</Text>
+			)}
+
+			{resolvedItems.length > 0 && (
+				<section className={styles.resolvedSection}>
+					<Text size="2" weight="medium" color="gray">
+						<IconCircleCheck size={14} />
+						対応済み（{resolvedItems.length}件）
+					</Text>
+					<ul className={styles.list}>
+						{resolvedItems.map(inq => (
+							<InquiryCard
+								key={inq.id}
+								inquiry={inq}
+								basePath={basePath}
+								isMyInquiry={false}
+								showAssignees={false}
+							/>
+						))}
+					</ul>
+				</section>
+			)}
+		</>
+	);
+}
+
+function InquiryCard({
+	inquiry,
+	basePath,
+	isMyInquiry,
+	showAssignees,
+}: {
+	inquiry: InquirySummary;
+	basePath: string;
+	isMyInquiry: boolean;
+	showAssignees: boolean;
+}) {
+	const navigate = useNavigate();
+	const config = statusConfig[inquiry.status];
+	const StatusIcon = config.icon;
+
+	const allAssignees: AssigneeInfo[] = [
+		...inquiry.committeeAssignees,
+		...inquiry.projectAssignees,
+	];
+
+	return (
+		<li
+			className={`${styles.card} ${inquiry.status === "UNASSIGNED" ? styles.cardNew : ""}`}
+		>
+			<button
+				type="button"
+				className={styles.cardButton}
+				onClick={() => navigate({ to: `${basePath}/${inquiry.id}` as string })}
+			>
+				<span className={styles.statusIcon} data-status={inquiry.status}>
+					<Tooltip content={config.label}>
+						<StatusIcon size={20} />
+					</Tooltip>
+				</span>
+
+				<span className={styles.cardBody}>
+					<span className={styles.cardTitleRow}>
+						<Text size="3" weight="medium">
+							{inquiry.title}
+						</Text>
+						{isMyInquiry && showAssignees && (
+							<Tooltip content="自分が担当">
+								<IconUserCheck size={14} className={styles.myBadge} />
+							</Tooltip>
+						)}
+					</span>
+
+					<Text size="1" color="gray">
+						{formatDate(inquiry.createdAt, "datetime")} に作成
+						{inquiry.commentCount > 0 && ` / ${inquiry.commentCount}件の返信`}
+					</Text>
+
+					<span className={styles.cardTags}>
+						<Badge color={config.color} size="1" variant="soft">
+							{config.label}
+						</Badge>
+						{showAssignees && (
+							<span className={styles.assignees}>
+								{allAssignees.slice(0, 3).map(a => (
+									<Tooltip key={a.id} content={a.user.name}>
+										<span className={styles.avatar}>
+											<Avatar size={20} name={a.user.name} variant="beam" />
+										</span>
+									</Tooltip>
+								))}
+								{allAssignees.length > 3 && (
+									<span className={styles.avatarMore}>
+										+{allAssignees.length - 3}
+									</span>
+								)}
+							</span>
+						)}
+					</span>
+				</span>
+			</button>
+		</li>
+	);
+}

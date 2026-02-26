@@ -17,6 +17,7 @@ const PERMISSION_OPTIONS: { value: CommitteePermission; label: string }[] = [
 	{ value: "NOTICE_DELIVER", label: "お知らせ配信" },
 	{ value: "NOTICE_APPROVE", label: "お知らせ承認" },
 	{ value: "FORM_DELIVER", label: "フォーム配信" },
+	{ value: "INQUIRY_ADMIN", label: "お問い合わせ管理" },
 ];
 
 const BUREAU_OPTIONS: { value: Bureau; label: string }[] = Object.entries(

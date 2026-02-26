@@ -20,19 +20,24 @@ import { Route as ForbiddenIndexRouteImport } from './routes/forbidden/index'
 import { Route as DocsIndexRouteImport } from './routes/docs/index'
 import { Route as CommitteeIndexRouteImport } from './routes/committee/index'
 import { Route as DocsSlugRouteImport } from './routes/docs/$slug'
+import { Route as ProjectSupportIndexRouteImport } from './routes/project/support/index'
 import { Route as ProjectNoticeIndexRouteImport } from './routes/project/notice/index'
 import { Route as ProjectMembersIndexRouteImport } from './routes/project/members/index'
 import { Route as ProjectFormsIndexRouteImport } from './routes/project/forms/index'
 import { Route as DevTableIndexRouteImport } from './routes/dev/table/index'
+import { Route as DevStorageIndexRouteImport } from './routes/dev/storage/index'
 import { Route as DevSearchIndexRouteImport } from './routes/dev/search/index'
 import { Route as DevPushNotificationIndexRouteImport } from './routes/dev/pushNotification/index'
 import { Route as DevCommitteeMemberIndexRouteImport } from './routes/dev/committeeMember/index'
+import { Route as CommitteeSupportIndexRouteImport } from './routes/committee/support/index'
 import { Route as CommitteeNoticeIndexRouteImport } from './routes/committee/notice/index'
 import { Route as CommitteeMembersIndexRouteImport } from './routes/committee/members/index'
 import { Route as CommitteeFormsIndexRouteImport } from './routes/committee/forms/index'
 import { Route as AuthResetPasswordIndexRouteImport } from './routes/auth/reset-password/index'
 import { Route as AuthRegisterIndexRouteImport } from './routes/auth/register/index'
 import { Route as AuthLoginIndexRouteImport } from './routes/auth/login/index'
+import { Route as ProjectSupportInquiryIdRouteImport } from './routes/project/support/$inquiryId'
+import { Route as CommitteeSupportInquiryIdRouteImport } from './routes/committee/support/$inquiryId'
 import { Route as DevUiComponentsIndexRouteImport } from './routes/dev/ui/components/index'
 import { Route as CommitteeNoticeNoticeIdIndexRouteImport } from './routes/committee/notice/$noticeId/index'
 import { Route as CommitteeFormsFormIdIndexRouteImport } from './routes/committee/forms/$formId/index'
@@ -96,6 +101,11 @@ const DocsSlugRoute = DocsSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => DocsRouteRoute,
 } as any)
+const ProjectSupportIndexRoute = ProjectSupportIndexRouteImport.update({
+  id: '/support/',
+  path: '/support/',
+  getParentRoute: () => ProjectRouteRoute,
+} as any)
 const ProjectNoticeIndexRoute = ProjectNoticeIndexRouteImport.update({
   id: '/notice/',
   path: '/notice/',
@@ -116,6 +126,11 @@ const DevTableIndexRoute = DevTableIndexRouteImport.update({
   path: '/table/',
   getParentRoute: () => DevRouteRoute,
 } as any)
+const DevStorageIndexRoute = DevStorageIndexRouteImport.update({
+  id: '/storage/',
+  path: '/storage/',
+  getParentRoute: () => DevRouteRoute,
+} as any)
 const DevSearchIndexRoute = DevSearchIndexRouteImport.update({
   id: '/search/',
   path: '/search/',
@@ -131,6 +146,11 @@ const DevCommitteeMemberIndexRoute = DevCommitteeMemberIndexRouteImport.update({
   id: '/committeeMember/',
   path: '/committeeMember/',
   getParentRoute: () => DevRouteRoute,
+} as any)
+const CommitteeSupportIndexRoute = CommitteeSupportIndexRouteImport.update({
+  id: '/support/',
+  path: '/support/',
+  getParentRoute: () => CommitteeRouteRoute,
 } as any)
 const CommitteeNoticeIndexRoute = CommitteeNoticeIndexRouteImport.update({
   id: '/notice/',
@@ -162,6 +182,17 @@ const AuthLoginIndexRoute = AuthLoginIndexRouteImport.update({
   path: '/login/',
   getParentRoute: () => AuthRouteRoute,
 } as any)
+const ProjectSupportInquiryIdRoute = ProjectSupportInquiryIdRouteImport.update({
+  id: '/support/$inquiryId',
+  path: '/support/$inquiryId',
+  getParentRoute: () => ProjectRouteRoute,
+} as any)
+const CommitteeSupportInquiryIdRoute =
+  CommitteeSupportInquiryIdRouteImport.update({
+    id: '/support/$inquiryId',
+    path: '/support/$inquiryId',
+    getParentRoute: () => CommitteeRouteRoute,
+  } as any)
 const DevUiComponentsIndexRoute = DevUiComponentsIndexRouteImport.update({
   id: '/ui/components/',
   path: '/ui/components/',
@@ -214,19 +245,24 @@ export interface FileRoutesByFullPath {
   '/docs/': typeof DocsIndexRoute
   '/forbidden/': typeof ForbiddenIndexRoute
   '/project/': typeof ProjectIndexRoute
+  '/committee/support/$inquiryId': typeof CommitteeSupportInquiryIdRoute
+  '/project/support/$inquiryId': typeof ProjectSupportInquiryIdRoute
   '/auth/login/': typeof AuthLoginIndexRoute
   '/auth/register/': typeof AuthRegisterIndexRoute
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
   '/committee/forms/': typeof CommitteeFormsIndexRoute
   '/committee/members/': typeof CommitteeMembersIndexRoute
   '/committee/notice/': typeof CommitteeNoticeIndexRoute
+  '/committee/support/': typeof CommitteeSupportIndexRoute
   '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
   '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
   '/dev/search/': typeof DevSearchIndexRoute
+  '/dev/storage/': typeof DevStorageIndexRoute
   '/dev/table/': typeof DevTableIndexRoute
   '/project/forms/': typeof ProjectFormsIndexRoute
   '/project/members/': typeof ProjectMembersIndexRoute
   '/project/notice/': typeof ProjectNoticeIndexRoute
+  '/project/support/': typeof ProjectSupportIndexRoute
   '/auth/register/setup/': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify/': typeof AuthRegisterVerifyIndexRoute
   '/committee/forms/$formId/': typeof CommitteeFormsFormIdIndexRoute
@@ -244,19 +280,24 @@ export interface FileRoutesByTo {
   '/docs': typeof DocsIndexRoute
   '/forbidden': typeof ForbiddenIndexRoute
   '/project': typeof ProjectIndexRoute
+  '/committee/support/$inquiryId': typeof CommitteeSupportInquiryIdRoute
+  '/project/support/$inquiryId': typeof ProjectSupportInquiryIdRoute
   '/auth/login': typeof AuthLoginIndexRoute
   '/auth/register': typeof AuthRegisterIndexRoute
   '/auth/reset-password': typeof AuthResetPasswordIndexRoute
   '/committee/forms': typeof CommitteeFormsIndexRoute
   '/committee/members': typeof CommitteeMembersIndexRoute
   '/committee/notice': typeof CommitteeNoticeIndexRoute
+  '/committee/support': typeof CommitteeSupportIndexRoute
   '/dev/committeeMember': typeof DevCommitteeMemberIndexRoute
   '/dev/pushNotification': typeof DevPushNotificationIndexRoute
   '/dev/search': typeof DevSearchIndexRoute
+  '/dev/storage': typeof DevStorageIndexRoute
   '/dev/table': typeof DevTableIndexRoute
   '/project/forms': typeof ProjectFormsIndexRoute
   '/project/members': typeof ProjectMembersIndexRoute
   '/project/notice': typeof ProjectNoticeIndexRoute
+  '/project/support': typeof ProjectSupportIndexRoute
   '/auth/register/setup': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify': typeof AuthRegisterVerifyIndexRoute
   '/committee/forms/$formId': typeof CommitteeFormsFormIdIndexRoute
@@ -278,19 +319,24 @@ export interface FileRoutesById {
   '/docs/': typeof DocsIndexRoute
   '/forbidden/': typeof ForbiddenIndexRoute
   '/project/': typeof ProjectIndexRoute
+  '/committee/support/$inquiryId': typeof CommitteeSupportInquiryIdRoute
+  '/project/support/$inquiryId': typeof ProjectSupportInquiryIdRoute
   '/auth/login/': typeof AuthLoginIndexRoute
   '/auth/register/': typeof AuthRegisterIndexRoute
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
   '/committee/forms/': typeof CommitteeFormsIndexRoute
   '/committee/members/': typeof CommitteeMembersIndexRoute
   '/committee/notice/': typeof CommitteeNoticeIndexRoute
+  '/committee/support/': typeof CommitteeSupportIndexRoute
   '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
   '/dev/pushNotification/': typeof DevPushNotificationIndexRoute
   '/dev/search/': typeof DevSearchIndexRoute
+  '/dev/storage/': typeof DevStorageIndexRoute
   '/dev/table/': typeof DevTableIndexRoute
   '/project/forms/': typeof ProjectFormsIndexRoute
   '/project/members/': typeof ProjectMembersIndexRoute
   '/project/notice/': typeof ProjectNoticeIndexRoute
+  '/project/support/': typeof ProjectSupportIndexRoute
   '/auth/register/setup/': typeof AuthRegisterSetupIndexRoute
   '/auth/register/verify/': typeof AuthRegisterVerifyIndexRoute
   '/committee/forms/$formId/': typeof CommitteeFormsFormIdIndexRoute
@@ -313,19 +359,24 @@ export interface FileRouteTypes {
     | '/docs/'
     | '/forbidden/'
     | '/project/'
+    | '/committee/support/$inquiryId'
+    | '/project/support/$inquiryId'
     | '/auth/login/'
     | '/auth/register/'
     | '/auth/reset-password/'
     | '/committee/forms/'
     | '/committee/members/'
     | '/committee/notice/'
+    | '/committee/support/'
     | '/dev/committeeMember/'
     | '/dev/pushNotification/'
     | '/dev/search/'
+    | '/dev/storage/'
     | '/dev/table/'
     | '/project/forms/'
     | '/project/members/'
     | '/project/notice/'
+    | '/project/support/'
     | '/auth/register/setup/'
     | '/auth/register/verify/'
     | '/committee/forms/$formId/'
@@ -343,19 +394,24 @@ export interface FileRouteTypes {
     | '/docs'
     | '/forbidden'
     | '/project'
+    | '/committee/support/$inquiryId'
+    | '/project/support/$inquiryId'
     | '/auth/login'
     | '/auth/register'
     | '/auth/reset-password'
     | '/committee/forms'
     | '/committee/members'
     | '/committee/notice'
+    | '/committee/support'
     | '/dev/committeeMember'
     | '/dev/pushNotification'
     | '/dev/search'
+    | '/dev/storage'
     | '/dev/table'
     | '/project/forms'
     | '/project/members'
     | '/project/notice'
+    | '/project/support'
     | '/auth/register/setup'
     | '/auth/register/verify'
     | '/committee/forms/$formId'
@@ -376,19 +432,24 @@ export interface FileRouteTypes {
     | '/docs/'
     | '/forbidden/'
     | '/project/'
+    | '/committee/support/$inquiryId'
+    | '/project/support/$inquiryId'
     | '/auth/login/'
     | '/auth/register/'
     | '/auth/reset-password/'
     | '/committee/forms/'
     | '/committee/members/'
     | '/committee/notice/'
+    | '/committee/support/'
     | '/dev/committeeMember/'
     | '/dev/pushNotification/'
     | '/dev/search/'
+    | '/dev/storage/'
     | '/dev/table/'
     | '/project/forms/'
     | '/project/members/'
     | '/project/notice/'
+    | '/project/support/'
     | '/auth/register/setup/'
     | '/auth/register/verify/'
     | '/committee/forms/$formId/'
@@ -487,6 +548,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsSlugRouteImport
       parentRoute: typeof DocsRouteRoute
     }
+    '/project/support/': {
+      id: '/project/support/'
+      path: '/support'
+      fullPath: '/project/support/'
+      preLoaderRoute: typeof ProjectSupportIndexRouteImport
+      parentRoute: typeof ProjectRouteRoute
+    }
     '/project/notice/': {
       id: '/project/notice/'
       path: '/notice'
@@ -515,6 +583,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevTableIndexRouteImport
       parentRoute: typeof DevRouteRoute
     }
+    '/dev/storage/': {
+      id: '/dev/storage/'
+      path: '/storage'
+      fullPath: '/dev/storage/'
+      preLoaderRoute: typeof DevStorageIndexRouteImport
+      parentRoute: typeof DevRouteRoute
+    }
     '/dev/search/': {
       id: '/dev/search/'
       path: '/search'
@@ -535,6 +610,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dev/committeeMember/'
       preLoaderRoute: typeof DevCommitteeMemberIndexRouteImport
       parentRoute: typeof DevRouteRoute
+    }
+    '/committee/support/': {
+      id: '/committee/support/'
+      path: '/support'
+      fullPath: '/committee/support/'
+      preLoaderRoute: typeof CommitteeSupportIndexRouteImport
+      parentRoute: typeof CommitteeRouteRoute
     }
     '/committee/notice/': {
       id: '/committee/notice/'
@@ -577,6 +659,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/login/'
       preLoaderRoute: typeof AuthLoginIndexRouteImport
       parentRoute: typeof AuthRouteRoute
+    }
+    '/project/support/$inquiryId': {
+      id: '/project/support/$inquiryId'
+      path: '/support/$inquiryId'
+      fullPath: '/project/support/$inquiryId'
+      preLoaderRoute: typeof ProjectSupportInquiryIdRouteImport
+      parentRoute: typeof ProjectRouteRoute
+    }
+    '/committee/support/$inquiryId': {
+      id: '/committee/support/$inquiryId'
+      path: '/support/$inquiryId'
+      fullPath: '/committee/support/$inquiryId'
+      preLoaderRoute: typeof CommitteeSupportInquiryIdRouteImport
+      parentRoute: typeof CommitteeRouteRoute
     }
     '/dev/ui/components/': {
       id: '/dev/ui/components/'
@@ -652,9 +748,11 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
 
 interface CommitteeRouteRouteChildren {
   CommitteeIndexRoute: typeof CommitteeIndexRoute
+  CommitteeSupportInquiryIdRoute: typeof CommitteeSupportInquiryIdRoute
   CommitteeFormsIndexRoute: typeof CommitteeFormsIndexRoute
   CommitteeMembersIndexRoute: typeof CommitteeMembersIndexRoute
   CommitteeNoticeIndexRoute: typeof CommitteeNoticeIndexRoute
+  CommitteeSupportIndexRoute: typeof CommitteeSupportIndexRoute
   CommitteeFormsFormIdIndexRoute: typeof CommitteeFormsFormIdIndexRoute
   CommitteeNoticeNoticeIdIndexRoute: typeof CommitteeNoticeNoticeIdIndexRoute
   CommitteeFormsFormIdAnswersIndexRoute: typeof CommitteeFormsFormIdAnswersIndexRoute
@@ -663,9 +761,11 @@ interface CommitteeRouteRouteChildren {
 
 const CommitteeRouteRouteChildren: CommitteeRouteRouteChildren = {
   CommitteeIndexRoute: CommitteeIndexRoute,
+  CommitteeSupportInquiryIdRoute: CommitteeSupportInquiryIdRoute,
   CommitteeFormsIndexRoute: CommitteeFormsIndexRoute,
   CommitteeMembersIndexRoute: CommitteeMembersIndexRoute,
   CommitteeNoticeIndexRoute: CommitteeNoticeIndexRoute,
+  CommitteeSupportIndexRoute: CommitteeSupportIndexRoute,
   CommitteeFormsFormIdIndexRoute: CommitteeFormsFormIdIndexRoute,
   CommitteeNoticeNoticeIdIndexRoute: CommitteeNoticeNoticeIdIndexRoute,
   CommitteeFormsFormIdAnswersIndexRoute: CommitteeFormsFormIdAnswersIndexRoute,
@@ -681,6 +781,7 @@ interface DevRouteRouteChildren {
   DevCommitteeMemberIndexRoute: typeof DevCommitteeMemberIndexRoute
   DevPushNotificationIndexRoute: typeof DevPushNotificationIndexRoute
   DevSearchIndexRoute: typeof DevSearchIndexRoute
+  DevStorageIndexRoute: typeof DevStorageIndexRoute
   DevTableIndexRoute: typeof DevTableIndexRoute
   DevUiComponentsIndexRoute: typeof DevUiComponentsIndexRoute
 }
@@ -689,6 +790,7 @@ const DevRouteRouteChildren: DevRouteRouteChildren = {
   DevCommitteeMemberIndexRoute: DevCommitteeMemberIndexRoute,
   DevPushNotificationIndexRoute: DevPushNotificationIndexRoute,
   DevSearchIndexRoute: DevSearchIndexRoute,
+  DevStorageIndexRoute: DevStorageIndexRoute,
   DevTableIndexRoute: DevTableIndexRoute,
   DevUiComponentsIndexRoute: DevUiComponentsIndexRoute,
 }
@@ -713,16 +815,20 @@ const DocsRouteRouteWithChildren = DocsRouteRoute._addFileChildren(
 
 interface ProjectRouteRouteChildren {
   ProjectIndexRoute: typeof ProjectIndexRoute
+  ProjectSupportInquiryIdRoute: typeof ProjectSupportInquiryIdRoute
   ProjectFormsIndexRoute: typeof ProjectFormsIndexRoute
   ProjectMembersIndexRoute: typeof ProjectMembersIndexRoute
   ProjectNoticeIndexRoute: typeof ProjectNoticeIndexRoute
+  ProjectSupportIndexRoute: typeof ProjectSupportIndexRoute
 }
 
 const ProjectRouteRouteChildren: ProjectRouteRouteChildren = {
   ProjectIndexRoute: ProjectIndexRoute,
+  ProjectSupportInquiryIdRoute: ProjectSupportInquiryIdRoute,
   ProjectFormsIndexRoute: ProjectFormsIndexRoute,
   ProjectMembersIndexRoute: ProjectMembersIndexRoute,
   ProjectNoticeIndexRoute: ProjectNoticeIndexRoute,
+  ProjectSupportIndexRoute: ProjectSupportIndexRoute,
 }
 
 const ProjectRouteRouteWithChildren = ProjectRouteRoute._addFileChildren(

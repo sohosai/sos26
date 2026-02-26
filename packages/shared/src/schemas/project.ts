@@ -5,6 +5,7 @@ export type ProjectType = z.infer<typeof projectTypeSchema>;
 
 export const projectSchema = z.object({
 	id: z.cuid(),
+	number: z.number().int().positive(),
 	name: z.string().min(1),
 	namePhonetic: z.string().min(1),
 	organizationName: z.string().min(1),

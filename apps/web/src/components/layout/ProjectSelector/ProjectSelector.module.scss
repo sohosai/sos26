@@ -10,6 +10,11 @@
 	cursor: pointer;
 	color: var(--gray-11);
 	transition: background-color 0.15s ease;
+	justify-content: flex-start;
+
+	&.collapsed {
+		justify-content: center;
+	}
 
 	&:hover {
 		background-color: var(--gray-a4);

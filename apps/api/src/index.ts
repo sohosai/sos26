@@ -3,18 +3,34 @@ import { cors } from "hono/cors";
 import { env } from "./lib/env";
 import { errorHandler } from "./lib/error-handler";
 import { initPush } from "./lib/push/client";
+import { initStorage } from "./lib/storage/client";
 import { authRoute } from "./routes/auth";
+
 import { committeeFormRoute } from "./routes/committee-form";
+
+import { committeeInquiryRoute } from "./routes/committee-inquiry";
+
 import { committeeMemberRoute } from "./routes/committee-member";
 import { committeeNoticeRoute } from "./routes/committee-notice";
 import { committeeProjectRoute } from "./routes/committee-project";
+import { fileRoute } from "./routes/files";
 import { projectRoute } from "./routes/project";
+
 import { projectFormRoute } from "./routes/project-form";
+
+import { projectInquiryRoute } from "./routes/project-inquiry";
+
 import { projectNoticeRoute } from "./routes/project-notice";
 import { pushRoute } from "./routes/push";
 
 // Push 初期化
 initPush();
+
+// Storage 初期化
+initStorage();
+
+// ファイルアクセスチェッカー登録
+import "./lib/storage/checkers";
 
 const app = new Hono();
 
@@ -43,10 +59,13 @@ app.route("/committee/members", committeeMemberRoute);
 app.route("/committee/projects", committeeProjectRoute);
 app.route("/committee/notices", committeeNoticeRoute);
 app.route("committee/forms", committeeFormRoute);
+app.route("/committee/inquiries", committeeInquiryRoute);
+app.route("/project/:projectId/forms", projectFormRoute);
 app.route("/project", projectRoute);
 app.route("/project", projectNoticeRoute);
-app.route("/project/:projectId/forms", projectFormRoute);
+app.route("/project", projectInquiryRoute);
 app.route("/push", pushRoute);
+app.route("/files", fileRoute);
 
 export { app };
 
