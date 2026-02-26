@@ -56,12 +56,16 @@ type Props = {
 	availableMembers: AvailableMember[];
 	approvers: Approver[];
 	removingId: string | null;
+	isEditMode: boolean;
+	isSaving: boolean;
 	onAddCollaborator: (userId: string) => Promise<void>;
 	onRemoveCollaborator: (collaboratorId: string) => void;
 	onApprove: (authorizationId: string) => Promise<void>;
 	onReject: (authorizationId: string) => Promise<void>;
 	onPublishSuccess: () => void;
 	onEdit: () => void;
+	onSave: () => void;
+	onCancelEdit: () => void;
 	onDelete: () => void;
 };
 
@@ -73,12 +77,16 @@ export function FormDetailSidebar({
 	availableMembers,
 	approvers,
 	removingId,
+	isEditMode,
+	isSaving,
 	onAddCollaborator,
 	onRemoveCollaborator,
 	onApprove,
 	onReject,
 	onPublishSuccess,
 	onEdit,
+	onSave,
+	onCancelEdit,
 	onDelete,
 }: Props) {
 	const [addCollaboratorOpen, setAddCollaboratorOpen] = useState(false);
@@ -168,6 +176,7 @@ export function FormDetailSidebar({
 								intent="secondary"
 								size="2"
 								onClick={() => setAddCollaboratorOpen(true)}
+								disabled={isEditMode}
 							>
 								<IconPlus size={14} />
 								共同編集者を追加
@@ -179,14 +188,37 @@ export function FormDetailSidebar({
 						<>
 							<Separator size="4" />
 							<div className={styles.actions}>
-								<Button intent="secondary" size="2" onClick={onEdit}>
-									編集
-								</Button>
-								{isOwner && (
-									<Button intent="ghost" size="2" onClick={onDelete}>
-										<IconTrash size={14} />
-										削除
-									</Button>
+								{isEditMode ? (
+									<>
+										<Button
+											intent="primary"
+											size="2"
+											onClick={onSave}
+											loading={isSaving}
+										>
+											保存
+										</Button>
+										<Button
+											intent="ghost"
+											size="2"
+											onClick={onCancelEdit}
+											disabled={isSaving}
+										>
+											キャンセル
+										</Button>
+									</>
+								) : (
+									<>
+										<Button intent="secondary" size="2" onClick={onEdit}>
+											編集
+										</Button>
+										{isOwner && (
+											<Button intent="ghost" size="2" onClick={onDelete}>
+												<IconTrash size={14} />
+												削除
+											</Button>
+										)}
+									</>
 								)}
 							</div>
 						</>
@@ -194,7 +226,7 @@ export function FormDetailSidebar({
 				</aside>
 
 				{/* ボックス2: 承認依頼 */}
-				{showAuthBox && (
+				{showAuthBox && !isEditMode && (
 					<aside className={styles.sidebar}>
 						{canPublish && (
 							<div className={styles.section}>
@@ -241,7 +273,7 @@ export function FormDetailSidebar({
 				)}
 
 				{/* ボックス3: 回答確認 */}
-				{canViewAnswers && (
+				{canViewAnswers && !isEditMode && (
 					<aside className={styles.sidebar}>
 						<Link
 							to="/committee/forms/$formId/answers"

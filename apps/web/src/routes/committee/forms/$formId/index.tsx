@@ -5,8 +5,14 @@ import {
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
+import {
+	FormEditor,
+	type FormEditorHandle,
+} from "@/components/form/Builder/Editor";
+import type { Form } from "@/components/form/type";
 import { Button } from "@/components/primitives";
 import {
 	addFormCollaborator,
@@ -15,17 +21,22 @@ import {
 	getFormDetail,
 	rejectFormAuthorization,
 	removeFormCollaborator,
+	updateFormDetail,
 } from "@/lib/api/committee-form";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { useAuthStore } from "@/lib/auth";
 import { formDetailToForm } from "@/lib/form/convert";
 import { formatDate } from "@/lib/format";
-import { EditFormDialog } from "./-components/EditFormDialog";
 import { FormDetailSidebar } from "./-components/FormDetailSidebar";
 import { FormItemsPreview } from "./-components/FormItemsPreview";
 import styles from "./index.module.scss";
 
+const searchSchema = z.object({
+	edit: z.boolean().optional().catch(undefined),
+});
+
 export const Route = createFileRoute("/committee/forms/$formId/")({
+	validateSearch: searchSchema,
 	component: RouteComponent,
 	head: () => ({
 		meta: [{ title: "フォーム詳細 | 雙峰祭オンラインシステム" }],
@@ -44,15 +55,19 @@ export const Route = createFileRoute("/committee/forms/$formId/")({
 
 function RouteComponent() {
 	const { formId } = Route.useParams();
+	const { edit } = Route.useSearch();
 	const { form, committeeMembers } = Route.useLoaderData();
 	const navigate = useNavigate();
 	const router = useRouter();
 	const { user } = useAuthStore();
 
-	const [editDialogOpen, setEditDialogOpen] = useState(false);
+	const [isEditMode, setIsEditMode] = useState(edit === true);
+	const [isSaving, setIsSaving] = useState(false);
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [removingId, setRemovingId] = useState<string | null>(null);
+
+	const editorRef = useRef<FormEditorHandle>(null);
 
 	const isOwner = form.ownerId === user?.id;
 	const isCollaborator = form.collaborators.some(c => c.user.id === user?.id);
@@ -126,6 +141,46 @@ function RouteComponent() {
 		}
 	};
 
+	const handleSidebarSave = () => {
+		editorRef.current?.submit();
+	};
+
+	const handleEditorSubmit = async (submitted: Form) => {
+		setIsSaving(true);
+		try {
+			await updateFormDetail(formId, {
+				title: submitted.name,
+				description: submitted.description,
+				items: submitted.items.map((item, index) => ({
+					id: item.id || undefined,
+					label: item.label,
+					description: item.description ?? null,
+					type: item.type,
+					required: item.required,
+					sortOrder: index,
+					options: item.options?.map((opt, i) => ({
+						label: opt.label,
+						sortOrder: i,
+					})),
+				})),
+			});
+			await router.invalidate();
+			setIsEditMode(false);
+			// search param もクリア
+			navigate({
+				to: "/committee/forms/$formId",
+				params: { formId },
+				search: {},
+				replace: true,
+			});
+			toast.success("フォームを保存しました");
+		} catch {
+			toast.error("フォームの保存に失敗しました");
+		} finally {
+			setIsSaving(false);
+		}
+	};
+
 	return (
 		<div className={styles.layout}>
 			<div className={styles.main}>
@@ -138,33 +193,44 @@ function RouteComponent() {
 					<Text size="2">フォーム一覧に戻る</Text>
 				</button>
 
-				<header className={styles.titleSection}>
-					<Heading size="5">{form.title}</Heading>
-					{form.description && (
-						<Text size="2" color="gray">
-							{form.description}
-						</Text>
-					)}
-					<div className={styles.meta}>
-						<span className={styles.metaItem}>
-							<IconCalendar size={14} />
+				{!isEditMode && (
+					<header className={styles.titleSection}>
+						<Heading size="5">{form.title}</Heading>
+						{form.description && (
 							<Text size="2" color="gray">
-								作成: {formatDate(form.createdAt, "datetime")}
+								{form.description}
 							</Text>
-						</span>
-						<span className={styles.metaItem}>
-							<IconClock size={14} />
-							<Text size="2" color="gray">
-								更新: {formatDate(form.updatedAt, "datetime")}
-							</Text>
-						</span>
-					</div>
-				</header>
+						)}
+						<div className={styles.meta}>
+							<span className={styles.metaItem}>
+								<IconCalendar size={14} />
+								<Text size="2" color="gray">
+									作成: {formatDate(form.createdAt, "datetime")}
+								</Text>
+							</span>
+							<span className={styles.metaItem}>
+								<IconClock size={14} />
+								<Text size="2" color="gray">
+									更新: {formatDate(form.updatedAt, "datetime")}
+								</Text>
+							</span>
+						</div>
+					</header>
+				)}
 
 				<Separator size="4" />
 
-				{/* フォーム項目プレビュー */}
-				<FormItemsPreview items={previewForm.items} />
+				{isEditMode ? (
+					<FormEditor
+						ref={editorRef}
+						initialForm={previewForm}
+						onSubmit={handleEditorSubmit}
+						loading={isSaving}
+						hideSubmit
+					/>
+				) : (
+					<FormItemsPreview items={previewForm.items} />
+				)}
 			</div>
 
 			<FormDetailSidebar
@@ -175,25 +241,19 @@ function RouteComponent() {
 				availableMembers={availableMembers}
 				approvers={approvers}
 				removingId={removingId}
+				isEditMode={isEditMode}
+				isSaving={isSaving}
 				onAddCollaborator={handleAddCollaborator}
 				onRemoveCollaborator={handleRemoveCollaborator}
 				onApprove={handleApprove}
 				onReject={handleReject}
 				onPublishSuccess={() => router.invalidate()}
-				onEdit={() => setEditDialogOpen(true)}
+				onEdit={() => setIsEditMode(true)}
+				onSave={handleSidebarSave}
+				onCancelEdit={() => setIsEditMode(false)}
 				onDelete={() => setDeleteConfirmOpen(true)}
 			/>
 
-			{/* 編集ダイアログ */}
-			<EditFormDialog
-				open={editDialogOpen}
-				onOpenChange={setEditDialogOpen}
-				formId={form.id}
-				initialValues={formDetailToForm({ form: form })}
-				onSuccess={() => router.invalidate()}
-			/>
-
-			{/* 削除確認ダイアログ */}
 			<AlertDialog.Root
 				open={deleteConfirmOpen}
 				onOpenChange={setDeleteConfirmOpen}
