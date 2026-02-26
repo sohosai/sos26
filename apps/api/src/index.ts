@@ -9,7 +9,6 @@ import { authRoute } from "./routes/auth";
 import { committeeFormRoute } from "./routes/committee-form";
 
 import { committeeInquiryRoute } from "./routes/committee-inquiry";
-
 import { committeeMemberRoute } from "./routes/committee-member";
 import { committeeNoticeRoute } from "./routes/committee-notice";
 import { committeeProjectRoute } from "./routes/committee-project";
@@ -17,7 +16,6 @@ import { fileRoute } from "./routes/files";
 import { projectRoute } from "./routes/project";
 
 import { projectFormRoute } from "./routes/project-form";
-
 import { projectInquiryRoute } from "./routes/project-inquiry";
 
 import { projectNoticeRoute } from "./routes/project-notice";
