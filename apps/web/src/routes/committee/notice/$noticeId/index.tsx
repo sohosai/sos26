@@ -1,6 +1,12 @@
 import { AlertDialog, Badge, Heading, Separator, Text } from "@radix-ui/themes";
 import type { GetNoticeResponse } from "@sos26/shared";
-import { IconArrowLeft, IconCalendar, IconClock } from "@tabler/icons-react";
+import {
+	IconArrowLeft,
+	IconCalendar,
+	IconClock,
+	IconDownload,
+	IconPaperclip,
+} from "@tabler/icons-react";
 import {
 	createFileRoute,
 	useNavigate,
@@ -17,8 +23,9 @@ import {
 	removeCollaborator,
 	updateNoticeAuthorization,
 } from "@/lib/api/committee-notice";
+import { downloadFile } from "@/lib/api/files";
 import { useAuthStore } from "@/lib/auth";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatFileSize } from "@/lib/format";
 import { getNoticeStatusFromAuth } from "@/lib/notice-status";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { CreateNoticeDialog } from "../-components/CreateNoticeDialog";
@@ -181,6 +188,35 @@ function RouteComponent() {
 						本文なし
 					</Text>
 				)}
+
+				{notice.attachments.length > 0 && (
+					<div className={styles.attachmentSection}>
+						<Text size="2" weight="medium" color="gray">
+							<IconPaperclip size={14} style={{ verticalAlign: "middle" }} />{" "}
+							添付ファイル
+						</Text>
+						<div className={styles.attachmentList}>
+							{notice.attachments.map(att => (
+								<button
+									key={att.id}
+									type="button"
+									className={styles.attachmentItem}
+									onClick={() =>
+										downloadFile(att.fileId, att.fileName, att.isPublic).catch(
+											() => toast.error("ファイルの取得に失敗しました")
+										)
+									}
+								>
+									<IconDownload size={14} />
+									<Text size="2">{att.fileName}</Text>
+									<Text size="1" color="gray">
+										({formatFileSize(att.size)})
+									</Text>
+								</button>
+							))}
+						</div>
+					</div>
+				)}
 			</div>
 
 			{/* サイドバー */}
@@ -208,6 +244,7 @@ function RouteComponent() {
 				onOpenChange={setEditDialogOpen}
 				noticeId={notice.id}
 				initialValues={{ title: notice.title, body: notice.body ?? "" }}
+				initialAttachments={notice.attachments}
 				onSuccess={() => router.invalidate()}
 			/>
 

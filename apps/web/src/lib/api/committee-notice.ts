@@ -1,7 +1,10 @@
 import {
 	type AddCollaboratorRequest,
 	type AddCollaboratorResponse,
+	type AddNoticeAttachmentRequest,
+	type AddNoticeAttachmentResponse,
 	addCollaboratorEndpoint,
+	addNoticeAttachmentEndpoint,
 	type CreateNoticeAuthorizationRequest,
 	type CreateNoticeAuthorizationResponse,
 	type CreateNoticeRequest,
@@ -15,7 +18,9 @@ import {
 	type ListNoticesResponse,
 	listNoticesEndpoint,
 	type RemoveCollaboratorResponse,
+	type RemoveNoticeAttachmentResponse,
 	removeCollaboratorEndpoint,
+	removeNoticeAttachmentEndpoint,
 	type UpdateNoticeAuthorizationRequest,
 	type UpdateNoticeAuthorizationResponse,
 	type UpdateNoticeRequest,
@@ -101,6 +106,32 @@ export async function removeCollaborator(
 ): Promise<RemoveCollaboratorResponse> {
 	return callNoBodyApi(removeCollaboratorEndpoint, {
 		pathParams: { noticeId, collaboratorId },
+	});
+}
+
+/**
+ * POST /committee/notices/:noticeId/attachments
+ * 添付ファイルを追加
+ */
+export async function addNoticeAttachments(
+	noticeId: string,
+	body: AddNoticeAttachmentRequest
+): Promise<AddNoticeAttachmentResponse> {
+	return callBodyApi(addNoticeAttachmentEndpoint, body, {
+		pathParams: { noticeId },
+	});
+}
+
+/**
+ * DELETE /committee/notices/:noticeId/attachments/:attachmentId
+ * 添付ファイルを削除
+ */
+export async function removeNoticeAttachment(
+	noticeId: string,
+	attachmentId: string
+): Promise<RemoveNoticeAttachmentResponse> {
+	return callNoBodyApi(removeNoticeAttachmentEndpoint, {
+		pathParams: { noticeId, attachmentId },
 	});
 }
 

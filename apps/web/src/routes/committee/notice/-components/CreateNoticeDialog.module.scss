@@ -16,3 +16,37 @@
 	justify-content: flex-end;
 	gap: var(--space-2);
 }
+
+.attachmentSection {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.fileList {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.fileItem {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-2);
+	padding: var(--space-1) var(--space-2);
+	border-radius: var(--radius-2);
+	background: var(--gray-a3);
+}
+
+.fileInfo {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	min-width: 0;
+	flex: 1;
+}
+
+.fileInput {
+	display: none;
+}
