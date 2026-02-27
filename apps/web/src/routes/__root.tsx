@@ -24,7 +24,7 @@ function RootComponent() {
 	const getAccentColor = (path: string) => {
 		if (path.startsWith("/project")) return "blue";
 		if (path.startsWith("/committee")) return "orange";
-		return "orange";
+		return "indigo";
 	};
 
 	const accentColor = getAccentColor(location.pathname);
