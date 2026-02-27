@@ -1,4 +1,4 @@
-import { Dialog, VisuallyHidden } from "@radix-ui/themes";
+import { Dialog, Spinner, VisuallyHidden } from "@radix-ui/themes";
 import type { Form, FormAnswers } from "../type";
 import styles from "./AnswerDialog.module.scss";
 import { FormViewer } from "./FormViewer";
@@ -20,7 +20,6 @@ export function FormAnswerDialog({
 	onSubmit,
 	onSaveDraft,
 }: Props) {
-	if (!form) return null;
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
 			<Dialog.Content className={styles.dialogContent}>
@@ -28,12 +27,18 @@ export function FormAnswerDialog({
 					<Dialog.Title>Form Viewer</Dialog.Title>
 				</VisuallyHidden>
 				<div className={styles.dialogInner}>
-					<FormViewer
-						form={form}
-						initialAnswers={initialAnswers}
-						onSubmit={onSubmit}
-						onSaveDraft={onSaveDraft}
-					/>
+					{form ? (
+						<FormViewer
+							form={form}
+							initialAnswers={initialAnswers}
+							onSubmit={onSubmit}
+							onSaveDraft={onSaveDraft}
+						/>
+					) : (
+						<div className={styles.loading}>
+							<Spinner size="3" />
+						</div>
+					)}
 				</div>
 			</Dialog.Content>
 		</Dialog.Root>
