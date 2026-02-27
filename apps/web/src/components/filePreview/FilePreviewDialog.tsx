@@ -43,7 +43,11 @@ function Viewer({ file }: { file: File }) {
 
 	return (
 		<div className={styles.unsupported}>
-			<Text size="2">非対応の形式です：.{ext}</Text>
+			{ext ? (
+				<Text size="2">非対応の形式です：.{ext}</Text>
+			) : (
+				<Text size="2">ファイルを表示できません</Text>
+			)}
 		</div>
 	);
 }
@@ -51,7 +55,6 @@ function Viewer({ file }: { file: File }) {
 export default function FilePreviewDialog({ file, open, onOpenChange }: Props) {
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
-			{/* <Dialog.Portal> */}
 			<Dialog.Content className={styles.content}>
 				<div className={styles.header}>
 					<Dialog.Title className={styles.title}>
@@ -67,7 +70,6 @@ export default function FilePreviewDialog({ file, open, onOpenChange }: Props) {
 					{file && <Viewer key={file.name + file.size} file={file} />}
 				</div>
 			</Dialog.Content>
-			{/* </Dialog.Portal> */}
 		</Dialog.Root>
 	);
 }
