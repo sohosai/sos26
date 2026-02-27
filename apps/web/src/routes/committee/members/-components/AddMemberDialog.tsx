@@ -54,7 +54,7 @@ export function AddMemberDialog({
 			toast.success("メンバーを追加しました");
 			handleClose();
 		} catch {
-			toast.error("メンバーの追加に失敗しました");
+			toast.error(isClientError(error) ? error.message : "メンバーの追加に失敗しました");
 		} finally {
 			setLoading(false);
 		}
