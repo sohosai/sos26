@@ -1,9 +1,10 @@
-import { Heading, Text } from "@radix-ui/themes";
+import { Heading, Text, Theme } from "@radix-ui/themes";
 import {
 	createRootRoute,
 	HeadContent,
 	Link,
 	Outlet,
+	useLocation,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { Button } from "@/components/primitives";
@@ -18,12 +19,24 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
+	const location = useLocation();
+
+	const getAccentColor = (path: string) => {
+		if (path.startsWith("/project")) return "blue";
+		if (path.startsWith("/committee")) return "orange";
+		return "orange";
+	};
+
+	const accentColor = getAccentColor(location.pathname);
+
 	return (
-		<>
+		<Theme accentColor={accentColor} grayColor="slate" panelBackground="solid">
 			<HeadContent />
-			<Outlet />
+			<div className={styles.appLayout}>
+				<Outlet />
+			</div>
 			{import.meta.env.DEV && <TanStackRouterDevtools />}
-		</>
+		</Theme>
 	);
 }
 
