@@ -174,12 +174,8 @@ function cornerToPx(
 	const colOff = corner.nativeColOff != null ? emuToPx(corner.nativeColOff) : 0;
 	const rowOff = corner.nativeRowOff != null ? emuToPx(corner.nativeRowOff) : 0;
 
-	const colOffsetsSum = colOffsets.reduce((acc, value, index) => {
-		return index < col1 ? acc + value : acc;
-	}, 0);
-
 	return {
-		x: colOffsetsSum + colOff,
+		x: (colOffsets[col1] ?? 0) + colOff,
 		y: (rowOffsets[row1] ?? 0) + rowOff,
 	};
 }

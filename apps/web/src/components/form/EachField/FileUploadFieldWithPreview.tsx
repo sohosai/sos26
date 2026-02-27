@@ -37,13 +37,17 @@ export function FileUploadFieldWithPreview({
 				disabled={disabled}
 			/>
 			{file && (
-				<div className={styles.preview}>
+				<div>
 					<IconButton onClick={() => setOpen(true)}>
 						<IconFileSearch size={16} />
 					</IconButton>
 				</div>
 			)}
-			<FilePreviewDialog file={file} open={open} onOpenChange={setOpen} />
+			<FilePreviewDialog
+				file={file ?? value ?? null}
+				open={open}
+				onOpenChange={setOpen}
+			/>
 		</div>
 	);
 }

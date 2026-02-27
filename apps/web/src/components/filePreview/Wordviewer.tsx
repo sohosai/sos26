@@ -1,3 +1,4 @@
+import { Text } from "@radix-ui/themes";
 import { renderAsync } from "docx-preview";
 import { useEffect, useRef, useState } from "react";
 import styles from "./WordViewer.module.scss";
@@ -47,8 +48,8 @@ export default function WordViewer({ file }: Props) {
 	}, [file]);
 	return (
 		<div className={styles.page}>
-			{status && <p className={styles.status}>{status}</p>}
-			<div ref={containerRef} className={styles.viewer} />
+			{status && <Text size="2">{status}</Text>}
+			<div ref={containerRef} />
 		</div>
 	);
 }
