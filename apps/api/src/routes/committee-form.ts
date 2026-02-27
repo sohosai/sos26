@@ -98,22 +98,24 @@ committeeFormRoute.get(
 				title: true,
 				description: true,
 				updatedAt: true,
-
 				owner: {
 					select: { id: true, name: true },
 				},
-
 				collaborators: {
 					where: { deletedAt: null },
 					select: {
 						user: { select: { id: true, name: true } },
 					},
 				},
-
 				authorizations: {
 					orderBy: { createdAt: "desc" },
 					take: 1,
-					include: {
+					select: {
+						id: true,
+						status: true,
+						scheduledSendAt: true,
+						allowLateResponse: true,
+						deadlineAt: true,
 						requestedTo: {
 							select: { id: true, name: true },
 						},

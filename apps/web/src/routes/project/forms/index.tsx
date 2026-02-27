@@ -184,7 +184,7 @@ function RouteComponent() {
 	];
 
 	return (
-		<div className={styles.page}>
+		<div>
 			<div className={styles.header}>
 				<Heading size="6">申請回答</Heading>
 				<Text size="2" color="gray">
