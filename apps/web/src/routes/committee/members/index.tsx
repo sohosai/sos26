@@ -333,6 +333,7 @@ function RouteComponent() {
 			<DataTable<CommitteeMemberRow>
 				data={members}
 				columns={columns}
+				features={{ selection: false, columnVisibility: false }}
 				initialSorting={[
 					{
 						id: "joinedAt",
