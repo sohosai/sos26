@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/committee-member";
 import { useAuthStore } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
+import { isClientError } from "@/lib/http/error";
 import { AddMemberDialog } from "./-components/AddMemberDialog";
 import styles from "./index.module.scss";
 
@@ -204,8 +205,12 @@ function RouteComponent() {
 					};
 				})
 			);
-		} catch {
-			toast.error("権限の変更に失敗しました");
+		} catch (error) {
+			toast.error(
+				isClientError(error)
+					? (error as Error).message
+					: "権限の変更に失敗しました"
+			);
 		}
 	};
 
@@ -247,8 +252,12 @@ function RouteComponent() {
 			await deleteCommitteeMember(pendingDeleteId);
 			setMembers(prev => prev.filter(m => m.id !== pendingDeleteId));
 			toast.success("メンバーを削除しました");
-		} catch {
-			toast.error("メンバーの削除に失敗しました");
+		} catch (error) {
+			toast.error(
+				isClientError(error)
+					? (error as Error).message
+					: "メンバーの削除に失敗しました"
+			);
 		} finally {
 			setDeleteConfirmOpen(false);
 			setPendingDeleteId(null);

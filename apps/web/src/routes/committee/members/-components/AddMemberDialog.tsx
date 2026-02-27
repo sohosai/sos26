@@ -4,6 +4,7 @@ import { IconX } from "@tabler/icons-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button, IconButton, Select, TextField } from "@/components/primitives";
+import { isClientError } from "@/lib/http/error";
 import styles from "./AddMemberDialog.module.scss";
 
 const bureauOptions = (
@@ -53,8 +54,12 @@ export function AddMemberDialog({
 			await onSubmit({ userId: userId.trim(), Bureau: bureau });
 			toast.success("メンバーを追加しました");
 			handleClose();
-		} catch {
-			toast.error(isClientError(error) ? error.message : "メンバーの追加に失敗しました");
+		} catch (error) {
+			toast.error(
+				isClientError(error)
+					? (error as Error).message
+					: "メンバーの追加に失敗しました"
+			);
 		} finally {
 			setLoading(false);
 		}
