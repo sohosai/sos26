@@ -6,7 +6,7 @@ import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { IconButton } from "../primitives";
 import styles from "./PdfViewer.module.scss";
 
-// workerはvite用に静的アセットとして読み込む
+// workerを読み込む
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 	"pdfjs-dist/build/pdf.worker.min.mjs",
 	import.meta.url
