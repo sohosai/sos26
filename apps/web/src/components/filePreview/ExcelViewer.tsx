@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { toast } from "sonner";
 import styles from "./ExcelViewer.module.scss";
 
@@ -46,6 +46,24 @@ interface SheetData {
 
 interface Props {
 	file: File;
+}
+
+interface ImageCorner {
+	nativeCol?: number;
+	col?: number;
+	nativeRow?: number;
+	row?: number;
+	nativeColOff?: number;
+	nativeRowOff?: number;
+}
+
+interface ImageRange {
+	tl?: ImageCorner;
+	br?: ImageCorner;
+	ext?: {
+		width: number;
+		height: number;
+	};
 }
 
 function toColor(color: ExcelJS.Color | undefined): string | undefined {
@@ -111,7 +129,7 @@ function extractStyle(cell: ExcelJS.Cell): CellStyle {
 	};
 }
 
-function cellStyleToCSS(style: CellStyle): React.CSSProperties {
+function cellStyleToCSS(style: CellStyle): CSSProperties {
 	return {
 		fontWeight: style.bold ? "bold" : undefined,
 		fontStyle: style.italic ? "italic" : undefined,
@@ -119,8 +137,8 @@ function cellStyleToCSS(style: CellStyle): React.CSSProperties {
 		fontSize: style.fontSize ? `${style.fontSize}pt` : undefined,
 		color: style.fontColor,
 		backgroundColor: style.bgColor,
-		textAlign: style.hAlign as React.CSSProperties["textAlign"],
-		verticalAlign: style.vAlign as React.CSSProperties["verticalAlign"],
+		textAlign: style.hAlign as CSSProperties["textAlign"],
+		verticalAlign: style.vAlign as CSSProperties["verticalAlign"],
 		whiteSpace: style.wrapText ? "pre-wrap" : undefined,
 		borderTop: style.borderTop,
 		borderBottom: style.borderBottom,
@@ -136,10 +154,34 @@ const emuToPx = (emu: number) => emu / EMU_PER_PX;
 function buildOffsets(sizes: number[]): number[] {
 	const offsets: number[] = new Array(sizes.length + 1).fill(0);
 	for (let i = 1; i < sizes.length; i++) {
-		const prev = offsets[i] ?? 0;
-		offsets[i + 1] = prev + (sizes[i] ?? 0);
+		offsets[i + 1] = (offsets[i] ?? 0) + (sizes[i] ?? 0);
 	}
 	return offsets;
+}
+
+function asImageRange(value: unknown): ImageRange | null {
+	if (!value || typeof value !== "object") return null;
+	return value as ImageRange;
+}
+
+function cornerToPx(
+	corner: ImageCorner,
+	colOffsets: number[],
+	rowOffsets: number[]
+): { x: number; y: number } {
+	const col1 = (corner.nativeCol ?? corner.col ?? 0) + 1;
+	const row1 = (corner.nativeRow ?? corner.row ?? 0) + 1;
+	const colOff = corner.nativeColOff != null ? emuToPx(corner.nativeColOff) : 0;
+	const rowOff = corner.nativeRowOff != null ? emuToPx(corner.nativeRowOff) : 0;
+
+	const colOffsetsSum = colOffsets.reduce((acc, value, index) => {
+		return index < col1 ? acc + value : acc;
+	}, 0);
+
+	return {
+		x: colOffsetsSum + colOff,
+		y: (rowOffsets[row1] ?? 0) + rowOff,
+	};
 }
 
 function resolveImageOverlay(
@@ -148,42 +190,16 @@ function resolveImageOverlay(
 	rowHeights: number[],
 	dataUrl: string
 ): ImageOverlay | null {
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	const range = img.range as any;
-	// console.log(range);
+	const range = asImageRange(img.range);
 	const tl = range?.tl;
 	if (!tl) return null;
 
 	const colOffsets = buildOffsets(colWidths);
-	// console.log(colOffsets);
 	const rowOffsets = buildOffsets(rowHeights);
 
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	function cornerToPx(corner: any): { x: number; y: number } {
-		const col1 = (corner.nativeCol ?? corner.col ?? 0) + 1;
-		const row1 = (corner.nativeRow ?? corner.row ?? 0) + 1;
-		const colOff =
-			corner.nativeColOff != null ? emuToPx(corner.nativeColOff) : 0;
-		const rowOff =
-			corner.nativeRowOff != null ? emuToPx(corner.nativeRowOff) : 0;
-
-		const colOffsetsSum = colOffsets.reduce((acc, value, index) => {
-			return index < col1 ? acc + value : acc;
-		}, 0);
-		return {
-			// 大きさの変換がよくわかんないが、これが安定している。上で、二重で合計を取ろうとしていたりするため、確実に正しくはないと思う
-			x: (colOffsetsSum ?? 0) + colOff,
-			// y: (rowOffsetsSum ?? 0) + rowOff,
-			// x: (colOffsets[col1] ?? 0) + colOff,
-			y: (rowOffsets[row1] ?? 0) + rowOff,
-		};
-	}
-
-	const tlPx = cornerToPx(tl);
-
-	const br = range?.br;
-	if (br) {
-		const brPx = cornerToPx(br);
+	const tlPx = cornerToPx(tl, colOffsets, rowOffsets);
+	if (range.br) {
+		const brPx = cornerToPx(range.br, colOffsets, rowOffsets);
 		return {
 			dataUrl,
 			left: tlPx.x,
@@ -193,18 +209,145 @@ function resolveImageOverlay(
 		};
 	}
 
-	const ext = range?.ext;
-	if (ext) {
+	if (range.ext) {
 		return {
 			dataUrl,
 			left: tlPx.x,
 			top: tlPx.y,
-			width: ext.width,
-			height: ext.height,
+			width: range.ext.width,
+			height: range.ext.height,
 		};
 	}
 
 	return null;
+}
+
+function parseRows(ws: ExcelJS.Worksheet): (CellData | null)[][] {
+	const mergeMap = new Map<string, { rowSpan: number; colSpan: number }>();
+	const coveredSet = new Set<string>();
+	const masterExtent = new Map<string, { maxRow: number; maxCol: number }>();
+
+	ws.eachRow({ includeEmpty: true }, row => {
+		row.eachCell({ includeEmpty: true }, cell => {
+			if (!cell.isMerged) return;
+			const master = cell.master;
+			const key = `${master.row},${master.col}`;
+			const prev = masterExtent.get(key);
+			const rowIndex = Number(cell.row);
+			const colIndex = Number(cell.col);
+			masterExtent.set(key, {
+				maxRow: Math.max(prev?.maxRow ?? rowIndex, rowIndex),
+				maxCol: Math.max(prev?.maxCol ?? colIndex, colIndex),
+			});
+		});
+	});
+
+	for (const [key, extent] of masterExtent.entries()) {
+		const [rowText, colText] = key.split(",");
+		if (!rowText || !colText) continue;
+
+		const mr = Number(rowText);
+		const mc = Number(colText);
+		mergeMap.set(key, {
+			rowSpan: extent.maxRow - mr + 1,
+			colSpan: extent.maxCol - mc + 1,
+		});
+
+		for (let r = mr; r <= extent.maxRow; r++) {
+			for (let c = mc; c <= extent.maxCol; c++) {
+				if (r !== mr || c !== mc) coveredSet.add(`${r},${c}`);
+			}
+		}
+	}
+
+	const rows: (CellData | null)[][] = [];
+	ws.eachRow({ includeEmpty: true }, row => {
+		const rowData: (CellData | null)[] = [];
+		row.eachCell({ includeEmpty: true }, cell => {
+			const key = `${cell.row},${cell.col}`;
+			if (coveredSet.has(key)) {
+				rowData.push(null);
+				return;
+			}
+
+			let value: CellValue;
+			if (cell.value == null) value = null;
+			else if (typeof cell.value === "object") value = String(cell.text);
+			else value = cell.value as string | number;
+
+			const merge = mergeMap.get(key);
+			rowData.push({
+				value,
+				style: extractStyle(cell),
+				rowSpan: merge?.rowSpan,
+				colSpan: merge?.colSpan,
+			});
+		});
+		rows.push(rowData);
+	});
+
+	return rows;
+}
+
+function getColWidths(ws: ExcelJS.Worksheet): number[] {
+	const colWidths: number[] = [0];
+	for (const col of ws.columns) {
+		colWidths.push(col?.width ? col.width * 7 : 80);
+	}
+	return colWidths;
+}
+
+function getRowHeights(ws: ExcelJS.Worksheet): number[] {
+	const rowHeights: number[] = [0];
+	ws.eachRow({ includeEmpty: true }, row => {
+		rowHeights.push(row.height ? row.height * 1.33 : 20);
+	});
+	return rowHeights;
+}
+
+function getImageDataUrl(imgData: ExcelJS.Image): string | null {
+	if (!imgData?.buffer) return null;
+
+	const ext = (imgData.extension ?? "png").toLowerCase();
+	const mimeMap: Record<string, string> = {
+		png: "image/png",
+		jpg: "image/jpeg",
+		jpeg: "image/jpeg",
+		gif: "image/gif",
+		bmp: "image/bmp",
+		tiff: "image/tiff",
+		svg: "image/svg+xml",
+	};
+	const mime = mimeMap[ext] ?? "image/png";
+	const bytes = new Uint8Array(imgData.buffer as ArrayBuffer);
+	let binary = "";
+	for (const byte of bytes) {
+		binary += String.fromCharCode(byte);
+	}
+	const base64 = btoa(binary);
+	return `data:${mime};base64,${base64}`;
+}
+
+function parseSheet(ws: ExcelJS.Worksheet, wb: ExcelJS.Workbook): SheetData {
+	const rows = parseRows(ws);
+	const colWidths = getColWidths(ws);
+	const rowHeights = getRowHeights(ws);
+	const images: ImageOverlay[] = [];
+
+	for (const img of ws.getImages()) {
+		try {
+			const imgData = wb.getImage(Number(img.imageId));
+			const dataUrl = imgData ? getImageDataUrl(imgData) : null;
+			if (!dataUrl) continue;
+
+			const overlay = resolveImageOverlay(img, colWidths, rowHeights, dataUrl);
+			if (overlay) images.push(overlay);
+		} catch {
+			toast.error("ファイル内の画像の読み込みに失敗しました。");
+		}
+	}
+
+	return { name: ws.name, rows, colWidths, rowHeights, images };
 }
 
 export default function ExcelViewer({ file }: Props) {
@@ -222,129 +365,7 @@ export default function ExcelViewer({ file }: Props) {
 				const buf = await file.arrayBuffer();
 				const wb = new ExcelJS.Workbook();
 				await wb.xlsx.load(buf);
-
-				// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>
-				const parsed: SheetData[] = wb.worksheets.map(ws => {
-					const mergeMap = new Map<
-						string,
-						{ rowSpan: number; colSpan: number }
-					>();
-					const coveredSet = new Set<string>();
-					const masterExtent = new Map<
-						string,
-						{ maxRow: number; maxCol: number }
-					>();
-
-					ws.eachRow({ includeEmpty: true }, row => {
-						row.eachCell({ includeEmpty: true }, cell => {
-							if (!cell.isMerged) return;
-							const master = cell.master;
-							const key = `${master.row},${master.col}`;
-							const prev = masterExtent.get(key);
-							const row = Number(cell.row);
-							const col = Number(cell.col);
-							masterExtent.set(key, {
-								maxRow: Math.max(prev?.maxRow ?? row, row),
-								maxCol: Math.max(prev?.maxCol ?? col, col),
-							});
-						});
-					});
-
-					for (const [key, extent] of masterExtent.entries()) {
-						const parts = key.split(",");
-						if (parts.length !== 2) continue;
-
-						const mr = Number(parts[0]);
-						const mc = Number(parts[1]);
-						mergeMap.set(key, {
-							rowSpan: extent.maxRow - mr + 1,
-							colSpan: extent.maxCol - mc + 1,
-						});
-						for (let r = mr; r <= extent.maxRow; r++) {
-							for (let c = mc; c <= extent.maxCol; c++) {
-								if (r !== mr || c !== mc) coveredSet.add(`${r},${c}`);
-							}
-						}
-					}
-
-					const rows: (CellData | null)[][] = [];
-					ws.eachRow({ includeEmpty: true }, row => {
-						const rowData: (CellData | null)[] = [];
-						// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>
-						row.eachCell({ includeEmpty: true }, cell => {
-							const key = `${cell.row},${cell.col}`;
-							if (coveredSet.has(key)) {
-								rowData.push(null);
-								return;
-							}
-							let value: CellValue;
-							if (cell.value == null) value = null;
-							else if (typeof cell.value === "object")
-								value = String(cell.text);
-							else value = cell.value as string | number;
-							const merge = mergeMap.get(key);
-							rowData.push({
-								value,
-								style: extractStyle(cell),
-								rowSpan: merge?.rowSpan,
-								colSpan: merge?.colSpan,
-							});
-						});
-						rows.push(rowData);
-					});
-
-					const colWidths: number[] = [0];
-					// biome-ignore lint/suspicious/useIterableCallbackReturn: <explanation>
-					ws.columns.forEach(col =>
-						colWidths.push(col?.width ? col.width * 7 : 80)
-					);
-
-					const rowHeights: number[] = [0];
-					ws.eachRow({ includeEmpty: true }, row =>
-						rowHeights.push(row.height ? row.height * 1.33 : 20)
-					);
-
-					const images: ImageOverlay[] = [];
-
-					for (const img of ws.getImages()) {
-						try {
-							const imgData = wb.getImage(img.imageId as unknown as number);
-							// console.log(imgData);
-							if (!imgData?.buffer) continue;
-
-							const ext = (imgData.extension ?? "png").toLowerCase();
-							const mimeMap: Record<string, string> = {
-								png: "image/png",
-								jpg: "image/jpeg",
-								jpeg: "image/jpeg",
-								gif: "image/gif",
-								bmp: "image/bmp",
-								tiff: "image/tiff",
-								svg: "image/svg+xml",
-							};
-							const mime = mimeMap[ext] ?? "image/png";
-							const bytes = new Uint8Array(imgData.buffer as ArrayBuffer);
-							let binary = "";
-							for (const byte of bytes) {
-								binary += String.fromCharCode(byte);
-							}
-							const base64 = btoa(binary);
-							const dataUrl = `data:${mime};base64,${base64}`;
-
-							const overlay = resolveImageOverlay(
-								img,
-								colWidths,
-								rowHeights,
-								dataUrl
-							);
-							if (overlay) images.push(overlay);
-						} catch {
-							toast.error("ファイル内の画像の読み込みに失敗しました。");
-						}
-					}
-
-					return { name: ws.name, rows, colWidths, rowHeights, images };
-				});
+				const parsed = wb.worksheets.map(ws => parseSheet(ws, wb));
 
 				if (!cancelled) {
 					setSheets(parsed);
@@ -373,8 +394,6 @@ export default function ExcelViewer({ file }: Props) {
 	const colWidths = sheet?.colWidths ?? [];
 	const rowHeights = sheet?.rowHeights ?? [];
 	const images = sheet?.images ?? [];
-	// console.log(sheet);
-	// console.log(images);
 	const colCount = Math.max(0, ...rows.map(r => r.length));
 
 	return (
@@ -389,8 +408,7 @@ export default function ExcelViewer({ file }: Props) {
 					{sheets.map((s, i) => (
 						<button
 							type="button"
-							// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-							key={i}
+							key={`${s.name}-${i}`}
 							className={`${styles.tab} ${i === active ? styles.activeTab : ""}`}
 							onClick={() => setActive(i)}
 						>
@@ -418,7 +436,7 @@ export default function ExcelViewer({ file }: Props) {
 										return (
 											<td
 												// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-												key={ci}
+												key={`cell-${ri}-${ci}`}
 												rowSpan={cell.rowSpan}
 												colSpan={cell.colSpan}
 												style={{
@@ -439,8 +457,7 @@ export default function ExcelViewer({ file }: Props) {
 					{/* Image / drawing overlays */}
 					{images.map((img, i) => (
 						<img
-							// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-							key={i}
+							key={`img-${i}-${img.left}-${img.top}`}
 							src={img.dataUrl}
 							alt={`drawing-${i}`}
 							style={{
