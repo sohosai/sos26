@@ -41,6 +41,18 @@ const envSchema = z.object({
 	VAPID_PUBLIC_KEY: z.string().min(1),
 	VAPID_PRIVATE_KEY: z.string().min(1),
 	PUSH_SEND_BATCH_SIZE: z.coerce.number().min(1).default(50),
+
+	// S3互換オブジェクトストレージ
+	S3_ENDPOINT: z.string().min(1),
+	S3_REGION: z.string().default("jp-north-1"),
+	S3_BUCKET: z.string().min(1),
+	S3_ACCESS_KEY_ID: z.string().min(1),
+	S3_SECRET_ACCESS_KEY: z.string().min(1),
+	S3_PRESIGNED_URL_EXPIRES: z.coerce.number().min(1).default(3600),
+	S3_MAX_FILE_SIZE: z.coerce.number().min(1).default(10_485_760), // 10MB
+
+	// ファイルトークン署名用秘密鍵
+	FILE_TOKEN_SECRET: z.string().min(32),
 });
 
 export const env = envSchema.parse({
@@ -57,6 +69,14 @@ export const env = envSchema.parse({
 	VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
 	VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
 	PUSH_SEND_BATCH_SIZE: process.env.PUSH_SEND_BATCH_SIZE,
+	S3_ENDPOINT: process.env.S3_ENDPOINT,
+	S3_REGION: process.env.S3_REGION,
+	S3_BUCKET: process.env.S3_BUCKET,
+	S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
+	S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY,
+	S3_PRESIGNED_URL_EXPIRES: process.env.S3_PRESIGNED_URL_EXPIRES,
+	S3_MAX_FILE_SIZE: process.env.S3_MAX_FILE_SIZE,
+	FILE_TOKEN_SECRET: process.env.FILE_TOKEN_SECRET,
 });
 
 export type Env = z.infer<typeof envSchema>;

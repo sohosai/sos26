@@ -18,7 +18,8 @@ import {
 	removeProjectMember,
 } from "@/lib/api/project";
 import { useAuthStore } from "@/lib/auth";
-import { useProject } from "@/lib/project/context";
+import { formatDate } from "@/lib/format";
+import { useProject, useProjectStore } from "@/lib/project/store";
 import styles from "./index.module.scss";
 
 export type MemberRow = {
@@ -26,7 +27,7 @@ export type MemberRow = {
 	name: string;
 	email: string;
 	role: "OWNER" | "SUB_OWNER" | "MEMBER";
-	roleLabel: string[]; // TagCell用の配列
+	roleLabel: string[];
 	joinedAt: Date;
 };
 
@@ -83,10 +84,6 @@ export function MemberActionsCell({
 	);
 }
 
-export const Route = createFileRoute("/project/members/")({
-	component: RouteComponent,
-});
-
 const roleLabelMap: Record<MemberRow["role"], string> = {
 	OWNER: "責任者",
 	SUB_OWNER: "副責任者",
@@ -101,36 +98,38 @@ const roleColorMap: Record<string, string> = {
 
 const memberColumnHelper = createColumnHelper<MemberRow>();
 
-function RouteComponent() {
-	const [members, setMembers] = useState<MemberRow[]>([]);
+export const Route = createFileRoute("/project/members/")({
+	component: RouteComponent,
+	loader: async () => {
+		const { selectedProjectId } = useProjectStore.getState();
+		if (!selectedProjectId) return { members: [] as MemberRow[] };
+		const data = await listProjectMembers(selectedProjectId);
+		return {
+			members: data.members.map((m: Omit<MemberRow, "roleLabel">) => ({
+				...m,
+				roleLabel: [roleLabelMap[m.role]],
+			})),
+		};
+	},
+});
 
+function RouteComponent() {
+	const { members: initialMembers } = Route.useLoaderData();
+	const [members, setMembers] = useState<MemberRow[]>(initialMembers);
+
+	useEffect(() => {
+		setMembers(initialMembers);
+	}, [initialMembers]);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const project = useProject();
 	const { user } = useAuthStore();
 
-	useEffect(() => {
-		if (!project?.id) return;
-
-		listProjectMembers(project.id).then(data => {
-			setMembers(
-				data.members.map((m: Omit<MemberRow, "roleLabel">) => ({
-					...m,
-					roleLabel: [roleLabelMap[m.role]],
-				}))
-			);
-		});
-	}, [project?.id]);
-
 	const hasSubOwner = members.some(member => member.role === "SUB_OWNER");
 
 	const isPrivileged =
-		project?.ownerId === user?.id || project?.subOwnerId === user?.id;
+		project.ownerId === user?.id || project.subOwnerId === user?.id;
 	const handleAssign = async (memberId: string) => {
 		try {
-			if (!project?.id) {
-				toast.error("企画情報が取得できません");
-				return;
-			}
 			await assignSubOwner(project.id, memberId);
 
 			setMembers(prev =>
@@ -152,10 +151,6 @@ function RouteComponent() {
 
 	const handleDeleteMember = async (memberId: string) => {
 		try {
-			if (!project?.id) {
-				toast.error("企画情報が取得できません");
-				return;
-			}
 			await removeProjectMember(project.id, memberId);
 			setMembers(prev => prev.filter(m => m.userId !== memberId));
 		} catch {
@@ -179,7 +174,7 @@ function RouteComponent() {
 		}),
 		memberColumnHelper.accessor("joinedAt", {
 			header: "参加日",
-			cell: info => new Date(info.getValue()).toLocaleDateString(),
+			cell: info => formatDate(new Date(info.getValue()), "date"),
 		}),
 	];
 
@@ -202,7 +197,7 @@ function RouteComponent() {
 		: baseColumns;
 
 	return (
-		<div className={styles.page}>
+		<div>
 			<Heading size="6">メンバー一覧</Heading>
 
 			<DataTable<MemberRow>

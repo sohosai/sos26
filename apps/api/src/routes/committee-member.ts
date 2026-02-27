@@ -19,7 +19,7 @@ const committeeMemberRoute = new Hono<AuthEnv>();
 committeeMemberRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 	const committeeMembers = await prisma.committeeMember.findMany({
 		where: { deletedAt: null },
-		include: { user: true },
+		include: { user: true, permissions: true },
 	});
 
 	return c.json({ committeeMembers });

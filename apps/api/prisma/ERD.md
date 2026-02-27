@@ -36,6 +36,7 @@ erDiagram
 }
 "Project" {
   String id PK
+  Int number UK
   String name UK
   String namePhonetic
   String organizationName
@@ -86,6 +87,19 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"File" {
+  String id PK
+  String key UK
+  String fileName
+  String mimeType
+  Int size
+  Boolean isPublic
+  FileStatus status
+  String uploadedById FK
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
 "Notice" {
   String id PK
   String ownerId FK
@@ -95,11 +109,10 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
-"NoticeShare" {
+"NoticeCollaborator" {
   String id PK
   String noticeId FK
   String userId FK
-  Boolean isWrite
   DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
@@ -200,6 +213,78 @@ erDiagram
   String formItemOptionId FK
   DateTime createdAt
 }
+"NoticeReadStatus" {
+  String id PK
+  String noticeDeliveryId FK
+  String userId FK
+  DateTime createdAt
+}
+"NoticeAttachment" {
+  String id PK
+  String noticeId FK
+  String fileId FK
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"Inquiry" {
+  String id PK
+  String title
+  String body
+  InquiryStatus status
+  String createdById FK
+  InquiryCreatorRole creatorRole
+  String projectId FK
+  String relatedFormId FK "nullable"
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"InquiryAssignee" {
+  String id PK
+  String inquiryId FK
+  String userId FK
+  InquiryAssigneeSide side
+  Boolean isCreator
+  DateTime assignedAt
+  DateTime deletedAt "nullable"
+}
+"InquiryViewer" {
+  String id PK
+  String inquiryId FK
+  InquiryViewerScope scope
+  Bureau bureauValue "nullable"
+  String userId FK "nullable"
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+}
+"InquiryComment" {
+  String id PK
+  String inquiryId FK
+  String body
+  String createdById FK
+  InquiryCreatorRole senderRole
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+}
+"InquiryActivity" {
+  String id PK
+  String inquiryId FK
+  InquiryActivityType type
+  String actorId FK
+  String targetId FK "nullable"
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+}
+"InquiryAttachment" {
+  String id PK
+  String inquiryId FK
+  String commentId FK "nullable"
+  String fileId FK
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
 "Project" }o--|| "User" : owner
 "Project" }o--o| "User" : subOwner
 "ProjectMember" }o--|| "Project" : project
@@ -208,9 +293,10 @@ erDiagram
 "CommitteeMemberPermission" }o--|| "CommitteeMember" : committeeMember
 "UserPushSubscription" }o--|| "User" : user
 "UserPushSubscription" }o--|| "PushSubscription" : pushSubscription
+"File" }o--|| "User" : uploadedBy
 "Notice" }o--|| "User" : owner
-"NoticeShare" }o--|| "Notice" : notice
-"NoticeShare" }o--|| "User" : user
+"NoticeCollaborator" }o--|| "Notice" : notice
+"NoticeCollaborator" }o--|| "User" : user
 "NoticeAuthorization" }o--|| "Notice" : notice
 "NoticeAuthorization" }o--|| "User" : requestedBy
 "NoticeAuthorization" }o--|| "User" : requestedTo
@@ -232,6 +318,25 @@ erDiagram
 "FormAnswer" }o--|| "FormItem" : formItem
 "FormAnswerSelectedOption" }o--|| "FormAnswer" : formAnswer
 "FormAnswerSelectedOption" }o--|| "FormItemOption" : formItemOption
+"NoticeReadStatus" }o--|| "NoticeDelivery" : noticeDelivery
+"NoticeReadStatus" }o--|| "User" : user
+"NoticeAttachment" }o--|| "Notice" : notice
+"NoticeAttachment" }o--|| "File" : file
+"Inquiry" }o--|| "User" : createdBy
+"Inquiry" }o--|| "Project" : project
+"Inquiry" }o--o| "Form" : relatedForm
+"InquiryAssignee" }o--|| "Inquiry" : inquiry
+"InquiryAssignee" }o--|| "User" : user
+"InquiryViewer" }o--|| "Inquiry" : inquiry
+"InquiryViewer" }o--o| "User" : user
+"InquiryComment" }o--|| "Inquiry" : inquiry
+"InquiryComment" }o--|| "User" : createdBy
+"InquiryActivity" }o--|| "Inquiry" : inquiry
+"InquiryActivity" }o--|| "User" : actor
+"InquiryActivity" }o--o| "User" : target
+"InquiryAttachment" }o--|| "Inquiry" : inquiry
+"InquiryAttachment" }o--o| "InquiryComment" : comment
+"InquiryAttachment" }o--|| "File" : file
 ```
 
 ### `EmailVerification`
@@ -274,6 +379,7 @@ Properties as follows:
 Properties as follows:
 
 - `id`:
+- `number`:
 - `name`:
 - `namePhonetic`:
 - `organizationName`:
@@ -339,6 +445,22 @@ Properties as follows:
 - `createdAt`:
 - `updatedAt`:
 
+### `File`
+
+Properties as follows:
+
+- `id`:
+- `key`:
+- `fileName`:
+- `mimeType`:
+- `size`:
+- `isPublic`:
+- `status`:
+- `uploadedById`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
 ### `Notice`
 
 Properties as follows:
@@ -351,14 +473,13 @@ Properties as follows:
 - `createdAt`:
 - `updatedAt`:
 
-### `NoticeShare`
+### `NoticeCollaborator`
 
 Properties as follows:
 
 - `id`:
 - `noticeId`:
 - `userId`:
-- `isWrite`:
 - `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
@@ -491,3 +612,99 @@ Properties as follows:
 - `formAnswerId`:
 - `formItemOptionId`:
 - `createdAt`:
+
+### `NoticeReadStatus`
+
+Properties as follows:
+
+- `id`:
+- `noticeDeliveryId`:
+- `userId`:
+- `createdAt`:
+
+### `NoticeAttachment`
+
+Properties as follows:
+
+- `id`:
+- `noticeId`:
+- `fileId`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `Inquiry`
+
+Properties as follows:
+
+- `id`:
+- `title`:
+- `body`:
+- `status`:
+- `createdById`:
+- `creatorRole`:
+- `projectId`:
+- `relatedFormId`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `InquiryAssignee`
+
+Properties as follows:
+
+- `id`:
+- `inquiryId`:
+- `userId`:
+- `side`:
+- `isCreator`:
+- `assignedAt`:
+- `deletedAt`:
+
+### `InquiryViewer`
+
+Properties as follows:
+
+- `id`:
+- `inquiryId`:
+- `scope`:
+- `bureauValue`:
+- `userId`:
+- `deletedAt`:
+- `createdAt`:
+
+### `InquiryComment`
+
+Properties as follows:
+
+- `id`:
+- `inquiryId`:
+- `body`:
+- `createdById`:
+- `senderRole`:
+- `deletedAt`:
+- `createdAt`:
+
+### `InquiryActivity`
+
+Properties as follows:
+
+- `id`:
+- `inquiryId`:
+- `type`:
+- `actorId`:
+- `targetId`:
+- `deletedAt`:
+- `createdAt`:
+
+### `InquiryAttachment`
+
+Properties as follows:
+
+- `id`:
+- `inquiryId`:
+- `commentId`:
+- `fileId`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:

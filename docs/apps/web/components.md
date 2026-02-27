@@ -681,6 +681,7 @@ import { Heading, Text } from "@radix-ui/themes";
 - ページは**primitives の組み合わせ**として構築する
 - ページ固有の装飾・構造は CSS に閉じ込める
 - UIロジックはページではなく primitives / patterns に寄せる
+- ページ固有のコンポーネント（ダイアログなど）は `routes/.../-components/` にコロケーションする（詳細は [routing.md](routing.md#ページ固有コンポーネントのコロケーション) を参照）
 
 ```tsx
 // src/routes/settings/index.tsx

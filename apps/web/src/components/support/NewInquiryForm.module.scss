@@ -1,0 +1,335 @@
+.form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-5);
+	margin-top: var(--space-4);
+}
+
+.formSection {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.formSectionHeader {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--space-2);
+	color: var(--gray-11);
+
+	div {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+	}
+}
+
+.formGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: var(--space-2);
+}
+
+.formCard {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-3);
+	border: 1px solid var(--gray-6);
+	border-radius: var(--radius-3);
+	background-color: var(--gray-1);
+	cursor: pointer;
+	color: var(--gray-12);
+	transition: border-color 0.15s, background-color 0.15s;
+	text-align: left;
+
+	&:hover {
+		border-color: var(--accent-7);
+		background-color: var(--accent-2);
+	}
+}
+
+.formCardSelected {
+	border-color: var(--accent-9);
+	background-color: var(--accent-3);
+}
+
+.formCardCheck {
+	margin-left: auto;
+	color: var(--accent-9);
+}
+
+.selectedFormBanner {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-3);
+	background-color: var(--accent-3);
+	border-radius: var(--radius-2);
+	color: var(--accent-11);
+}
+
+.clearForm {
+	margin-left: auto;
+	display: inline-flex;
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--gray-9);
+	padding: var(--space-1);
+	border-radius: var(--radius-2);
+
+	&:hover {
+		background-color: var(--gray-4);
+	}
+}
+
+.assignSection {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.assignTrigger {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	padding: var(--space-2) var(--space-3);
+	border: 1px solid var(--gray-6);
+	border-radius: var(--radius-2);
+	background: none;
+	cursor: pointer;
+	color: var(--gray-11);
+	transition: border-color 0.15s;
+
+	&:hover {
+		border-color: var(--accent-7);
+	}
+}
+
+.assignPopover {
+	width: 320px;
+	padding: 0;
+}
+
+.assignSearch {
+	padding: var(--space-2);
+	border-bottom: 1px solid var(--gray-6);
+}
+
+.assignList {
+	display: flex;
+	flex-direction: column;
+	max-height: 200px;
+	overflow-y: auto;
+}
+
+.assignOption {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	width: 100%;
+	padding: var(--space-2) var(--space-3);
+	border: none;
+	background: none;
+	cursor: pointer;
+	color: var(--gray-12);
+	text-align: left;
+	transition: background-color 0.1s;
+
+	&:hover {
+		background-color: var(--gray-a4);
+	}
+}
+
+.assignOptionSelected {
+	background-color: var(--accent-a3);
+}
+
+.assignOptionText {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-width: 0;
+}
+
+.assignOptionCheck {
+	margin-left: auto;
+	color: var(--accent-9);
+	flex-shrink: 0;
+}
+
+.assignChips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+}
+
+.assignChip {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1);
+	padding: var(--space-1) var(--space-2);
+	border: 1px solid var(--gray-6);
+	border-radius: var(--radius-4);
+	background-color: var(--gray-2);
+	color: var(--gray-12);
+}
+
+.assignChipRemove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	margin-left: var(--space-1);
+	border: none;
+	background: none;
+	cursor: pointer;
+	color: var(--gray-9);
+	border-radius: var(--radius-1);
+
+	&:hover {
+		color: var(--gray-12);
+		background-color: var(--gray-4);
+	}
+}
+
+/* ─── Viewer settings ─── */
+
+.viewerList {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+}
+
+.viewerItem {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1);
+	padding: var(--space-1) var(--space-2);
+	border-radius: var(--radius-4);
+}
+
+.viewerItemRemove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	margin-left: var(--space-1);
+	border: none;
+	background: none;
+	cursor: pointer;
+	color: var(--gray-9);
+	border-radius: var(--radius-1);
+
+	&:hover {
+		color: var(--gray-12);
+		background-color: var(--gray-4);
+	}
+}
+
+.viewerActions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-1);
+}
+
+.viewerAddButton {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1);
+	padding: var(--space-1) var(--space-2);
+	border: 1px dashed var(--gray-6);
+	border-radius: var(--radius-2);
+	background: none;
+	cursor: pointer;
+	color: var(--gray-11);
+	font-size: var(--font-size-1);
+	transition: border-color 0.15s, color 0.15s;
+
+	&:hover {
+		border-color: var(--accent-7);
+		color: var(--accent-11);
+	}
+}
+
+/* ─── File attachment ─── */
+
+.fileInput {
+	display: none;
+}
+
+.fileSelectArea {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.fileSelectButton {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	width: fit-content;
+	padding: var(--space-1) var(--space-3);
+	border: 1px dashed var(--gray-6);
+	border-radius: var(--radius-2);
+	background: none;
+	cursor: pointer;
+	color: var(--gray-11);
+	transition: border-color 0.15s, color 0.15s;
+
+	&:hover {
+		border-color: var(--accent-7);
+		color: var(--accent-11);
+	}
+}
+
+.selectedFileList {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.selectedFileItem {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-1) var(--space-2);
+	background-color: var(--gray-2);
+	border-radius: var(--radius-2);
+	color: var(--gray-12);
+}
+
+.selectedFileRemove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: auto;
+	padding: 0;
+	border: none;
+	background: none;
+	cursor: pointer;
+	color: var(--gray-9);
+	border-radius: var(--radius-1);
+
+	&:hover {
+		color: var(--gray-12);
+		background-color: var(--gray-4);
+	}
+}
+
+.infoBox {
+	padding: var(--space-3);
+	background-color: var(--gray-3);
+	border-radius: var(--radius-2);
+	border-left: 3px solid var(--gray-7);
+}
+
+.actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: var(--space-3);
+	margin-top: var(--space-4);
+}

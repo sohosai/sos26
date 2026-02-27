@@ -150,7 +150,7 @@ export async function callBodyApi<
  * 失敗時: ClientError を throw
  */
 export async function callNoBodyApi<
-	Method extends "DELETE" | "HEAD",
+	Method extends "POST" | "PATCH" | "DELETE" | "HEAD",
 	PathParams extends z.ZodTypeAny | undefined,
 	Query extends z.ZodTypeAny | undefined,
 	Response extends z.ZodTypeAny,

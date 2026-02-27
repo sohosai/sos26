@@ -1,3 +1,7 @@
+/**
+ * アカウント登録時、メールアドレス確認用のリンクを送信するメール
+ * トリガー: POST /auth/register
+ */
 import { z } from "zod";
 import { sendEmail } from "../providers/sendgridClient";
 import { verificationTemplate } from "../templates/verification";

@@ -51,7 +51,7 @@
 委員メンバー一覧を返します。
 
 - `deletedAt: null` のメンバーのみ返却
-- `user` リレーションを含む
+- `user`、`permissions` リレーションを含む
 
 ### POST `/committee/members`
 
@@ -88,6 +88,7 @@
 |---|---|
 | `MEMBER_EDIT` | メンバー編集 |
 | `NOTICE_DELIVER` | お知らせ配信 |
+| `NOTICE_APPROVE` | お知らせ承認 |
 | `FORM_DELIVER` | フォーム配信 |
 
 ### GET `/committee/members/:id/permissions`
@@ -100,13 +101,13 @@
 
 委員メンバーに権限を付与します。
 
-- 入力: `permission`（`MEMBER_EDIT` | `NOTICE_DELIVER` | `FORM_DELIVER`）
+- 入力: `permission`（`MEMBER_EDIT` | `NOTICE_DELIVER` | `NOTICE_APPROVE` | `FORM_DELIVER`）
 - 対象メンバーが存在しない場合: `NOT_FOUND`
 - 同じ権限が既に付与されている場合: `ALREADY_EXISTS`
 
 ### DELETE `/committee/members/:id/permissions/:permission`
 
-委員メンバーの権限を削除します。`:permission` には権限名（`MEMBER_EDIT` | `NOTICE_DELIVER` | `FORM_DELIVER`）を指定します。
+委員メンバーの権限を削除します。`:permission` には権限名（`MEMBER_EDIT` | `NOTICE_DELIVER` | `NOTICE_APPROVE` | `FORM_DELIVER`）を指定します。
 
 - 不正な権限名の場合: `VALIDATION_ERROR`
 - 対象メンバーが存在しない場合: `NOT_FOUND`

@@ -30,7 +30,8 @@
     "db:push": "bun run --cwd apps/api db:push",
     "db:pull": "bun run --cwd apps/api db:pull",
     "db:studio": "bun run --cwd apps/api db:studio",
-    "db:format": "bun run --cwd apps/api db:format"
+    "db:format": "bun run --cwd apps/api db:format",
+    "make-committee-member": "bun run --cwd apps/api make-committee-member"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.11",
