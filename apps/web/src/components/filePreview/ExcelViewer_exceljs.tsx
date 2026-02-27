@@ -210,140 +210,162 @@ function resolveImageOverlay(
 export default function ExcelViewer_exceljs({ file }: Props) {
 	const [sheets, setSheets] = useState<SheetData[]>([]);
 	const [active, setActive] = useState(0);
+	const [isLoading, setIsLoading] = useState(false);
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
 	useEffect(() => {
+		let cancelled = false;
 		const load = async () => {
-			const buf = await file.arrayBuffer();
-			const wb = new ExcelJS.Workbook();
-			await wb.xlsx.load(buf);
+			setIsLoading(true);
+			setErrorMessage(null);
+			try {
+				const buf = await file.arrayBuffer();
+				const wb = new ExcelJS.Workbook();
+				await wb.xlsx.load(buf);
 
-			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>
-			const parsed: SheetData[] = wb.worksheets.map(ws => {
-				const mergeMap = new Map<
-					string,
-					{ rowSpan: number; colSpan: number }
-				>();
-				const coveredSet = new Set<string>();
-				const masterExtent = new Map<
-					string,
-					{ maxRow: number; maxCol: number }
-				>();
+				// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>
+				const parsed: SheetData[] = wb.worksheets.map(ws => {
+					const mergeMap = new Map<
+						string,
+						{ rowSpan: number; colSpan: number }
+					>();
+					const coveredSet = new Set<string>();
+					const masterExtent = new Map<
+						string,
+						{ maxRow: number; maxCol: number }
+					>();
 
-				ws.eachRow({ includeEmpty: true }, row => {
-					row.eachCell({ includeEmpty: true }, cell => {
-						if (!cell.isMerged) return;
-						const master = cell.master;
-						const key = `${master.row},${master.col}`;
-						const prev = masterExtent.get(key);
-						const row = Number(cell.row);
-						const col = Number(cell.col);
-						masterExtent.set(key, {
-							maxRow: Math.max(prev?.maxRow ?? row, row),
-							maxCol: Math.max(prev?.maxCol ?? col, col),
+					ws.eachRow({ includeEmpty: true }, row => {
+						row.eachCell({ includeEmpty: true }, cell => {
+							if (!cell.isMerged) return;
+							const master = cell.master;
+							const key = `${master.row},${master.col}`;
+							const prev = masterExtent.get(key);
+							const row = Number(cell.row);
+							const col = Number(cell.col);
+							masterExtent.set(key, {
+								maxRow: Math.max(prev?.maxRow ?? row, row),
+								maxCol: Math.max(prev?.maxCol ?? col, col),
+							});
 						});
 					});
-				});
 
-				for (const [key, extent] of masterExtent.entries()) {
-					const parts = key.split(",");
-					if (parts.length !== 2) continue;
+					for (const [key, extent] of masterExtent.entries()) {
+						const parts = key.split(",");
+						if (parts.length !== 2) continue;
 
-					const mr = Number(parts[0]);
-					const mc = Number(parts[1]);
-					mergeMap.set(key, {
-						rowSpan: extent.maxRow - mr + 1,
-						colSpan: extent.maxCol - mc + 1,
-					});
-					for (let r = mr; r <= extent.maxRow; r++) {
-						for (let c = mc; c <= extent.maxCol; c++) {
-							if (r !== mr || c !== mc) coveredSet.add(`${r},${c}`);
-						}
-					}
-				}
-
-				const rows: (CellData | null)[][] = [];
-				ws.eachRow({ includeEmpty: true }, row => {
-					const rowData: (CellData | null)[] = [];
-					// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>
-					row.eachCell({ includeEmpty: true }, cell => {
-						const key = `${cell.row},${cell.col}`;
-						if (coveredSet.has(key)) {
-							rowData.push(null);
-							return;
-						}
-						let value: CellValue;
-						if (cell.value == null) value = null;
-						else if (typeof cell.value === "object") value = String(cell.text);
-						else value = cell.value as string | number;
-						const merge = mergeMap.get(key);
-						rowData.push({
-							value,
-							style: extractStyle(cell),
-							rowSpan: merge?.rowSpan,
-							colSpan: merge?.colSpan,
+						const mr = Number(parts[0]);
+						const mc = Number(parts[1]);
+						mergeMap.set(key, {
+							rowSpan: extent.maxRow - mr + 1,
+							colSpan: extent.maxCol - mc + 1,
 						});
+						for (let r = mr; r <= extent.maxRow; r++) {
+							for (let c = mc; c <= extent.maxCol; c++) {
+								if (r !== mr || c !== mc) coveredSet.add(`${r},${c}`);
+							}
+						}
+					}
+
+					const rows: (CellData | null)[][] = [];
+					ws.eachRow({ includeEmpty: true }, row => {
+						const rowData: (CellData | null)[] = [];
+						// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>
+						row.eachCell({ includeEmpty: true }, cell => {
+							const key = `${cell.row},${cell.col}`;
+							if (coveredSet.has(key)) {
+								rowData.push(null);
+								return;
+							}
+							let value: CellValue;
+							if (cell.value == null) value = null;
+							else if (typeof cell.value === "object")
+								value = String(cell.text);
+							else value = cell.value as string | number;
+							const merge = mergeMap.get(key);
+							rowData.push({
+								value,
+								style: extractStyle(cell),
+								rowSpan: merge?.rowSpan,
+								colSpan: merge?.colSpan,
+							});
+						});
+						rows.push(rowData);
 					});
-					rows.push(rowData);
+
+					const colWidths: number[] = [0];
+					// biome-ignore lint/suspicious/useIterableCallbackReturn: <explanation>
+					ws.columns.forEach(col =>
+						colWidths.push(col?.width ? col.width * 7 : 80)
+					);
+
+					const rowHeights: number[] = [0];
+					ws.eachRow({ includeEmpty: true }, row =>
+						rowHeights.push(row.height ? row.height * 1.33 : 20)
+					);
+
+					const images: ImageOverlay[] = [];
+
+					for (const img of ws.getImages()) {
+						try {
+							const imgData = wb.getImage(img.imageId as unknown as number);
+							// console.log(imgData);
+							if (!imgData?.buffer) continue;
+
+							const ext = (imgData.extension ?? "png").toLowerCase();
+							const mimeMap: Record<string, string> = {
+								png: "image/png",
+								jpg: "image/jpeg",
+								jpeg: "image/jpeg",
+								gif: "image/gif",
+								bmp: "image/bmp",
+								tiff: "image/tiff",
+								svg: "image/svg+xml",
+							};
+							const mime = mimeMap[ext] ?? "image/png";
+							const bytes = new Uint8Array(imgData.buffer as ArrayBuffer);
+							let binary = "";
+							for (const byte of bytes) {
+								binary += String.fromCharCode(byte);
+							}
+							const base64 = btoa(binary);
+							const dataUrl = `data:${mime};base64,${base64}`;
+
+							const overlay = resolveImageOverlay(
+								img,
+								colWidths,
+								rowHeights,
+								dataUrl
+							);
+							if (overlay) images.push(overlay);
+						} catch {
+							toast.error("ファイル内の画像の読み込みに失敗しました。");
+						}
+					}
+
+					return { name: ws.name, rows, colWidths, rowHeights, images };
 				});
 
-				const colWidths: number[] = [0];
-				// biome-ignore lint/suspicious/useIterableCallbackReturn: <explanation>
-				ws.columns.forEach(col =>
-					colWidths.push(col?.width ? col.width * 7 : 80)
-				);
-
-				const rowHeights: number[] = [0];
-				ws.eachRow({ includeEmpty: true }, row =>
-					rowHeights.push(row.height ? row.height * 1.33 : 20)
-				);
-
-				const images: ImageOverlay[] = [];
-
-				for (const img of ws.getImages()) {
-					try {
-						const imgData = wb.getImage(img.imageId as unknown as number);
-						// console.log(imgData);
-						if (!imgData?.buffer) continue;
-
-						const ext = (imgData.extension ?? "png").toLowerCase();
-						const mimeMap: Record<string, string> = {
-							png: "image/png",
-							jpg: "image/jpeg",
-							jpeg: "image/jpeg",
-							gif: "image/gif",
-							bmp: "image/bmp",
-							tiff: "image/tiff",
-							svg: "image/svg+xml",
-						};
-						const mime = mimeMap[ext] ?? "image/png";
-						const bytes = new Uint8Array(imgData.buffer as ArrayBuffer);
-						let binary = "";
-						for (const byte of bytes) {
-							binary += String.fromCharCode(byte);
-						}
-						const base64 = btoa(binary);
-						const dataUrl = `data:${mime};base64,${base64}`;
-
-						const overlay = resolveImageOverlay(
-							img,
-							colWidths,
-							rowHeights,
-							dataUrl
-						);
-						// console.log(overlay);
-						if (overlay) images.push(overlay);
-					} catch {
-						toast.error("ファイル内の画像の読み込みに失敗しました。");
-					}
+				if (!cancelled) {
+					setSheets(parsed);
+					setActive(0);
 				}
-
-				return { name: ws.name, rows, colWidths, rowHeights, images };
-			});
-
-			setSheets(parsed);
-			setActive(0);
+			} catch {
+				if (!cancelled) {
+					setSheets([]);
+					setActive(0);
+					setErrorMessage("Excelファイルの読み込みに失敗しました。");
+				}
+			} finally {
+				if (!cancelled) {
+					setIsLoading(false);
+				}
+			}
 		};
 		load();
+		return () => {
+			cancelled = true;
+		};
 	}, [file]);
 
 	const sheet = sheets[active];
@@ -357,6 +379,10 @@ export default function ExcelViewer_exceljs({ file }: Props) {
 
 	return (
 		<div className={styles.viewer}>
+			{isLoading && (
+				<p className={styles.status}>Excelファイルを読み込み中です...</p>
+			)}
+			{errorMessage && <p className={styles.status}>{errorMessage}</p>}
 			{/* Sheet tabs */}
 			{sheets.length > 1 && (
 				<div className={styles.tabs}>
@@ -424,7 +450,7 @@ export default function ExcelViewer_exceljs({ file }: Props) {
 								top: img.top,
 								width: img.width,
 								height: "auto",
-								pointerEvents: "none", // don't block table interactions
+								pointerEvents: "none",
 							}}
 						/>
 					))}

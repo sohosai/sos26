@@ -2,6 +2,12 @@
 	overflow: auto;
 }
 
+.status {
+	margin: 0 0 var(--space-2);
+	font-size: var(--font-size-2);
+	color: var(--gray-11);
+}
+
 .root {
   display: flex;
   flex-direction: column;
@@ -66,7 +72,7 @@
   }
 }
 
-.tableWrap {
+.tableWrapper {
   flex: 1;
   overflow: auto;
   font-size: 13px;

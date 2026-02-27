@@ -1,6 +1,6 @@
-// import * as Dialog from "@radix-ui/react-dialog";
 import { Dialog, Text } from "@radix-ui/themes";
 import { IconX } from "@tabler/icons-react";
+import { useEffect, useState } from "react";
 // import ExcelViewer from "./ExcelViewer";
 import ExcelViewer_exceljs from "./ExcelViewer_exceljs";
 import styles from "./FilePreviewDialog.module.scss";
@@ -19,16 +19,29 @@ function getExt(file: File) {
 
 function Viewer({ file }: { file: File }) {
 	const ext = getExt(file);
-	const url = URL.createObjectURL(file); // Dialog再マウント時に生成
+	const isImage = ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext);
+	const [imageUrl, setImageUrl] = useState<string | null>(null);
+	useEffect(() => {
+		if (!isImage) {
+			setImageUrl(null);
+			return;
+		}
 
-	if (ext === "pdf") return <PdfViewer url={url} />;
-	// if (ext === "xlsx" || ext === "xls") return <ExcelViewer file={file} />;
+		const objectUrl = URL.createObjectURL(file);
+		setImageUrl(objectUrl);
+
+		return () => {
+			URL.revokeObjectURL(objectUrl);
+		};
+	}, [file, isImage]);
+
+	if (ext === "pdf") return <PdfViewer file={file} />;
 	if (ext === "xlsx" || ext === "xls")
 		return <ExcelViewer_exceljs file={file} />;
 
 	if (ext === "docx") return <WordViewer file={file} />;
-	if (["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext))
-		return <img src={url} className={styles.image} alt={file.name} />;
+	if (isImage && imageUrl)
+		return <img src={imageUrl} className={styles.image} alt={file.name} />;
 
 	return (
 		<div className={styles.unsupported}>
