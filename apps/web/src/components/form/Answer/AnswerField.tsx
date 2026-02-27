@@ -17,7 +17,9 @@ type FieldProps = {
 };
 
 export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
-	const Label = () => <Text size="2">{item.label}</Text>;
+	const Label = () => (
+		<Text size="2">{item.label + (item.required ? " *" : "")}</Text>
+	);
 	const Description = () => {
 		return item.description && <Text size="1">{item.description}</Text>;
 	};
@@ -32,7 +34,7 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 						placeholder="回答を入力してください"
 						value={(value as string) ?? ""}
 						onChange={value => onChange(value)}
-						required={item.required}
+						// required={item.required}
 						disabled={disabled}
 						aria-label={item.label}
 					/>
@@ -50,7 +52,7 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 						onChange={value => onChange(value)}
 						placeholder="回答を入力してください"
 						rows={3}
-						required={item.required}
+						// required={item.required}
 						resize="none"
 						autoGrow
 						disabled={disabled}
@@ -68,7 +70,7 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 						label=""
 						value={value as number | null}
 						onChange={onChange}
-						required={item.required}
+						// required={item.required}
 						disabled={disabled}
 						aria-label={item.label}
 						// 必要になったら有効化
@@ -87,7 +89,7 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 						label=""
 						value={value as File | null}
 						onChange={onChange}
-						required={item.required}
+						// required={item.required}
 						disabled={disabled}
 						aria-label={item.label}
 					/>
@@ -103,7 +105,7 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 						label=""
 						value={(value as string) ?? ""}
 						onValueChange={val => onChange(val)}
-						required={item.required}
+						// required={item.required}
 						name={item.id}
 						disabled={disabled}
 						aria-label={item.label}
@@ -126,7 +128,7 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 						label=""
 						value={(value as string[]) ?? []}
 						onValueChange={val => onChange(val)}
-						required={item.required}
+						// required={item.required}
 						name={item.id}
 						disabled={disabled}
 						aria-label={item.label}
