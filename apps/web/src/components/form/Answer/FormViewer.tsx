@@ -1,6 +1,6 @@
 import { Text } from "@radix-ui/themes";
-import { IconCheck } from "@tabler/icons-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/primitives";
 import type { Form, FormAnswers, FormAnswerValue } from "../type";
 import { AnswerField } from "./AnswerField";
@@ -8,14 +8,21 @@ import styles from "./FormViewer.module.scss";
 
 type Props = {
 	form: Form;
-	onSubmit?: (answers: FormAnswers) => void;
-	onClose?: () => void;
+	onSubmit?: (answers: FormAnswers) => Promise<void>;
+	initialAnswers?: FormAnswers;
+	onSaveDraft?: (answers: FormAnswers) => Promise<void>;
 };
 
-export function FormViewer({ form, onSubmit, onClose }: Props) {
-	const [answers, setAnswers] = useState<FormAnswers>({});
+export function FormViewer({
+	form,
+	onSubmit,
+	initialAnswers = {},
+	onSaveDraft,
+}: Props) {
+	const [answers, setAnswers] = useState<FormAnswers>(initialAnswers);
 	const [errors, setErrors] = useState<Record<string, string>>({});
-	const [submitted, setSubmitted] = useState(false);
+	const [isSavingDraft, setIsSavingDraft] = useState(false);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const updateAnswer = (itemId: string, value: FormAnswerValue) => {
 		setAnswers(prev => ({ ...prev, [itemId]: value }));
@@ -43,31 +50,31 @@ export function FormViewer({ form, onSubmit, onClose }: Props) {
 		return Object.keys(newErrors).length === 0;
 	};
 
-	const handleSaveDraft = () => {
-		// TODO: 下書きを保存する処理を実装
+	const handleSaveDraft = async () => {
+		setIsSavingDraft(true);
+		try {
+			await onSaveDraft?.(answers);
+			toast.success("下書きを保存しました");
+		} catch {
+			toast.error("下書きの保存に失敗しました");
+		} finally {
+			setIsSavingDraft(false);
+		}
 	};
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!validate()) return;
-		setSubmitted(true);
-		onSubmit?.(answers);
+		setIsSubmitting(true);
+		try {
+			await onSubmit?.(answers);
+			toast.success("送信しました");
+		} catch {
+			toast.error("送信に失敗しました");
+		} finally {
+			setIsSubmitting(false);
+		}
 	};
-
-	if (submitted) {
-		return (
-			<div className={styles.complete}>
-				<span className={styles.completeHeader}>
-					<IconCheck size={24} />
-					<Text size="5" weight="bold">
-						送信しました
-					</Text>
-				</span>
-				<Text size="2">ご回答ありがとうございました。</Text>
-				<Button onClick={onClose}>閉じる</Button>
-			</div>
-		);
-	}
 
 	return (
 		<form className={styles.root} onSubmit={handleSubmit} noValidate>
@@ -96,10 +103,20 @@ export function FormViewer({ form, onSubmit, onClose }: Props) {
 			</ul>
 
 			<div className={styles.footer}>
-				<Button intent="secondary" type="button" onClick={handleSaveDraft}>
-					下書きを保存
+				{onSaveDraft && (
+					<Button
+						intent="secondary"
+						type="button"
+						onClick={handleSaveDraft}
+						loading={isSavingDraft}
+						disabled={isSubmitting}
+					>
+						下書きを保存
+					</Button>
+				)}
+				<Button type="submit" loading={isSubmitting} disabled={isSavingDraft}>
+					送信する
 				</Button>
-				<Button type="submit">送信する</Button>
 			</div>
 		</form>
 	);

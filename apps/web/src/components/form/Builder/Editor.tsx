@@ -1,5 +1,6 @@
 import { IconPlus } from "@tabler/icons-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button, TextArea, TextField } from "@/components/primitives";
 import type { Form, FormItem } from "../type";
 import styles from "./Editor.module.scss";
@@ -8,9 +9,10 @@ import { FormItemList } from "./ItemList";
 type Props = {
 	initialForm: Form;
 	onSubmit?: (form: Form) => void;
+	loading: boolean;
 };
 
-export function FormEditor({ initialForm, onSubmit }: Props) {
+export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 	const [formName, setFormName] = useState(initialForm.name);
 	const [formDescription, setFormDescription] = useState(
 		initialForm.description ?? ""
@@ -23,7 +25,7 @@ export function FormEditor({ initialForm, onSubmit }: Props) {
 					{
 						id: crypto.randomUUID(),
 						label: "",
-						type: "text",
+						type: "TEXT",
 						required: false,
 					},
 				]
@@ -35,7 +37,7 @@ export function FormEditor({ initialForm, onSubmit }: Props) {
 			{
 				id: crypto.randomUUID(),
 				label: "",
-				type: "text",
+				type: "TEXT",
 				required: false,
 			},
 		]);
@@ -52,6 +54,31 @@ export function FormEditor({ initialForm, onSubmit }: Props) {
 	};
 
 	const handleSubmit = () => {
+		const invalidChoiceItem = items.find(item => {
+			if (item.type === "CHECKBOX" || item.type === "SELECT") {
+				if (!item.options || item.options.length === 0) return true;
+				if (item.options.some(opt => opt.label.trim() === "")) return true;
+			}
+			return false;
+		});
+
+		if (invalidChoiceItem) {
+			toast.error("選択式の項目には、空でない選択肢を1つ以上追加してください");
+			return;
+		}
+
+		if (formName.trim() === "") {
+			toast.error("フォーム名を入力してください");
+			return;
+		}
+
+		const emptyLabelItem = items.find(item => item.label.trim() === "");
+
+		if (emptyLabelItem) {
+			toast.error("すべての設問に項目名を入力してください");
+			return;
+		}
+
 		const form: Form = {
 			id: initialForm.id,
 			name: formName.trim(),
@@ -92,7 +119,9 @@ export function FormEditor({ initialForm, onSubmit }: Props) {
 				<IconPlus size={16} stroke={1.5} />
 				項目を追加
 			</Button>
-			<Button onClick={handleSubmit}>保存</Button>
+			<Button onClick={handleSubmit} loading={loading}>
+				保存
+			</Button>
 		</div>
 	);
 }

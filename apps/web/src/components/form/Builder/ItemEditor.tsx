@@ -11,7 +11,13 @@ import {
 	IconTextSize,
 	IconTrash,
 } from "@tabler/icons-react";
-import { IconButton, Select, Switch, TextField } from "@/components/primitives";
+import {
+	IconButton,
+	Select,
+	Switch,
+	TextArea,
+	TextField,
+} from "@/components/primitives";
 import type { FormItem } from "../type";
 import { AnswerFieldEditor } from "./AnswerFieldEditor";
 import styles from "./ItemEditor.module.scss";
@@ -20,27 +26,27 @@ const ICON_SIZE = 16;
 
 const FIELD_TYPES = [
 	{
-		value: "text",
+		value: "TEXT",
 		label: "テキスト（短文）",
 		icon: <IconTextSize size={ICON_SIZE} />,
 	},
 	{
-		value: "textarea",
+		value: "TEXTAREA",
 		label: "テキスト（長文）",
 		icon: <IconAlignLeft size={ICON_SIZE} />,
 	},
 	{
-		value: "select",
+		value: "SELECT",
 		label: "単一選択",
 		icon: <IconCircleDot size={ICON_SIZE} />,
 	},
 	{
-		value: "checkbox",
+		value: "CHECKBOX",
 		label: "複数選択",
 		icon: <IconSquareCheck size={ICON_SIZE} />,
 	},
-	{ value: "number", label: "数値", icon: <IconNumbers size={ICON_SIZE} /> },
-	{ value: "file", label: "ファイル", icon: <IconFile size={ICON_SIZE} /> },
+	{ value: "NUMBER", label: "数値", icon: <IconNumbers size={ICON_SIZE} /> },
+	{ value: "FILE", label: "ファイル", icon: <IconFile size={ICON_SIZE} /> },
 ];
 
 type Props = {
@@ -105,22 +111,35 @@ export function FormItemEditor({
 
 						{/* タイプ選択 */}
 						<div className={styles.formItemSetting}>
-							<Select
-								options={FIELD_TYPES}
-								value={item.type}
-								onValueChange={value =>
-									onUpdate(item.id, { type: value as FormItem["type"] })
-								}
-								aria-label="フィールドタイプ"
-							/>
-
+							<div>
+								<Select
+									options={FIELD_TYPES}
+									value={item.type}
+									onValueChange={value =>
+										onUpdate(item.id, { type: value as FormItem["type"] })
+									}
+									aria-label="フィールドタイプ"
+								/>
+							</div>
 							<Switch
 								label="必須"
+								checked={item.required}
 								onCheckedChange={checked =>
 									onUpdate(item.id, { required: checked })
 								}
 							/>
 						</div>
+
+						{/* 説明 */}
+						<TextArea
+							label=""
+							aria-label={`説明 ${index + 1}`}
+							value={item.description}
+							onChange={value => onUpdate(item.id, { description: value })}
+							placeholder={`説明を入力してください（任意）`}
+							autoGrow
+							resize="none"
+						/>
 
 						{/* 解答欄 */}
 						<AnswerFieldEditor

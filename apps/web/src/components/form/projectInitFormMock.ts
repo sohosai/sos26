@@ -11,31 +11,31 @@ export const projectRegisterMockForm: Form = {
 		{
 			id: "name",
 			label: "企画名",
-			type: "text",
+			type: "TEXT",
 			required: true,
 		},
 		{
 			id: "namePhonetic",
 			label: "企画名（ふりがな）",
-			type: "text",
+			type: "TEXT",
 			required: true,
 		},
 		{
 			id: "organizationName",
 			label: "企画団体名",
-			type: "text",
+			type: "TEXT",
 			required: true,
 		},
 		{
 			id: "organizationNamePhonetic",
 			label: "企画団体名（ふりがな）",
-			type: "text",
+			type: "TEXT",
 			required: true,
 		},
 		{
 			id: "type",
 			label: "企画区分",
-			type: "select",
+			type: "SELECT",
 			required: true,
 			options: [
 				{ id: "NORMAL", label: "通常企画" },

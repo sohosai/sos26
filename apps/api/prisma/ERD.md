@@ -147,6 +147,7 @@ erDiagram
   String id PK
   String formId FK
   String label
+  String description "nullable"
   FormItemType type
   Boolean required
   Int sortOrder
@@ -180,6 +181,7 @@ erDiagram
   DateTime scheduledSendAt
   DateTime deadlineAt "nullable"
   Boolean allowLateResponse
+  Boolean required
   DateTime createdAt
   DateTime updatedAt
 }
@@ -526,6 +528,7 @@ Properties as follows:
 - `id`:
 - `formId`:
 - `label`:
+- `description`:
 - `type`:
 - `required`:
 - `sortOrder`:
@@ -568,6 +571,7 @@ Properties as follows:
 - `scheduledSendAt`:
 - `deadlineAt`:
 - `allowLateResponse`:
+- `required`:
 - `createdAt`:
 - `updatedAt`:
 
