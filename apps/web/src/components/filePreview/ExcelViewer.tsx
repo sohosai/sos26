@@ -423,19 +423,19 @@ export default function ExcelViewer({ file }: Props) {
 					<table className={styles.table}>
 						<colgroup>
 							{Array.from({ length: colCount }, (_, ci) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+								// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>表示専用で並び順が変わらないため
 								<col key={ci} style={{ width: colWidths[ci + 1] ?? 80 }} />
 							))}
 						</colgroup>
 						<tbody>
 							{rows.map((row, ri) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+								// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>表示専用で並び順が変わらないため
 								<tr key={ri} style={{ height: rowHeights[ri + 1] ?? 20 }}>
 									{row.map((cell, ci) => {
 										if (cell === null) return null;
 										return (
 											<td
-												// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+												// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>表示専用で並び順が変わらないため
 												key={`cell-${ri}-${ci}`}
 												rowSpan={cell.rowSpan}
 												colSpan={cell.colSpan}
