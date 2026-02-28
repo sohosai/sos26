@@ -11,6 +11,7 @@ import {
 } from "@/components/primitives";
 import { requestFormAuthorization } from "@/lib/api/committee-form";
 import { listCommitteeProjects } from "@/lib/api/committee-project";
+import { validateAuthorizationDates } from "@/lib/form/AuthDateCheck";
 import { isClientError } from "@/lib/http/error";
 import styles from "./FormPublishRequestDialog.module.scss";
 
@@ -121,6 +122,21 @@ export function FormPublishRequestDialog({
 		});
 	};
 
+	function getAuthorizationDateErrorMessage(params: {
+		scheduledSendAt: Date;
+		deadlineAt: Date | null;
+	}): string | null {
+		const error = validateAuthorizationDates(params);
+
+		switch (error) {
+			case "PAST_SCHEDULED_SEND_AT":
+				return "配信希望日時は未来の日時を指定してください。";
+			case "INVALID_SCHEDULE_DEADLINE_ORDER":
+				return "配信希望日時と回答期限の順番が不正です。";
+			default:
+				return null;
+		}
+	}
 	const canSubmit =
 		approverId && sendDate && sendTime && selectedProjectIds.size > 0;
 
@@ -133,6 +149,17 @@ export function FormPublishRequestDialog({
 			const deadlineAt = deadlineDate
 				? new Date(`${deadlineDate}T${deadlineTime}+09:00`)
 				: null;
+
+			const message = getAuthorizationDateErrorMessage({
+				scheduledSendAt,
+				deadlineAt,
+			});
+
+			if (message) {
+				setError(message);
+				setIsSubmitting(false);
+				return;
+			}
 
 			await requestFormAuthorization(formId, {
 				requestedToId: approverId,

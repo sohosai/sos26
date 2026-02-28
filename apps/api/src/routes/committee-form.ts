@@ -445,6 +445,14 @@ committeeFormRoute.post(
 			);
 		}
 
+		const now = new Date();
+		// scheduledSendAt が未来であること
+		if (data.scheduledSendAt && data.scheduledSendAt <= now) {
+			throw Errors.invalidRequest("配信希望日時は未来の日時を指定してください");
+		} else if (data.deadlineAt && data.scheduledSendAt >= data.deadlineAt) {
+			throw Errors.invalidRequest("配信希望日時と締め切り日時の順番が不正です");
+		}
+
 		// 配信先企画の存在確認
 		const projects = await prisma.project.findMany({
 			where: { id: { in: projectIds }, deletedAt: null },
@@ -507,6 +515,22 @@ committeeFormRoute.patch(
 
 		if (authorization.status !== "PENDING") {
 			throw Errors.invalidRequest("この承認申請は既に処理済みです");
+		}
+
+		const now = new Date();
+		// 承認する場合、scheduledSendAt が未来であること
+		if (status === "APPROVED" && authorization.scheduledSendAt <= now) {
+			throw Errors.invalidRequest(
+				"配信希望日時を過ぎているため承認できません。新しい日時で再申請してください"
+			);
+		} else if (
+			status === "APPROVED" &&
+			authorization.deadlineAt &&
+			authorization.scheduledSendAt >= authorization.deadlineAt
+		) {
+			throw Errors.invalidRequest(
+				"配信希望日時と締め切り日時の順番が不正であるため承認できません。新しい日時で再申請してください"
+			);
 		}
 
 		const updated = await prisma.formAuthorization.update({
