@@ -13,7 +13,7 @@ import {
 import {
 	type ActionItem,
 	ActionsMenu,
-} from "@/components/patterns/ActionMenu/ActonMenu";
+} from "@/components/patterns/ActionMenu/ActionMenu";
 import { Button } from "@/components/primitives";
 import { listMyForms } from "@/lib/api/committee-form";
 import { useAuthStore } from "@/lib/auth";
