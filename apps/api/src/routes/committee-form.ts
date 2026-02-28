@@ -1,7 +1,9 @@
 import {
 	addFormCollaboratorRequestSchema,
 	createFormRequestSchema,
+	formAuthorizationPathParamsSchema,
 	requestFormAuthorizationRequestSchema,
+	updateFormAuthorizationRequestSchema,
 	updateFormDetailRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
@@ -467,74 +469,49 @@ committeeFormRoute.post(
 	}
 );
 
-// ─────────────────────────────────────────
-// POST /committee/forms/:formId/authorizations/:authorizationId/approve
-// 配信承認を承認
-// ─────────────────────────────────────────
-committeeFormRoute.post(
-	"/:formId/authorizations/:authorizationId/approve",
+// ─────────────────────────────────────────────────────────────
+// PATCH /committee/forms/:formId/authorizations/:authorizationId
+// 承認 / 却下（requestedTo 本人のみ）
+// ─────────────────────────────────────────────────────────────
+committeeFormRoute.patch(
+	"/:formId/authorizations/:authorizationId",
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId, authorizationId } = c.req.param();
-		const userId = c.get("user").id;
+		const user = c.get("user");
+		const { formId, authorizationId } = formAuthorizationPathParamsSchema.parse(
+			{
+				formId: c.req.param("formId"),
+				authorizationId: c.req.param("authorizationId"),
+			}
+		);
+		const body = await c.req.json().catch(() => ({}));
+		const { status } = updateFormAuthorizationRequestSchema.parse(body);
 
 		const authorization = await prisma.formAuthorization.findFirst({
 			where: { id: authorizationId, formId },
+			include: { form: { select: { deletedAt: true } } },
 		});
-		if (!authorization) throw Errors.notFound("承認リクエストが見つかりません");
 
-		if (authorization.requestedToId !== userId) {
-			throw Errors.forbidden("この操作を行う権限がありません");
+		if (!authorization) {
+			throw Errors.notFound("承認申請が見つかりません");
+		}
+
+		if (authorization.form.deletedAt) {
+			throw Errors.invalidRequest("削除済みのフォームは承認できません");
+		}
+
+		if (authorization.requestedToId !== user.id) {
+			throw Errors.forbidden("この承認申請を操作する権限がありません");
 		}
 
 		if (authorization.status !== "PENDING") {
-			throw Errors.invalidRequest("すでに審査済みの承認リクエストです");
+			throw Errors.invalidRequest("この承認申請は既に処理済みです");
 		}
 
 		const updated = await prisma.formAuthorization.update({
-			where: { id: authorizationId },
-			data: {
-				status: "APPROVED",
-				decidedAt: new Date(),
-			},
-		});
-
-		return c.json({ authorization: updated });
-	}
-);
-
-// ─────────────────────────────────────────
-// POST /committee/forms/:formId/authorizations/:authorizationId/reject
-// 配信承認を却下
-// ─────────────────────────────────────────
-committeeFormRoute.post(
-	"/:formId/authorizations/:authorizationId/reject",
-	requireAuth,
-	requireCommitteeMember,
-	async c => {
-		const { formId, authorizationId } = c.req.param();
-		const userId = c.get("user").id;
-
-		const authorization = await prisma.formAuthorization.findFirst({
-			where: { id: authorizationId, formId },
-		});
-		if (!authorization) throw Errors.notFound("承認リクエストが見つかりません");
-
-		if (authorization.requestedToId !== userId) {
-			throw Errors.forbidden("この操作を行う権限がありません");
-		}
-
-		if (authorization.status !== "PENDING") {
-			throw Errors.invalidRequest("すでに審査済みの承認リクエストです");
-		}
-
-		const updated = await prisma.formAuthorization.update({
-			where: { id: authorizationId },
-			data: {
-				status: "REJECTED",
-				decidedAt: new Date(),
-			},
+			where: { id: authorizationId, status: "PENDING" },
+			data: { status, decidedAt: new Date() },
 		});
 
 		return c.json({ authorization: updated });

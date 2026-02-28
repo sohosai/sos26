@@ -1,8 +1,6 @@
 import {
 	addFormCollaboratorRequestSchema,
 	addFormCollaboratorResponseSchema,
-	approveFormAuthorizationRequestSchema,
-	approveFormAuthorizationResponseSchema,
 	createFormRequestSchema,
 	createFormResponseSchema,
 	deleteFormResponseSchema,
@@ -12,11 +10,11 @@ import {
 	getFormDetailResponseSchema,
 	listFormResponsesResponseSchema,
 	listMyFormsResponseSchema,
-	rejectFormAuthorizationRequestSchema,
-	rejectFormAuthorizationResponseSchema,
 	removeFormCollaboratorResponseSchema,
 	requestFormAuthorizationRequestSchema,
 	requestFormAuthorizationResponseSchema,
+	updateFormAuthorizationRequestSchema,
+	updateFormAuthorizationResponseSchema,
 	updateFormDetailRequestSchema,
 	updateFormDetailResponseSchema,
 } from "../schemas/form";
@@ -197,47 +195,26 @@ export const requestFormAuthorizationEndpoint: BodyEndpoint<
 } as const;
 
 /**
- * POST /committee/forms/:formId/authorizations/:authorizationId/approve
- * 配信承認を承認
- *
- * - requestedTo のユーザーのみ
- */
-export const approveFormAuthorizationEndpoint: BodyEndpoint<
-	"POST",
-	"/committee/forms/:formId/authorizations/:authorizationId/approve",
-	typeof formAuthorizationPathParamsSchema,
-	undefined,
-	typeof approveFormAuthorizationRequestSchema,
-	typeof approveFormAuthorizationResponseSchema
-> = {
-	method: "POST",
-	path: "/committee/forms/:formId/authorizations/:authorizationId/approve",
-	pathParams: formAuthorizationPathParamsSchema,
-	query: undefined,
-	request: approveFormAuthorizationRequestSchema,
-	response: approveFormAuthorizationResponseSchema,
-} as const;
-
-/**
  * POST /committee/forms/:formId/authorizations/:authorizationId/reject
- * 配信承認を却下
+ * 配信承認を承認/却下
  *
  * - requestedTo のユーザーのみ
  */
-export const rejectFormAuthorizationEndpoint: BodyEndpoint<
-	"POST",
-	"/committee/forms/:formId/authorizations/:authorizationId/reject",
+
+export const updateFormAuthorizationEndpoint: BodyEndpoint<
+	"PATCH",
+	"/committee/forms/:formId/authorizations/:authorizationId",
 	typeof formAuthorizationPathParamsSchema,
 	undefined,
-	typeof rejectFormAuthorizationRequestSchema,
-	typeof rejectFormAuthorizationResponseSchema
+	typeof updateFormAuthorizationRequestSchema,
+	typeof updateFormAuthorizationResponseSchema
 > = {
-	method: "POST",
-	path: "/committee/forms/:formId/authorizations/:authorizationId/reject",
+	method: "PATCH",
+	path: "/committee/forms/:formId/authorizations/:authorizationId",
 	pathParams: formAuthorizationPathParamsSchema,
 	query: undefined,
-	request: rejectFormAuthorizationRequestSchema,
-	response: rejectFormAuthorizationResponseSchema,
+	request: updateFormAuthorizationRequestSchema,
+	response: updateFormAuthorizationResponseSchema,
 } as const;
 
 export const listFormResponsesEndpoint: GetEndpoint<
