@@ -1,4 +1,5 @@
-import { AlertDialog, Heading, Separator, Text } from "@radix-ui/themes";
+import { AlertDialog, Badge, Heading, Separator, Text } from "@radix-ui/themes";
+import type { GetFormDetailResponse } from "@sos26/shared";
 import { IconArrowLeft, IconCalendar, IconClock } from "@tabler/icons-react";
 import {
 	createFileRoute,
@@ -19,6 +20,7 @@ import {
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { useAuthStore } from "@/lib/auth";
 import { formDetailToForm } from "@/lib/form/convert";
+import { getFormStatusFromAuth } from "@/lib/form/form-status";
 import { formatDate } from "@/lib/format";
 import { EditFormDialog } from "./-components/EditFormDialog";
 import { FormDetailSidebar } from "./-components/FormDetailSidebar";
@@ -139,6 +141,7 @@ function RouteComponent() {
 				</button>
 
 				<header className={styles.titleSection}>
+					<FormStatusBadge form={form} />
 					<Heading size="5">{form.title}</Heading>
 					{form.description && (
 						<Text size="2" color="gray">
@@ -220,6 +223,29 @@ function RouteComponent() {
 					</div>
 				</AlertDialog.Content>
 			</AlertDialog.Root>
+		</div>
+	);
+}
+
+function FormStatusBadge({ form }: { form: GetFormDetailResponse["form"] }) {
+	const latestAuth = form.authorizationDetail;
+
+	const status = getFormStatusFromAuth(
+		latestAuth
+			? {
+					status: latestAuth.status,
+					deliveredAt: latestAuth.scheduledSendAt,
+					allowLateResponse: latestAuth.allowLateResponse,
+					deadlineAt: latestAuth.deadlineAt,
+				}
+			: null
+	);
+
+	return (
+		<div>
+			<Badge variant="soft" size="2" color={status.color}>
+				{status.label}
+			</Badge>
 		</div>
 	);
 }
