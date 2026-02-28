@@ -349,12 +349,23 @@ committeeFormRoute.post(
 		});
 		if (!targetUser) throw Errors.notFound("ユーザーが見つかりません");
 
-		// すでに共同編集者か確認
+		// 既存チェック（ソフトデリート済みも含めて検索）
 		const existing = await prisma.formCollaborator.findFirst({
-			where: { formId, userId: targetUserId, deletedAt: null },
+			where: { formId, userId: targetUserId },
 		});
-		if (existing)
-			throw Errors.alreadyExists("すでに共同編集者として登録されています");
+		if (existing) {
+			if (!existing.deletedAt) {
+				throw Errors.alreadyExists("既に共同編集者です");
+			}
+
+			// ソフトデリート済み → 再有効化
+			const reactivated = await prisma.formCollaborator.update({
+				where: { id: existing.id },
+				data: { deletedAt: null },
+			});
+
+			return c.json({ collaborator: reactivated });
+		}
 
 		const body = await c.req.json().catch(() => ({}));
 		const data = addFormCollaboratorRequestSchema.parse(body);
