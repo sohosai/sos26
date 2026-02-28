@@ -23,7 +23,7 @@ import {
 import type { BodyEndpoint, GetEndpoint, NoBodyEndpoint } from "./types";
 
 /**
- * POST /form/create
+ * POST /committee/forms/create
  * フォームを作成
  *
  * - 認証必須
@@ -45,7 +45,7 @@ export const createFormEndpoint: BodyEndpoint<
 } as const;
 
 /**
- * GET /form/list
+ * GET /committee/forms/list
  * 自分が作成・共同編集しているフォーム一覧を取得
  */
 export const listMyFormsEndpoint: GetEndpoint<
@@ -63,7 +63,7 @@ export const listMyFormsEndpoint: GetEndpoint<
 } as const;
 
 /**
- * GET /form/:formId/detail
+ * GET /committee/forms/:formId/detail
  * フォームの詳細を取得（項目含む）
  */
 export const getFormDetailEndpoint: GetEndpoint<
@@ -81,7 +81,7 @@ export const getFormDetailEndpoint: GetEndpoint<
 } as const;
 
 /**
- * PATCH /form/:formId/detail
+ * PATCH /committee/forms/:formId/detail
  * フォームのタイトル・説明を更新
  *
  * - 作成者または書き込み権限付き共同編集者のみ
@@ -103,7 +103,7 @@ export const updateFormDetailEndpoint: BodyEndpoint<
 } as const;
 
 /**
- * DELETE /form/:formId
+ * DELETE /committee/forms/:formId
  * フォームを論理削除
  *
  * - 作成者のみ
@@ -128,7 +128,7 @@ export const deleteFormEndpoint: NoBodyEndpoint<
 // ─────────────────────────────────────────────────────────────
 
 /**
- * POST /form/:formId/collaborators/:userId
+ * POST /committee/forms/:formId/collaborators/:userId
  * 共同編集者を追加
  *
  * - 作成者のみ
@@ -150,7 +150,7 @@ export const addFormCollaboratorEndpoint: BodyEndpoint<
 } as const;
 
 /**
- * DELETE /form/:formId/collaborators/:userId
+ * DELETE /committee/forms/:formId/collaborators/:userId
  * 共同編集者を削除
  *
  * - 作成者のみ
@@ -175,7 +175,7 @@ export const removeFormCollaboratorEndpoint: NoBodyEndpoint<
 // ─────────────────────────────────────────────────────────────
 
 /**
- * POST /form/:formId/authorizations
+ * POST /committee/forms/:formId/authorizations
  * 配信承認をリクエスト
  *
  * - 作成者または書き込み権限付き共同編集者のみ
@@ -197,7 +197,7 @@ export const requestFormAuthorizationEndpoint: BodyEndpoint<
 } as const;
 
 /**
- * POST /form/:formId/authorizations/:authorizationId/approve
+ * POST /committee/forms/:formId/authorizations/:authorizationId/approve
  * 配信承認を承認
  *
  * - requestedTo のユーザーのみ
@@ -219,7 +219,7 @@ export const approveFormAuthorizationEndpoint: BodyEndpoint<
 } as const;
 
 /**
- * POST /form/:formId/authorizations/:authorizationId/reject
+ * POST /committee/forms/:formId/authorizations/:authorizationId/reject
  * 配信承認を却下
  *
  * - requestedTo のユーザーのみ

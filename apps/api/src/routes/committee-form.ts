@@ -50,7 +50,7 @@ const requireOwner = async (formId: string, userId: string) => {
 };
 
 // ─────────────────────────────────────────
-// POST /form/create
+// POST /committee/forms/create
 // フォームを作成（項目・選択肢含め一括登録）
 // ─────────────────────────────────────────
 committeeFormRoute.post(
@@ -83,7 +83,7 @@ committeeFormRoute.post(
 );
 
 // ─────────────────────────────────────────
-// GET /form/list
+// GET /committee/forms/list
 // フォーム一覧を取得（実委人全員閲覧可）
 // ─────────────────────────────────────────
 committeeFormRoute.get(
@@ -137,7 +137,7 @@ committeeFormRoute.get(
 );
 
 // ─────────────────────────────────────────
-// GET /form/:formId/detail
+// GET /committee/forms/:formId/detail
 // フォームの詳細を取得（項目含む）
 // ─────────────────────────────────────────
 committeeFormRoute.get(
@@ -194,7 +194,7 @@ committeeFormRoute.get(
 );
 
 // ─────────────────────────────────────────
-// PATCH /form/:formId/detail
+// PATCH /committee/forms/:formId/detail
 // フォームを更新
 // ─────────────────────────────────────────
 committeeFormRoute.patch(
@@ -294,7 +294,7 @@ committeeFormRoute.patch(
 );
 
 // ─────────────────────────────────────────
-// DELETE /form/:formId
+// DELETE /committee/forms/:formId
 // フォームを論理削除
 // ─────────────────────────────────────────
 committeeFormRoute.delete(
@@ -321,7 +321,7 @@ committeeFormRoute.delete(
 // ─────────────────────────────────────────────────────────────
 
 // ─────────────────────────────────────────
-// POST /form/:formId/collaborators/:userId
+// POST /committee/forms/:formId/collaborators/:userId
 // 共同編集者を追加
 // ─────────────────────────────────────────
 committeeFormRoute.post(
@@ -370,7 +370,7 @@ committeeFormRoute.post(
 );
 
 // ─────────────────────────────────────────
-// DELETE /form/:formId/collaborators/:userId
+// DELETE /committee/forms/:formId/collaborators/:userId
 // 共同編集者を削除
 // ─────────────────────────────────────────
 committeeFormRoute.delete(
@@ -403,7 +403,7 @@ committeeFormRoute.delete(
 // ─────────────────────────────────────────────────────────────
 
 // ─────────────────────────────────────────
-// POST /form/:formId/authorizations
+// POST /committee/forms/:formId/authorizations
 // 配信承認をリクエスト
 // ─────────────────────────────────────────
 committeeFormRoute.post(
@@ -468,7 +468,7 @@ committeeFormRoute.post(
 );
 
 // ─────────────────────────────────────────
-// POST /form/:formId/authorizations/:authorizationId/approve
+// POST /committee/forms/:formId/authorizations/:authorizationId/approve
 // 配信承認を承認
 // ─────────────────────────────────────────
 committeeFormRoute.post(
@@ -505,7 +505,7 @@ committeeFormRoute.post(
 );
 
 // ─────────────────────────────────────────
-// POST /form/:formId/authorizations/:authorizationId/reject
+// POST /committee/forms/:formId/authorizations/:authorizationId/reject
 // 配信承認を却下
 // ─────────────────────────────────────────
 committeeFormRoute.post(
@@ -542,7 +542,7 @@ committeeFormRoute.post(
 );
 
 // ─────────────────────────────────────────────────────────────
-// GET /form/:formId/responses
+// GET /committee/forms/:formId/responses
 // 回答一覧（owner または共同編集者のみ）
 // ─────────────────────────────────────────────────────────────
 committeeFormRoute.get(
