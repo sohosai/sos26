@@ -14,7 +14,7 @@ import {
 import {
 	type ActionItem,
 	ActionsMenu,
-} from "@/components/patterns/ActionMenu/ActonMenu";
+} from "@/components/patterns/ActionMenu/ActionMenu";
 import { Button } from "@/components/primitives";
 import { createForm, listMyForms } from "@/lib/api/committee-form";
 import { useAuthStore } from "@/lib/auth";
@@ -66,8 +66,8 @@ export const Route = createFileRoute("/committee/forms/")({
 	component: CommitteeIndexPage,
 	head: () => ({
 		meta: [
-			{ title: "申請管理 | 雙峰祭オンラインシステム" },
-			{ name: "description", content: "申請管理" },
+			{ title: "フォーム管理 | 雙峰祭オンラインシステム" },
+			{ name: "description", content: "フォーム管理" },
 		],
 	}),
 	loader: async () => {
@@ -193,9 +193,9 @@ function CommitteeIndexPage() {
 	return (
 		<div>
 			<div className={styles.header}>
-				<Heading size="6">申請</Heading>
+				<Heading size="6">フォーム</Heading>
 				<Text size="2" color="gray">
-					申請フォームの作成・管理ができます。
+					フォームの作成・管理ができます。
 				</Text>
 			</div>
 			<DataTable<FormRow>

@@ -272,47 +272,87 @@ function assertRequiredAnswered(
 
 projectFormRoute.get("/", requireAuth, requireProjectMember, async c => {
 	const projectId = c.req.param("projectId");
-	const userId = c.get("user").id;
 
 	const now = new Date();
 
-	const deliveries = await prisma.formDelivery.findMany({
-		where: {
-			projectId,
-			formAuthorization: {
-				status: "APPROVED",
-				scheduledSendAt: {
-					lte: now,
-				},
-			},
-		},
-		include: {
-			formAuthorization: {
-				include: {
-					form: { select: { id: true, title: true, description: true } },
-				},
-			},
-			responses: {
-				where: { respondentId: userId },
-				select: { id: true, submittedAt: true },
-				take: 1,
-			},
-		},
-		orderBy: { formAuthorization: { scheduledSendAt: "desc" } },
-	});
+	// const deliveries = await prisma.formDelivery.findMany({
+	// 	where: {
+	// 		projectId,
+	// 		formAuthorization: {
+	// 			status: "APPROVED",
+	// 			scheduledSendAt: {
+	// 				lte: now,
+	// 			},
+	// 		},
+	// 	},
+	// 	include: {
+	// 		formAuthorization: {
+	// 			include: {
+	// 				form: { select: { id: true, title: true, description: true } },
+	// 			},
+	// 		},
+	// 		responses: {
+	// 			where: { respondentId: userId },
+	// 			select: { id: true, submittedAt: true },
+	// 			take: 1,
+	// 		},
+	// 	},
+	// 	orderBy: { formAuthorization: { scheduledSendAt: "desc" } },
+	// });
 
+	const [deliveries, responses] = await Promise.all([
+		prisma.formDelivery.findMany({
+			where: {
+				projectId,
+				formAuthorization: {
+					status: "APPROVED",
+					scheduledSendAt: { lte: now },
+				},
+			},
+			include: {
+				formAuthorization: {
+					select: {
+						scheduledSendAt: true,
+						deadlineAt: true,
+						allowLateResponse: true,
+						required: true,
+						form: { select: { id: true, title: true, description: true } },
+					},
+				},
+			},
+			orderBy: { formAuthorization: { scheduledSendAt: "desc" } },
+		}),
+		// 自分の回答だけ取得
+		prisma.formResponse.findMany({
+			where: {
+				formDelivery: { projectId },
+			},
+			select: {
+				id: true,
+				formDeliveryId: true,
+				submittedAt: true,
+			},
+		}),
+	]);
+
+	const responseMap = new Map(responses.map(r => [r.formDeliveryId, r]));
 	return c.json({
-		forms: deliveries.map(d => ({
-			formDeliveryId: d.id,
-			formId: d.formAuthorization.form.id,
-			title: d.formAuthorization.form.title,
-			description: d.formAuthorization.form.description,
-			scheduledSendAt: d.formAuthorization.scheduledSendAt,
-			deadlineAt: d.formAuthorization.deadlineAt,
-			allowLateResponse: d.formAuthorization.allowLateResponse,
-			required: d.formAuthorization.required,
-			response: d.responses[0] ?? null,
-		})),
+		forms: deliveries.map(d => {
+			const response = responseMap.get(d.id) ?? null;
+			return {
+				formDeliveryId: d.id,
+				formId: d.formAuthorization.form.id,
+				title: d.formAuthorization.form.title,
+				description: d.formAuthorization.form.description,
+				scheduledSendAt: d.formAuthorization.scheduledSendAt,
+				deadlineAt: d.formAuthorization.deadlineAt,
+				allowLateResponse: d.formAuthorization.allowLateResponse,
+				required: d.formAuthorization.required,
+				response: response
+					? { id: response.id, submittedAt: response.submittedAt }
+					: null,
+			};
+		}),
 	});
 });
 

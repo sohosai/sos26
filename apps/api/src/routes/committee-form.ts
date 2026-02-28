@@ -1,7 +1,9 @@
 import {
 	addFormCollaboratorRequestSchema,
 	createFormRequestSchema,
+	formAuthorizationPathParamsSchema,
 	requestFormAuthorizationRequestSchema,
+	updateFormAuthorizationRequestSchema,
 	updateFormDetailRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
@@ -50,7 +52,7 @@ const requireOwner = async (formId: string, userId: string) => {
 };
 
 // ─────────────────────────────────────────
-// POST /form/create
+// POST /committee/forms/create
 // フォームを作成（項目・選択肢含め一括登録）
 // ─────────────────────────────────────────
 committeeFormRoute.post(
@@ -83,7 +85,7 @@ committeeFormRoute.post(
 );
 
 // ─────────────────────────────────────────
-// GET /form/list
+// GET /committee/forms/list
 // フォーム一覧を取得（実委人全員閲覧可）
 // ─────────────────────────────────────────
 committeeFormRoute.get(
@@ -98,22 +100,24 @@ committeeFormRoute.get(
 				title: true,
 				description: true,
 				updatedAt: true,
-
 				owner: {
 					select: { id: true, name: true },
 				},
-
 				collaborators: {
 					where: { deletedAt: null },
 					select: {
 						user: { select: { id: true, name: true } },
 					},
 				},
-
 				authorizations: {
 					orderBy: { createdAt: "desc" },
 					take: 1,
-					include: {
+					select: {
+						id: true,
+						status: true,
+						scheduledSendAt: true,
+						allowLateResponse: true,
+						deadlineAt: true,
 						requestedTo: {
 							select: { id: true, name: true },
 						},
@@ -135,7 +139,7 @@ committeeFormRoute.get(
 );
 
 // ─────────────────────────────────────────
-// GET /form/:formId/detail
+// GET /committee/forms/:formId/detail
 // フォームの詳細を取得（項目含む）
 // ─────────────────────────────────────────
 committeeFormRoute.get(
@@ -192,7 +196,7 @@ committeeFormRoute.get(
 );
 
 // ─────────────────────────────────────────
-// PATCH /form/:formId/detail
+// PATCH /committee/forms/:formId/detail
 // フォームを更新
 // ─────────────────────────────────────────
 committeeFormRoute.patch(
@@ -292,7 +296,7 @@ committeeFormRoute.patch(
 );
 
 // ─────────────────────────────────────────
-// DELETE /form/:formId
+// DELETE /committee/forms/:formId
 // フォームを論理削除
 // ─────────────────────────────────────────
 committeeFormRoute.delete(
@@ -319,7 +323,7 @@ committeeFormRoute.delete(
 // ─────────────────────────────────────────────────────────────
 
 // ─────────────────────────────────────────
-// POST /form/:formId/collaborators/:userId
+// POST /committee/forms/:formId/collaborators/:userId
 // 共同編集者を追加
 // ─────────────────────────────────────────
 committeeFormRoute.post(
@@ -345,12 +349,23 @@ committeeFormRoute.post(
 		});
 		if (!targetUser) throw Errors.notFound("ユーザーが見つかりません");
 
-		// すでに共同編集者か確認
+		// 既存チェック（ソフトデリート済みも含めて検索）
 		const existing = await prisma.formCollaborator.findFirst({
-			where: { formId, userId: targetUserId, deletedAt: null },
+			where: { formId, userId: targetUserId },
 		});
-		if (existing)
-			throw Errors.alreadyExists("すでに共同編集者として登録されています");
+		if (existing) {
+			if (!existing.deletedAt) {
+				throw Errors.alreadyExists("既に共同編集者です");
+			}
+
+			// ソフトデリート済み → 再有効化
+			const reactivated = await prisma.formCollaborator.update({
+				where: { id: existing.id },
+				data: { deletedAt: null },
+			});
+
+			return c.json({ collaborator: reactivated });
+		}
 
 		const body = await c.req.json().catch(() => ({}));
 		const data = addFormCollaboratorRequestSchema.parse(body);
@@ -368,7 +383,7 @@ committeeFormRoute.post(
 );
 
 // ─────────────────────────────────────────
-// DELETE /form/:formId/collaborators/:userId
+// DELETE /committee/forms/:formId/collaborators/:userId
 // 共同編集者を削除
 // ─────────────────────────────────────────
 committeeFormRoute.delete(
@@ -401,7 +416,7 @@ committeeFormRoute.delete(
 // ─────────────────────────────────────────────────────────────
 
 // ─────────────────────────────────────────
-// POST /form/:formId/authorizations
+// POST /committee/forms/:formId/authorizations
 // 配信承認をリクエスト
 // ─────────────────────────────────────────
 committeeFormRoute.post(
@@ -441,6 +456,14 @@ committeeFormRoute.post(
 			);
 		}
 
+		const now = new Date();
+		// scheduledSendAt が未来であること
+		if (data.scheduledSendAt && data.scheduledSendAt <= now) {
+			throw Errors.invalidRequest("配信希望日時は未来の日時を指定してください");
+		} else if (data.deadlineAt && data.scheduledSendAt >= data.deadlineAt) {
+			throw Errors.invalidRequest("配信希望日時と締め切り日時の順番が不正です");
+		}
+
 		// 配信先企画の存在確認
 		const projects = await prisma.project.findMany({
 			where: { id: { in: projectIds }, deletedAt: null },
@@ -465,74 +488,65 @@ committeeFormRoute.post(
 	}
 );
 
-// ─────────────────────────────────────────
-// POST /form/:formId/authorizations/:authorizationId/approve
-// 配信承認を承認
-// ─────────────────────────────────────────
-committeeFormRoute.post(
-	"/:formId/authorizations/:authorizationId/approve",
+// ─────────────────────────────────────────────────────────────
+// PATCH /committee/forms/:formId/authorizations/:authorizationId
+// 承認 / 却下（requestedTo 本人のみ）
+// ─────────────────────────────────────────────────────────────
+committeeFormRoute.patch(
+	"/:formId/authorizations/:authorizationId",
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId, authorizationId } = c.req.param();
-		const userId = c.get("user").id;
+		const user = c.get("user");
+		const { formId, authorizationId } = formAuthorizationPathParamsSchema.parse(
+			{
+				formId: c.req.param("formId"),
+				authorizationId: c.req.param("authorizationId"),
+			}
+		);
+		const body = await c.req.json().catch(() => ({}));
+		const { status } = updateFormAuthorizationRequestSchema.parse(body);
 
 		const authorization = await prisma.formAuthorization.findFirst({
 			where: { id: authorizationId, formId },
+			include: { form: { select: { deletedAt: true } } },
 		});
-		if (!authorization) throw Errors.notFound("承認リクエストが見つかりません");
 
-		if (authorization.requestedToId !== userId) {
-			throw Errors.forbidden("この操作を行う権限がありません");
+		if (!authorization) {
+			throw Errors.notFound("承認申請が見つかりません");
+		}
+
+		if (authorization.form.deletedAt) {
+			throw Errors.invalidRequest("削除済みのフォームは承認できません");
+		}
+
+		if (authorization.requestedToId !== user.id) {
+			throw Errors.forbidden("この承認申請を操作する権限がありません");
 		}
 
 		if (authorization.status !== "PENDING") {
-			throw Errors.invalidRequest("すでに審査済みの承認リクエストです");
+			throw Errors.invalidRequest("この承認申請は既に処理済みです");
+		}
+
+		const now = new Date();
+		// 承認する場合、scheduledSendAt が未来であること
+		if (status === "APPROVED" && authorization.scheduledSendAt <= now) {
+			throw Errors.invalidRequest(
+				"配信希望日時を過ぎているため承認できません。新しい日時で再申請してください"
+			);
+		} else if (
+			status === "APPROVED" &&
+			authorization.deadlineAt &&
+			authorization.scheduledSendAt >= authorization.deadlineAt
+		) {
+			throw Errors.invalidRequest(
+				"配信希望日時と締め切り日時の順番が不正であるため承認できません。新しい日時で再申請してください"
+			);
 		}
 
 		const updated = await prisma.formAuthorization.update({
-			where: { id: authorizationId },
-			data: {
-				status: "APPROVED",
-				decidedAt: new Date(),
-			},
-		});
-
-		return c.json({ authorization: updated });
-	}
-);
-
-// ─────────────────────────────────────────
-// POST /form/:formId/authorizations/:authorizationId/reject
-// 配信承認を却下
-// ─────────────────────────────────────────
-committeeFormRoute.post(
-	"/:formId/authorizations/:authorizationId/reject",
-	requireAuth,
-	requireCommitteeMember,
-	async c => {
-		const { formId, authorizationId } = c.req.param();
-		const userId = c.get("user").id;
-
-		const authorization = await prisma.formAuthorization.findFirst({
-			where: { id: authorizationId, formId },
-		});
-		if (!authorization) throw Errors.notFound("承認リクエストが見つかりません");
-
-		if (authorization.requestedToId !== userId) {
-			throw Errors.forbidden("この操作を行う権限がありません");
-		}
-
-		if (authorization.status !== "PENDING") {
-			throw Errors.invalidRequest("すでに審査済みの承認リクエストです");
-		}
-
-		const updated = await prisma.formAuthorization.update({
-			where: { id: authorizationId },
-			data: {
-				status: "REJECTED",
-				decidedAt: new Date(),
-			},
+			where: { id: authorizationId, status: "PENDING" },
+			data: { status, decidedAt: new Date() },
 		});
 
 		return c.json({ authorization: updated });
@@ -540,7 +554,7 @@ committeeFormRoute.post(
 );
 
 // ─────────────────────────────────────────────────────────────
-// GET /form/:formId/responses
+// GET /committee/forms/:formId/responses
 // 回答一覧（owner または共同編集者のみ）
 // ─────────────────────────────────────────────────────────────
 committeeFormRoute.get(

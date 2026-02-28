@@ -1,9 +1,7 @@
 import {
 	type AddFormCollaboratorRequest,
 	type AddFormCollaboratorResponse,
-	type ApproveFormAuthorizationResponse,
 	addFormCollaboratorEndpoint,
-	approveFormAuthorizationEndpoint,
 	type CreateFormRequest,
 	type CreateFormResponse,
 	createFormEndpoint,
@@ -15,15 +13,15 @@ import {
 	type ListMyFormsResponse,
 	listFormResponsesEndpoint,
 	listMyFormsEndpoint,
-	type RejectFormAuthorizationResponse,
 	type RemoveFormCollaboratorResponse,
 	type RequestFormAuthorizationRequest,
 	type RequestFormAuthorizationResponse,
-	rejectFormAuthorizationEndpoint,
 	removeFormCollaboratorEndpoint,
 	requestFormAuthorizationEndpoint,
+	type UpdateFormAuthorizationResponse,
 	type UpdateFormDetailRequest,
 	type UpdateFormDetailResponse,
+	updateFormAuthorizationEndpoint,
 	updateFormDetailEndpoint,
 } from "@sos26/shared";
 import { callBodyApi, callGetApi, callNoBodyApi } from "./core";
@@ -134,29 +132,37 @@ export async function requestFormAuthorization(
 }
 
 /**
- * POST /form/:formId/authorizations/:authorizationId/approve
+ * PATCH /form/:formId/authorizations/:authorizationId/approve
  * 配信承認を承認
  */
 export async function approveFormAuthorization(
 	formId: string,
 	authorizationId: string
-): Promise<ApproveFormAuthorizationResponse> {
-	return callBodyApi(approveFormAuthorizationEndpoint, undefined, {
-		pathParams: { formId, authorizationId },
-	});
+): Promise<UpdateFormAuthorizationResponse> {
+	return callBodyApi(
+		updateFormAuthorizationEndpoint,
+		{ status: "APPROVED" },
+		{
+			pathParams: { formId, authorizationId },
+		}
+	);
 }
 
 /**
- * POST /form/:formId/authorizations/:authorizationId/reject
+ * PATCH /form/:formId/authorizations/:authorizationId/reject
  * 配信承認を却下
  */
 export async function rejectFormAuthorization(
 	formId: string,
 	authorizationId: string
-): Promise<RejectFormAuthorizationResponse> {
-	return callBodyApi(rejectFormAuthorizationEndpoint, undefined, {
-		pathParams: { formId, authorizationId },
-	});
+): Promise<UpdateFormAuthorizationResponse> {
+	return callBodyApi(
+		updateFormAuthorizationEndpoint,
+		{ status: "REJECTED" },
+		{
+			pathParams: { formId, authorizationId },
+		}
+	);
 }
 
 /**

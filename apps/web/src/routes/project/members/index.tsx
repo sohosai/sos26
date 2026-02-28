@@ -8,7 +8,7 @@ import { DataTable, TagCell } from "@/components/patterns";
 import {
 	type ActionItem,
 	ActionsMenu,
-} from "@/components/patterns/ActionMenu/ActonMenu";
+} from "@/components/patterns/ActionMenu/ActionMenu";
 import { Button } from "@/components/primitives";
 import { InviteMemberDialog } from "@/components/project/members/InviteMemberDialog";
 import {

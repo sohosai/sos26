@@ -573,6 +573,8 @@ model FormAuthorization {
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
   deliveries FormDelivery[]
+
+	@@index([formId, createdAt(sort: Desc)])
 }
 
 //フォームの配信

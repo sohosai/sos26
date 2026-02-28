@@ -104,17 +104,17 @@ export type FormDelivery = z.infer<typeof formDeliverySchema>;
 // ─────────────────────────────────────────────────────────────
 
 export const formIdPathParamsSchema = z.object({
-	formId: z.string().min(1),
+	formId: z.cuid(),
 });
 
 export const formCollaboratorPathParamsSchema = z.object({
-	formId: z.string().min(1),
-	userId: z.string().min(1),
+	formId: z.cuid(),
+	userId: z.cuid(),
 });
 
 export const formAuthorizationPathParamsSchema = z.object({
-	formId: z.string().min(1),
-	authorizationId: z.string().min(1),
+	formId: z.cuid(),
+	authorizationId: z.cuid(),
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -347,33 +347,21 @@ export type RequestFormAuthorizationResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
-// POST /committee/forms/:formId/authorizations/:authorizationId/approve
+// PATCH /committee/forms/:formId/authorizations/:authorizationId
 // ─────────────────────────────────────────────────────────────
-export const approveFormAuthorizationRequestSchema = z.undefined();
-export type ApproveFormAuthorizationRequest = z.infer<
-	typeof approveFormAuthorizationRequestSchema
+
+export const updateFormAuthorizationRequestSchema = z.object({
+	status: z.enum(["APPROVED", "REJECTED"]),
+});
+export type UpdateFormAuthorizationRequest = z.infer<
+	typeof updateFormAuthorizationRequestSchema
 >;
 
-export const approveFormAuthorizationResponseSchema = z.object({
+export const updateFormAuthorizationResponseSchema = z.object({
 	authorization: formAuthorizationSchema,
 });
-export type ApproveFormAuthorizationResponse = z.infer<
-	typeof approveFormAuthorizationResponseSchema
->;
-
-// ─────────────────────────────────────────────────────────────
-// POST /committee/forms/:formId/authorizations/:authorizationId/reject
-// ─────────────────────────────────────────────────────────────
-
-export const rejectFormAuthorizationRequestSchema = z.undefined();
-export type RejectFormAuthorizationRequest = z.infer<
-	typeof rejectFormAuthorizationRequestSchema
->;
-export const rejectFormAuthorizationResponseSchema = z.object({
-	authorization: formAuthorizationSchema,
-});
-export type RejectFormAuthorizationResponse = z.infer<
-	typeof rejectFormAuthorizationResponseSchema
+export type UpdateFormAuthorizationResponse = z.infer<
+	typeof updateFormAuthorizationResponseSchema
 >;
 
 // ─────────────────────────────────────────────────────────────
@@ -422,14 +410,14 @@ export type ListFormResponsesResponse = z.infer<
 // ─────────────────────────────────────────────────────────────
 
 export const projectFormPathParamsSchema = z.object({
-	projectId: z.string().min(1),
-	formDeliveryId: z.string().min(1),
+	projectId: z.cuid(),
+	formDeliveryId: z.cuid(),
 });
 
 export const projectFormResponsePathParamsSchema = z.object({
-	projectId: z.string().min(1),
-	formDeliveryId: z.string().min(1),
-	responseId: z.string().min(1),
+	projectId: z.cuid(),
+	formDeliveryId: z.cuid(),
+	responseId: z.cuid(),
 });
 
 // ─────────────────────────────────────────────────────────────

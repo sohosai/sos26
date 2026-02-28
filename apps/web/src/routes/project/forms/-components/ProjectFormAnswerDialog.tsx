@@ -1,3 +1,4 @@
+import type { GetProjectFormResponse } from "@sos26/shared";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FormAnswerDialog } from "@/components/form/Answer/AnswerDialog";
@@ -19,6 +20,12 @@ type Props = {
 	onDraftSaved: (responseId: string) => void;
 };
 
+type FetchState =
+	| { status: "idle" }
+	| { status: "loading" }
+	| { status: "error" }
+	| { status: "success"; data: GetProjectFormResponse };
+
 export function ProjectFormAnswerDialog({
 	open,
 	onOpenChange,
@@ -27,35 +34,45 @@ export function ProjectFormAnswerDialog({
 	onSubmitSuccess,
 	onDraftSaved,
 }: Props) {
-	const [form, setForm] = useState<Form | null>(null);
-	const [initialAnswers, setInitialAnswers] = useState<FormAnswers>({});
-	const [responseId, setResponseId] = useState<string | null>(null);
+	const [fetchState, setFetchState] = useState<FetchState>({ status: "idle" });
+	const [draftResponseId, setDraftResponseId] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (!open) return;
-		let cancelled = false;
+
+		const controller = new AbortController();
+		setFetchState({ status: "loading" });
 
 		getProjectForm(projectId, formDeliveryId)
-			.then(res => {
-				if (cancelled) return;
-				const convertedForm = ProjectFormToForm(res);
-
-				setForm(convertedForm);
-				setResponseId(res.form.response?.id ?? null);
-				setInitialAnswers(
-					res.form.response
-						? responseToAnswers(res.form.response, convertedForm)
-						: {}
-				);
+			.then(data => {
+				if (controller.signal.aborted) return;
+				setFetchState({ status: "success", data });
+				// openのたびにdraftResponseIdをサーバーの値でリセット
+				setDraftResponseId(null);
 			})
 			.catch(() => {
-				if (!cancelled) toast.error("フォームの取得に失敗しました");
+				if (controller.signal.aborted) return;
+				setFetchState({ status: "error" });
+				toast.error("フォームの取得に失敗しました");
 			});
 
-		return () => {
-			cancelled = true;
-		};
+		return () => controller.abort();
 	}, [open, projectId, formDeliveryId]);
+
+	// fetchStateから導出
+	const form: Form | null =
+		fetchState.status === "success" ? ProjectFormToForm(fetchState.data) : null;
+
+	const initialAnswers: FormAnswers =
+		fetchState.status === "success" && fetchState.data.form.response && form
+			? responseToAnswers(fetchState.data.form.response, form)
+			: {};
+
+	const responseId =
+		draftResponseId ??
+		(fetchState.status === "success"
+			? (fetchState.data.form.response?.id ?? null)
+			: null);
 
 	const handleSaveDraft = async (answers: FormAnswers) => {
 		if (!form) return;
@@ -64,7 +81,7 @@ export function ProjectFormAnswerDialog({
 			await updateFormResponse(projectId, formDeliveryId, responseId, body);
 		} else {
 			const res = await createFormResponse(projectId, formDeliveryId, body);
-			setResponseId(res.response.id);
+			setDraftResponseId(res.response.id);
 			onDraftSaved(res.response.id);
 		}
 	};
@@ -72,22 +89,17 @@ export function ProjectFormAnswerDialog({
 	const handleSubmit = async (answers: FormAnswers) => {
 		if (!form) return;
 		const body = buildAnswerBody(answers, form, true);
-		if (responseId) {
-			const response = await updateFormResponse(
-				projectId,
-				formDeliveryId,
-				responseId,
-				body
-			).then(res => res.response);
-			onSubmitSuccess(response.submittedAt);
-		} else {
-			const response = await createFormResponse(
-				projectId,
-				formDeliveryId,
-				body
-			).then(res => res.response);
-			onSubmitSuccess(response.submittedAt);
-		}
+		const response = responseId
+			? await updateFormResponse(
+					projectId,
+					formDeliveryId,
+					responseId,
+					body
+				).then(r => r.response)
+			: await createFormResponse(projectId, formDeliveryId, body).then(
+					r => r.response
+				);
+		onSubmitSuccess(response.submittedAt);
 	};
 
 	return (
@@ -95,13 +107,12 @@ export function ProjectFormAnswerDialog({
 			open={open}
 			onOpenChange={open => {
 				if (!open) {
-					setForm(null);
-					setInitialAnswers({});
-					setResponseId(null);
+					setFetchState({ status: "idle" });
+					setDraftResponseId(null);
 				}
 				onOpenChange(open);
 			}}
-			form={form}
+			form={fetchState.status === "loading" ? null : form}
 			initialAnswers={initialAnswers}
 			onSubmit={handleSubmit}
 			onSaveDraft={handleSaveDraft}

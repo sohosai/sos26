@@ -56,7 +56,7 @@ app.route("/auth", authRoute);
 app.route("/committee/members", committeeMemberRoute);
 app.route("/committee/projects", committeeProjectRoute);
 app.route("/committee/notices", committeeNoticeRoute);
-app.route("committee/forms", committeeFormRoute);
+app.route("/committee/forms", committeeFormRoute);
 app.route("/committee/inquiries", committeeInquiryRoute);
 app.route("/project/:projectId/forms", projectFormRoute);
 app.route("/project", projectRoute);

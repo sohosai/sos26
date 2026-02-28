@@ -10,8 +10,10 @@ import {
 import { Link } from "@tanstack/react-router";
 import Avatar from "boring-avatars";
 import { useState } from "react";
+import { toast } from "sonner";
 import { AddCollaboratorDialog } from "@/components/committee/AddCollaboratorDialog";
 import { Button, IconButton } from "@/components/primitives";
+import { validateAuthorizationDates } from "@/lib/form/AuthDateCheck";
 import { getFormStatusFromAuth } from "@/lib/form/form-status";
 import { formatDate } from "@/lib/format";
 import styles from "./FormDetailSidebar.module.scss";
@@ -113,8 +115,7 @@ export function FormDetailSidebar({
 		statusCode: statusInfo.code,
 	});
 
-	const showAuthBox =
-		canPublish || (latestAuth && latestAuth?.status === "PENDING");
+	const showAuthBox = canPublish || latestAuth;
 
 	return (
 		<>
@@ -244,7 +245,7 @@ export function FormDetailSidebar({
 							</div>
 						)}
 
-						{latestAuth && latestAuth?.status === "PENDING" && (
+						{latestAuth && (
 							<AuthDetailSection
 								auth={latestAuth}
 								pendingAuth={latestAuth}
@@ -363,6 +364,20 @@ function AuthDetailSection({
 				</Text>
 				<Text size="2">{formatDate(auth.scheduledSendAt, "datetime")}</Text>
 			</div>
+			{auth.deliveries.length > 0 && (
+				<div className={styles.authDetailRow}>
+					<Text size="2" color="gray">
+						配信先
+					</Text>
+					<div className={styles.projectTags}>
+						{auth.deliveries.map(d => (
+							<Badge key={d.id} variant="soft" size="1">
+								{d.project.name}
+							</Badge>
+						))}
+					</div>
+				</div>
+			)}
 			{auth.deadlineAt && (
 				<>
 					<div className={styles.authDetailRow}>
@@ -391,7 +406,29 @@ function AuthDetailSection({
 					<Button
 						intent="primary"
 						size="2"
-						onClick={() => onApprove(pendingAuth.id)}
+						onClick={() => {
+							const error = validateAuthorizationDates({
+								scheduledSendAt: pendingAuth.scheduledSendAt,
+								deadlineAt: pendingAuth.deadlineAt,
+							});
+
+							if (error) {
+								switch (error) {
+									case "PAST_SCHEDULED_SEND_AT":
+										toast.error(
+											"配信希望日時を過ぎているため承認できません。新しい日時で再申請してください"
+										);
+										return;
+									case "INVALID_SCHEDULE_DEADLINE_ORDER":
+										toast.error(
+											"配信希望日時と締め切り日時の順番が不正です。新しい日時で再申請してください"
+										);
+										return;
+								}
+							}
+
+							onApprove(pendingAuth.id);
+						}}
 						loading={approvingId === pendingAuth.id}
 						disabled={rejectingId !== null}
 					>
