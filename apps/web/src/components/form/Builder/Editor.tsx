@@ -1,3 +1,4 @@
+import { Text } from "@radix-ui/themes";
 import { IconPlus } from "@tabler/icons-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -30,6 +31,41 @@ export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 					},
 				]
 	);
+	const [errors, setErrors] = useState<Record<string, string>>({});
+	const validate = (): boolean => {
+		const newErrors: Record<string, string> = {};
+
+		if (formName.trim() === "") {
+			newErrors.__formName = "フォーム名を入力してください";
+		}
+
+		for (const item of items) {
+			const error = validateItem(item);
+			if (error) {
+				newErrors[item.id] = error;
+			}
+		}
+
+		setErrors(newErrors);
+		return Object.keys(newErrors).length === 0;
+	};
+
+	function validateItem(item: FormItem): string | null {
+		if (item.label.trim() === "") {
+			return "設問名を入力してください";
+		}
+
+		if (item.type === "SELECT" || item.type === "CHECKBOX") {
+			if (!item.options || item.options.length === 0) {
+				return "選択肢を1つ以上追加してください";
+			}
+			if (item.options.some(opt => opt.label.trim() === "")) {
+				return "空の選択肢があります";
+			}
+		}
+
+		return null;
+	}
 
 	const addItem = () => {
 		setItems(prev => [
@@ -54,28 +90,8 @@ export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 	};
 
 	const handleSubmit = () => {
-		const invalidChoiceItem = items.find(item => {
-			if (item.type === "CHECKBOX" || item.type === "SELECT") {
-				if (!item.options || item.options.length === 0) return true;
-				if (item.options.some(opt => opt.label.trim() === "")) return true;
-			}
-			return false;
-		});
-
-		if (invalidChoiceItem) {
-			toast.error("選択式の項目には、空でない選択肢を1つ以上追加してください");
-			return;
-		}
-
-		if (formName.trim() === "") {
-			toast.error("フォーム名を入力してください");
-			return;
-		}
-
-		const emptyLabelItem = items.find(item => item.label.trim() === "");
-
-		if (emptyLabelItem) {
-			toast.error("すべての設問に項目名を入力してください");
+		if (!validate()) {
+			toast.error("入力内容を確認してください");
 			return;
 		}
 
@@ -97,6 +113,11 @@ export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 				onChange={setFormName}
 				placeholder="フォーム名を入力してください"
 			/>
+			{errors.__formName && (
+				<Text size="2" color="red">
+					{errors.__formName}
+				</Text>
+			)}
 			<TextArea
 				label="フォームの説明"
 				placeholder="このフォームの目的や注意事項を記入してください"
@@ -109,6 +130,7 @@ export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 			<div className={styles.items}>
 				<FormItemList
 					items={items}
+					errors={errors}
 					setItems={setItems}
 					onUpdate={updateItem}
 					onRemove={removeItem}

@@ -1,4 +1,5 @@
 import { Draggable } from "@hello-pangea/dnd";
+import { Text } from "@radix-ui/themes";
 import {
 	IconAlignLeft,
 	IconChevronDown,
@@ -52,6 +53,7 @@ const FIELD_TYPES = [
 type Props = {
 	item: FormItem;
 	index: number;
+	error?: string;
 	onUpdate: (id: string, update: Partial<FormItem>) => void;
 	onRemove: (id: string) => void;
 	onMoveUp: () => void;
@@ -63,6 +65,7 @@ type Props = {
 export function FormItemEditor({
 	item,
 	index,
+	error,
 	onUpdate,
 	onRemove,
 	onMoveUp,
@@ -168,6 +171,11 @@ export function FormItemEditor({
 								onUpdate(item.id, update)
 							}
 						/>
+						{error && (
+							<Text size="2" color="red">
+								{error}
+							</Text>
+						)}
 					</div>
 				</li>
 			)}
