@@ -107,8 +107,7 @@ export function FormDetailSidebar({
 		statusCode: statusInfo.code,
 	});
 
-	const showAuthBox =
-		canPublish || (latestAuth && latestAuth?.status === "PENDING");
+	const showAuthBox = canPublish || latestAuth;
 
 	return (
 		<>
@@ -214,7 +213,7 @@ export function FormDetailSidebar({
 							</div>
 						)}
 
-						{latestAuth && latestAuth?.status === "PENDING" && (
+						{latestAuth && (
 							<AuthDetailSection
 								auth={latestAuth}
 								pendingAuth={latestAuth}
@@ -333,6 +332,20 @@ function AuthDetailSection({
 				</Text>
 				<Text size="2">{formatDate(auth.scheduledSendAt, "datetime")}</Text>
 			</div>
+			{auth.deliveries.length > 0 && (
+				<div className={styles.authDetailRow}>
+					<Text size="2" color="gray">
+						配信先
+					</Text>
+					<div className={styles.projectTags}>
+						{auth.deliveries.map(d => (
+							<Badge key={d.id} variant="soft" size="1">
+								{d.project.name}
+							</Badge>
+						))}
+					</div>
+				</div>
+			)}
 			{auth.deadlineAt && (
 				<>
 					<div className={styles.authDetailRow}>
