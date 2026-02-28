@@ -43,7 +43,10 @@ function resolveFormPermissions(params: {
 			canEdit && (statusCode === "DRAFT" || statusCode === "REJECTED"),
 		// 編集できるのは「承認済み以外」
 		canEditForm:
-			canEdit && statusCode !== "PUBLISHED" && statusCode !== "SCHEDULED",
+			canEdit &&
+			statusCode !== "PUBLISHED" &&
+			statusCode !== "SCHEDULED" &&
+			statusCode !== "EXPIRED",
 		// 回答確認は「公開済み」または「期限切れ」
 		canViewAnswers:
 			canEdit && (statusCode === "PUBLISHED" || statusCode === "EXPIRED"),
