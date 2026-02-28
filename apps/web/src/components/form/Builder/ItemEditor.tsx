@@ -115,9 +115,29 @@ export function FormItemEditor({
 								<Select
 									options={FIELD_TYPES}
 									value={item.type}
-									onValueChange={value =>
-										onUpdate(item.id, { type: value as FormItem["type"] })
-									}
+									onValueChange={value => {
+										const nextType = value as FormItem["type"];
+
+										if (nextType === "SELECT" || nextType === "CHECKBOX") {
+											onUpdate(item.id, {
+												type: nextType,
+												options:
+													item.options && item.options.length > 0
+														? item.options
+														: [
+																{
+																	id: crypto.randomUUID(),
+																	label: "",
+																},
+															],
+											});
+										} else {
+											onUpdate(item.id, {
+												type: nextType,
+												options: undefined,
+											});
+										}
+									}}
 									aria-label="フィールドタイプ"
 								/>
 							</div>
