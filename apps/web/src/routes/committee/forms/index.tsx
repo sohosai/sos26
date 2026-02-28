@@ -1,8 +1,9 @@
 import { Badge, Heading, Text } from "@radix-ui/themes";
 import { IconEye, IconPlus } from "@tabler/icons-react";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useState } from "react";
+import { toast } from "sonner";
 import {
 	AvatarGroupCell,
 	type AvatarGroupItem,
@@ -15,13 +16,12 @@ import {
 	ActionsMenu,
 } from "@/components/patterns/ActionMenu/ActionMenu";
 import { Button } from "@/components/primitives";
-import { listMyForms } from "@/lib/api/committee-form";
+import { createForm, listMyForms } from "@/lib/api/committee-form";
 import { useAuthStore } from "@/lib/auth";
 import {
 	type FormStatusInfo,
 	getFormStatusFromAuth,
 } from "@/lib/form/form-status";
-import { CreateFormDialog } from "./-components/CreateFormDialog";
 import styles from "./index.module.scss";
 
 type FormRow = {
@@ -107,9 +107,28 @@ export const Route = createFileRoute("/committee/forms/")({
 function CommitteeIndexPage() {
 	const { forms } = Route.useLoaderData();
 	const userId = useAuthStore().user?.id;
-	const router = useRouter();
+	const navigate = useNavigate();
+	const [isCreating, setIsCreating] = useState(false);
 
-	const [dialogOpen, setDialogOpen] = useState(false);
+	const handleCreateForm = async () => {
+		setIsCreating(true);
+		try {
+			const { form: created } = await createForm({
+				title: "無題のフォーム",
+				description: undefined,
+				items: [],
+			});
+			navigate({
+				to: "/committee/forms/$formId",
+				params: { formId: created.id },
+				search: { edit: true },
+			});
+		} catch {
+			toast.error("フォームの作成に失敗しました");
+		} finally {
+			setIsCreating(false);
+		}
+	};
 
 	const columns = [
 		columnHelper.accessor("title", {
@@ -160,7 +179,6 @@ function CommitteeIndexPage() {
 					item={row.original}
 					actions={buildFormActions(
 						row.original,
-						//オーナーか共同編集者、かつ承認済み
 						(row.original.ownerId === userId ||
 							row.original.collaborators.some(c => c.id === userId)) &&
 							(row.original.status.code === "EXPIRED" ||
@@ -192,16 +210,16 @@ function CommitteeIndexPage() {
 					csvExport: false,
 				}}
 				toolbarExtra={
-					<Button intent="primary" size="2" onClick={() => setDialogOpen(true)}>
+					<Button
+						intent="primary"
+						size="2"
+						onClick={handleCreateForm}
+						loading={isCreating}
+					>
 						<IconPlus size={16} stroke={1.5} />
 						フォームを作成
 					</Button>
 				}
-			/>
-			<CreateFormDialog
-				open={dialogOpen}
-				onOpenChange={setDialogOpen}
-				onSuccess={() => router.invalidate()}
 			/>
 		</div>
 	);
