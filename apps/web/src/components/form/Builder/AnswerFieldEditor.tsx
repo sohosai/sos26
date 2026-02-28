@@ -105,7 +105,7 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 					))}
 
 					<Button
-						intent="ghost"
+						intent="secondary"
 						size="1"
 						onClick={() =>
 							onUpdate({
