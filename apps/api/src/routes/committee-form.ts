@@ -209,87 +209,95 @@ committeeFormRoute.patch(
 
 		await requireWriteAccess(formId, userId);
 
-		const approvedAuth = await prisma.formAuthorization.findFirst({
-			where: { formId, status: "APPROVED" },
-		});
-		if (approvedAuth) {
-			throw Errors.invalidRequest("配信承認済みのフォームは編集できません");
-		}
-
 		const body = await c.req.json().catch(() => ({}));
 		const { items, ...formData } = updateFormDetailRequestSchema.parse(body);
 
-		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>
-		const form = await prisma.$transaction(async tx => {
-			await tx.form.update({ where: { id: formId }, data: formData });
-
-			if (items !== undefined) {
-				const existingItems = await tx.formItem.findMany({
-					where: { formId },
-					select: { id: true },
+		const form = await prisma.$transaction(
+			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>
+			async tx => {
+				const approvedAuth = await tx.formAuthorization.findFirst({
+					where: { formId, status: "APPROVED" },
 				});
+				if (approvedAuth) {
+					throw Errors.invalidRequest("配信承認済みのフォームは編集できません");
+				}
 
-				const existingIds = new Set(existingItems.map(i => i.id));
-				const submittedIds = new Set(
-					items.flatMap(i => (i.id && existingIds.has(i.id) ? [i.id] : []))
-				);
+				await tx.form.update({ where: { id: formId }, data: formData });
 
-				// 送信されなかったitemは回答があればエラー、なければ物理削除
-				const removedIds = [...existingIds].filter(id => !submittedIds.has(id));
-				for (const id of removedIds) {
-					const hasAnswers = await tx.formAnswer.count({
-						where: { formItemId: id },
+				if (items !== undefined) {
+					const existingItems = await tx.formItem.findMany({
+						where: { formId },
+						select: { id: true },
 					});
-					if (hasAnswers > 0) {
-						throw Errors.invalidRequest("回答が存在する項目は削除できません");
-					}
-					await tx.formItem.delete({ where: { id } });
-				}
 
-				// 既存itemを更新 / 新規itemを作成
-				for (const [index, { id, options, ...item }] of items.entries()) {
-					if (id && existingIds.has(id)) {
-						await tx.formItem.update({
-							where: { id },
-							data: {
-								...item,
-								sortOrder: index,
-								options: {
-									deleteMany: {},
-									create: (options ?? []).map((opt, i) => ({
-										label: opt.label,
-										sortOrder: i,
-									})),
+					const existingIds = new Set(existingItems.map(i => i.id));
+					const submittedIds = new Set(
+						items.flatMap(i => (i.id && existingIds.has(i.id) ? [i.id] : []))
+					);
+
+					// 送信されなかったitemは回答があればエラー、なければ物理削除
+					const removedIds = [...existingIds].filter(
+						id => !submittedIds.has(id)
+					);
+					for (const id of removedIds) {
+						const hasAnswers = await tx.formAnswer.count({
+							where: { formItemId: id },
+						});
+						if (hasAnswers > 0) {
+							throw Errors.invalidRequest("回答が存在する項目は削除できません");
+						}
+						await tx.formItem.delete({ where: { id } });
+					}
+
+					// 既存itemを更新 / 新規itemを作成
+					for (const [index, { id, options, ...item }] of items.entries()) {
+						if (id && existingIds.has(id)) {
+							await tx.formItem.update({
+								where: { id },
+								data: {
+									...item,
+									sortOrder: index,
+									options: {
+										deleteMany: {},
+										create: (options ?? []).map((opt, i) => ({
+											label: opt.label,
+											sortOrder: i,
+										})),
+									},
 								},
-							},
-						});
-					} else {
-						await tx.formItem.create({
-							data: {
-								...item,
-								formId,
-								sortOrder: index,
-								options: options?.length
-									? {
-											create: options.map((opt, i) => ({
-												label: opt.label,
-												sortOrder: i,
-											})),
-										}
-									: undefined,
-							},
-						});
+							});
+						} else {
+							await tx.formItem.create({
+								data: {
+									...item,
+									formId,
+									sortOrder: index,
+									options: options?.length
+										? {
+												create: options.map((opt, i) => ({
+													label: opt.label,
+													sortOrder: i,
+												})),
+											}
+										: undefined,
+								},
+							});
+						}
 					}
 				}
-			}
 
-			return tx.form.findUniqueOrThrow({
-				where: { id: formId },
-				include: {
-					items: { include: { options: true }, orderBy: { sortOrder: "asc" } },
-				},
-			});
-		});
+				return tx.form.findUniqueOrThrow({
+					where: { id: formId },
+					include: {
+						items: {
+							include: { options: true },
+							orderBy: { sortOrder: "asc" },
+						},
+					},
+				});
+			},
+			{ isolationLevel: "Serializable" }
+		);
 
 		return c.json({ form });
 	}
