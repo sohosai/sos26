@@ -239,35 +239,52 @@ committeeFormRoute.patch(
 						items.flatMap(i => (i.id && existingIds.has(i.id) ? [i.id] : []))
 					);
 
+					// 回答が存在するアイテムIDを一括取得
+					const answeredItems = await tx.formAnswer.groupBy({
+						by: ["formItemId"],
+						where: { formItemId: { in: [...existingIds] } },
+					});
+					const answeredItemIds = new Set(answeredItems.map(a => a.formItemId));
+
 					// 送信されなかったitemは回答があればエラー、なければ物理削除
 					const removedIds = [...existingIds].filter(
 						id => !submittedIds.has(id)
 					);
-					for (const id of removedIds) {
-						const hasAnswers = await tx.formAnswer.count({
-							where: { formItemId: id },
+					const removedWithAnswers = removedIds.filter(id =>
+						answeredItemIds.has(id)
+					);
+					if (removedWithAnswers.length > 0) {
+						throw Errors.invalidRequest("回答が存在する項目は削除できません");
+					}
+					if (removedIds.length > 0) {
+						await tx.formItem.deleteMany({
+							where: { id: { in: removedIds } },
 						});
-						if (hasAnswers > 0) {
-							throw Errors.invalidRequest("回答が存在する項目は削除できません");
-						}
-						await tx.formItem.delete({ where: { id } });
 					}
 
 					// 既存itemを更新 / 新規itemを作成
 					for (const [index, { id, options, ...item }] of items.entries()) {
 						if (id && existingIds.has(id)) {
+							if (options && answeredItemIds.has(id)) {
+								throw Errors.invalidRequest(
+									"回答が存在する項目の選択肢は変更できません"
+								);
+							}
+
 							await tx.formItem.update({
 								where: { id },
 								data: {
 									...item,
 									sortOrder: index,
-									options: {
-										deleteMany: {},
-										create: (options ?? []).map((opt, i) => ({
-											label: opt.label,
-											sortOrder: i,
-										})),
-									},
+									options: answeredItemIds.has(id)
+										? undefined
+										: {
+												deleteMany: {},
+												create: (options ?? []).map((opt, i) => ({
+													label: opt.label,
+													sortOrder: i,
+												})),
+											},
 								},
 							});
 						} else {
