@@ -36,7 +36,7 @@ export function FileUploadFieldWithPreview({
 				required={required}
 				disabled={disabled}
 			/>
-			{file && (
+			{(file ?? value) && (
 				<div>
 					<IconButton onClick={() => setOpen(true)}>
 						<IconFileSearch size={16} />
