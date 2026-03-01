@@ -39,6 +39,10 @@ export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 			newErrors.__formName = "フォーム名を入力してください";
 		}
 
+		if (items.length === 0) {
+			newErrors.__items = "項目を1つ以上追加してください";
+		}
+
 		for (const item of items) {
 			const error = validateItem(item);
 			if (error) {
@@ -136,6 +140,11 @@ export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 					onRemove={removeItem}
 				/>
 			</div>
+			{errors.__items && (
+				<Text size="2" color="red">
+					{errors.__items}
+				</Text>
+			)}
 
 			<Button intent="secondary" onClick={addItem}>
 				<IconPlus size={16} stroke={1.5} />

@@ -185,7 +185,7 @@ function RouteComponent() {
 				open={editDialogOpen}
 				onOpenChange={setEditDialogOpen}
 				formId={form.id}
-				initialValues={formDetailToForm({ form: form })}
+				initialValues={previewForm}
 				onSuccess={() => router.invalidate()}
 			/>
 

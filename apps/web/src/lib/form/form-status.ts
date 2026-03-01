@@ -29,13 +29,6 @@ type AuthorizationSummary = {
 export function getFormStatusFromAuth(
 	authorization: AuthorizationSummary
 ): FormStatusInfo {
-	const now = new Date();
-
-	// 期限切れ
-	if (authorization?.deadlineAt && authorization.deadlineAt < now) {
-		return { label: "期間外", color: "gray", code: "EXPIRED" };
-	}
-
 	if (!authorization) {
 		return { label: "公開申請前", color: "gray", code: "DRAFT" };
 	}
@@ -48,6 +41,17 @@ export function getFormStatusFromAuth(
 			return { label: "却下", color: "red", code: "REJECTED" };
 
 		case "APPROVED": {
+			const now = new Date();
+
+			// 期限切れチェック（承認済みの場合のみ意味がある）
+			if (
+				authorization.deadlineAt &&
+				authorization.deadlineAt < now &&
+				!authorization.allowLateResponse
+			) {
+				return { label: "期間外", color: "gray", code: "EXPIRED" };
+			}
+
 			if (
 				authorization.deliveredAt &&
 				new Date(authorization.deliveredAt) > now
