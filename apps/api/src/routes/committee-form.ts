@@ -552,46 +552,50 @@ committeeFormRoute.patch(
 		const body = await c.req.json().catch(() => ({}));
 		const { status } = updateFormAuthorizationRequestSchema.parse(body);
 
-		const authorization = await prisma.formAuthorization.findFirst({
-			where: { id: authorizationId, formId },
-			include: { form: { select: { deletedAt: true, title: true } } },
-		});
+		const { updated, authorization } = await prisma.$transaction(async tx => {
+			const authorization = await tx.formAuthorization.findFirst({
+				where: { id: authorizationId, formId },
+				include: { form: { select: { deletedAt: true, title: true } } },
+			});
 
-		if (!authorization) {
-			throw Errors.notFound("承認申請が見つかりません");
-		}
+			if (!authorization) {
+				throw Errors.notFound("承認申請が見つかりません");
+			}
 
-		if (authorization.form.deletedAt) {
-			throw Errors.invalidRequest("削除済みのフォームは承認できません");
-		}
+			if (authorization.form.deletedAt) {
+				throw Errors.invalidRequest("削除済みのフォームは承認できません");
+			}
 
-		if (authorization.requestedToId !== user.id) {
-			throw Errors.forbidden("この承認申請を操作する権限がありません");
-		}
+			if (authorization.requestedToId !== user.id) {
+				throw Errors.forbidden("この承認申請を操作する権限がありません");
+			}
 
-		if (authorization.status !== "PENDING") {
-			throw Errors.invalidRequest("この承認申請は既に処理済みです");
-		}
+			if (authorization.status !== "PENDING") {
+				throw Errors.invalidRequest("この承認申請は既に処理済みです");
+			}
 
-		const now = new Date();
-		// 承認する場合、scheduledSendAt が未来であること
-		if (status === "APPROVED" && authorization.scheduledSendAt <= now) {
-			throw Errors.invalidRequest(
-				"配信希望日時を過ぎているため承認できません。新しい日時で再申請してください"
-			);
-		} else if (
-			status === "APPROVED" &&
-			authorization.deadlineAt &&
-			authorization.scheduledSendAt >= authorization.deadlineAt
-		) {
-			throw Errors.invalidRequest(
-				"配信希望日時と締め切り日時の順番が不正であるため承認できません。新しい日時で再申請してください"
-			);
-		}
+			const now = new Date();
+			// 承認する場合、scheduledSendAt が未来であること
+			if (status === "APPROVED" && authorization.scheduledSendAt <= now) {
+				throw Errors.invalidRequest(
+					"配信希望日時を過ぎているため承認できません。新しい日時で再申請してください"
+				);
+			} else if (
+				status === "APPROVED" &&
+				authorization.deadlineAt &&
+				authorization.scheduledSendAt >= authorization.deadlineAt
+			) {
+				throw Errors.invalidRequest(
+					"配信希望日時と締め切り日時の順番が不正であるため承認できません。新しい日時で再申請してください"
+				);
+			}
 
-		const updated = await prisma.formAuthorization.update({
-			where: { id: authorizationId, status: "PENDING" },
-			data: { status, decidedAt: new Date() },
+			const updated = await tx.formAuthorization.update({
+				where: { id: authorizationId, status: "PENDING" },
+				data: { status, decidedAt: new Date() },
+			});
+
+			return { updated, authorization };
 		});
 
 		void notifyFormAuthorizationDecided({
