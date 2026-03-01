@@ -191,6 +191,7 @@ export function FormPublishRequestDialog({
 			setDeadlineDate("");
 			setDeadlineTime("23:59");
 			setAllowLateResponse(false);
+			setIsRequired(true);
 			setSelectedProjectIds(new Set());
 			setProjectSearch("");
 			setError(null);
