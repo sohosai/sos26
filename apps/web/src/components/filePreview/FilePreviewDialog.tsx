@@ -1,6 +1,7 @@
 import { Dialog, Text } from "@radix-ui/themes";
 import { IconDownload, IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { Button, IconButton } from "@/components/primitives";
 import ExcelViewer from "./ExcelViewer";
 import styles from "./FilePreviewDialog.module.scss";
 import PdfViewer from "./Pdfviewer";
@@ -68,17 +69,15 @@ export default function FilePreviewDialog({
 					</Dialog.Title>
 					<div className={styles.headerActions}>
 						{onDownload && (
-							<button
-								type="button"
-								className={styles.actionBtn}
-								onClick={onDownload}
-								aria-label="ダウンロード"
-							>
-								<IconDownload size={20} />
-							</button>
+							<Button intent="secondary" size="2" onClick={onDownload}>
+								<IconDownload size={16} />
+								ダウンロード
+							</Button>
 						)}
-						<Dialog.Close className={styles.closeBtn} aria-label="閉じる">
-							<IconX size={20} />
+						<Dialog.Close>
+							<IconButton size="2" aria-label="閉じる">
+								<IconX size={18} />
+							</IconButton>
 						</Dialog.Close>
 					</div>
 				</div>
