@@ -1,8 +1,8 @@
 .viewer {
 	overflow-y: auto;
-  overflow-x: hidden;
+	overflow-x: hidden;
 	display: flex;
-  flex-direction: column;
+	flex-direction: column;
 }
 
 .status {
@@ -12,85 +12,83 @@
 }
 
 .tabs {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
+	display: flex;
+	align-items: flex-end;
+	gap: 2px;
 
-  padding: 0 12px;
-  height: 36px;
+	padding: 0 12px;
+	height: 36px;
 
-  background: var(--gray-3);
-  border-bottom: 1px solid var(--gray-6);
+	background: var(--gray-3);
+	border-bottom: 1px solid var(--gray-6);
 
-  flex-shrink: 0;
+	flex-shrink: 0;
 }
 
 .tab {
-  height: 28px;
-  padding: 0 16px;
+	height: 28px;
+	padding: 0 16px;
 
-  background: var(--gray-4);
-  border: 1px solid var(--gray-6);
-  border-bottom: none;
-  border-radius: 6px 6px 0 0;
+	background: var(--gray-4);
+	border: 1px solid var(--gray-6);
+	border-bottom: none;
+	border-radius: 6px 6px 0 0;
 
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--gray-10);
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--gray-10);
 
-  cursor: pointer;
-  transition: background-color 0.12s ease, color 0.12s ease;
+	cursor: pointer;
+	transition: background-color 0.12s ease, color 0.12s ease;
 
-  &:hover {
-    background: var(--gray-2);
-    color: var(--gray-12);
-  }
+	&:hover {
+		background: var(--gray-2);
+		color: var(--gray-12);
+	}
 }
 
 .activeTab {
-  background: var(--gray-1);
-  color: var(--blue-11);
-  border-color: var(--gray-6);
-  position: relative;
+	background: var(--gray-1);
+	color: var(--blue-11);
+	border-color: var(--gray-6);
+	position: relative;
 
-  &::after {
-    content: "";
-    position: absolute;
-    inset-inline: 0;
-    bottom: -1px;
-    height: 1px;
-    background: var(--gray-1);
-  }
+	&::after {
+		content: "";
+		position: absolute;
+		inset-inline: 0;
+		bottom: -1px;
+		height: 1px;
+		background: var(--gray-1);
+	}
 }
 
 .tableWrapper {
-  flex: 1;
-  overflow: auto;
-  font-size: 13px;
-	overflow-x: auto;
-  overflow-y: auto;
+	flex: 1;
+	overflow: auto;
+	font-size: 13px;
 }
 
 .table {
-  border-collapse: collapse;
-  white-space: nowrap;
+	border-collapse: collapse;
+	white-space: nowrap;
 
-  tbody td {
-    height: 22px;
-    padding: 0 8px;
+	tbody td {
+		height: 22px;
+		padding: 0 8px;
 
-    color: var(--gray-12);
-    background: var(--gray-1);
+		color: var(--gray-12);
+		background: var(--gray-1);
 
-    border-right: 1px solid var(--gray-6);
-    border-bottom: 1px solid var(--gray-4);
+		border-right: 1px solid var(--gray-6);
+		border-bottom: 1px solid var(--gray-4);
 
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 280px;
-  }
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 280px;
+	}
 
-  tbody tr:hover td {
-    background: var(--blue-2);
-  }
+	tbody tr:hover td {
+		background: var(--blue-2);
+	}
 }
