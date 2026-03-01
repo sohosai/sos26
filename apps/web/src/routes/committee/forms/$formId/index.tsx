@@ -228,7 +228,6 @@ function FormStatusBadge({ form }: { form: GetFormDetailResponse["form"] }) {
 			? {
 					status: latestAuth.status,
 					deliveredAt: latestAuth.scheduledSendAt,
-					allowLateResponse: latestAuth.allowLateResponse,
 					deadlineAt: latestAuth.deadlineAt,
 				}
 			: null

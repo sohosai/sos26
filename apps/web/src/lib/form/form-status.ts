@@ -18,7 +18,6 @@ export type FormStatusInfo = {
 type AuthorizationSummary = {
 	status: FormAuthorizationStatus;
 	deliveredAt: Date;
-	allowLateResponse: boolean;
 	deadlineAt: Date | null;
 } | null;
 
@@ -44,11 +43,8 @@ export function getFormStatusFromAuth(
 			const now = new Date();
 
 			// 期限切れチェック（承認済みの場合のみ意味がある）
-			if (
-				authorization.deadlineAt &&
-				authorization.deadlineAt < now &&
-				!authorization.allowLateResponse
-			) {
+			// allowLateResponse に関わらず、期限を過ぎていれば EXPIRED 表示
+			if (authorization.deadlineAt && authorization.deadlineAt <= now) {
 				return { label: "期間外", color: "gray", code: "EXPIRED" };
 			}
 

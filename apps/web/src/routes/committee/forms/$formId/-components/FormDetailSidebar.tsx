@@ -98,7 +98,6 @@ export function FormDetailSidebar({
 			? {
 					status: latestAuth.status,
 					deliveredAt: latestAuth.scheduledSendAt,
-					allowLateResponse: latestAuth.allowLateResponse,
 					deadlineAt: latestAuth.deadlineAt,
 				}
 			: null
