@@ -219,7 +219,7 @@ committeeFormRoute.patch(
 		const body = await c.req.json().catch(() => ({}));
 		const { items, ...formData } = updateFormDetailRequestSchema.parse(body);
 
-		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: items の CRUD を一括で行うため
 		const form = await prisma.$transaction(async tx => {
 			await tx.form.update({ where: { id: formId }, data: formData });
 
