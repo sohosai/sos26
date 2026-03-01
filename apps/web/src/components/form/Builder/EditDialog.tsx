@@ -8,18 +8,29 @@ type Props = {
 	onOpenChange: (open: boolean) => void;
 	form: Form | null;
 	onSubmit?: (form: Form) => void;
+	loading: boolean;
 };
 
-export function FormEditDialog({ open, onOpenChange, form, onSubmit }: Props) {
+export function FormEditDialog({
+	open,
+	onOpenChange,
+	form,
+	onSubmit,
+	loading,
+}: Props) {
 	if (!form) return null;
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
 			<Dialog.Content className={styles.dialogContent}>
 				<VisuallyHidden>
-					<Dialog.Title>Form Editor</Dialog.Title>
+					<Dialog.Title>フォーム編集</Dialog.Title>
 				</VisuallyHidden>
 				<div className={styles.dialogInner}>
-					<FormEditor initialForm={form} onSubmit={onSubmit} />
+					<FormEditor
+						initialForm={form}
+						onSubmit={onSubmit}
+						loading={loading}
+					/>
 				</div>
 			</Dialog.Content>
 		</Dialog.Root>

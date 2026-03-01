@@ -1,13 +1,13 @@
 import { Dialog, Text } from "@radix-ui/themes";
 import type { Bureau, NoticeAttachment } from "@sos26/shared";
 import { bureauLabelMap } from "@sos26/shared";
-import { IconDownload, IconPaperclip } from "@tabler/icons-react";
+import { IconPaperclip } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { AttachmentPreviewButton } from "@/components/filePreview/AttachmentPreviewButton";
 import { Button } from "@/components/primitives";
-import { downloadFile } from "@/lib/api/files";
 import { getProjectNotice, readProjectNotice } from "@/lib/api/project-notice";
-import { formatDate, formatFileSize } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { sanitizeHtml } from "@/lib/sanitize";
 import styles from "./NoticeDetailDialog.module.scss";
 
@@ -118,26 +118,7 @@ export function NoticeDetailDialog({
 								</Text>
 								<div className={styles.attachmentList}>
 									{attachments.map(att => (
-										<button
-											key={att.id}
-											type="button"
-											className={styles.attachmentItem}
-											onClick={() =>
-												downloadFile(
-													att.fileId,
-													att.fileName,
-													att.isPublic
-												).catch(() =>
-													toast.error("ファイルの取得に失敗しました")
-												)
-											}
-										>
-											<IconDownload size={14} />
-											<Text size="2">{att.fileName}</Text>
-											<Text size="1" color="gray">
-												({formatFileSize(att.size)})
-											</Text>
-										</button>
+										<AttachmentPreviewButton key={att.id} attachment={att} />
 									))}
 								</div>
 							</div>

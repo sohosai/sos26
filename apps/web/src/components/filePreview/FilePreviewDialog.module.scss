@@ -1,0 +1,74 @@
+.content {
+	display: flex;
+	flex-direction: column;
+	padding: 0;
+
+	max-width: min(96vw, 1200px);
+	height: min(90vh, 900px);
+
+	overflow: hidden;
+}
+
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--space-3) var(--space-4);
+	border-bottom: 1px solid var(--gray-6);
+	flex-shrink: 0;
+}
+
+.title {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	min-width: 0;
+}
+
+.headerActions {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	flex-shrink: 0;
+}
+
+.zoomControls {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	border-right: 1px solid var(--gray-6);
+	padding-right: var(--space-3);
+}
+
+.zoomLabel {
+	min-width: 3ch;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+	color: var(--gray-11);
+	user-select: none;
+}
+
+.body {
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
+	display: flex;
+	flex-direction: column;
+}
+
+.image {
+	display: block;
+	max-width: 100%;
+	object-fit: contain;
+	margin: auto;
+	padding: var(--space-6);
+	background: var(--gray-3);
+}
+
+.unsupported {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 1;
+	color: var(--gray-10);
+}

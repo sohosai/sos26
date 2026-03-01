@@ -1,4 +1,4 @@
-import { Dialog, VisuallyHidden } from "@radix-ui/themes";
+import { Dialog, Spinner, VisuallyHidden } from "@radix-ui/themes";
 import type { Form, FormAnswers } from "../type";
 import styles from "./AnswerDialog.module.scss";
 import { FormViewer } from "./FormViewer";
@@ -7,30 +7,44 @@ type Props = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	form: Form | null;
-	onSubmit?: (answers: FormAnswers) => void;
+	initialAnswers?: FormAnswers;
+	onSubmit?: (answers: FormAnswers) => Promise<void>;
+	onSaveDraft?: (answers: FormAnswers) => Promise<void>;
+	disableSubmit?: boolean;
+	disableSaveDraft?: boolean;
 };
 
 export function FormAnswerDialog({
 	open,
 	onOpenChange,
 	form,
+	initialAnswers,
 	onSubmit,
+	onSaveDraft,
+	disableSubmit = false,
+	disableSaveDraft = false,
 }: Props) {
-	if (!form) return null;
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
 			<Dialog.Content className={styles.dialogContent}>
 				<VisuallyHidden>
-					<Dialog.Title>Form Viewer</Dialog.Title>
+					<Dialog.Title>フォーム回答</Dialog.Title>
 				</VisuallyHidden>
 				<div className={styles.dialogInner}>
-					<FormViewer
-						form={form}
-						onSubmit={answers => {
-							onSubmit?.(answers);
-						}}
-						onClose={() => onOpenChange(false)}
-					/>
+					{form ? (
+						<FormViewer
+							form={form}
+							initialAnswers={initialAnswers}
+							onSubmit={onSubmit}
+							onSaveDraft={onSaveDraft}
+							disableSubmit={disableSubmit}
+							disableSaveDraft={disableSaveDraft}
+						/>
+					) : (
+						<div className={styles.loading}>
+							<Spinner size="3" />
+						</div>
+					)}
 				</div>
 			</Dialog.Content>
 		</Dialog.Root>

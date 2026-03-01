@@ -10,13 +10,13 @@ export const volunteerEntryFormMock: Form = {
 		{
 			id: "fullName",
 			label: "氏名",
-			type: "text",
+			type: "TEXT",
 			required: true,
 		},
 		{
 			id: "department",
 			label: "所属学部・学科",
-			type: "select",
+			type: "SELECT",
 			required: true,
 			options: [
 				{ id: "LIT", label: "文学部" },
@@ -29,25 +29,25 @@ export const volunteerEntryFormMock: Form = {
 		{
 			id: "age",
 			label: "年齢",
-			type: "number",
+			type: "NUMBER",
 			required: true,
 		},
 		{
 			id: "motivation",
 			label: "志望動機",
-			type: "textarea",
+			type: "TEXTAREA",
 			required: true,
 		},
 		{
 			id: "idCardCopy",
 			label: "学生証の写し（PDFまたは画像）",
-			type: "file",
+			type: "FILE",
 			required: true,
 		},
 		{
 			id: "availableRoles",
 			label: "希望する担当業務（複数選択可）",
-			type: "checkbox",
+			type: "CHECKBOX",
 			required: true,
 			options: [
 				{ id: "RECEPTION", label: "受付・案内" },
@@ -59,19 +59,19 @@ export const volunteerEntryFormMock: Form = {
 		{
 			id: "previousExperience",
 			label: "過去のボランティア経験回数",
-			type: "number",
+			type: "NUMBER",
 			required: false,
 		},
 		{
 			id: "notes",
 			label: "特記事項・連絡事項",
-			type: "textarea",
+			type: "TEXTAREA",
 			required: false,
 		},
 		{
 			id: "termsAgreed",
 			label: "規約への同意",
-			type: "checkbox",
+			type: "CHECKBOX",
 			required: true,
 			options: [
 				{

@@ -1,10 +1,8 @@
 import { Badge, Text } from "@radix-ui/themes";
 import type { InquiryAttachment } from "@sos26/shared";
-import { IconDownload } from "@tabler/icons-react";
 import Avatar from "boring-avatars";
-import { toast } from "sonner";
-import { downloadFile } from "@/lib/api/files";
-import { formatDate, formatFileSize } from "@/lib/format";
+import { AttachmentPreviewButton } from "@/components/filePreview/AttachmentPreviewButton";
+import { formatDate } from "@/lib/format";
 import { useStorageUrl } from "@/lib/storage";
 import styles from "./SupportDetail.module.scss";
 import type { ActivityInfo } from "./types";
@@ -52,22 +50,7 @@ export function TimelineItem({
 							att.mimeType.startsWith("image/") ? (
 								<AttachmentImage key={att.id} attachment={att} />
 							) : (
-								<button
-									key={att.id}
-									type="button"
-									className={styles.attachmentItem}
-									onClick={() =>
-										downloadFile(att.fileId, att.fileName, att.isPublic).catch(
-											() => toast.error("ファイルの取得に失敗しました")
-										)
-									}
-								>
-									<IconDownload size={14} />
-									<Text size="2">{att.fileName}</Text>
-									<Text size="1" color="gray">
-										({formatFileSize(att.size)})
-									</Text>
-								</button>
+								<AttachmentPreviewButton key={att.id} attachment={att} />
 							)
 						)}
 					</div>

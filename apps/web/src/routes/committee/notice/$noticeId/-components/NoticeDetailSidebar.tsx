@@ -9,9 +9,9 @@ import {
 } from "@tabler/icons-react";
 import Avatar from "boring-avatars";
 import { useState } from "react";
+import { AddCollaboratorDialog } from "@/components/committee/AddCollaboratorDialog";
 import { Button, IconButton } from "@/components/primitives";
 import { formatDate } from "@/lib/format";
-import { AddCollaboratorDialog } from "./AddCollaboratorDialog";
 import styles from "./NoticeDetailSidebar.module.scss";
 import { PublishRequestDialog } from "./PublishRequestDialog";
 

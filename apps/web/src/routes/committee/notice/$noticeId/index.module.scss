@@ -75,24 +75,6 @@
 	gap: var(--space-1);
 }
 
-.attachmentItem {
-	display: inline-flex;
-	align-items: center;
-	gap: var(--space-1);
-	padding: var(--space-1) var(--space-2);
-	border-radius: var(--radius-2);
-	background: var(--gray-a3);
-	border: none;
-	cursor: pointer;
-	font: inherit;
-	width: fit-content;
-	color: var(--accent-11);
-
-	&:hover {
-		background: var(--gray-a4);
-	}
-}
-
 /* ─── Body ─── */
 
 /* ─── Delete confirm ─── */

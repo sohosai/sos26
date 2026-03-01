@@ -17,6 +17,7 @@
   - RichTextEditor（サニタイズ仕様含む）: `docs/apps/web/rich-text-editor.md`
   - 日付フォーマット: `docs/apps/web/format.md`
   - DataTable: `docs/apps/web/data-table.md`
+  - ファイルプレビュー: `docs/apps/web/file-preview.md`
   - トースト通知: `docs/apps/web/toast.md`
   - スタイリング: `docs/apps/web/styling.md`
   - 環境変数: `docs/apps/web/environment-variables.md`
@@ -25,11 +26,15 @@
   - Project API 仕様: `docs/apps/api/project.md`
   - Committee Member API 仕様: `docs/apps/api/committee-member.md`
   - Notice API 仕様: `docs/apps/api/notice.md`
+  - Form API 仕様: `docs/apps/api/form.md`
   - Committee Project API 仕様: `docs/apps/api/committee-project.md`
   - テストガイド: `docs/apps/api/testing.md`
   - Prisma: `docs/apps/api/prisma.md`
   - メール送信: `docs/apps/api/send-mail.md`
   - 環境変数: `docs/apps/api/environment-variables.md`
+- 機能仕様書
+  - お知らせ機能: `docs/notice-spec.md`
+  - お問い合わせ機能: `docs/support-spec.md`
 - 共有仕様
   - Shared パッケージ: `packages/shared/README.md`
 - テスト全般: `docs/testing.md`
