@@ -472,17 +472,33 @@ committeeFormRoute.post(
 			throw Errors.notFound("指定された企画の一部が見つかりません");
 		}
 
-		const authorization = await prisma.formAuthorization.create({
-			data: {
-				formId,
-				requestedById: userId,
-				requestedToId,
-				...data,
-				deliveries: {
-					create: projectIds.map(projectId => ({ projectId })),
-				},
+		const authorization = await prisma.$transaction(
+			async tx => {
+				const existingAuth = await tx.formAuthorization.findFirst({
+					where: { formId, status: { in: ["PENDING", "APPROVED"] } },
+				});
+
+				if (existingAuth) {
+					if (existingAuth.status === "APPROVED") {
+						throw Errors.invalidRequest("このフォームは既に承認されています");
+					}
+					throw Errors.alreadyExists("既に承認待ちの申請があります");
+				}
+
+				return tx.formAuthorization.create({
+					data: {
+						formId,
+						requestedById: userId,
+						requestedToId,
+						...data,
+						deliveries: {
+							create: projectIds.map(projectId => ({ projectId })),
+						},
+					},
+				});
 			},
-		});
+			{ isolationLevel: "Serializable" }
+		);
 
 		return c.json({ authorization });
 	}
