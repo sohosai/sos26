@@ -485,7 +485,9 @@ projectFormRoute.patch(
 
 		assertSelectedOptionsValid(delivery.formAuthorization.form.items, answers);
 
-		if (submit) {
+		const isAlreadySubmitted = existing.submittedAt !== null;
+
+		if (submit || isAlreadySubmitted) {
 			checkDeadline(delivery.formAuthorization);
 			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
 		}
@@ -493,7 +495,10 @@ projectFormRoute.patch(
 		const response = await prisma.$transaction(async tx => {
 			await tx.formResponse.update({
 				where: { id: existing.id },
-				data: { submittedAt: submit ? new Date() : null },
+				data: {
+					submittedAt: isAlreadySubmitted || submit ? new Date() : null,
+					respondentId: userId,
+				},
 			});
 
 			await upsertAnswers(
