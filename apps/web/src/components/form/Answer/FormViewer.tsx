@@ -6,6 +6,8 @@ import type { Form, FormAnswers, FormAnswerValue } from "../type";
 import { AnswerField } from "./AnswerField";
 import styles from "./FormViewer.module.scss";
 
+const EMPTY_ANSWERS: FormAnswers = {};
+
 type Props = {
 	form: Form;
 	onSubmit?: (answers: FormAnswers) => Promise<void>;
@@ -40,7 +42,7 @@ function buildInitialAnswers(
 export function FormViewer({
 	form,
 	onSubmit,
-	initialAnswers = {},
+	initialAnswers = EMPTY_ANSWERS,
 	onSaveDraft,
 	disableSubmit = false,
 	disableSaveDraft = false,
