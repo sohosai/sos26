@@ -14,6 +14,7 @@ export type ActionItem<T> = {
 	href?: {
 		to: string;
 		params: Record<string, string>;
+		search?: Record<string, unknown>;
 	};
 	onClick?: (item: T) => void | Promise<void>;
 };
@@ -58,6 +59,7 @@ export function ActionsMenu<T>({ item, actions }: ActionsMenuProps<T>) {
 								key={action.key}
 								to={action.href.to}
 								params={action.href.params}
+								search={action.href.search}
 							>
 								{content}
 							</Link>
