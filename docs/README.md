@@ -17,6 +17,7 @@
   - RichTextEditor（サニタイズ仕様含む）: `docs/apps/web/rich-text-editor.md`
   - 日付フォーマット: `docs/apps/web/format.md`
   - DataTable: `docs/apps/web/data-table.md`
+  - ファイルプレビュー: `docs/apps/web/file-preview.md`
   - トースト通知: `docs/apps/web/toast.md`
   - スタイリング: `docs/apps/web/styling.md`
   - 環境変数: `docs/apps/web/environment-variables.md`
