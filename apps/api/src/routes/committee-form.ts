@@ -218,7 +218,7 @@ committeeFormRoute.patch(
 		const { items, ...formData } = updateFormDetailRequestSchema.parse(body);
 
 		const form = await prisma.$transaction(
-			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>
+			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: フォーム更新のトランザクション処理
 			async tx => {
 				const approvedAuth = await tx.formAuthorization.findFirst({
 					where: { formId, status: "APPROVED" },
