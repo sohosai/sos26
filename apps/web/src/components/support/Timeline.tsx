@@ -50,11 +50,7 @@ export function TimelineItem({
 							att.mimeType.startsWith("image/") ? (
 								<AttachmentImage key={att.id} attachment={att} />
 							) : (
-								<AttachmentPreviewButton
-									key={att.id}
-									attachment={att}
-									className={styles.attachmentItem}
-								/>
+								<AttachmentPreviewButton key={att.id} attachment={att} />
 							)
 						)}
 					</div>

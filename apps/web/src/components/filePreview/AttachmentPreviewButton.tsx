@@ -2,6 +2,7 @@ import { Text } from "@radix-ui/themes";
 import { IconFileSearch } from "@tabler/icons-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/primitives";
 import { downloadFile, fetchFile } from "@/lib/api/files";
 import { formatFileSize } from "@/lib/format";
 import FilePreviewDialog from "./FilePreviewDialog";
@@ -16,10 +17,9 @@ type Attachment = {
 
 interface Props {
 	attachment: Attachment;
-	className?: string;
 }
 
-export function AttachmentPreviewButton({ attachment, className }: Props) {
+export function AttachmentPreviewButton({ attachment }: Props) {
 	const [file, setFile] = useState<File | null>(null);
 	const [open, setOpen] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
@@ -57,18 +57,18 @@ export function AttachmentPreviewButton({ attachment, className }: Props) {
 
 	return (
 		<>
-			<button
-				type="button"
-				className={className}
+			<Button
+				intent="secondary"
+				size="2"
 				onClick={handleClick}
-				disabled={isLoading}
+				loading={isLoading}
 			>
 				<IconFileSearch size={14} />
 				<Text size="2">{attachment.fileName}</Text>
 				<Text size="1" color="gray">
 					({formatFileSize(attachment.size)})
 				</Text>
-			</button>
+			</Button>
 			<FilePreviewDialog
 				file={file}
 				open={open}

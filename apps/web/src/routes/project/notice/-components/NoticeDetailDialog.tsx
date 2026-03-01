@@ -118,11 +118,7 @@ export function NoticeDetailDialog({
 								</Text>
 								<div className={styles.attachmentList}>
 									{attachments.map(att => (
-										<AttachmentPreviewButton
-											key={att.id}
-											attachment={att}
-											className={styles.attachmentItem}
-										/>
+										<AttachmentPreviewButton key={att.id} attachment={att} />
 									))}
 								</div>
 							</div>
