@@ -56,12 +56,6 @@ export function AnswerField({ item, value, onChange }: FieldProps) {
 
 		case "file":
 			return (
-				// <FileUploadField
-				// 	label={item.label}
-				// 	value={value as File | null}
-				// 	onChange={onChange}
-				// 	required={item.required}
-				// />
 				<FileUploadFieldWithPreview
 					label={item.label}
 					value={value as File | null}
