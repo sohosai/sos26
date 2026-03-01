@@ -18,7 +18,7 @@ export function ProjectFormToForm(form: GetProjectFormResponse): Form {
 				type: item.type,
 				description: item.description ?? undefined,
 				required: item.required,
-				options: item.options
+				options: [...item.options]
 					.sort((a, b) => a.sortOrder - b.sortOrder)
 					.map(opt => ({
 						id: opt.id,
@@ -42,7 +42,7 @@ export function formDetailToForm(formDetail: GetFormDetailResponse): Form {
 				description: item.description ?? undefined,
 				type: item.type,
 				required: item.required,
-				options: item.options
+				options: [...item.options]
 					.sort((a, b) => a.sortOrder - b.sortOrder)
 					.map(opt => ({
 						id: opt.id,
