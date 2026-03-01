@@ -30,6 +30,9 @@
   - Prisma: `docs/apps/api/prisma.md`
   - メール送信: `docs/apps/api/send-mail.md`
   - 環境変数: `docs/apps/api/environment-variables.md`
+- 機能仕様書
+  - お知らせ機能: `docs/notice-spec.md`
+  - お問い合わせ機能: `docs/support-spec.md`
 - 共有仕様
   - Shared パッケージ: `packages/shared/README.md`
 - テスト全般: `docs/testing.md`
