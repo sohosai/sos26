@@ -1,3 +1,11 @@
 .page {
-  overflow: auto;
+	overflow: auto;
+
+	:global(.docx-wrapper) {
+		box-shadow: none !important;
+
+		> :global(section.docx) {
+			box-shadow: var(--shadow-2);
+		}
+	}
 }
