@@ -2,6 +2,8 @@ import {
 	addFormCollaboratorRequestSchema,
 	createFormRequestSchema,
 	formAuthorizationPathParamsSchema,
+	formIdPathParamsSchema,
+	formResponsePathParamsSchema,
 	requestFormAuthorizationRequestSchema,
 	updateFormAuthorizationRequestSchema,
 	updateFormDetailRequestSchema,
@@ -151,7 +153,7 @@ committeeFormRoute.get(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId } = c.req.param();
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
 
 		const form = await prisma.form.findFirst({
 			where: { id: formId, deletedAt: null },
@@ -208,7 +210,7 @@ committeeFormRoute.patch(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId } = c.req.param();
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
 		const userId = c.get("user").id;
 
 		await requireWriteAccess(formId, userId);
@@ -217,7 +219,7 @@ committeeFormRoute.patch(
 		const { items, ...formData } = updateFormDetailRequestSchema.parse(body);
 
 		const form = await prisma.$transaction(
-			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>
+			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: フォーム更新のトランザクション処理
 			async tx => {
 				const approvedAuth = await tx.formAuthorization.findFirst({
 					where: { formId, status: "APPROVED" },
@@ -239,35 +241,52 @@ committeeFormRoute.patch(
 						items.flatMap(i => (i.id && existingIds.has(i.id) ? [i.id] : []))
 					);
 
+					// 回答が存在するアイテムIDを一括取得
+					const answeredItems = await tx.formAnswer.groupBy({
+						by: ["formItemId"],
+						where: { formItemId: { in: [...existingIds] } },
+					});
+					const answeredItemIds = new Set(answeredItems.map(a => a.formItemId));
+
 					// 送信されなかったitemは回答があればエラー、なければ物理削除
 					const removedIds = [...existingIds].filter(
 						id => !submittedIds.has(id)
 					);
-					for (const id of removedIds) {
-						const hasAnswers = await tx.formAnswer.count({
-							where: { formItemId: id },
+					const removedWithAnswers = removedIds.filter(id =>
+						answeredItemIds.has(id)
+					);
+					if (removedWithAnswers.length > 0) {
+						throw Errors.invalidRequest("回答が存在する項目は削除できません");
+					}
+					if (removedIds.length > 0) {
+						await tx.formItem.deleteMany({
+							where: { id: { in: removedIds } },
 						});
-						if (hasAnswers > 0) {
-							throw Errors.invalidRequest("回答が存在する項目は削除できません");
-						}
-						await tx.formItem.delete({ where: { id } });
 					}
 
 					// 既存itemを更新 / 新規itemを作成
 					for (const [index, { id, options, ...item }] of items.entries()) {
 						if (id && existingIds.has(id)) {
+							if (options && answeredItemIds.has(id)) {
+								throw Errors.invalidRequest(
+									"回答が存在する項目の選択肢は変更できません"
+								);
+							}
+
 							await tx.formItem.update({
 								where: { id },
 								data: {
 									...item,
 									sortOrder: index,
-									options: {
-										deleteMany: {},
-										create: (options ?? []).map((opt, i) => ({
-											label: opt.label,
-											sortOrder: i,
-										})),
-									},
+									options: answeredItemIds.has(id)
+										? undefined
+										: {
+												deleteMany: {},
+												create: (options ?? []).map((opt, i) => ({
+													label: opt.label,
+													sortOrder: i,
+												})),
+											},
 								},
 							});
 						} else {
@@ -316,7 +335,7 @@ committeeFormRoute.delete(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId } = c.req.param();
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
 		const userId = c.get("user").id;
 
 		await requireOwner(formId, userId);
@@ -351,7 +370,8 @@ committeeFormRoute.post(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId, userId: targetUserId } = c.req.param();
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
+		const { userId: targetUserId } = c.req.param();
 		const userId = c.get("user").id;
 
 		await requireOwner(formId, userId);
@@ -363,11 +383,18 @@ committeeFormRoute.post(
 			);
 		}
 
-		// 追加対象ユーザーの存在確認
+		// 追加対象ユーザーの存在確認 + 委員会メンバーであることを確認
 		const targetUser = await prisma.user.findFirst({
-			where: { id: targetUserId, deletedAt: null },
+			where: {
+				id: targetUserId,
+				deletedAt: null,
+				committeeMember: { deletedAt: null },
+			},
 		});
-		if (!targetUser) throw Errors.notFound("ユーザーが見つかりません");
+		if (!targetUser)
+			throw Errors.notFound(
+				"ユーザーが見つからないか、委員会メンバーではありません"
+			);
 
 		// 既存チェック（ソフトデリート済みも含めて検索）
 		const existing = await prisma.formCollaborator.findFirst({
@@ -411,7 +438,8 @@ committeeFormRoute.delete(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId, userId: targetUserId } = c.req.param();
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
+		const { userId: targetUserId } = c.req.param();
 		const userId = c.get("user").id;
 
 		await requireOwner(formId, userId);
@@ -444,13 +472,11 @@ committeeFormRoute.post(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId } = c.req.param();
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
 		const user = c.get("user");
 		const userId = user.id;
 
 		const form = await requireWriteAccess(formId, userId);
-
-		await requireWriteAccess(formId, userId);
 
 		const body = await c.req.json().catch(() => ({}));
 		const { projectIds, requestedToId, ...data } =
@@ -554,46 +580,50 @@ committeeFormRoute.patch(
 		const body = await c.req.json().catch(() => ({}));
 		const { status } = updateFormAuthorizationRequestSchema.parse(body);
 
-		const authorization = await prisma.formAuthorization.findFirst({
-			where: { id: authorizationId, formId },
-			include: { form: { select: { deletedAt: true, title: true } } },
-		});
+		const { updated, authorization } = await prisma.$transaction(async tx => {
+			const authorization = await tx.formAuthorization.findFirst({
+				where: { id: authorizationId, formId },
+				include: { form: { select: { deletedAt: true, title: true } } },
+			});
 
-		if (!authorization) {
-			throw Errors.notFound("承認申請が見つかりません");
-		}
+			if (!authorization) {
+				throw Errors.notFound("承認申請が見つかりません");
+			}
 
-		if (authorization.form.deletedAt) {
-			throw Errors.invalidRequest("削除済みのフォームは承認できません");
-		}
+			if (authorization.form.deletedAt) {
+				throw Errors.invalidRequest("削除済みのフォームは承認できません");
+			}
 
-		if (authorization.requestedToId !== user.id) {
-			throw Errors.forbidden("この承認申請を操作する権限がありません");
-		}
+			if (authorization.requestedToId !== user.id) {
+				throw Errors.forbidden("この承認申請を操作する権限がありません");
+			}
 
-		if (authorization.status !== "PENDING") {
-			throw Errors.invalidRequest("この承認申請は既に処理済みです");
-		}
+			if (authorization.status !== "PENDING") {
+				throw Errors.invalidRequest("この承認申請は既に処理済みです");
+			}
 
-		const now = new Date();
-		// 承認する場合、scheduledSendAt が未来であること
-		if (status === "APPROVED" && authorization.scheduledSendAt <= now) {
-			throw Errors.invalidRequest(
-				"配信希望日時を過ぎているため承認できません。新しい日時で再申請してください"
-			);
-		} else if (
-			status === "APPROVED" &&
-			authorization.deadlineAt &&
-			authorization.scheduledSendAt >= authorization.deadlineAt
-		) {
-			throw Errors.invalidRequest(
-				"配信希望日時と締め切り日時の順番が不正であるため承認できません。新しい日時で再申請してください"
-			);
-		}
+			const now = new Date();
+			// 承認する場合、scheduledSendAt が未来であること
+			if (status === "APPROVED" && authorization.scheduledSendAt <= now) {
+				throw Errors.invalidRequest(
+					"配信希望日時を過ぎているため承認できません。新しい日時で再申請してください"
+				);
+			} else if (
+				status === "APPROVED" &&
+				authorization.deadlineAt &&
+				authorization.scheduledSendAt >= authorization.deadlineAt
+			) {
+				throw Errors.invalidRequest(
+					"配信希望日時と締め切り日時の順番が不正であるため承認できません。新しい日時で再申請してください"
+				);
+			}
 
-		const updated = await prisma.formAuthorization.update({
-			where: { id: authorizationId, status: "PENDING" },
-			data: { status, decidedAt: new Date() },
+			const updated = await tx.formAuthorization.update({
+				where: { id: authorizationId, status: "PENDING" },
+				data: { status, decidedAt: new Date() },
+			});
+
+			return { updated, authorization };
 		});
 
 		void notifyFormAuthorizationDecided({
@@ -617,7 +647,7 @@ committeeFormRoute.get(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId } = c.req.param();
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
 		const userId = c.get("user").id;
 
 		// owner または共同編集者のみ閲覧可
@@ -686,6 +716,86 @@ committeeFormRoute.get(
 					})),
 				})),
 			})),
+		});
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// GET /committee/forms/:formId/responses/:responseId
+// 回答詳細（owner または共同編集者のみ）
+// ─────────────────────────────────────────────────────────────
+committeeFormRoute.get(
+	"/:formId/responses/:responseId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const { formId, responseId } = formResponsePathParamsSchema.parse(
+			c.req.param()
+		);
+		const userId = c.get("user").id;
+
+		// owner または共同編集者のみ閲覧可
+		const form = await prisma.form.findFirst({
+			where: { id: formId, deletedAt: null },
+			include: {
+				collaborators: { where: { deletedAt: null } },
+			},
+		});
+		if (!form) throw Errors.notFound("フォームが見つかりません");
+
+		const isOwner = form.ownerId === userId;
+		const isCollaborator = form.collaborators.some(c => c.userId === userId);
+		if (!isOwner && !isCollaborator) {
+			throw Errors.forbidden("回答の閲覧は作成者・共同編集者のみ可能です");
+		}
+
+		const r = await prisma.formResponse.findFirst({
+			where: {
+				id: responseId,
+				formDelivery: { formAuthorization: { formId } },
+				submittedAt: { not: null },
+			},
+			include: {
+				respondent: { select: { id: true, name: true } },
+				formDelivery: {
+					include: {
+						project: { select: { id: true, name: true } },
+					},
+				},
+				answers: {
+					include: {
+						selectedOptions: {
+							include: {
+								formItemOption: { select: { id: true, label: true } },
+							},
+						},
+					},
+				},
+			},
+		});
+		if (!r) throw Errors.notFound("回答が見つかりません");
+
+		return c.json({
+			response: {
+				id: r.id,
+				respondent: r.respondent,
+				project: {
+					id: r.formDelivery.project.id,
+					name: r.formDelivery.project.name,
+				},
+				submittedAt: r.submittedAt,
+				createdAt: r.createdAt,
+				answers: r.answers.map(a => ({
+					formItemId: a.formItemId,
+					textValue: a.textValue,
+					numberValue: a.numberValue,
+					fileUrl: a.fileUrl,
+					selectedOptions: a.selectedOptions.map(s => ({
+						id: s.formItemOption.id,
+						label: s.formItemOption.label,
+					})),
+				})),
+			},
 		});
 	}
 );

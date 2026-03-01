@@ -7,7 +7,7 @@ import {
 	IconTrash,
 	IconX,
 } from "@tabler/icons-react";
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import Avatar from "boring-avatars";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -86,6 +86,7 @@ export function FormDetailSidebar({
 	onEdit,
 	onDelete,
 }: Props) {
+	const navigate = useNavigate();
 	const [addCollaboratorOpen, setAddCollaboratorOpen] = useState(false);
 	const [publishRequestOpen, setPublishRequestOpen] = useState(false);
 	const [approvingId, setApprovingId] = useState<string | null>(null);
@@ -97,7 +98,6 @@ export function FormDetailSidebar({
 			? {
 					status: latestAuth.status,
 					deliveredAt: latestAuth.scheduledSendAt,
-					allowLateResponse: latestAuth.allowLateResponse,
 					deadlineAt: latestAuth.deadlineAt,
 				}
 			: null
@@ -247,16 +247,20 @@ export function FormDetailSidebar({
 				{/* ボックス3: 回答確認 */}
 				{canViewAnswers && (
 					<aside className={styles.sidebar}>
-						<Link
-							to="/committee/forms/$formId/answers"
-							params={{ formId: form.id }}
-						>
-							<div className={styles.section}>
-								<Button intent="primary" size="2">
-									回答を確認する
-								</Button>
-							</div>
-						</Link>
+						<div className={styles.section}>
+							<Button
+								intent="primary"
+								size="2"
+								onClick={() =>
+									navigate({
+										to: "/committee/forms/$formId/answers",
+										params: { formId: form.id },
+									})
+								}
+							>
+								回答を確認する
+							</Button>
+						</div>
 					</aside>
 				)}
 			</div>

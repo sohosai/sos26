@@ -1,4 +1,4 @@
-import { Text } from "@radix-ui/themes";
+import { Flex, Text } from "@radix-ui/themes";
 import {
 	CheckboxGroup,
 	CheckboxGroupItem,
@@ -17,95 +17,74 @@ type FieldProps = {
 };
 
 export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
-	const Label = () => (
-		<Text size="2">{item.label + (item.required ? " *" : "")}</Text>
+	const label = (
+		<Text size="2" weight="medium">
+			{item.label + (item.required ? " *" : "")}
+		</Text>
 	);
-	const Description = () => {
-		return item.description && <Text size="1">{item.description}</Text>;
-	};
-	switch (item.type) {
-		case "TEXT":
-			return (
-				<>
-					<Label />
-					<Description />
+	const description = item.description ? (
+		<Text size="1" color="gray">
+			{item.description}
+		</Text>
+	) : null;
+
+	const field = (() => {
+		switch (item.type) {
+			case "TEXT":
+				return (
 					<TextField
 						label=""
 						placeholder="回答を入力してください"
 						value={(value as string) ?? ""}
 						onChange={value => onChange(value)}
-						// required={item.required}
 						disabled={disabled}
 						aria-label={item.label}
 					/>
-				</>
-			);
+				);
 
-		case "TEXTAREA":
-			return (
-				<>
-					<Label />
-					<Description />
+			case "TEXTAREA":
+				return (
 					<TextArea
 						label=""
 						value={(value as string) ?? ""}
 						onChange={value => onChange(value)}
 						placeholder="回答を入力してください"
 						rows={3}
-						// required={item.required}
 						resize="none"
 						autoGrow
 						disabled={disabled}
 						aria-label={item.label}
 					/>
-				</>
-			);
+				);
 
-		case "NUMBER":
-			return (
-				<>
-					<Label />
-					<Description />
+			case "NUMBER":
+				return (
 					<NumberField
 						label=""
 						value={value as number | null}
 						onChange={onChange}
-						// required={item.required}
 						disabled={disabled}
 						aria-label={item.label}
-						// 必要になったら有効化
-						// allowDecimal // 小数許可
-						// allowNegative // 負の数許可
 					/>
-				</>
-			);
+				);
 
-		case "FILE":
-			return (
-				<>
-					<Label />
-					<Description />
+			case "FILE":
+				return (
 					<FileUploadFieldWithPreview
 						label=""
 						value={value as File | null}
 						onChange={onChange}
-						// required={item.required}
 						disabled={disabled}
 						aria-label={item.label}
 					/>
-				</>
-			);
+				);
 
-		case "SELECT":
-			return (
-				<>
-					<Label />
-					<Description />
+			case "SELECT":
+				return (
 					<RadioGroup
 						label=""
 						value={(value as string) ?? ""}
 						onValueChange={val => onChange(val)}
-						// required={item.required}
 						name={item.id}
 						disabled={disabled}
 						aria-label={item.label}
@@ -116,19 +95,14 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 							</RadioGroupItem>
 						))}
 					</RadioGroup>
-				</>
-			);
+				);
 
-		case "CHECKBOX":
-			return (
-				<>
-					<Label />
-					<Description />
+			case "CHECKBOX":
+				return (
 					<CheckboxGroup
 						label=""
 						value={(value as string[]) ?? []}
 						onValueChange={val => onChange(val)}
-						// required={item.required}
 						name={item.id}
 						disabled={disabled}
 						aria-label={item.label}
@@ -139,10 +113,18 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 							</CheckboxGroupItem>
 						))}
 					</CheckboxGroup>
-				</>
-			);
+				);
 
-		default:
-			return null;
-	}
+			default:
+				return null;
+		}
+	})();
+
+	return (
+		<Flex direction="column" gap="1">
+			{label}
+			{description}
+			{field}
+		</Flex>
+	);
 }

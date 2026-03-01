@@ -1,8 +1,8 @@
 import { Heading, Separator, Text } from "@radix-ui/themes";
 import { IconArrowLeft } from "@tabler/icons-react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnswerField } from "@/components/form/Answer/AnswerField";
-import { getFormDetail, listFormResponses } from "@/lib/api/committee-form";
+import { getFormDetail, getFormResponse } from "@/lib/api/committee-form";
 import { formDetailToForm } from "@/lib/form/convert";
 import { responseToAnswers } from "@/lib/form/utils";
 import { formatDate } from "@/lib/format";
@@ -17,41 +17,31 @@ export const Route = createFileRoute(
 	}),
 
 	loader: async ({ params }) => {
-		const [formRes, responsesRes] = await Promise.all([
+		const [formRes, responseRes] = await Promise.all([
 			getFormDetail(params.formId),
-			listFormResponses(params.formId),
+			getFormResponse(params.formId, params.answerId),
 		]);
 
-		const response = responsesRes.responses.find(r => r.id === params.answerId);
-		if (!response) throw new Error("回答が見つかりません");
-
 		const form = formDetailToForm(formRes);
-		const answers = responseToAnswers(response, form);
+		const answers = responseToAnswers(responseRes.response, form);
 
-		return { form, response, answers };
+		return { form, response: responseRes.response, answers };
 	},
 });
 
 function RouteComponent() {
 	const { formId } = Route.useParams();
 	const { form, response, answers } = Route.useLoaderData();
-	const navigate = useNavigate();
-
 	return (
 		<div className={styles.page}>
-			<button
-				type="button"
+			<Link
+				to="/committee/forms/$formId/answers"
+				params={{ formId }}
 				className={styles.backLink}
-				onClick={() =>
-					navigate({
-						to: "/committee/forms/$formId/answers",
-						params: { formId },
-					})
-				}
 			>
 				<IconArrowLeft size={16} />
 				<Text size="2">回答一覧に戻る</Text>
-			</button>
+			</Link>
 
 			<header className={styles.header}>
 				<Heading size="5">{form.name}</Heading>

@@ -93,7 +93,6 @@ export const Route = createFileRoute("/committee/forms/")({
 							? {
 									status: authorization.status,
 									deliveredAt: authorization.scheduledSendAt,
-									allowLateResponse: authorization.allowLateResponse,
 									deadlineAt: authorization.deadlineAt,
 								}
 							: null

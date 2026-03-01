@@ -431,16 +431,16 @@ projectFormRoute.post(
 			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
 		}
 
-		const existing = await prisma.formResponse.findFirst({
-			where: { formDeliveryId },
-		});
-		if (existing) {
-			throw Errors.alreadyExists(
-				"既に回答が存在します。更新する場合はPATCHを使用してください"
-			);
-		}
-
 		const response = await prisma.$transaction(async tx => {
+			const existing = await tx.formResponse.findFirst({
+				where: { formDeliveryId },
+			});
+			if (existing) {
+				throw Errors.alreadyExists(
+					"既に回答が存在します。更新する場合はPATCHを使用してください"
+				);
+			}
+
 			const created = await tx.formResponse.create({
 				data: {
 					formDeliveryId,
