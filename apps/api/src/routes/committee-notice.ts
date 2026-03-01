@@ -596,7 +596,7 @@ committeeNoticeRoute.delete(
 
 // ─────────────────────────────────────────────────────────────
 // POST /committee/notices/:noticeId/authorizations
-// 配信承認を申請（owner または共同編集者 + NOTICE_DELIVER 権限）
+// 配信承認を申請（owner または共同編集者）
 // ─────────────────────────────────────────────────────────────
 committeeNoticeRoute.post(
 	"/:noticeId/authorizations",
@@ -604,7 +604,6 @@ committeeNoticeRoute.post(
 	requireCommitteeMember,
 	async c => {
 		const user = c.get("user");
-		const committeeMember = c.get("committeeMember");
 		const { noticeId } = noticeIdPathParamsSchema.parse({
 			noticeId: c.req.param("noticeId"),
 		});
@@ -630,33 +629,17 @@ committeeNoticeRoute.post(
 			throw Errors.forbidden("配信承認の申請権限がありません");
 		}
 
-		// 自分自身を承認者に指定できない
-		if (requestedToId === user.id) {
-			throw Errors.invalidRequest("自分自身を承認者に指定することはできません");
-		}
-
-		// NOTICE_DELIVER 権限チェック
-		const hasPermission = await prisma.committeeMemberPermission.findFirst({
-			where: {
-				committeeMemberId: committeeMember.id,
-				permission: "NOTICE_DELIVER",
-			},
-		});
-		if (!hasPermission) {
-			throw Errors.forbidden("NOTICE_DELIVER 権限が必要です");
-		}
-
-		// 承認者が NOTICE_APPROVE 権限を持つか確認
+		// 承認者が NOTICE_DELIVER 権限を持つか確認
 		const approverPermission = await prisma.committeeMemberPermission.findFirst(
 			{
 				where: {
 					committeeMember: { userId: requestedToId, deletedAt: null },
-					permission: "NOTICE_APPROVE",
+					permission: "NOTICE_DELIVER",
 				},
 			}
 		);
 		if (!approverPermission) {
-			throw Errors.invalidRequest("承認者には NOTICE_APPROVE 権限が必要です");
+			throw Errors.invalidRequest("承認者には NOTICE_DELIVER 権限が必要です");
 		}
 
 		// deliveredAt が未来であること

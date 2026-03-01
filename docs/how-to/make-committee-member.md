@@ -17,7 +17,7 @@ bun run make-committee-member --email user@example.com
 bun run make-committee-member --email user@example.com --bureau FINANCE
 
 # 権限も同時に付与する場合（カンマ区切り）
-bun run make-committee-member --email user@example.com --permissions NOTICE_DELIVER,NOTICE_APPROVE
+bun run make-committee-member --email user@example.com --permissions NOTICE_DELIVER,FORM_DELIVER
 ```
 
 ### 指定可能な局
@@ -40,9 +40,9 @@ bun run make-committee-member --email user@example.com --permissions NOTICE_DELI
 | 値 | 説明 |
 |---|------|
 | `MEMBER_EDIT` | メンバー編集 |
-| `NOTICE_DELIVER` | お知らせ配信 |
-| `NOTICE_APPROVE` | お知らせ承認 |
+| `NOTICE_DELIVER` | お知らせ配信・承認 |
 | `FORM_DELIVER` | フォーム配信 |
+| `INQUIRY_ADMIN` | お問い合わせ管理 |
 
 ## 動作
 

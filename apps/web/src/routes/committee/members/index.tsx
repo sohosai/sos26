@@ -42,7 +42,6 @@ type CommitteeMemberRow = {
 const permissionLabelMap: Record<CommitteePermission, string> = {
 	MEMBER_EDIT: "メンバー編集",
 	NOTICE_DELIVER: "お知らせ配信",
-	NOTICE_APPROVE: "お知らせ承認",
 	FORM_DELIVER: "フォーム配信",
 	INQUIRY_ADMIN: "お問い合わせ管理",
 };
@@ -77,7 +76,6 @@ function PermissionsCell({ member, onToggle }: PermissionsCellProps) {
 	const allPermissions: CommitteePermission[] = [
 		"MEMBER_EDIT",
 		"NOTICE_DELIVER",
-		"NOTICE_APPROVE",
 		"FORM_DELIVER",
 		"INQUIRY_ADMIN",
 	];
