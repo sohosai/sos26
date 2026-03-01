@@ -40,10 +40,9 @@ export async function createFormResponse(
 export async function updateFormResponse(
 	projectId: string,
 	formDeliveryId: string,
-	responseId: string,
 	body: UpdateFormResponseRequest
 ): Promise<UpdateFormResponseResponse> {
 	return callBodyApi(updateFormResponseEndpoint, body, {
-		pathParams: { projectId, formDeliveryId, responseId },
+		pathParams: { projectId, formDeliveryId },
 	});
 }

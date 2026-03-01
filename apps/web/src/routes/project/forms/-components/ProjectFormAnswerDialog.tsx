@@ -74,11 +74,15 @@ export function ProjectFormAnswerDialog({
 			? (fetchState.data.form.response?.id ?? null)
 			: null);
 
+	const isSubmitted =
+		fetchState.status === "success" &&
+		fetchState.data.form.response?.submittedAt != null;
+
 	const handleSaveDraft = async (answers: FormAnswers) => {
 		if (!form) return;
 		const body = buildAnswerBody(answers, form, false);
 		if (responseId) {
-			await updateFormResponse(projectId, formDeliveryId, responseId, body);
+			await updateFormResponse(projectId, formDeliveryId, body);
 		} else {
 			const res = await createFormResponse(projectId, formDeliveryId, body);
 			setDraftResponseId(res.response.id);
@@ -90,12 +94,9 @@ export function ProjectFormAnswerDialog({
 		if (!form) return;
 		const body = buildAnswerBody(answers, form, true);
 		const response = responseId
-			? await updateFormResponse(
-					projectId,
-					formDeliveryId,
-					responseId,
-					body
-				).then(r => r.response)
+			? await updateFormResponse(projectId, formDeliveryId, body).then(
+					r => r.response
+				)
 			: await createFormResponse(projectId, formDeliveryId, body).then(
 					r => r.response
 				);
@@ -115,7 +116,7 @@ export function ProjectFormAnswerDialog({
 			form={fetchState.status === "loading" ? null : form}
 			initialAnswers={initialAnswers}
 			onSubmit={handleSubmit}
-			onSaveDraft={handleSaveDraft}
+			onSaveDraft={isSubmitted ? undefined : handleSaveDraft}
 		/>
 	);
 }
