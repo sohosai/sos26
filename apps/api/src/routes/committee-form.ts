@@ -450,8 +450,6 @@ committeeFormRoute.post(
 
 		const form = await requireWriteAccess(formId, userId);
 
-		await requireWriteAccess(formId, userId);
-
 		const body = await c.req.json().catch(() => ({}));
 		const { projectIds, requestedToId, ...data } =
 			requestFormAuthorizationRequestSchema.parse(body);
