@@ -36,6 +36,14 @@ export function ProjectFormAnswerDialog({
 }: Props) {
 	const [fetchState, setFetchState] = useState<FetchState>({ status: "idle" });
 	const [draftResponseId, setDraftResponseId] = useState<string | null>(null);
+	const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
+
+	useEffect(() => {
+		if (!open) return;
+		setCurrentTime(new Date());
+		const timer = setInterval(() => setCurrentTime(new Date()), 1000 * 30);
+		return () => clearInterval(timer);
+	}, [open]);
 
 	useEffect(() => {
 		if (!open) return;
@@ -78,8 +86,14 @@ export function ProjectFormAnswerDialog({
 		fetchState.status === "success" &&
 		fetchState.data.form.response?.submittedAt != null;
 
+	const isDeadlineExpired =
+		fetchState.status === "success" &&
+		fetchState.data.form.deadlineAt != null &&
+		!fetchState.data.form.allowLateResponse &&
+		fetchState.data.form.deadlineAt <= currentTime;
+
 	const handleSaveDraft = async (answers: FormAnswers) => {
-		if (!form) return;
+		if (!form || isDeadlineExpired) return;
 		const body = buildAnswerBody(answers, form, false);
 		if (responseId) {
 			await updateFormResponse(projectId, formDeliveryId, body);
@@ -117,6 +131,8 @@ export function ProjectFormAnswerDialog({
 			initialAnswers={initialAnswers}
 			onSubmit={handleSubmit}
 			onSaveDraft={isSubmitted ? undefined : handleSaveDraft}
+			disableSubmit={isDeadlineExpired}
+			disableSaveDraft={isDeadlineExpired || isSubmitted}
 		/>
 	);
 }

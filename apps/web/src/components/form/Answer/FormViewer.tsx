@@ -1,5 +1,5 @@
 import { Text } from "@radix-ui/themes";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
 import type { Form, FormAnswers, FormAnswerValue } from "../type";
@@ -11,18 +11,52 @@ type Props = {
 	onSubmit?: (answers: FormAnswers) => Promise<void>;
 	initialAnswers?: FormAnswers;
 	onSaveDraft?: (answers: FormAnswers) => Promise<void>;
+	disableSubmit?: boolean;
+	disableSaveDraft?: boolean;
 };
+
+function getDefaultValue(type: Form["items"][number]["type"]): FormAnswerValue {
+	switch (type) {
+		case "CHECKBOX":
+			return [];
+		case "NUMBER":
+			return null;
+		default:
+			return "";
+	}
+}
+
+function buildInitialAnswers(
+	form: Form,
+	initialAnswers: FormAnswers
+): FormAnswers {
+	const merged: FormAnswers = {};
+	for (const item of form.items) {
+		merged[item.id] = initialAnswers[item.id] ?? getDefaultValue(item.type);
+	}
+	return merged;
+}
 
 export function FormViewer({
 	form,
 	onSubmit,
 	initialAnswers = {},
 	onSaveDraft,
+	disableSubmit = false,
+	disableSaveDraft = false,
 }: Props) {
-	const [answers, setAnswers] = useState<FormAnswers>(initialAnswers);
+	// const [answers, setAnswers] = useState<FormAnswers>(initialAnswers);
+	const [answers, setAnswers] = useState<FormAnswers>(() =>
+		buildInitialAnswers(form, initialAnswers)
+	);
 	const [errors, setErrors] = useState<Record<string, string>>({});
 	const [isSavingDraft, setIsSavingDraft] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+
+	useEffect(() => {
+		setAnswers(buildInitialAnswers(form, initialAnswers));
+		setErrors({});
+	}, [form, initialAnswers]);
 
 	const updateAnswer = (itemId: string, value: FormAnswerValue) => {
 		setAnswers(prev => ({ ...prev, [itemId]: value }));
@@ -64,6 +98,7 @@ export function FormViewer({
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+		if (disableSubmit) return;
 		if (!validate()) return;
 		setIsSubmitting(true);
 		try {
@@ -103,18 +138,22 @@ export function FormViewer({
 			</ul>
 
 			<div className={styles.footer}>
-				{onSaveDraft && (
+				{onSaveDraft && !disableSaveDraft && (
 					<Button
 						intent="secondary"
 						type="button"
 						onClick={handleSaveDraft}
 						loading={isSavingDraft}
-						disabled={isSubmitting}
+						disabled={isSubmitting || disableSaveDraft}
 					>
 						下書きを保存
 					</Button>
 				)}
-				<Button type="submit" loading={isSubmitting} disabled={isSavingDraft}>
+				<Button
+					type="submit"
+					loading={isSubmitting}
+					disabled={isSavingDraft || disableSubmit}
+				>
 					送信する
 				</Button>
 			</div>

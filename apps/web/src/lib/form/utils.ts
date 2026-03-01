@@ -67,18 +67,24 @@ export function buildAnswerBody(
 	form: Form,
 	submit: boolean
 ): CreateFormResponseRequest {
-	const itemTypeMap = buildItemTypeMap(form);
-
 	return {
 		submit,
-		answers: Object.entries(answers).map(([formItemId, value]) => {
-			const type = itemTypeMap.get(formItemId);
-			if (!type) {
-				throw new Error(`Unknown formItemId: ${formItemId}`);
-			}
-			return buildSingleAnswer(formItemId, value, type);
+		answers: form.items.map(item => {
+			const value = answers[item.id] ?? getDefaultAnswerValue(item.type);
+			return buildSingleAnswer(item.id, value, item.type);
 		}),
 	};
+}
+
+function getDefaultAnswerValue(type: FormItemType): FormAnswerValue {
+	switch (type) {
+		case "CHECKBOX":
+			return [];
+		case "NUMBER":
+			return null;
+		default:
+			return "";
+	}
 }
 
 function normalizeOptionIds(value: FormAnswerValue): string[] {

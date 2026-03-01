@@ -10,6 +10,8 @@ type Props = {
 	initialAnswers?: FormAnswers;
 	onSubmit?: (answers: FormAnswers) => Promise<void>;
 	onSaveDraft?: (answers: FormAnswers) => Promise<void>;
+	disableSubmit?: boolean;
+	disableSaveDraft?: boolean;
 };
 
 export function FormAnswerDialog({
@@ -19,6 +21,8 @@ export function FormAnswerDialog({
 	initialAnswers,
 	onSubmit,
 	onSaveDraft,
+	disableSubmit = false,
+	disableSaveDraft = false,
 }: Props) {
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -33,6 +37,8 @@ export function FormAnswerDialog({
 							initialAnswers={initialAnswers}
 							onSubmit={onSubmit}
 							onSaveDraft={onSaveDraft}
+							disableSubmit={disableSubmit}
+							disableSaveDraft={disableSaveDraft}
 						/>
 					) : (
 						<div className={styles.loading}>
