@@ -1,3 +1,5 @@
+export { notifyFormAuthorizationDecided } from "./notifyFormAuthorizationDecided";
+export { notifyFormAuthorizationRequested } from "./notifyFormAuthorizationRequested";
 export { notifyInquiryAssigneeAdded } from "./notifyInquiryAssigneeAdded";
 export { notifyInquiryCommentAdded } from "./notifyInquiryCommentAdded";
 export { notifyInquiryCreatedByCommittee } from "./notifyInquiryCreatedByCommittee";

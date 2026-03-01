@@ -64,7 +64,7 @@ function RouteComponent() {
 						タイトル
 						<br />
 						<input
-							type="text"
+							type="TEXT"
 							value={title}
 							onChange={e => setTitle(e.target.value)}
 						/>

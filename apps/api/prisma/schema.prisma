@@ -460,6 +460,9 @@ model FormItem {
   //質問文
   label String
 
+  //説明
+  description String?
+
   //回答タイプ
   type FormItemType
 
@@ -563,10 +566,14 @@ model FormAuthorization {
   //期限後の回答を許可するか
   allowLateResponse Boolean @default(false)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  //フォーム自体を回答必須にするか
+  required Boolean @default(true)
 
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
   deliveries FormDelivery[]
+
+  @@index([formId, createdAt(sort: Desc)])
 }
 
 //フォームの配信
@@ -589,7 +596,7 @@ model FormDelivery {
   @@unique([formAuthorizationId, projectId])
 }
 
-//フォームへの回答（1人1回の送信単位）
+//フォームへの回答（1配信につき最大1件）
 model FormResponse {
   id String @id @default(cuid())
 
@@ -607,7 +614,7 @@ model FormResponse {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  @@index([formDeliveryId])
+  @@unique([formDeliveryId])
   @@index([respondentId])
 }
 

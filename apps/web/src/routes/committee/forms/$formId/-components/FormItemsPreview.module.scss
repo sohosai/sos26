@@ -1,0 +1,19 @@
+.itemList {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+}
+
+.itemCard {
+	background-color: var(--gray-1);
+	border-radius: var(--radius-3);
+	padding: var(--space-4);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+	box-shadow: var(--shadow-2);
+}
+

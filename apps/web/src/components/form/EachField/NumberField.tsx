@@ -1,5 +1,5 @@
 import { Text } from "@radix-ui/themes";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { TextField } from "@/components/primitives";
 import styles from "./NumberField.module.scss";
 
@@ -30,6 +30,14 @@ export function NumberField({
 	const [shake, setShake] = useState(false);
 	const [invalidMessage, setInvalidMessage] = useState<string | null>(null);
 	const shakeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	useEffect(() => {
+		if (value === null || value === undefined) {
+			setDisplay("");
+		} else {
+			setDisplay(String(value));
+		}
+	}, [value]);
 
 	const triggerShake = useCallback((message: string) => {
 		setInvalidMessage(message);

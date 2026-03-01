@@ -147,6 +147,7 @@ erDiagram
   String id PK
   String formId FK
   String label
+  String description "nullable"
   FormItemType type
   Boolean required
   Int sortOrder
@@ -180,6 +181,7 @@ erDiagram
   DateTime scheduledSendAt
   DateTime deadlineAt "nullable"
   Boolean allowLateResponse
+  Boolean required
   DateTime createdAt
   DateTime updatedAt
 }
@@ -191,7 +193,7 @@ erDiagram
 }
 "FormResponse" {
   String id PK
-  String formDeliveryId FK
+  String formDeliveryId FK,UK
   String respondentId FK
   DateTime submittedAt "nullable"
   DateTime createdAt
@@ -312,7 +314,7 @@ erDiagram
 "FormAuthorization" }o--|| "User" : requestedTo
 "FormDelivery" }o--|| "FormAuthorization" : formAuthorization
 "FormDelivery" }o--|| "Project" : project
-"FormResponse" }o--|| "FormDelivery" : formDelivery
+"FormResponse" |o--|| "FormDelivery" : formDelivery
 "FormResponse" }o--|| "User" : respondent
 "FormAnswer" }o--|| "FormResponse" : formResponse
 "FormAnswer" }o--|| "FormItem" : formItem
@@ -526,6 +528,7 @@ Properties as follows:
 - `id`:
 - `formId`:
 - `label`:
+- `description`:
 - `type`:
 - `required`:
 - `sortOrder`:
@@ -568,6 +571,7 @@ Properties as follows:
 - `scheduledSendAt`:
 - `deadlineAt`:
 - `allowLateResponse`:
+- `required`:
 - `createdAt`:
 - `updatedAt`:
 

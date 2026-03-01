@@ -5,12 +5,19 @@ import styles from "./ItemList.module.scss";
 
 type Props = {
 	items: FormItem[];
+	errors: Record<string, string>;
 	setItems: (items: FormItem[]) => void;
 	onUpdate: (id: string, update: Partial<FormItem>) => void;
 	onRemove: (id: string) => void;
 };
 
-export function FormItemList({ items, setItems, onUpdate, onRemove }: Props) {
+export function FormItemList({
+	items,
+	errors,
+	setItems,
+	onUpdate,
+	onRemove,
+}: Props) {
 	const moveUp = (index: number) => {
 		if (index === 0) return;
 		setItems(arrayMove(items, index, index - 1));
@@ -42,6 +49,7 @@ export function FormItemList({ items, setItems, onUpdate, onRemove }: Props) {
 								key={item.id}
 								item={item}
 								index={index}
+								error={errors[item.id]}
 								onUpdate={onUpdate}
 								onRemove={onRemove}
 								onMoveUp={() => moveUp(index)}

@@ -1,3 +1,4 @@
+import { Flex, Text } from "@radix-ui/themes";
 import {
 	CheckboxGroup,
 	CheckboxGroupItem,
@@ -12,93 +13,118 @@ type FieldProps = {
 	item: FormItem;
 	value: FormAnswerValue | undefined;
 	onChange: (val: FormAnswerValue) => void;
+	disabled?: boolean;
 };
 
-export function AnswerField({ item, value, onChange }: FieldProps) {
-	switch (item.type) {
-		case "text":
-			return (
-				<TextField
-					label={item.label}
-					placeholder="回答を入力してください"
-					value={(value as string) ?? ""}
-					onChange={value => onChange(value)}
-					required={item.required}
-				/>
-			);
+export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
+	const label = (
+		<Text size="2" weight="medium">
+			{item.label + (item.required ? " *" : "")}
+		</Text>
+	);
+	const description = item.description ? (
+		<Text size="1" color="gray">
+			{item.description}
+		</Text>
+	) : null;
 
-		case "textarea":
-			return (
-				<TextArea
-					label={item.label}
-					value={(value as string) ?? ""}
-					onChange={value => onChange(value)}
-					placeholder="回答を入力してください"
-					rows={3}
-					required={item.required}
-					resize="none"
-					autoGrow
-				/>
-			);
+	const field = (() => {
+		switch (item.type) {
+			case "TEXT":
+				return (
+					<TextField
+						label=""
+						placeholder="回答を入力してください"
+						value={(value as string) ?? ""}
+						onChange={value => onChange(value)}
+						disabled={disabled}
+						aria-label={item.label}
+					/>
+				);
 
-		case "number":
-			return (
-				<NumberField
-					label={item.label}
-					value={value as number | null}
-					onChange={onChange}
-					required={item.required}
-					// 必要になったら有効化
-					// allowDecimal // 小数許可
-					// allowNegative // 負の数許可
-				/>
-			);
+			case "TEXTAREA":
+				return (
+					<TextArea
+						label=""
+						value={(value as string) ?? ""}
+						onChange={value => onChange(value)}
+						placeholder="回答を入力してください"
+						rows={3}
+						resize="none"
+						autoGrow
+						disabled={disabled}
+						aria-label={item.label}
+					/>
+				);
 
-		case "file":
-			return (
-				<FileUploadFieldWithPreview
-					label={item.label}
-					value={value as File | null}
-					onChange={onChange}
-					required={item.required}
-				/>
-			);
+			case "NUMBER":
+				return (
+					<NumberField
+						label=""
+						value={value as number | null}
+						onChange={onChange}
+						disabled={disabled}
+						aria-label={item.label}
+					/>
+				);
 
-		case "select":
-			return (
-				<RadioGroup
-					label={item.label}
-					value={(value as string) ?? ""}
-					onValueChange={val => onChange(val)}
-					required={item.required}
-					name={item.id}
-				>
-					{(item.options ?? []).map(option => (
-						<RadioGroupItem key={option.id} value={option.id}>
-							{option.label}
-						</RadioGroupItem>
-					))}
-				</RadioGroup>
-			);
+			case "FILE":
+				return (
+					<FileUploadFieldWithPreview
+						label=""
+						value={value as File | null}
+						onChange={onChange}
+						disabled={disabled}
+						aria-label={item.label}
+					/>
+				);
 
-		case "checkbox":
-			return (
-				<CheckboxGroup
-					label={item.label}
-					value={(value as string[]) ?? []}
-					onValueChange={val => onChange(val)}
-					required={item.required}
-					name={item.id}
-				>
-					{(item.options ?? []).map(option => (
-						<CheckboxGroupItem key={option.id} value={option.id}>
-							{option.label}
-						</CheckboxGroupItem>
-					))}
-				</CheckboxGroup>
-			);
+			case "SELECT":
+				return (
+					<RadioGroup
+						label=""
+						value={(value as string) ?? ""}
+						onValueChange={val => onChange(val)}
+						name={item.id}
+						disabled={disabled}
+						aria-label={item.label}
+					>
+						{(item.options ?? []).map(option => (
+							<RadioGroupItem key={option.id} value={option.id}>
+								{option.label}
+							</RadioGroupItem>
+						))}
+					</RadioGroup>
+				);
 
-		default:
-			return null;
-	}
+			case "CHECKBOX":
+				return (
+					<CheckboxGroup
+						label=""
+						value={(value as string[]) ?? []}
+						onValueChange={val => onChange(val)}
+						name={item.id}
+						disabled={disabled}
+						aria-label={item.label}
+					>
+						{(item.options ?? []).map(option => (
+							<CheckboxGroupItem key={option.id} value={option.id}>
+								{option.label}
+							</CheckboxGroupItem>
+						))}
+					</CheckboxGroup>
+				);
+
+			default:
+				return null;
+		}
+	})();
+
+	return (
+		<Flex direction="column" gap="1">
+			{label}
+			{description}
+			{field}
+		</Flex>
+	);
 }

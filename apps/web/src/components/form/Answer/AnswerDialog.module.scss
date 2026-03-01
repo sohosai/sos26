@@ -13,3 +13,10 @@
 	overflow-y: auto;
 	padding: var(--space-5);
 }
+
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+}
