@@ -309,10 +309,18 @@ committeeFormRoute.delete(
 
 		await requireOwner(formId, userId);
 
-		await prisma.form.update({
-			where: { id: formId },
-			data: { deletedAt: new Date() },
-		});
+		const now = new Date();
+
+		await prisma.$transaction([
+			prisma.form.update({
+				where: { id: formId },
+				data: { deletedAt: now },
+			}),
+			prisma.formAuthorization.updateMany({
+				where: { formId, status: "PENDING" },
+				data: { status: "REJECTED", decidedAt: now },
+			}),
+		]);
 
 		return c.json({ success: true as const });
 	}
