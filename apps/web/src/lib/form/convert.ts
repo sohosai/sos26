@@ -4,7 +4,7 @@ import type {
 } from "@sos26/shared";
 import type { Form } from "@/components/form/type";
 
-export function ProjectFormToForm(form: GetProjectFormResponse): Form {
+export function projectFormToForm(form: GetProjectFormResponse): Form {
 	const detail = form.form;
 	return {
 		id: detail.formId,

@@ -8,7 +8,7 @@ import {
 	getProjectForm,
 	updateFormResponse,
 } from "@/lib/api/project-form";
-import { ProjectFormToForm } from "@/lib/form/convert";
+import { projectFormToForm } from "@/lib/form/convert";
 import { buildAnswerBody, responseToAnswers } from "@/lib/form/utils";
 
 type Props = {
@@ -61,7 +61,7 @@ export function ProjectFormAnswerDialog({
 
 	// fetchStateから導出
 	const form: Form | null =
-		fetchState.status === "success" ? ProjectFormToForm(fetchState.data) : null;
+		fetchState.status === "success" ? projectFormToForm(fetchState.data) : null;
 
 	const initialAnswers: FormAnswers =
 		fetchState.status === "success" && fetchState.data.form.response && form
