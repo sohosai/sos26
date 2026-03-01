@@ -122,7 +122,7 @@
 
 1. 一覧取得（`GET /project/:projectId/forms`）
 2. 詳細取得（`GET /project/:projectId/forms/:formDeliveryId`）
-3. 回答作成（`POST .../responses`）または更新（`PATCH .../responses/:responseId`）
+3. 回答作成（`POST .../response`）または更新（`PATCH .../response`）
 
 回答時は `submit` フラグで状態を切り替えます。
 
@@ -131,8 +131,7 @@
 
 期限の扱い:
 
-- 下書き保存時: 期限チェックなし
-- 提出時: 期限チェックあり（`deadlineAt` 超過かつ `allowLateResponse=false` は拒否）
+- 期限チェックは `submit` の値に関わらず常に実行される（`deadlineAt` 超過かつ `allowLateResponse=false` は下書き保存も含め拒否）
 
 ---
 
@@ -150,9 +149,9 @@
 | POST | `/committee/forms/:formId/collaborators/:userId` | 共同編集者追加 | owner |
 | DELETE | `/committee/forms/:formId/collaborators/:userId` | 共同編集者削除 | owner |
 | POST | `/committee/forms/:formId/authorizations` | 公開申請 | owner / 書込共同編集者 |
-| POST | `/committee/forms/:formId/authorizations/:authorizationId/approve` | 承認 | 申請先本人 |
-| POST | `/committee/forms/:formId/authorizations/:authorizationId/reject` | 却下 | 申請先本人 |
+| PATCH | `/committee/forms/:formId/authorizations/:authorizationId` | 承認 / 却下 | 申請先本人 |
 | GET | `/committee/forms/:formId/responses` | 回答一覧 | owner / 書込共同編集者 |
+| GET | `/committee/forms/:formId/responses/:responseId` | 回答詳細 | owner / 書込共同編集者 |
 
 ### 補足
 
@@ -171,8 +170,8 @@
 |---|---|---|
 | GET | `/project/:projectId/forms` | 配信済みフォーム一覧 |
 | GET | `/project/:projectId/forms/:formDeliveryId` | フォーム詳細 + 既存回答 |
-| POST | `/project/:projectId/forms/:formDeliveryId/responses` | 回答作成（下書き/提出） |
-| PATCH | `/project/:projectId/forms/:formDeliveryId/responses/:responseId` | 回答更新（下書き/再提出） |
+| POST | `/project/:projectId/forms/:formDeliveryId/response` | 回答作成（下書き/提出） |
+| PATCH | `/project/:projectId/forms/:formDeliveryId/response` | 回答更新（下書き/再提出） |
 
 ### 一覧表示条件
 
@@ -185,7 +184,7 @@
 
 - 1企画につき 1 `formDeliveryId` に対して 1回答
 - `POST` は既存回答がある場合エラー
-- `PATCH` は自分の回答のみ更新可能
+- `PATCH` は同じ企画のメンバーであれば誰でも更新可能（企画単位の共有回答）
 
 ---
 
@@ -212,11 +211,11 @@
 
 ### 4. 期限チェック
 
-`submit: true` かつ次を満たす場合は提出を拒否します。
+`submit` の値に関わらず、回答の作成・更新時に常に実行されます。次の条件を**すべて**満たす場合は操作を拒否します（下書き保存も含む）。
 
 - `deadlineAt` が設定済み
 - `allowLateResponse = false`
-- `deadlineAt < now`
+- `deadlineAt <= now`
 
 ---
 
