@@ -7,6 +7,14 @@
 
 	:global(.react-pdf__Page) {
 		margin-bottom: var(--space-4);
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+
+	:global(.react-pdf__Document) {
+		margin-bottom: 0;
 	}
 
 	canvas {

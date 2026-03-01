@@ -6,9 +6,11 @@
 		background-color: transparent !important;
 		box-shadow: none !important;
 		padding: var(--space-4) !important;
+		padding-bottom: var(--space-4) !important;
 
 		> :global(section.docx-preview) {
 			box-shadow: var(--shadow-2);
+			margin-bottom: 0 !important;
 		}
 	}
 }
