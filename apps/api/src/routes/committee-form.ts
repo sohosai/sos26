@@ -2,6 +2,7 @@ import {
 	addFormCollaboratorRequestSchema,
 	createFormRequestSchema,
 	formAuthorizationPathParamsSchema,
+	formIdPathParamsSchema,
 	requestFormAuthorizationRequestSchema,
 	updateFormAuthorizationRequestSchema,
 	updateFormDetailRequestSchema,
@@ -151,7 +152,7 @@ committeeFormRoute.get(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId } = c.req.param();
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
 
 		const form = await prisma.form.findFirst({
 			where: { id: formId, deletedAt: null },
@@ -208,7 +209,7 @@ committeeFormRoute.patch(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId } = c.req.param();
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
 		const userId = c.get("user").id;
 
 		await requireWriteAccess(formId, userId);
@@ -333,7 +334,7 @@ committeeFormRoute.delete(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId } = c.req.param();
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
 		const userId = c.get("user").id;
 
 		await requireOwner(formId, userId);
@@ -368,7 +369,8 @@ committeeFormRoute.post(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId, userId: targetUserId } = c.req.param();
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
+		const { userId: targetUserId } = c.req.param();
 		const userId = c.get("user").id;
 
 		await requireOwner(formId, userId);
@@ -428,7 +430,8 @@ committeeFormRoute.delete(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId, userId: targetUserId } = c.req.param();
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
+		const { userId: targetUserId } = c.req.param();
 		const userId = c.get("user").id;
 
 		await requireOwner(formId, userId);
@@ -461,7 +464,7 @@ committeeFormRoute.post(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId } = c.req.param();
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
 		const user = c.get("user");
 		const userId = user.id;
 
@@ -636,7 +639,7 @@ committeeFormRoute.get(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId } = c.req.param();
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
 		const userId = c.get("user").id;
 
 		// owner または共同編集者のみ閲覧可
