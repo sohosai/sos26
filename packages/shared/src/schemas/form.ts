@@ -414,12 +414,6 @@ export const projectFormPathParamsSchema = z.object({
 	formDeliveryId: z.cuid(),
 });
 
-export const projectFormResponsePathParamsSchema = z.object({
-	projectId: z.cuid(),
-	formDeliveryId: z.cuid(),
-	responseId: z.cuid(),
-});
-
 // ─────────────────────────────────────────────────────────────
 // 企画側: GET /project/:projectId/forms
 // 自分の企画に配信されたフォーム一覧

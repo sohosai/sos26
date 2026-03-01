@@ -4,7 +4,6 @@ import {
 	getProjectFormResponseSchema,
 	listProjectFormsResponseSchema,
 	projectFormPathParamsSchema,
-	projectFormResponsePathParamsSchema,
 	updateFormResponseRequestSchema,
 	updateFormResponseResponseSchema,
 } from "../schemas/form";
@@ -52,19 +51,19 @@ export const getProjectFormEndpoint: GetEndpoint<
 } as const;
 
 /**
- * POST /project/:projectId/forms/:formDeliveryId/responses
+ * POST /project/:projectId/forms/:formDeliveryId/response
  * 回答を作成（下書き or 提出）
  */
 export const createFormResponseEndpoint: BodyEndpoint<
 	"POST",
-	"/project/:projectId/forms/:formDeliveryId/responses",
+	"/project/:projectId/forms/:formDeliveryId/response",
 	typeof projectFormPathParamsSchema,
 	undefined,
 	typeof createFormResponseRequestSchema,
 	typeof createFormResponseResponseSchema
 > = {
 	method: "POST",
-	path: "/project/:projectId/forms/:formDeliveryId/responses",
+	path: "/project/:projectId/forms/:formDeliveryId/response",
 	pathParams: projectFormPathParamsSchema,
 	query: undefined,
 	request: createFormResponseRequestSchema,
@@ -72,20 +71,20 @@ export const createFormResponseEndpoint: BodyEndpoint<
 } as const;
 
 /**
- * PATCH /project/:projectId/forms/:formDeliveryId/responses/:responseId
+ * PATCH /project/:projectId/forms/:formDeliveryId/response
  * 回答を更新（下書き編集 or 提出）
  */
 export const updateFormResponseEndpoint: BodyEndpoint<
 	"PATCH",
-	"/project/:projectId/forms/:formDeliveryId/responses/:responseId",
-	typeof projectFormResponsePathParamsSchema,
+	"/project/:projectId/forms/:formDeliveryId/response",
+	typeof projectFormPathParamsSchema,
 	undefined,
 	typeof updateFormResponseRequestSchema,
 	typeof updateFormResponseResponseSchema
 > = {
 	method: "PATCH",
-	path: "/project/:projectId/forms/:formDeliveryId/responses/:responseId",
-	pathParams: projectFormResponsePathParamsSchema,
+	path: "/project/:projectId/forms/:formDeliveryId/response",
+	pathParams: projectFormPathParamsSchema,
 	query: undefined,
 	request: updateFormResponseRequestSchema,
 	response: updateFormResponseResponseSchema,

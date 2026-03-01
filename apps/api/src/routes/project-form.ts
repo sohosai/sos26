@@ -3,7 +3,6 @@ import {
 	createFormResponseRequestSchema,
 	type FormItemType,
 	projectFormPathParamsSchema,
-	projectFormResponsePathParamsSchema,
 	updateFormResponseRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
@@ -275,31 +274,6 @@ projectFormRoute.get("/", requireAuth, requireProjectMember, async c => {
 
 	const now = new Date();
 
-	// const deliveries = await prisma.formDelivery.findMany({
-	// 	where: {
-	// 		projectId,
-	// 		formAuthorization: {
-	// 			status: "APPROVED",
-	// 			scheduledSendAt: {
-	// 				lte: now,
-	// 			},
-	// 		},
-	// 	},
-	// 	include: {
-	// 		formAuthorization: {
-	// 			include: {
-	// 				form: { select: { id: true, title: true, description: true } },
-	// 			},
-	// 		},
-	// 		responses: {
-	// 			where: { respondentId: userId },
-	// 			select: { id: true, submittedAt: true },
-	// 			take: 1,
-	// 		},
-	// 	},
-	// 	orderBy: { formAuthorization: { scheduledSendAt: "desc" } },
-	// });
-
 	const [deliveries, responses] = await Promise.all([
 		prisma.formDelivery.findMany({
 			where: {
@@ -427,11 +401,11 @@ projectFormRoute.get(
 );
 
 // ─────────────────────────────────────────────────────────────
-// POST /project/:projectId/forms/:formDeliveryId/responses
+// POST /project/:projectId/forms/:formDeliveryId/response
 // ─────────────────────────────────────────────────────────────
 
 projectFormRoute.post(
-	"/:formDeliveryId/responses",
+	"/:formDeliveryId/response",
 	requireAuth,
 	requireProjectMember,
 	async c => {
@@ -485,26 +459,24 @@ projectFormRoute.post(
 );
 
 // ─────────────────────────────────────────────────────────────
-// PATCH /project/:projectId/forms/:formDeliveryId/responses/:responseId
+// PATCH /project/:projectId/forms/:formDeliveryId/response
 // ─────────────────────────────────────────────────────────────
 
 projectFormRoute.patch(
-	"/:formDeliveryId/responses/:responseId",
+	"/:formDeliveryId/response",
 	requireAuth,
 	requireProjectMember,
 	async c => {
-		const { projectId, formDeliveryId, responseId } =
-			projectFormResponsePathParamsSchema.parse({
-				projectId: c.req.param("projectId"),
-				formDeliveryId: c.req.param("formDeliveryId"),
-				responseId: c.req.param("responseId"),
-			});
+		const { projectId, formDeliveryId } = projectFormPathParamsSchema.parse({
+			projectId: c.req.param("projectId"),
+			formDeliveryId: c.req.param("formDeliveryId"),
+		});
 		const userId = c.get("user").id;
 
 		const delivery = await getDeliveryOrThrow(projectId, formDeliveryId);
 
 		const existing = await prisma.formResponse.findFirst({
-			where: { id: responseId, formDeliveryId, respondentId: userId },
+			where: { formDeliveryId, respondentId: userId },
 		});
 		if (!existing) throw Errors.notFound("回答が見つかりません");
 
@@ -520,17 +492,17 @@ projectFormRoute.patch(
 
 		const response = await prisma.$transaction(async tx => {
 			await tx.formResponse.update({
-				where: { id: responseId },
+				where: { id: existing.id },
 				data: { submittedAt: submit ? new Date() : null },
 			});
 
 			await upsertAnswers(
 				tx,
-				responseId,
+				existing.id,
 				answers,
 				delivery.formAuthorization.form.items
 			);
-			return formatResponse(tx, responseId);
+			return formatResponse(tx, existing.id);
 		});
 
 		return c.json({ response });
