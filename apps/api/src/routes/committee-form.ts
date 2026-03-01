@@ -383,11 +383,18 @@ committeeFormRoute.post(
 			);
 		}
 
-		// 追加対象ユーザーの存在確認
+		// 追加対象ユーザーの存在確認 + 委員会メンバーであることを確認
 		const targetUser = await prisma.user.findFirst({
-			where: { id: targetUserId, deletedAt: null },
+			where: {
+				id: targetUserId,
+				deletedAt: null,
+				committeeMember: { deletedAt: null },
+			},
 		});
-		if (!targetUser) throw Errors.notFound("ユーザーが見つかりません");
+		if (!targetUser)
+			throw Errors.notFound(
+				"ユーザーが見つからないか、委員会メンバーではありません"
+			);
 
 		// 既存チェック（ソフトデリート済みも含めて検索）
 		const existing = await prisma.formCollaborator.findFirst({
