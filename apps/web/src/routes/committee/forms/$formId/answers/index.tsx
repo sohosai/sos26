@@ -175,7 +175,12 @@ function RouteComponent() {
 			<button
 				type="button"
 				className={styles.backLink}
-				onClick={() => navigate({ to: "/committee/forms" })}
+				onClick={() =>
+					navigate({
+						to: "/committee/forms/$formId",
+						params: { formId },
+					})
+				}
 			>
 				<IconArrowLeft size={16} />
 				<Text size="2">フォーム詳細に戻る</Text>
