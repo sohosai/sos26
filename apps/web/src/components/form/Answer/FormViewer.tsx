@@ -87,9 +87,10 @@ export function FormViewer({
 	};
 
 	const handleSaveDraft = async () => {
+		if (!onSaveDraft) return;
 		setIsSavingDraft(true);
 		try {
-			await onSaveDraft?.(answers);
+			await onSaveDraft(answers);
 			toast.success("下書きを保存しました");
 		} catch {
 			toast.error("下書きの保存に失敗しました");
@@ -100,11 +101,11 @@ export function FormViewer({
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (disableSubmit) return;
+		if (!onSubmit || disableSubmit) return;
 		if (!validate()) return;
 		setIsSubmitting(true);
 		try {
-			await onSubmit?.(answers);
+			await onSubmit(answers);
 			toast.success("送信しました");
 		} catch {
 			toast.error("送信に失敗しました");
@@ -129,6 +130,7 @@ export function FormViewer({
 							item={item}
 							value={answers[item.id]}
 							onChange={val => updateAnswer(item.id, val)}
+							disabled={disableSubmit && disableSaveDraft}
 						/>
 						{errors[item.id] && (
 							<Text size="2" color="red">
