@@ -178,7 +178,7 @@ export function PublishRequestDialog({
 						</Text>
 						{approverOptions.length === 0 ? (
 							<Text size="2" color="red">
-								承認可能なメンバーがいません。NOTICE_APPROVE
+								承認可能なメンバーがいません。NOTICE_DELIVER
 								権限を持つメンバーを追加してください。
 							</Text>
 						) : (

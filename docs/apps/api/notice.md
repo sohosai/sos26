@@ -40,8 +40,7 @@
 
 | 権限 | 説明 | 必要な場面 |
 |---|---|---|
-| `NOTICE_DELIVER` | お知らせ配信 | 公開申請の送信時（申請者に必要） |
-| `NOTICE_APPROVE` | お知らせ承認 | 公開申請の承認者として指定される条件 |
+| `NOTICE_DELIVER` | お知らせ配信・承認 | 公開申請の承認者として指定される条件 |
 
 ### 編集権限
 
@@ -53,8 +52,8 @@
 ## 公開申請（承認ワークフロー）
 
 ```
-申請者（owner/共同編集者 + NOTICE_DELIVER）
-  → 承認者（NOTICE_APPROVE 権限を持つ実委人）を指定して申請
+申請者（owner/共同編集者）
+  → 承認者（NOTICE_DELIVER 権限を持つ実委人）を指定して申請
   → 承認者が APPROVED / REJECTED を決定
   → APPROVED の場合、deliveredAt 到来後に企画メンバーへ配信
 ```
@@ -62,9 +61,7 @@
 ### バリデーション
 
 - 申請者は owner または共同編集者であること
-- 申請者が `NOTICE_DELIVER` 権限を持つこと
-- 承認者が `NOTICE_APPROVE` 権限を持つこと
-- 自分自身を承認者に指定できない
+- 承認者が `NOTICE_DELIVER` 権限を持つこと
 - 配信希望日時は未来であること
 - 同一お知らせに対して PENDING / APPROVED の申請が既に存在しないこと（Serializable トランザクションで保証）
 
@@ -95,7 +92,7 @@ PENDING → REJECTED（却下）
 | DELETE | `/committee/notices/:noticeId` | お知らせ削除 | owner のみ |
 | POST | `/committee/notices/:noticeId/collaborators` | 共同編集者追加 | owner のみ |
 | DELETE | `/committee/notices/:noticeId/collaborators/:collaboratorId` | 共同編集者削除 | owner のみ |
-| POST | `/committee/notices/:noticeId/authorizations` | 公開申請 | owner / 共同編集者 + `NOTICE_DELIVER` |
+| POST | `/committee/notices/:noticeId/authorizations` | 公開申請 | owner / 共同編集者 |
 | PATCH | `/committee/notices/:noticeId/authorizations/:authorizationId` | 承認 / 却下 | 申請先本人（`requestedTo`） |
 
 ### POST `/committee/notices`

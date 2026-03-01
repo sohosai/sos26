@@ -18,8 +18,8 @@ type Bureau = (typeof BUREAUS)[number];
 const PERMISSIONS: CommitteePermission[] = [
 	"MEMBER_EDIT",
 	"NOTICE_DELIVER",
-	"NOTICE_APPROVE",
 	"FORM_DELIVER",
+	"INQUIRY_ADMIN",
 ];
 
 function printUsage() {
@@ -40,7 +40,7 @@ Permissions:
 Examples:
   bun run make-committee-member --email user@example.com
   bun run make-committee-member --email user@example.com --bureau FINANCE
-  bun run make-committee-member --email user@example.com --permissions NOTICE_DELIVER,NOTICE_APPROVE
+  bun run make-committee-member --email user@example.com --permissions NOTICE_DELIVER,FORM_DELIVER
 `);
 }
 

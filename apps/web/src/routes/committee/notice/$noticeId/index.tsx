@@ -80,11 +80,7 @@ function RouteComponent() {
 		.map(m => ({ userId: m.user.id, name: m.user.name }));
 
 	const approvers = committeeMembers
-		.filter(
-			m =>
-				m.user.id !== user?.id &&
-				m.permissions.some(p => p.permission === "NOTICE_APPROVE")
-		)
+		.filter(m => m.permissions.some(p => p.permission === "NOTICE_DELIVER"))
 		.map(m => ({ userId: m.user.id, name: m.user.name }));
 
 	const handleAddCollaborator = async (userId: string) => {
