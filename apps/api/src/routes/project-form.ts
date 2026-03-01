@@ -275,31 +275,6 @@ projectFormRoute.get("/", requireAuth, requireProjectMember, async c => {
 
 	const now = new Date();
 
-	// const deliveries = await prisma.formDelivery.findMany({
-	// 	where: {
-	// 		projectId,
-	// 		formAuthorization: {
-	// 			status: "APPROVED",
-	// 			scheduledSendAt: {
-	// 				lte: now,
-	// 			},
-	// 		},
-	// 	},
-	// 	include: {
-	// 		formAuthorization: {
-	// 			include: {
-	// 				form: { select: { id: true, title: true, description: true } },
-	// 			},
-	// 		},
-	// 		responses: {
-	// 			where: { respondentId: userId },
-	// 			select: { id: true, submittedAt: true },
-	// 			take: 1,
-	// 		},
-	// 	},
-	// 	orderBy: { formAuthorization: { scheduledSendAt: "desc" } },
-	// });
-
 	const [deliveries, responses] = await Promise.all([
 		prisma.formDelivery.findMany({
 			where: {
