@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { FormEditDialog } from "@/components/form/Builder/EditDialog";
 import type { Form } from "@/components/form/type";
 import { createForm } from "@/lib/api/committee-form";
@@ -48,6 +49,8 @@ export function CreateFormDialog({ open, onOpenChange, onSuccess }: Props) {
 
 			onSuccess?.();
 			onOpenChange(false);
+		} catch {
+			toast.error("フォームの作成に失敗しました");
 		} finally {
 			setIsSubmitting(false);
 		}
