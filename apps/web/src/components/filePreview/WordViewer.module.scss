@@ -1,10 +1,13 @@
 .page {
 	overflow: auto;
+	background: var(--gray-3);
 
-	:global(.docx-wrapper) {
+	:global(.docx-preview-wrapper) {
+		background-color: transparent !important;
 		box-shadow: none !important;
+		padding: var(--space-4) !important;
 
-		> :global(section.docx) {
+		> :global(section.docx-preview) {
 			box-shadow: var(--shadow-2);
 		}
 	}
