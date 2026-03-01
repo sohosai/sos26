@@ -1,20 +1,21 @@
 .content {
 	display: flex;
 	flex-direction: column;
+	padding: 0;
 
 	max-width: min(96vw, 1200px);
 	height: min(90vh, 900px);
 
 	overflow: hidden;
-	position: relative;
 }
 
 .header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: var(--space-2) var(--space-4);
+	padding: var(--space-3) var(--space-4);
 	border-bottom: 1px solid var(--gray-6);
+	flex-shrink: 0;
 }
 
 .title {
@@ -30,7 +31,7 @@
 .headerActions {
 	display: flex;
 	align-items: center;
-	gap: var(--space-2);
+	gap: var(--space-3);
 	flex-shrink: 0;
 }
 
