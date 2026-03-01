@@ -3,6 +3,7 @@ import {
 	createFormRequestSchema,
 	formAuthorizationPathParamsSchema,
 	formIdPathParamsSchema,
+	formResponsePathParamsSchema,
 	requestFormAuthorizationRequestSchema,
 	updateFormAuthorizationRequestSchema,
 	updateFormDetailRequestSchema,
@@ -708,6 +709,86 @@ committeeFormRoute.get(
 					})),
 				})),
 			})),
+		});
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// GET /committee/forms/:formId/responses/:responseId
+// 回答詳細（owner または共同編集者のみ）
+// ─────────────────────────────────────────────────────────────
+committeeFormRoute.get(
+	"/:formId/responses/:responseId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const { formId, responseId } = formResponsePathParamsSchema.parse(
+			c.req.param()
+		);
+		const userId = c.get("user").id;
+
+		// owner または共同編集者のみ閲覧可
+		const form = await prisma.form.findFirst({
+			where: { id: formId, deletedAt: null },
+			include: {
+				collaborators: { where: { deletedAt: null } },
+			},
+		});
+		if (!form) throw Errors.notFound("フォームが見つかりません");
+
+		const isOwner = form.ownerId === userId;
+		const isCollaborator = form.collaborators.some(c => c.userId === userId);
+		if (!isOwner && !isCollaborator) {
+			throw Errors.forbidden("回答の閲覧は作成者・共同編集者のみ可能です");
+		}
+
+		const r = await prisma.formResponse.findFirst({
+			where: {
+				id: responseId,
+				formDelivery: { formAuthorization: { formId } },
+				submittedAt: { not: null },
+			},
+			include: {
+				respondent: { select: { id: true, name: true } },
+				formDelivery: {
+					include: {
+						project: { select: { id: true, name: true } },
+					},
+				},
+				answers: {
+					include: {
+						selectedOptions: {
+							include: {
+								formItemOption: { select: { id: true, label: true } },
+							},
+						},
+					},
+				},
+			},
+		});
+		if (!r) throw Errors.notFound("回答が見つかりません");
+
+		return c.json({
+			response: {
+				id: r.id,
+				respondent: r.respondent,
+				project: {
+					id: r.formDelivery.project.id,
+					name: r.formDelivery.project.name,
+				},
+				submittedAt: r.submittedAt,
+				createdAt: r.createdAt,
+				answers: r.answers.map(a => ({
+					formItemId: a.formItemId,
+					textValue: a.textValue,
+					numberValue: a.numberValue,
+					fileUrl: a.fileUrl,
+					selectedOptions: a.selectedOptions.map(s => ({
+						id: s.formItemOption.id,
+						label: s.formItemOption.label,
+					})),
+				})),
+			},
 		});
 	}
 );

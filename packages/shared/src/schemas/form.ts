@@ -402,6 +402,23 @@ export type ListFormResponsesResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
+// GET /committee/forms/:formId/responses/:responseId
+// フォームの回答詳細（共同編集者のみ）
+// ─────────────────────────────────────────────────────────────
+
+export const formResponsePathParamsSchema = z.object({
+	formId: z.cuid(),
+	responseId: z.cuid(),
+});
+
+export const getFormResponseResponseSchema = z.object({
+	response: formResponseSummarySchema,
+});
+export type GetFormResponseResponse = z.infer<
+	typeof getFormResponseResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
 // 企画側
 // ─────────────────────────────────────────────────────────────
 

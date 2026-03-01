@@ -2,7 +2,7 @@ import { Heading, Separator, Text } from "@radix-ui/themes";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnswerField } from "@/components/form/Answer/AnswerField";
-import { getFormDetail, listFormResponses } from "@/lib/api/committee-form";
+import { getFormDetail, getFormResponse } from "@/lib/api/committee-form";
 import { formDetailToForm } from "@/lib/form/convert";
 import { responseToAnswers } from "@/lib/form/utils";
 import { formatDate } from "@/lib/format";
@@ -17,18 +17,15 @@ export const Route = createFileRoute(
 	}),
 
 	loader: async ({ params }) => {
-		const [formRes, responsesRes] = await Promise.all([
+		const [formRes, responseRes] = await Promise.all([
 			getFormDetail(params.formId),
-			listFormResponses(params.formId),
+			getFormResponse(params.formId, params.answerId),
 		]);
 
-		const response = responsesRes.responses.find(r => r.id === params.answerId);
-		if (!response) throw new Error("回答が見つかりません");
-
 		const form = formDetailToForm(formRes);
-		const answers = responseToAnswers(response, form);
+		const answers = responseToAnswers(responseRes.response, form);
 
-		return { form, response, answers };
+		return { form, response: responseRes.response, answers };
 	},
 });
 

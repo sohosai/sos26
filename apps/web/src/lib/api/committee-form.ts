@@ -8,7 +8,9 @@ import {
 	type DeleteFormResponse,
 	deleteFormEndpoint,
 	type GetFormDetailResponse,
+	type GetFormResponseResponse,
 	getFormDetailEndpoint,
+	getFormResponseEndpoint,
 	type ListFormResponsesResponse,
 	type ListMyFormsResponse,
 	listFormResponsesEndpoint,
@@ -173,4 +175,17 @@ export async function listFormResponses(
 	formId: string
 ): Promise<ListFormResponsesResponse> {
 	return callGetApi(listFormResponsesEndpoint, { pathParams: { formId } });
+}
+
+/**
+ * GET /form/:formId/responses/:responseId
+ * 回答詳細（owner または共同編集者のみ）
+ */
+export async function getFormResponse(
+	formId: string,
+	responseId: string
+): Promise<GetFormResponseResponse> {
+	return callGetApi(getFormResponseEndpoint, {
+		pathParams: { formId, responseId },
+	});
 }
