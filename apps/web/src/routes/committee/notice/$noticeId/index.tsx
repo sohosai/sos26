@@ -4,7 +4,6 @@ import {
 	IconArrowLeft,
 	IconCalendar,
 	IconClock,
-	IconDownload,
 	IconPaperclip,
 } from "@tabler/icons-react";
 import {
@@ -14,6 +13,7 @@ import {
 } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { AttachmentPreviewButton } from "@/components/filePreview/AttachmentPreviewButton";
 import { Button } from "@/components/primitives";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import {
@@ -23,9 +23,8 @@ import {
 	removeCollaborator,
 	updateNoticeAuthorization,
 } from "@/lib/api/committee-notice";
-import { downloadFile } from "@/lib/api/files";
 import { useAuthStore } from "@/lib/auth";
-import { formatDate, formatFileSize } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { getNoticeStatusFromAuth } from "@/lib/notice-status";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { CreateNoticeDialog } from "../-components/CreateNoticeDialog";
@@ -193,22 +192,11 @@ function RouteComponent() {
 						</Text>
 						<div className={styles.attachmentList}>
 							{notice.attachments.map(att => (
-								<button
+								<AttachmentPreviewButton
 									key={att.id}
-									type="button"
+									attachment={att}
 									className={styles.attachmentItem}
-									onClick={() =>
-										downloadFile(att.fileId, att.fileName, att.isPublic).catch(
-											() => toast.error("ファイルの取得に失敗しました")
-										)
-									}
-								>
-									<IconDownload size={14} />
-									<Text size="2">{att.fileName}</Text>
-									<Text size="1" color="gray">
-										({formatFileSize(att.size)})
-									</Text>
-								</button>
+								/>
 							))}
 						</div>
 					</div>

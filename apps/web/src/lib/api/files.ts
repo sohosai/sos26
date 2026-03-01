@@ -79,6 +79,26 @@ export async function getAuthenticatedFileUrl(fileId: string): Promise<string> {
 }
 
 /**
+ * ファイルを取得して File オブジェクトとして返す
+ */
+export async function fetchFile(
+	fileId: string,
+	fileName: string,
+	mimeType: string,
+	isPublic: boolean
+): Promise<File> {
+	const url = isPublic
+		? getFileContentUrl(fileId)
+		: await getAuthenticatedFileUrl(fileId);
+	const res = await fetch(url);
+	if (!res.ok) {
+		throw new Error(`ファイルの取得に失敗しました (${res.status})`);
+	}
+	const blob = await res.blob();
+	return new File([blob], fileName, { type: mimeType });
+}
+
+/**
  * ファイルをダウンロードする
  */
 export async function downloadFile(

@@ -10,6 +10,9 @@
 }
 
 .header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
 	padding: var(--space-2) var(--space-4);
 	border-bottom: 1px solid var(--gray-6);
 }
@@ -21,15 +24,21 @@
 	text-overflow: ellipsis;
 	margin: 0;
 	line-height: 2;
+	min-width: 0;
 }
 
+.headerActions {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	flex-shrink: 0;
+}
+
+.actionBtn,
 .closeBtn {
-	position: absolute;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	right: var(--space-4);
-	top: var(--space-4);
 	border-radius: var(--radius-2);
 	background: transparent;
 	border: none;

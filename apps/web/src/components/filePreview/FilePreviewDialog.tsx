@@ -1,5 +1,5 @@
 import { Dialog, Text } from "@radix-ui/themes";
-import { IconX } from "@tabler/icons-react";
+import { IconDownload, IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import ExcelViewer from "./ExcelViewer";
 import styles from "./FilePreviewDialog.module.scss";
@@ -10,6 +10,7 @@ interface Props {
 	file: File | null;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	onDownload?: () => void;
 }
 
 function getExt(file: File) {
@@ -52,7 +53,12 @@ function Viewer({ file }: { file: File }) {
 	);
 }
 
-export default function FilePreviewDialog({ file, open, onOpenChange }: Props) {
+export default function FilePreviewDialog({
+	file,
+	open,
+	onOpenChange,
+	onDownload,
+}: Props) {
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
 			<Dialog.Content className={styles.content}>
@@ -60,9 +66,21 @@ export default function FilePreviewDialog({ file, open, onOpenChange }: Props) {
 					<Dialog.Title className={styles.title}>
 						{file?.name ?? ""}
 					</Dialog.Title>
-					<Dialog.Close className={styles.closeBtn} aria-label="閉じる">
-						<IconX size={20} />
-					</Dialog.Close>
+					<div className={styles.headerActions}>
+						{onDownload && (
+							<button
+								type="button"
+								className={styles.actionBtn}
+								onClick={onDownload}
+								aria-label="ダウンロード"
+							>
+								<IconDownload size={20} />
+							</button>
+						)}
+						<Dialog.Close className={styles.closeBtn} aria-label="閉じる">
+							<IconX size={20} />
+						</Dialog.Close>
+					</div>
 				</div>
 
 				{/* プレビューエリア */}
