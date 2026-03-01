@@ -154,37 +154,36 @@ function RouteComponent() {
 			id: "actions",
 			header: "操作",
 			cell: ({ row }) => (
-				<Link
-					to="/committee/forms/$formId/answers/$answerId"
-					params={{
-						formId,
-						answerId: row.original.id,
-					}}
+				<Button
+					intent="ghost"
+					size="1"
+					onClick={() =>
+						navigate({
+							to: "/committee/forms/$formId/answers/$answerId",
+							params: {
+								formId,
+								answerId: row.original.id,
+							},
+						})
+					}
 				>
-					<Button intent="ghost" size="1">
-						<IconEye size={16} />
-						詳細
-					</Button>
-				</Link>
+					<IconEye size={16} />
+					詳細
+				</Button>
 			),
 		}),
 	];
 
 	return (
 		<div>
-			<button
-				type="button"
+			<Link
+				to="/committee/forms/$formId"
+				params={{ formId }}
 				className={styles.backLink}
-				onClick={() =>
-					navigate({
-						to: "/committee/forms/$formId",
-						params: { formId },
-					})
-				}
 			>
 				<IconArrowLeft size={16} />
 				<Text size="2">フォーム詳細に戻る</Text>
-			</button>
+			</Link>
 			<div style={{ marginBottom: 16 }}>
 				<Heading size="5">回答一覧</Heading>
 				<Text size="2" color="gray">

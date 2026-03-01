@@ -3,6 +3,7 @@ import type { GetFormDetailResponse } from "@sos26/shared";
 import { IconArrowLeft, IconCalendar, IconClock } from "@tabler/icons-react";
 import {
 	createFileRoute,
+	Link,
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
@@ -127,14 +128,10 @@ function RouteComponent() {
 	return (
 		<div className={styles.layout}>
 			<div className={styles.main}>
-				<button
-					type="button"
-					className={styles.backLink}
-					onClick={() => navigate({ to: "/committee/forms" })}
-				>
+				<Link to="/committee/forms" className={styles.backLink}>
 					<IconArrowLeft size={16} />
 					<Text size="2">フォーム一覧に戻る</Text>
-				</button>
+				</Link>
 
 				<header className={styles.titleSection}>
 					<FormStatusBadge form={form} />
