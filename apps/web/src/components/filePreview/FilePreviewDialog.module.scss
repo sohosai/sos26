@@ -19,12 +19,9 @@
 }
 
 .title {
-	font-size: var(--font-size-4);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	margin: 0;
-	line-height: 2;
 	min-width: 0;
 }
 

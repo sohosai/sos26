@@ -1,4 +1,4 @@
-import { Dialog, Text } from "@radix-ui/themes";
+import { Dialog, Text, VisuallyHidden } from "@radix-ui/themes";
 import { IconDownload, IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { Button, IconButton } from "@/components/primitives";
@@ -63,10 +63,13 @@ export default function FilePreviewDialog({
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
 			<Dialog.Content className={styles.content}>
+				<VisuallyHidden>
+					<Dialog.Title>{file?.name ?? ""}</Dialog.Title>
+				</VisuallyHidden>
 				<div className={styles.header}>
-					<Dialog.Title className={styles.title}>
+					<Text size="3" weight="medium" className={styles.title}>
 						{file?.name ?? ""}
-					</Dialog.Title>
+					</Text>
 					<div className={styles.headerActions}>
 						{onDownload && (
 							<Button intent="secondary" size="2" onClick={onDownload}>
