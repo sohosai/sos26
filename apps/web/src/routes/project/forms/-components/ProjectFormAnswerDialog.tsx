@@ -1,5 +1,5 @@
 import type { GetProjectFormResponse } from "@sos26/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { FormAnswerDialog } from "@/components/form/Answer/AnswerDialog";
 import type { Form, FormAnswers } from "@/components/form/type";
@@ -36,14 +36,24 @@ export function ProjectFormAnswerDialog({
 }: Props) {
 	const [fetchState, setFetchState] = useState<FetchState>({ status: "idle" });
 	const [draftResponseId, setDraftResponseId] = useState<string | null>(null);
-	const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
+	const [isDeadlineExpired, setIsDeadlineExpired] = useState(false);
 
+	// 締切の瞬間に1回だけ発火するタイマー
 	useEffect(() => {
-		if (!open) return;
-		setCurrentTime(new Date());
-		const timer = setInterval(() => setCurrentTime(new Date()), 1000 * 30);
-		return () => clearInterval(timer);
-	}, [open]);
+		if (fetchState.status !== "success") return;
+		const { deadlineAt, allowLateResponse } = fetchState.data.form;
+		if (!deadlineAt || allowLateResponse) return;
+
+		const now = new Date();
+		if (deadlineAt <= now) {
+			setIsDeadlineExpired(true);
+			return;
+		}
+
+		const ms = deadlineAt.getTime() - now.getTime();
+		const timer = setTimeout(() => setIsDeadlineExpired(true), ms);
+		return () => clearTimeout(timer);
+	}, [fetchState]);
 
 	useEffect(() => {
 		if (!open) return;
@@ -71,10 +81,13 @@ export function ProjectFormAnswerDialog({
 	const form: Form | null =
 		fetchState.status === "success" ? ProjectFormToForm(fetchState.data) : null;
 
-	const initialAnswers: FormAnswers =
-		fetchState.status === "success" && fetchState.data.form.response && form
-			? responseToAnswers(fetchState.data.form.response, form)
-			: {};
+	const initialAnswers: FormAnswers = useMemo(
+		() =>
+			fetchState.status === "success" && fetchState.data.form.response && form
+				? responseToAnswers(fetchState.data.form.response, form)
+				: {},
+		[fetchState, form]
+	);
 
 	const responseId =
 		draftResponseId ??
@@ -85,12 +98,6 @@ export function ProjectFormAnswerDialog({
 	const isSubmitted =
 		fetchState.status === "success" &&
 		fetchState.data.form.response?.submittedAt != null;
-
-	const isDeadlineExpired =
-		fetchState.status === "success" &&
-		fetchState.data.form.deadlineAt != null &&
-		!fetchState.data.form.allowLateResponse &&
-		fetchState.data.form.deadlineAt <= currentTime;
 
 	const handleSaveDraft = async (answers: FormAnswers) => {
 		if (!form || isDeadlineExpired) return;
@@ -124,6 +131,7 @@ export function ProjectFormAnswerDialog({
 				if (!open) {
 					setFetchState({ status: "idle" });
 					setDraftResponseId(null);
+					setIsDeadlineExpired(false);
 				}
 				onOpenChange(open);
 			}}
