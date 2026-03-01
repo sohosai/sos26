@@ -8,6 +8,10 @@ import {
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
+import {
+	notifyFormAuthorizationDecided,
+	notifyFormAuthorizationRequested,
+} from "../lib/notifications";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -149,7 +153,7 @@ committeeFormRoute.get(
 	async c => {
 		const { formId } = c.req.param();
 
-		const form = await prisma.form.findUniqueOrThrow({
+		const form = await prisma.form.findFirst({
 			where: { id: formId, deletedAt: null },
 			include: {
 				owner: { select: { id: true, name: true } },
@@ -441,7 +445,10 @@ committeeFormRoute.post(
 	requireCommitteeMember,
 	async c => {
 		const { formId } = c.req.param();
-		const userId = c.get("user").id;
+		const user = c.get("user");
+		const userId = user.id;
+
+		const form = await requireWriteAccess(formId, userId);
 
 		await requireWriteAccess(formId, userId);
 
@@ -516,6 +523,14 @@ committeeFormRoute.post(
 			{ isolationLevel: "Serializable" }
 		);
 
+		void notifyFormAuthorizationRequested({
+			approverUserId: requestedToId,
+			requesterName: user.name,
+			formId,
+			formTitle: form.title,
+			scheduledSendAt: authorization.scheduledSendAt,
+		});
+
 		return c.json({ authorization });
 	}
 );
@@ -541,7 +556,7 @@ committeeFormRoute.patch(
 
 		const authorization = await prisma.formAuthorization.findFirst({
 			where: { id: authorizationId, formId },
-			include: { form: { select: { deletedAt: true } } },
+			include: { form: { select: { deletedAt: true, title: true } } },
 		});
 
 		if (!authorization) {
@@ -579,6 +594,14 @@ committeeFormRoute.patch(
 		const updated = await prisma.formAuthorization.update({
 			where: { id: authorizationId, status: "PENDING" },
 			data: { status, decidedAt: new Date() },
+		});
+
+		void notifyFormAuthorizationDecided({
+			requestedByUserId: authorization.requestedById,
+			formId,
+			formTitle: authorization.form.title,
+			status,
+			scheduledSendAt: authorization.scheduledSendAt,
 		});
 
 		return c.json({ authorization: updated });
