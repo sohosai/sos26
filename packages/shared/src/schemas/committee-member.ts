@@ -56,7 +56,6 @@ export type CommitteeMember = z.infer<typeof committeeMemberSchema>;
 export const committeePermissionSchema = z.enum([
 	"MEMBER_EDIT",
 	"NOTICE_DELIVER",
-	"NOTICE_APPROVE",
 	"FORM_DELIVER",
 	"INQUIRY_ADMIN",
 ]);

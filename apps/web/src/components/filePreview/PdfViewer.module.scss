@@ -1,0 +1,29 @@
+.root {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: var(--space-4);
+	background: var(--gray-3);
+
+	:global(.react-pdf__Page) {
+		margin-bottom: var(--space-4);
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+
+	:global(.react-pdf__Document) {
+		margin-bottom: 0;
+	}
+
+	canvas {
+		display: block;
+		height: auto !important;
+		box-shadow: var(--shadow-2);
+	}
+}
+
+.status {
+	color: var(--gray-11);
+}

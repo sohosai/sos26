@@ -5,7 +5,7 @@ import {
 } from "@/components/patterns/CheckboxGroup";
 import { RadioGroup, RadioGroupItem } from "@/components/patterns/RadioGroup";
 import { TextArea, TextField } from "@/components/primitives";
-import { FileUploadField } from "../EachField/FileUploadField";
+import { FileUploadFieldWithPreview } from "../EachField/FileUploadFieldWithPreview";
 import { NumberField } from "../EachField/NumberField";
 import type { FormAnswerValue, FormItem } from "../type";
 
@@ -85,7 +85,7 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 				<>
 					<Label />
 					<Description />
-					<FileUploadField
+					<FileUploadFieldWithPreview
 						label=""
 						value={value as File | null}
 						onChange={onChange}
