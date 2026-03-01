@@ -32,6 +32,22 @@
 	flex-shrink: 0;
 }
 
+.zoomControls {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	border-right: 1px solid var(--gray-6);
+	padding-right: var(--space-3);
+}
+
+.zoomLabel {
+	min-width: 3ch;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+	color: var(--gray-11);
+	user-select: none;
+}
+
 .body {
 	flex: 1;
 	min-height: 0;

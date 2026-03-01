@@ -13,9 +13,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 
 interface Props {
 	file: File;
+	scale: number;
 }
 
-export default function PdfViewer({ file }: Props) {
+export default function PdfViewer({ file, scale }: Props) {
 	const [numPages, setNumPages] = useState<number>(0);
 	const [isLoading, setIsLoading] = useState(true);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -48,7 +49,7 @@ export default function PdfViewer({ file }: Props) {
 				{!errorMessage &&
 					Array.from({ length: numPages }, (_, i) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: ページ番号は固定順序
-						<Page key={i + 1} pageNumber={i + 1} />
+						<Page key={i + 1} pageNumber={i + 1} scale={scale} />
 					))}
 			</Document>
 		</div>
