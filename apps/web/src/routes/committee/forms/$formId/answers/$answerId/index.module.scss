@@ -1,34 +1,41 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-5);
   max-width: 680px;
 }
 
 .backLink {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
+  color: var(--accent-11);
+  cursor: pointer;
+  width: fit-content;
   background: none;
   border: none;
-  cursor: pointer;
   padding: 0;
-  color: var(--gray-11);
+  font: inherit;
+  text-decoration: none;
 
   &:hover {
-    color: var(--gray-12);
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    text-decoration: underline;
   }
 }
 
 .header {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .meta {
   display: flex;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .itemList {
@@ -37,7 +44,7 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-5);
 }
 
 .itemCard {
