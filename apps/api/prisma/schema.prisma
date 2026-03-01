@@ -597,7 +597,7 @@ model FormDelivery {
   @@unique([formAuthorizationId, projectId])
 }
 
-//フォームへの回答（1人1回の送信単位）
+//フォームへの回答（1配信につき最大1件）
 model FormResponse {
   id String @id @default(cuid())
 
@@ -615,7 +615,7 @@ model FormResponse {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  @@index([formDeliveryId])
+  @@unique([formDeliveryId])
   @@index([respondentId])
 }
 

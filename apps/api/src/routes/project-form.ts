@@ -31,6 +31,7 @@ const getDeliveryOrThrow = async (
 				scheduledSendAt: {
 					lte: now,
 				},
+				form: { deletedAt: null },
 			},
 		},
 		include: {
@@ -69,7 +70,7 @@ const checkDeadline = (auth: {
 }) => {
 	if (!auth.deadlineAt) return; // 期限なし
 	if (auth.allowLateResponse) return; // 遅延提出許可あり
-	if (auth.deadlineAt < new Date()) {
+	if (auth.deadlineAt <= new Date()) {
 		throw Errors.invalidRequest("回答期限を過ぎています");
 	}
 };
@@ -92,6 +93,9 @@ const upsertAnswers = async (
 		const type = itemTypeMap.get(answer.formItemId);
 		if (!type) {
 			throw Errors.invalidRequest("不正な設問IDです");
+		}
+		if (type !== answer.type) {
+			throw Errors.invalidRequest("設問タイプと回答タイプが一致しません");
 		}
 
 		switch (answer.type) {
@@ -274,40 +278,40 @@ projectFormRoute.get("/", requireAuth, requireProjectMember, async c => {
 
 	const now = new Date();
 
-	const [deliveries, responses] = await Promise.all([
-		prisma.formDelivery.findMany({
-			where: {
-				projectId,
-				formAuthorization: {
-					status: "APPROVED",
-					scheduledSendAt: { lte: now },
+	const deliveries = await prisma.formDelivery.findMany({
+		where: {
+			projectId,
+			formAuthorization: {
+				status: "APPROVED",
+				scheduledSendAt: { lte: now },
+				form: { deletedAt: null },
+			},
+		},
+		include: {
+			formAuthorization: {
+				select: {
+					scheduledSendAt: true,
+					deadlineAt: true,
+					allowLateResponse: true,
+					required: true,
+					form: { select: { id: true, title: true, description: true } },
 				},
 			},
-			include: {
-				formAuthorization: {
-					select: {
-						scheduledSendAt: true,
-						deadlineAt: true,
-						allowLateResponse: true,
-						required: true,
-						form: { select: { id: true, title: true, description: true } },
-					},
+		},
+		orderBy: { formAuthorization: { scheduledSendAt: "desc" } },
+	});
+
+	const deliveryIds = deliveries.map(d => d.id);
+	const responses = deliveryIds.length
+		? await prisma.formResponse.findMany({
+				where: { formDeliveryId: { in: deliveryIds } },
+				select: {
+					id: true,
+					formDeliveryId: true,
+					submittedAt: true,
 				},
-			},
-			orderBy: { formAuthorization: { scheduledSendAt: "desc" } },
-		}),
-		// 自分の回答だけ取得
-		prisma.formResponse.findMany({
-			where: {
-				formDelivery: { projectId },
-			},
-			select: {
-				id: true,
-				formDeliveryId: true,
-				submittedAt: true,
-			},
-		}),
-	]);
+			})
+		: [];
 
 	const responseMap = new Map(responses.map(r => [r.formDeliveryId, r]));
 	return c.json({
@@ -343,13 +347,12 @@ projectFormRoute.get(
 			projectId: c.req.param("projectId"),
 			formDeliveryId: c.req.param("formDeliveryId"),
 		});
-		const userId = c.get("user").id;
 
 		const delivery = await getDeliveryOrThrow(projectId, formDeliveryId);
 		const { form } = delivery.formAuthorization;
 
 		const existingResponse = await prisma.formResponse.findFirst({
-			where: { formDeliveryId, respondentId: userId },
+			where: { formDeliveryId },
 			include: {
 				answers: { include: { selectedOptions: true } },
 			},
@@ -422,13 +425,14 @@ projectFormRoute.post(
 
 		assertSelectedOptionsValid(delivery.formAuthorization.form.items, answers);
 
+		checkDeadline(delivery.formAuthorization);
+
 		if (submit) {
-			checkDeadline(delivery.formAuthorization);
 			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
 		}
 
 		const existing = await prisma.formResponse.findFirst({
-			where: { formDeliveryId, respondentId: userId },
+			where: { formDeliveryId },
 		});
 		if (existing) {
 			throw Errors.alreadyExists(
@@ -476,7 +480,7 @@ projectFormRoute.patch(
 		const delivery = await getDeliveryOrThrow(projectId, formDeliveryId);
 
 		const existing = await prisma.formResponse.findFirst({
-			where: { formDeliveryId, respondentId: userId },
+			where: { formDeliveryId },
 		});
 		if (!existing) throw Errors.notFound("回答が見つかりません");
 
@@ -487,8 +491,9 @@ projectFormRoute.patch(
 
 		const isAlreadySubmitted = existing.submittedAt !== null;
 
+		checkDeadline(delivery.formAuthorization);
+
 		if (submit || isAlreadySubmitted) {
-			checkDeadline(delivery.formAuthorization);
 			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
 		}
 

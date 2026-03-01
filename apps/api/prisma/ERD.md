@@ -193,7 +193,7 @@ erDiagram
 }
 "FormResponse" {
   String id PK
-  String formDeliveryId FK
+  String formDeliveryId FK,UK
   String respondentId FK
   DateTime submittedAt "nullable"
   DateTime createdAt
@@ -314,7 +314,7 @@ erDiagram
 "FormAuthorization" }o--|| "User" : requestedTo
 "FormDelivery" }o--|| "FormAuthorization" : formAuthorization
 "FormDelivery" }o--|| "Project" : project
-"FormResponse" }o--|| "FormDelivery" : formDelivery
+"FormResponse" |o--|| "FormDelivery" : formDelivery
 "FormResponse" }o--|| "User" : respondent
 "FormAnswer" }o--|| "FormResponse" : formResponse
 "FormAnswer" }o--|| "FormItem" : formItem
