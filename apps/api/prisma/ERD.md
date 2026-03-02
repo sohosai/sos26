@@ -278,6 +278,90 @@ erDiagram
   DateTime deletedAt "nullable"
   DateTime createdAt
 }
+"MastersheetColumn" {
+  String id PK
+  MastersheetColumnType type
+  String name
+  String description "nullable"
+  Int sortOrder
+  String createdById FK
+  String formItemId FK "nullable"
+  MastersheetDataType dataType "nullable"
+  MastersheetColumnVisibility visibility "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"MastersheetColumnOption" {
+  String id PK
+  String columnId FK
+  String label
+  Int sortOrder
+}
+"MastersheetCellValue" {
+  String id PK
+  String columnId FK
+  String projectId FK
+  String textValue "nullable"
+  Float numberValue "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"MastersheetCellSelectedOption" {
+  String id PK
+  String cellId FK
+  String optionId FK
+}
+"MastersheetOverride" {
+  String id PK
+  String columnId FK
+  String projectId FK
+  String textValue "nullable"
+  Float numberValue "nullable"
+  String fileUrl "nullable"
+  Boolean isStale
+  String editorId FK
+  DateTime createdAt
+  DateTime updatedAt
+}
+"MastersheetOverrideSelectedOption" {
+  String id PK
+  String overrideId FK
+  String optionId
+}
+"MastersheetColumnViewer" {
+  String id PK
+  String columnId FK
+  ViewerScope scope
+  Bureau bureauValue "nullable"
+  String userId FK "nullable"
+}
+"MastersheetAccessRequest" {
+  String id PK
+  String columnId FK
+  String requesterId FK
+  String decidedById FK "nullable"
+  ApprovalStatus status
+  DateTime decidedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"MastersheetEditHistory" {
+  String id PK
+  String columnId FK
+  String projectId FK
+  String oldValue "nullable"
+  String newValue "nullable"
+  String editorId FK
+  DateTime createdAt
+}
+"MastersheetView" {
+  String id PK
+  String name
+  String createdById FK
+  String state
+  DateTime createdAt
+  DateTime updatedAt
+}
 "InquiryAttachment" {
   String id PK
   String inquiryId FK
@@ -336,6 +420,26 @@ erDiagram
 "InquiryActivity" }o--|| "Inquiry" : inquiry
 "InquiryActivity" }o--|| "User" : actor
 "InquiryActivity" }o--o| "User" : target
+"MastersheetColumn" }o--|| "User" : createdBy
+"MastersheetColumn" }o--o| "FormItem" : formItem
+"MastersheetColumnOption" }o--|| "MastersheetColumn" : column
+"MastersheetCellValue" }o--|| "MastersheetColumn" : column
+"MastersheetCellValue" }o--|| "Project" : project
+"MastersheetCellSelectedOption" }o--|| "MastersheetCellValue" : cell
+"MastersheetCellSelectedOption" }o--|| "MastersheetColumnOption" : option
+"MastersheetOverride" }o--|| "MastersheetColumn" : column
+"MastersheetOverride" }o--|| "Project" : project
+"MastersheetOverride" }o--|| "User" : editor
+"MastersheetOverrideSelectedOption" }o--|| "MastersheetOverride" : override
+"MastersheetColumnViewer" }o--|| "MastersheetColumn" : column
+"MastersheetColumnViewer" }o--o| "User" : user
+"MastersheetAccessRequest" }o--|| "MastersheetColumn" : column
+"MastersheetAccessRequest" }o--|| "User" : requester
+"MastersheetAccessRequest" }o--o| "User" : decidedBy
+"MastersheetEditHistory" }o--|| "MastersheetColumn" : column
+"MastersheetEditHistory" }o--|| "Project" : project
+"MastersheetEditHistory" }o--|| "User" : editor
+"MastersheetView" }o--|| "User" : createdBy
 "InquiryAttachment" }o--|| "Inquiry" : inquiry
 "InquiryAttachment" }o--o| "InquiryComment" : comment
 "InquiryAttachment" }o--|| "File" : file
@@ -700,6 +804,120 @@ Properties as follows:
 - `targetId`:
 - `deletedAt`:
 - `createdAt`:
+
+### `MastersheetColumn`
+
+Properties as follows:
+
+- `id`:
+- `type`:
+- `name`:
+- `description`:
+- `sortOrder`:
+- `createdById`:
+- `formItemId`:
+- `dataType`:
+- `visibility`:
+- `createdAt`:
+- `updatedAt`:
+
+### `MastersheetColumnOption`
+
+Properties as follows:
+
+- `id`:
+- `columnId`:
+- `label`:
+- `sortOrder`:
+
+### `MastersheetCellValue`
+
+Properties as follows:
+
+- `id`:
+- `columnId`:
+- `projectId`:
+- `textValue`:
+- `numberValue`:
+- `createdAt`:
+- `updatedAt`:
+
+### `MastersheetCellSelectedOption`
+
+Properties as follows:
+
+- `id`:
+- `cellId`:
+- `optionId`:
+
+### `MastersheetOverride`
+
+Properties as follows:
+
+- `id`:
+- `columnId`:
+- `projectId`:
+- `textValue`:
+- `numberValue`:
+- `fileUrl`:
+- `isStale`:
+- `editorId`:
+- `createdAt`:
+- `updatedAt`:
+
+### `MastersheetOverrideSelectedOption`
+
+Properties as follows:
+
+- `id`:
+- `overrideId`:
+- `optionId`:
+
+### `MastersheetColumnViewer`
+
+Properties as follows:
+
+- `id`:
+- `columnId`:
+- `scope`:
+- `bureauValue`:
+- `userId`:
+
+### `MastersheetAccessRequest`
+
+Properties as follows:
+
+- `id`:
+- `columnId`:
+- `requesterId`:
+- `decidedById`:
+- `status`:
+- `decidedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `MastersheetEditHistory`
+
+Properties as follows:
+
+- `id`:
+- `columnId`:
+- `projectId`:
+- `oldValue`:
+- `newValue`:
+- `editorId`:
+- `createdAt`:
+
+### `MastersheetView`
+
+Properties as follows:
+
+- `id`:
+- `name`:
+- `createdById`:
+- `state`:
+- `createdAt`:
+- `updatedAt`:
 
 ### `InquiryAttachment`
 

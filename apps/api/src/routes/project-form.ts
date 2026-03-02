@@ -455,6 +455,20 @@ projectFormRoute.post(
 				answers,
 				delivery.formAuthorization.form.items
 			);
+
+			if (submit) {
+				await tx.mastersheetOverride.updateMany({
+					where: {
+						projectId,
+						column: {
+							formItem: { formId: delivery.formAuthorization.form.id },
+						},
+						isStale: false,
+					},
+					data: { isStale: true },
+				});
+			}
+
 			return formatResponse(tx, created.id);
 		});
 
@@ -512,6 +526,20 @@ projectFormRoute.patch(
 				answers,
 				delivery.formAuthorization.form.items
 			);
+
+			if (submit || isAlreadySubmitted) {
+				await tx.mastersheetOverride.updateMany({
+					where: {
+						projectId,
+						column: {
+							formItem: { formId: delivery.formAuthorization.form.id },
+						},
+						isStale: false,
+					},
+					data: { isStale: true },
+				});
+			}
+
 			return formatResponse(tx, existing.id);
 		});
 

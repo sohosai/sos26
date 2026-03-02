@@ -92,6 +92,15 @@ model User {
   inquiryActivitiesAsActor  InquiryActivity[] @relation("InquiryActivityActor")
   inquiryActivitiesAsTarget InquiryActivity[] @relation("InquiryActivityTarget")
 
+  // Mastersheet関連
+  mastersheetColumns              MastersheetColumn[]        @relation("MastersheetColumnCreatedBy")
+  mastersheetOverrides            MastersheetOverride[]      @relation("MastersheetOverrideEditor")
+  mastersheetColumnViewers        MastersheetColumnViewer[]
+  mastersheetAccessRequestsMade   MastersheetAccessRequest[] @relation("MastersheetAccessRequester")
+  mastersheetAccessRequestsJudged MastersheetAccessRequest[] @relation("MastersheetAccessDecider")
+  mastersheetEditHistories        MastersheetEditHistory[]   @relation("MastersheetEditHistoryEditor")
+  mastersheetViews                MastersheetView[]
+
   @@unique([firebaseUid, deletedAt])
   @@unique([email, deletedAt])
 }
@@ -143,6 +152,10 @@ model Project {
   noticeDeliveries NoticeDelivery[]
   formDeliveries   FormDelivery[]
   inquiries        Inquiry[]
+
+  mastersheetCellValues    MastersheetCellValue[]
+  mastersheetOverrides     MastersheetOverride[]
+  mastersheetEditHistories MastersheetEditHistory[]
 
   @@index([ownerId])
   @@index([subOwnerId])
@@ -477,6 +490,8 @@ model FormItem {
 
   //回答
   answers FormAnswer[]
+
+  mastersheetColumns MastersheetColumn[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -866,6 +881,206 @@ model InquiryActivity {
 
   @@index([inquiryId])
   @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// マスターシート関連
+// ─────────────────────────────────────────────────────────────
+
+enum MastersheetColumnType {
+  FORM_ITEM // フォーム由来
+  CUSTOM // 自由追加
+}
+
+enum MastersheetDataType {
+  TEXT
+  NUMBER
+  SELECT
+  MULTI_SELECT
+}
+
+enum MastersheetColumnVisibility {
+  PRIVATE
+  PUBLIC
+}
+
+// ─── カラム定義 ───
+
+model MastersheetColumn {
+  id          String                @id @default(cuid())
+  type        MastersheetColumnType
+  name        String
+  description String?
+  sortOrder   Int
+  createdById String
+  createdBy   User                  @relation("MastersheetColumnCreatedBy", fields: [createdById], references: [id])
+
+  // フォーム由来カラムの場合
+  formItemId String?
+  formItem   FormItem? @relation(fields: [formItemId], references: [id])
+
+  // 自由追加カラムの場合
+  dataType   MastersheetDataType?
+  visibility MastersheetColumnVisibility?
+
+  viewers        MastersheetColumnViewer[]
+  options        MastersheetColumnOption[]
+  cellValues     MastersheetCellValue[]
+  overrides      MastersheetOverride[]
+  editHistory    MastersheetEditHistory[]
+  accessRequests MastersheetAccessRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdById])
+  @@index([formItemId])
+}
+
+// ─── 自由追加カラムの選択肢 ───
+
+model MastersheetColumnOption {
+  id        String            @id @default(cuid())
+  columnId  String
+  column    MastersheetColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  label     String
+  sortOrder Int
+
+  cellSelections MastersheetCellSelectedOption[]
+
+  @@index([columnId])
+}
+
+// ─── 自由追加カラムのセル値 ───
+
+model MastersheetCellValue {
+  id          String            @id @default(cuid())
+  columnId    String
+  column      MastersheetColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project           @relation(fields: [projectId], references: [id])
+  textValue   String?
+  numberValue Float?
+
+  selectedOptions MastersheetCellSelectedOption[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([columnId, projectId])
+  @@index([projectId])
+}
+
+// ─── SELECT/MULTI_SELECT のセル値（中間テーブル）───
+
+model MastersheetCellSelectedOption {
+  id       String                  @id @default(cuid())
+  cellId   String
+  cell     MastersheetCellValue    @relation(fields: [cellId], references: [id], onDelete: Cascade)
+  optionId String
+  option   MastersheetColumnOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([cellId, optionId])
+}
+
+// ─── フォーム回答のオーバーライド ───
+
+model MastersheetOverride {
+  id          String            @id @default(cuid())
+  columnId    String
+  column      MastersheetColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project           @relation(fields: [projectId], references: [id])
+  textValue   String?
+  numberValue Float?
+  fileUrl     String?
+  isStale     Boolean           @default(false)
+
+  selectedOptions MastersheetOverrideSelectedOption[]
+
+  editorId  String
+  editor    User     @relation("MastersheetOverrideEditor", fields: [editorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([columnId, projectId])
+  @@index([projectId])
+}
+
+// ─── SELECT/CHECKBOX オーバーライドの選択肢（中間テーブル）───
+
+model MastersheetOverrideSelectedOption {
+  id         String              @id @default(cuid())
+  overrideId String
+  override   MastersheetOverride @relation(fields: [overrideId], references: [id], onDelete: Cascade)
+  optionId   String
+
+  @@unique([overrideId, optionId])
+}
+
+// ─── カラムの公開範囲（自由追加カラム用）───
+
+model MastersheetColumnViewer {
+  id          String            @id @default(cuid())
+  columnId    String
+  column      MastersheetColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  scope       ViewerScope
+  bureauValue Bureau?
+  userId      String?
+  user        User?             @relation(fields: [userId], references: [id])
+
+  @@index([columnId])
+  @@index([userId])
+}
+
+// ─── 閲覧申請 ───
+
+model MastersheetAccessRequest {
+  id          String            @id @default(cuid())
+  columnId    String
+  column      MastersheetColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  requesterId String
+  requester   User              @relation("MastersheetAccessRequester", fields: [requesterId], references: [id])
+  decidedById String?
+  decidedBy   User?             @relation("MastersheetAccessDecider", fields: [decidedById], references: [id])
+  status      ApprovalStatus
+  decidedAt   DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([columnId])
+  @@index([requesterId])
+}
+
+// ─── 編集履歴 ───
+
+model MastersheetEditHistory {
+  id        String            @id @default(cuid())
+  columnId  String
+  column    MastersheetColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project           @relation(fields: [projectId], references: [id])
+  oldValue  String? // JSON シリアライズ
+  newValue  String? // JSON シリアライズ
+  editorId  String
+  editor    User              @relation("MastersheetEditHistoryEditor", fields: [editorId], references: [id])
+  createdAt DateTime          @default(now())
+
+  @@index([columnId, projectId])
+}
+
+// ─── 保存済みビュー ───
+
+model MastersheetView {
+  id          String   @id @default(cuid())
+  name        String
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  state       String // JSON: { columns: string[], filters: {...}, sorting: {...} }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdById])
 }
 
 //お問い合わせの添付ファイル
