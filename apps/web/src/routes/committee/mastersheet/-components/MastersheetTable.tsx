@@ -4,7 +4,12 @@ import type {
 	UpsertMastersheetCellRequest,
 } from "@sos26/shared";
 import { useRouter } from "@tanstack/react-router";
-import { type ColumnDef, createColumnHelper } from "@tanstack/react-table";
+import {
+	type ColumnDef,
+	createColumnHelper,
+	type SortingState,
+	type VisibilityState,
+} from "@tanstack/react-table";
 import { type ReactNode, useMemo } from "react";
 import {
 	DataTable,
@@ -32,6 +37,10 @@ type Props = {
 	columns: GetMastersheetDataResponse["columns"];
 	rows: GetMastersheetDataResponse["rows"];
 	toolbarExtra?: ReactNode;
+	initialSorting?: SortingState;
+	initialColumnVisibility?: VisibilityState;
+	onSortingChange?: (sorting: SortingState) => void;
+	onColumnVisibilityChange?: (visibility: VisibilityState) => void;
 };
 
 const columnHelper = createColumnHelper<MastersheetRow>();
@@ -168,7 +177,15 @@ function buildCustomPayload(
 	return { textValue: typeof value === "string" ? value : null };
 }
 
-export function MastersheetTable({ columns, rows, toolbarExtra }: Props) {
+export function MastersheetTable({
+	columns,
+	rows,
+	toolbarExtra,
+	initialSorting,
+	initialColumnVisibility,
+	onSortingChange,
+	onColumnVisibilityChange,
+}: Props) {
 	const router = useRouter();
 
 	const tableData = useMemo(
@@ -221,7 +238,11 @@ export function MastersheetTable({ columns, rows, toolbarExtra }: Props) {
 				copy: false,
 				csvExport: true,
 			}}
+			initialSorting={initialSorting}
+			initialColumnVisibility={initialColumnVisibility}
 			onCellEdit={handleCellEdit}
+			onSortingChange={onSortingChange}
+			onColumnVisibilityChange={onColumnVisibilityChange}
 			toolbarExtra={toolbarExtra}
 		/>
 	);

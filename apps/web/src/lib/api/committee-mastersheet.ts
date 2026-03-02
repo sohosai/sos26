@@ -2,14 +2,21 @@ import {
 	type CreateMastersheetAccessRequestResponse,
 	type CreateMastersheetColumnRequest,
 	type CreateMastersheetColumnResponse,
+	type CreateMastersheetViewRequest,
+	type CreateMastersheetViewResponse,
 	createMastersheetAccessRequestEndpoint,
 	createMastersheetColumnEndpoint,
+	createMastersheetViewEndpoint,
 	type DeleteMastersheetColumnResponse,
+	type DeleteMastersheetViewResponse,
 	type DiscoverMastersheetColumnsResponse,
 	deleteMastersheetColumnEndpoint,
+	deleteMastersheetViewEndpoint,
 	discoverMastersheetColumnsEndpoint,
 	type GetMastersheetDataResponse,
 	getMastersheetDataEndpoint,
+	type ListMastersheetViewsResponse,
+	listMastersheetViewsEndpoint,
 	type UpdateMastersheetColumnRequest,
 	type UpdateMastersheetColumnResponse,
 	type UpsertMastersheetCellRequest,
@@ -110,5 +117,35 @@ export async function createMastersheetAccessRequest(
 ): Promise<CreateMastersheetAccessRequestResponse> {
 	return callNoBodyApi(createMastersheetAccessRequestEndpoint, {
 		pathParams: { columnId },
+	});
+}
+
+/**
+ * GET /committee/mastersheet/views
+ * 自分が保存したビュー一覧
+ */
+export async function listMastersheetViews(): Promise<ListMastersheetViewsResponse> {
+	return callGetApi(listMastersheetViewsEndpoint);
+}
+
+/**
+ * POST /committee/mastersheet/views
+ * ビューを保存
+ */
+export async function createMastersheetView(
+	body: CreateMastersheetViewRequest
+): Promise<CreateMastersheetViewResponse> {
+	return callBodyApi(createMastersheetViewEndpoint, body);
+}
+
+/**
+ * DELETE /committee/mastersheet/views/:viewId
+ * ビューを削除
+ */
+export async function deleteMastersheetView(
+	viewId: string
+): Promise<DeleteMastersheetViewResponse> {
+	return callNoBodyApi(deleteMastersheetViewEndpoint, {
+		pathParams: { viewId },
 	});
 }
