@@ -4,7 +4,6 @@ import {
 	Popover,
 	Checkbox as RadixCheckbox,
 	Table,
-	Text,
 	TextField,
 } from "@radix-ui/themes";
 import { IconDownload, IconSearch, IconSettings } from "@tabler/icons-react";
@@ -313,8 +312,6 @@ export function DataTable<T extends RowData>({
 
 	const showToolbar = hasToolbar(f, toolbarExtra);
 
-	const selectedRowCount = Object.keys(rowSelection).length;
-
 	return (
 		<Box>
 			{showToolbar && (
@@ -454,24 +451,6 @@ export function DataTable<T extends RowData>({
 					))}
 				</Table.Body>
 			</Table.Root>
-			{cellSelection && selected.size > 0 && (
-				<Box mt="3" p="3" className={styles.selectionInfo}>
-					<Text size="2" weight="bold">
-						選択中: {selected.size}セル
-					</Text>
-					<Text size="1" color="gray" ml="2" as="span">
-						{" "}
-						[ {[...selected].sort().join(", ")} ]
-					</Text>
-				</Box>
-			)}
-			{f.rowSelection && selectedRowCount > 0 && (
-				<Box mt="3" p="3" className={styles.selectionInfo}>
-					<Text size="2" weight="bold">
-						{selectedRowCount}件を選択中
-					</Text>
-				</Box>
-			)}
 		</Box>
 	);
 }
