@@ -234,8 +234,8 @@ export function MastersheetTable({
 				sorting: true,
 				globalFilter: true,
 				columnVisibility: true,
-				selection: false,
-				copy: false,
+				selection: true,
+				copy: true,
 				csvExport: true,
 			}}
 			initialSorting={initialSorting}
