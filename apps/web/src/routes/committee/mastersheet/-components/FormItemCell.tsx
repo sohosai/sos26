@@ -1,9 +1,8 @@
-import { Flex, Link, Text } from "@radix-ui/themes";
+import { Link, Text } from "@radix-ui/themes";
 import type { MastersheetCellStatus } from "@sos26/shared";
 import type { CellContext, RowData } from "@tanstack/react-table";
 import { useEffect, useRef, useState } from "react";
 import editableStyles from "@/components/patterns/DataTable/cells/EditableCell.module.scss";
-import { FormCellStatusBadge } from "@/components/patterns/DataTable/cells/FormCellStatusBadge";
 
 // ─────────────────────────────────────────────────────────────
 // 型定義
@@ -120,41 +119,36 @@ function CellDisplay({
 	const effectiveValue = cell.override ?? cell.formValue ?? null;
 	const displayText = getDisplayText(effectiveValue, formItemType);
 
+	// 未回答 → ─
 	if (cell.status === "NOT_ANSWERED") {
 		return (
-			<Flex onDoubleClick={handler}>
-				<FormCellStatusBadge status={cell.status} />
-			</Flex>
+			<Text size="2" color="gray" onDoubleClick={handler}>
+				─
+			</Text>
 		);
 	}
 
-	if (cell.status === "SUBMITTED") {
-		if (formItemType === "FILE" && displayText) {
-			return (
-				<Link href={displayText} target="_blank" size="2">
-					ファイル
-				</Link>
-			);
-		}
+	// 下書き → グレーテキスト
+	if (cell.status === "DRAFT") {
 		return (
-			<Text size="2" truncate onDoubleClick={handler}>
+			<Text size="2" color="gray" truncate onDoubleClick={handler}>
 				{displayText ?? "─"}
 			</Text>
 		);
 	}
 
-	// DRAFT / OVERRIDDEN / STALE_OVERRIDE
+	// SUBMITTED / OVERRIDDEN / STALE_OVERRIDE → 値のみ
+	if (formItemType === "FILE" && displayText) {
+		return (
+			<Link href={displayText} target="_blank" size="2">
+				ファイル
+			</Link>
+		);
+	}
 	return (
-		<Flex gap="1" align="center" onDoubleClick={handler}>
-			<Text
-				size="2"
-				color={cell.status === "DRAFT" ? "gray" : undefined}
-				truncate
-			>
-				{displayText ?? "─"}
-			</Text>
-			<FormCellStatusBadge status={cell.status} />
-		</Flex>
+		<Text size="2" truncate onDoubleClick={handler}>
+			{displayText ?? "─"}
+		</Text>
 	);
 }
 
