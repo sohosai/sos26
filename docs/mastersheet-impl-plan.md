@@ -400,57 +400,173 @@ TanStack Router の `search` 機能でテーブル状態（フィルター・ソ
 apps/web/src/routes/committee/mastersheet/
 ├── index.tsx                     # マスターシート本体ページ
 └── -components/
-    ├── MastersheetTable.tsx      # DataTable ラッパー（動的カラム生成）
+    ├── MastersheetTable.tsx      # DataTable ラッパー（動的カラム生成）✅
+    ├── FormItemCell.tsx          # FORM_ITEM セル表示コンポーネント ✅
     ├── ColumnManagerDialog.tsx   # カラム追加・設定 UI
     ├── ColumnDiscoverDialog.tsx  # カラム一覧・発見・閲覧申請
     ├── CellHistoryPanel.tsx      # 編集履歴パネル
     └── ViewSwitcher.tsx          # ビュー切替 UI
 ```
 
-### データ取得
+---
 
-TanStack Router の `loader` で `GET /committee/mastersheet/data` を1リクエストで全取得。
+### Phase 5-A: コアテーブル表示 + CUSTOM セル編集 ✅ **実装済み**
 
-### カラム定義の動的生成
+**対応内容:**
+- `GET /committee/mastersheet/data` を loader で取得・表示
+- 固定6列（企画番号・企画名・種別・団体名・担当者・副担当者）
+- 動的カラム: `FORM_ITEM` → `FormItemCell`（表示のみ）、`CUSTOM TEXT/NUMBER` → `EditableCell`、`CUSTOM SELECT` → `SelectCell`、`CUSTOM MULTI_SELECT` → `MultiSelectCell`（表示のみ）
+- `onCellEdit` 時に `PUT /cells/...` or `PUT /overrides/...` を呼び分け + `router.invalidate()`
+- `SelectCell` に `meta.selectOptions` サポートを追加
+- `ColumnMeta` に `formItemType` フィールドを追加
 
-```typescript
-// 初期カラム（固定）
-const baseColumns: ColumnDef[] = [
-  { id: "number", header: "企画番号" },
-  { id: "name", header: "企画名" },
-  { id: "type", header: "企画種別" },
-  { id: "organizationName", header: "団体名" },
-  { id: "owner", header: "企画責任者" },
-  { id: "subOwner", header: "副企画責任者" },
-];
+**未対応（以降の Sub-Phase で対応）:**
+- FORM_ITEM セルの編集（override）
+- MULTI_SELECT の編集
+- カラム管理・発見 UI
+- 編集履歴
+- ビュー保存・URL 連動
 
-// 動的カラム（API から権限フィルタ済みで返ってくる）
-const dynamicColumns: ColumnDef[] = columns.map(col => ({
-  id: col.id,
-  header: col.name,
-  cell: resolveCell(col),  // 型・状態に応じたセルコンポーネントを返す
-  meta: { editable: canEdit(col), type: col.dataType, ... },
-}));
+---
+
+### Phase 5-B: FORM_ITEM セル インライン編集
+
+**目的**: FORM_ITEM カラムを上書き（override）できるようにする。
+
+**対象ファイル:**
+- `FormItemCell.tsx` — EditableCell 相当のダブルクリック編集を組み込む
+
+**実装方針:**
+- `formItemType` が `TEXT` / `TEXTAREA` / `NUMBER` の場合のみ編集可能にする
+- ダブルクリックで `<input>` を表示し、Enter/blur でコミット
+- コミット時 `table.options.meta?.updateData(row, columnId, value)` を呼ぶ（既存の `onCellEdit` ルーティングが `upsertMastersheetOverride` を呼ぶ）
+- `FILE` / `SELECT` / `CHECKBOX` 型は引き続き表示のみ（別途対応検討）
+- オーバーライド済みの場合は「元に戻す（DELETE /overrides/...）」ボタンを追加検討
+
+**考慮点:**
+- 編集中は status badge を非表示にする
+- `STALE_OVERRIDE` のとき編集を確定すると `isStale` がリセットされる（サーバー側で処理）
+
+---
+
+### Phase 5-C: ColumnManagerDialog（カラム管理）
+
+**目的**: 自分が作成したカラムの追加・編集・削除ができる UI。
+
+**対象ファイル:**
+- `ColumnManagerDialog.tsx` — 新規作成
+- `index.tsx` — ツールバーに「カラムを管理」ボタンを追加
+
+**UI 構成:**
+```
+[カラムを管理] ボタン → ダイアログ
+  タブ: [自分のカラム一覧] [新規追加]
+
+  自分のカラム一覧タブ:
+    - カラム名・種別・公開設定を一覧表示
+    - 各行に [編集] [削除] アクション
+    - 編集: インラインフォームで name/description/sortOrder/visibility を変更
+    - 削除: 確認ダイアログ → DELETE /columns/:columnId
+
+  新規追加タブ:
+    - 種別選択: FORM_ITEM / CUSTOM
+    - FORM_ITEM: フォーム・項目のセレクタ
+    - CUSTOM: dataType・visibility・選択肢（SELECT/MULTI_SELECT の場合）
+    → POST /columns
 ```
 
-### セル編集フロー
+**API:**
+- `POST /committee/mastersheet/columns` → `createMastersheetColumn()`
+- `PATCH /committee/mastersheet/columns/:columnId` → `updateMastersheetColumn()`
+- `DELETE /committee/mastersheet/columns/:columnId` → `deleteMastersheetColumn()`
 
-1. セルをダブルクリック → EditableCell/SelectCell が編集モードに
-2. 確定 → `onCellEdit` コールバック → PUT `/cells/...` or `/overrides/...`
-3. 成功 → ローカルデータを更新（楽観的更新）
+**完了後**: `router.invalidate()` でテーブルを再取得。
 
-### セル状態の表示
+---
 
-フォーム由来カラムのセルは状態に応じた表示:
+### Phase 5-D: ColumnDiscoverDialog（カラム発見・閲覧申請）
 
-| 状態 | 表示 |
-|------|------|
-| 未配信 | 灰色背景 |
-| 未回答 | 「未回答」ラベル |
-| 下書き | 薄字 + 「下書き」バッジ |
-| 提出済み | 通常表示 |
-| オーバーライド済み | オーバーライド値 + 上書きアイコン |
-| 要確認 | オーバーライド値 + 警告アイコン |
+**目的**: 他ユーザーが作成した PUBLIC カラムを一覧表示し、閲覧申請を送れる UI。
+
+**対象ファイル:**
+- `ColumnDiscoverDialog.tsx` — 新規作成
+- `index.tsx` — ツールバーに「カラムを追加」ボタンを追加
+
+**UI 構成:**
+```
+[カラムを追加] ボタン → ダイアログ
+  - GET /columns/discover で全公開カラム一覧を取得
+  - カラム名・作成者・種別を一覧表示
+  - hasAccess=true: 「表示中」バッジ
+  - pendingRequest=true: 「申請中」バッジ
+  - それ以外: [閲覧申請] ボタン → POST /columns/:columnId/access-request
+```
+
+**API:**
+- `GET /committee/mastersheet/columns/discover` → `discoverMastersheetColumns()`
+- `POST /committee/mastersheet/columns/:columnId/access-request` → `createMastersheetAccessRequest()`
+
+**閲覧申請の承認 UI** は別途（通知経由 or 専用ページ）で対応。
+
+---
+
+### Phase 5-E: CellHistoryPanel（編集履歴）
+
+**目的**: セルを右クリック（またはアイコンクリック）で編集履歴を表示する。
+
+**対象ファイル:**
+- `CellHistoryPanel.tsx` — 新規作成（Popover またはサイドパネル）
+- `FormItemCell.tsx` — 履歴アイコンを追加
+
+**UI 構成:**
+```
+セル右クリック or アイコンクリック → パネル表示
+  - GET /columns/:columnId/history/:projectId
+  - 編集日時・編集者・変更前後の値を降順リスト表示
+```
+
+**API:**
+- `GET /committee/mastersheet/columns/:columnId/history/:projectId` → `getMastersheetHistory()`
+
+**実装上の注意:**
+- 履歴取得は非同期（クリック時に fetch）なので TanStack Query または `useState` + `useEffect` で管理
+- loader には含めない（パフォーマンス上の理由）
+
+---
+
+### Phase 5-F: ViewSwitcher（ビュー保存・URL 連動）
+
+**目的**: フィルター・ソート・表示カラムの状態を保存・復元できる UI。
+
+**対象ファイル:**
+- `ViewSwitcher.tsx` — 新規作成
+- `index.tsx` — URL search params でテーブル状態を管理
+- `MastersheetTable.tsx` — `initialSorting` / `initialColumnVisibility` を props で受け取る
+
+**Phase 5-F-1: URL 連動**
+- TanStack Router の `validateSearch` で `{ sorting, filters, columns }` を URL クエリに保持
+- ページリロード・URL 共有でも同じ表示状態を再現
+
+**Phase 5-F-2: ビュー保存**
+```
+[ビュー保存] ボタン → 名前入力 → POST /views
+[ビュー切替] ドロップダウン → GET /views で一覧 → 選択で状態を適用
+[ビュー削除] → DELETE /views/:viewId
+```
+
+**API:**
+- `GET /committee/mastersheet/views` → `listMastersheetViews()`
+- `POST /committee/mastersheet/views` → `createMastersheetView()`
+- `DELETE /committee/mastersheet/views/:viewId` → `deleteMastersheetView()`
+
+**state のシリアライズ形式（DB 保存用）:**
+```json
+{
+  "columnVisibility": { "colId1": false },
+  "sorting": [{ "id": "colId2", "desc": true }],
+  "columnFilters": [{ "id": "colId3", "value": "..." }]
+}
+```
 
 ---
 
