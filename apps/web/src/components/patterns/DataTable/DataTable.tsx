@@ -1,4 +1,4 @@
-import { Box, Flex, Popover, Table, Text, TextField } from "@radix-ui/themes";
+import { Box, Flex, Popover, Table, TextField } from "@radix-ui/themes";
 import { IconDownload, IconSearch, IconSettings } from "@tabler/icons-react";
 import {
 	type ColumnDef,
@@ -270,17 +270,6 @@ export function DataTable<T extends RowData>({
 					))}
 				</Table.Body>
 			</Table.Root>
-			{f.selection && selected.size > 0 && (
-				<Box mt="3" p="3" className={styles.selectionInfo}>
-					<Text size="2" weight="bold">
-						選択中: {selected.size}セル
-					</Text>
-					<Text size="1" color="gray" ml="2" as="span">
-						{" "}
-						[ {[...selected].sort().join(", ")} ]
-					</Text>
-				</Box>
-			)}
 		</Box>
 	);
 }
