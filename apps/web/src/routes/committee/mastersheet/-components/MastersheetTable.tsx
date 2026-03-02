@@ -5,7 +5,7 @@ import type {
 } from "@sos26/shared";
 import { useRouter } from "@tanstack/react-router";
 import { type ColumnDef, createColumnHelper } from "@tanstack/react-table";
-import { useMemo } from "react";
+import { type ReactNode, useMemo } from "react";
 import {
 	DataTable,
 	EditableCell,
@@ -31,11 +31,13 @@ type ApiColumn = GetMastersheetDataResponse["columns"][number];
 type Props = {
 	columns: GetMastersheetDataResponse["columns"];
 	rows: GetMastersheetDataResponse["rows"];
+	toolbarExtra?: ReactNode;
 };
 
 const columnHelper = createColumnHelper<MastersheetRow>();
 
-const fixedColumns: ColumnDef<MastersheetRow, unknown>[] = [
+// biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
+const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 	columnHelper.accessor(row => row.project.number, {
 		id: "number",
 		header: "企画番号",
@@ -81,9 +83,8 @@ const fixedColumns: ColumnDef<MastersheetRow, unknown>[] = [
 	}),
 ];
 
-function buildDynamicColumn(
-	col: ApiColumn
-): ColumnDef<MastersheetRow, unknown> {
+// biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
+function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 	if (col.type === "FORM_ITEM") {
 		return columnHelper.accessor(row => row.cells[col.id] ?? null, {
 			id: col.id,
@@ -167,7 +168,7 @@ function buildCustomPayload(
 	return { textValue: typeof value === "string" ? value : null };
 }
 
-export function MastersheetTable({ columns, rows }: Props) {
+export function MastersheetTable({ columns, rows, toolbarExtra }: Props) {
 	const router = useRouter();
 
 	const tableData = useMemo(
@@ -221,6 +222,7 @@ export function MastersheetTable({ columns, rows }: Props) {
 				csvExport: true,
 			}}
 			onCellEdit={handleCellEdit}
+			toolbarExtra={toolbarExtra}
 		/>
 	);
 }
