@@ -1,8 +1,9 @@
 import { Link, Text } from "@radix-ui/themes";
 import type { MastersheetCellStatus } from "@sos26/shared";
 import type { CellContext, RowData } from "@tanstack/react-table";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import editableStyles from "@/components/patterns/DataTable/cells/EditableCell.module.scss";
+import styles from "./FormItemCell.module.scss";
 
 // ─────────────────────────────────────────────────────────────
 // 型定義
@@ -41,34 +42,42 @@ function getDisplayText(
 }
 
 // ─────────────────────────────────────────────────────────────
-// 編集入力コンポーネント
+// 常時レンダリングの編集 input（レイアウトシフト防止）
 // ─────────────────────────────────────────────────────────────
 
-type EditInputProps = {
-	initialValue: string;
+type FormEditableCellProps = {
+	initialText: string;
 	isNumberType: boolean;
+	isDraft: boolean;
 	onCommit: (value: string) => void;
-	onCancel: () => void;
+	onStartEdit: () => void;
 };
 
-function EditInput({
-	initialValue,
+function FormEditableCell({
+	initialText,
 	isNumberType,
+	isDraft,
 	onCommit,
-	onCancel,
-}: EditInputProps) {
-	const [value, setValue] = useState(initialValue);
+	onStartEdit,
+}: FormEditableCellProps) {
+	const [value, setValue] = useState(initialText);
 	const inputRef = useRef<HTMLInputElement>(null);
-	const committedRef = useRef(false);
+	const isEditingRef = useRef(false);
+	const [, rerender] = useState(0);
+	const [isFocused, setIsFocused] = useState(false);
 
-	useEffect(() => {
-		inputRef.current?.focus();
-		inputRef.current?.select();
+	const setIsEditing = useCallback((editing: boolean) => {
+		isEditingRef.current = editing;
+		rerender(c => c + 1);
 	}, []);
 
-	function handleCommit() {
-		if (committedRef.current) return;
-		committedRef.current = true;
+	useEffect(() => {
+		setValue(initialText);
+	}, [initialText]);
+
+	function commit() {
+		setIsEditing(false);
+		setIsFocused(false);
 		onCommit(value);
 	}
 
@@ -76,79 +85,61 @@ function EditInput({
 		<div className={editableStyles.wrapper}>
 			<input
 				ref={inputRef}
-				className={editableStyles.input}
+				className={`${editableStyles.input} ${styles.input}`}
 				inputMode={isNumberType ? "numeric" : undefined}
 				value={value}
+				placeholder="─"
 				size={Math.max(value.length, 1)}
-				data-editing={true}
-				onChange={e => setValue(e.target.value)}
-				onBlur={handleCommit}
+				data-editing={isEditingRef.current}
+				data-focused={isFocused}
+				data-draft={isDraft}
+				onChange={e => {
+					if (isEditingRef.current) {
+						setValue(e.target.value);
+					}
+				}}
+				onMouseDown={e => {
+					if (!isEditingRef.current) {
+						e.preventDefault();
+						inputRef.current?.focus();
+					}
+				}}
+				onFocus={() => setIsFocused(true)}
+				onDoubleClick={() => {
+					onStartEdit();
+					setIsEditing(true);
+					inputRef.current?.focus();
+				}}
+				onBlur={() => {
+					if (isEditingRef.current) {
+						commit();
+					} else {
+						setIsFocused(false);
+					}
+				}}
 				onKeyDown={e => {
 					if (e.nativeEvent.isComposing) return;
 					if (e.key === "Escape") {
-						e.preventDefault();
-						onCancel();
+						setValue(initialText);
+						setIsEditing(false);
+						inputRef.current?.blur();
 					} else if (e.key === "Enter") {
 						e.preventDefault();
-						handleCommit();
+						commit();
+						inputRef.current?.blur();
+					} else if (
+						!isEditingRef.current &&
+						e.key.length === 1 &&
+						!e.ctrlKey &&
+						!e.metaKey
+					) {
+						onStartEdit();
+						setIsEditing(true);
+						setValue("");
 					}
 				}}
 			/>
 		</div>
-	);
-}
-
-// ─────────────────────────────────────────────────────────────
-// 表示コンポーネント
-// ─────────────────────────────────────────────────────────────
-
-type CellDisplayProps = {
-	cell: Omit<CellData, "status"> & { status: MastersheetCellStatus };
-	formItemType: string | undefined;
-	canEdit: boolean;
-	onDoubleClick: () => void;
-};
-
-function CellDisplay({
-	cell,
-	formItemType,
-	canEdit,
-	onDoubleClick,
-}: CellDisplayProps) {
-	const handler = canEdit ? onDoubleClick : undefined;
-	const effectiveValue = cell.override ?? cell.formValue ?? null;
-	const displayText = getDisplayText(effectiveValue, formItemType);
-
-	// 未回答 → ─
-	if (cell.status === "NOT_ANSWERED") {
-		return (
-			<Text size="2" color="gray" onDoubleClick={handler}>
-				─
-			</Text>
-		);
-	}
-
-	// 下書き → グレーテキスト
-	if (cell.status === "DRAFT") {
-		return (
-			<Text size="2" color="gray" truncate onDoubleClick={handler}>
-				{displayText ?? "─"}
-			</Text>
-		);
-	}
-
-	// SUBMITTED / OVERRIDDEN / STALE_OVERRIDE → 値のみ
-	if (formItemType === "FILE" && displayText) {
-		return (
-			<Link href={displayText} target="_blank" size="2">
-				ファイル
-			</Link>
-		);
-	}
-	return (
-		<Text size="2" truncate onDoubleClick={handler}>
-			{displayText ?? "─"}
-		</Text>
 	);
 }
 
@@ -166,7 +157,6 @@ export function FormItemCell<TData extends RowData>({
 	const formItemType = column.columnDef.meta?.formItemType;
 	const isEditable = !!formItemType && EDITABLE_TYPES.has(formItemType);
 	const isNumberType = formItemType === "NUMBER";
-	const [isEditing, setIsEditing] = useState(false);
 
 	if (!cell || !cell.status || cell.status === "NOT_DELIVERED") {
 		return (
@@ -177,43 +167,53 @@ export function FormItemCell<TData extends RowData>({
 	}
 
 	const effectiveValue = cell.override ?? cell.formValue ?? null;
+	const displayText = getDisplayText(effectiveValue, formItemType);
+	const isDraft = cell.status === "DRAFT";
+
+	// ファイル型は Link 表示のみ（編集不可）
+	// URL なしの場合は下の !isEditable ブランチで「─」を表示
+	if (formItemType === "FILE" && displayText) {
+		return (
+			<Link href={displayText} target="_blank" size="2">
+				ファイル
+			</Link>
+		);
+	}
+
+	// 編集不可 or 未回答はテキスト表示のみ
+	if (!isEditable || cell.status === "NOT_ANSWERED") {
+		return (
+			<Text
+				size="2"
+				color={isDraft || cell.status === "NOT_ANSWERED" ? "gray" : undefined}
+				truncate
+			>
+				{displayText ?? "─"}
+			</Text>
+		);
+	}
+
+	// TEXT / TEXTAREA / NUMBER: 常時レンダリング input で編集
 	const initialText = isNumberType
 		? (effectiveValue?.numberValue?.toString() ?? "")
 		: (effectiveValue?.textValue ?? "");
 
 	function handleCommit(value: string) {
 		const committed = isNumberType ? Number(value) : value;
-		setIsEditing(false);
 		table.options.meta?.updateData(row.original, column.id, committed);
 	}
 
-	function handleCancel() {
-		setIsEditing(false);
-	}
-
-	function handleDoubleClick() {
+	function handleStartEdit() {
 		table.options.meta?.clearSelection?.();
-		setIsEditing(true);
-	}
-
-	if (isEditing) {
-		return (
-			<EditInput
-				initialValue={initialText}
-				isNumberType={isNumberType}
-				onCommit={handleCommit}
-				onCancel={handleCancel}
-			/>
-		);
 	}
 
 	return (
-		<CellDisplay
-			// cell.status は上の早期 return で undefined / NOT_DELIVERED が除外済み
-			cell={cell as CellDisplayProps["cell"]}
-			formItemType={formItemType}
-			canEdit={isEditable}
-			onDoubleClick={handleDoubleClick}
+		<FormEditableCell
+			initialText={initialText}
+			isNumberType={isNumberType}
+			isDraft={isDraft}
+			onCommit={handleCommit}
+			onStartEdit={handleStartEdit}
 		/>
 	);
 }

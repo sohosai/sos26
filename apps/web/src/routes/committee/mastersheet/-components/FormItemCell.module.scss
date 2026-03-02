@@ -1,0 +1,13 @@
+// EditableCell.module.scss の .input に重ねるスタイル
+.input {
+	// 未入力時のプレースホルダー（─）
+	&::placeholder {
+		color: var(--gray-9);
+		opacity: 1;
+	}
+
+	// 下書き状態（非編集時）はグレー文字
+	&[data-draft="true"] {
+		color: var(--gray-11);
+	}
+}
