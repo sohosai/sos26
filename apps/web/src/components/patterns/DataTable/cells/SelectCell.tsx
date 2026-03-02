@@ -10,6 +10,9 @@ export function SelectCell<TData extends RowData>({
 	const initialValue = getValue() as string;
 	const editable = column.columnDef.meta?.editable ?? false;
 	const options = column.columnDef.meta?.options ?? [];
+	const selectOptions = column.columnDef.meta?.selectOptions;
+	const resolvedOptions =
+		selectOptions ?? options.map(o => ({ value: o, label: o }));
 
 	if (!editable) {
 		return <>{initialValue}</>;
@@ -19,7 +22,7 @@ export function SelectCell<TData extends RowData>({
 		<Select
 			aria-label={column.id}
 			variant="ghost"
-			options={options.map(o => ({ value: o, label: o }))}
+			options={resolvedOptions}
 			value={initialValue}
 			onValueChange={val => {
 				table.options.meta?.updateData(row.original, column.id, val);

@@ -1,4 +1,5 @@
 import type { RowData } from "@tanstack/react-table";
+import type { FormItemType } from "@sos26/shared";
 import type { ZodType } from "zod";
 
 declare module "@tanstack/react-table" {
@@ -17,5 +18,7 @@ declare module "@tanstack/react-table" {
 		tagColors?: Record<string, string>;
 		/** カラムフィルターの種別（columnFilter=true 時に表示） */
 		filterVariant?: "text" | "number" | "select";
+		/** FORM_ITEM カラムのフォーム項目タイプ（FormItemCell 内の型判定用） */
+		formItemType?: FormItemType;
 	}
 }
