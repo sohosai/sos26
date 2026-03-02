@@ -176,7 +176,7 @@ erDiagram
   String formId FK
   String requestedById FK
   String requestedToId FK
-  FormAuthorizationStatus status
+  ApprovalStatus status
   DateTime decidedAt "nullable"
   DateTime scheduledSendAt
   DateTime deadlineAt "nullable"
@@ -254,7 +254,7 @@ erDiagram
 "InquiryViewer" {
   String id PK
   String inquiryId FK
-  InquiryViewerScope scope
+  ViewerScope scope
   Bureau bureauValue "nullable"
   String userId FK "nullable"
   DateTime deletedAt "nullable"

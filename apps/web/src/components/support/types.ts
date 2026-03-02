@@ -1,7 +1,7 @@
 import type {
 	Bureau,
 	GetProjectInquiryResponse,
-	InquiryViewerScope,
+	ViewerScope,
 } from "@sos26/shared";
 
 export type InquiryDetail = GetProjectInquiryResponse["inquiry"];
@@ -11,14 +11,14 @@ export type AssigneeInfo = InquiryDetail["projectAssignees"][number];
 
 export type ViewerDetail = {
 	id: string;
-	scope: InquiryViewerScope;
+	scope: ViewerScope;
 	bureauValue: Bureau | null;
 	createdAt: Date;
 	user: { id: string; name: string } | null;
 };
 
 export type ViewerInput = {
-	scope: InquiryViewerScope;
+	scope: ViewerScope;
 	bureauValue?: Bureau;
 	userId?: string;
 };

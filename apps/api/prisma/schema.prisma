@@ -527,7 +527,7 @@ model FormCollaborator {
 }
 
 //Formに関する承認待ちの状態Enum
-enum FormAuthorizationStatus {
+enum ApprovalStatus {
   //承認待ち
   PENDING
   //承認済み（時間になれば配信される）
@@ -552,7 +552,7 @@ model FormAuthorization {
   requestedTo   User   @relation("FormRequestedTo", fields: [requestedToId], references: [id])
 
   //審査のステータス
-  status FormAuthorizationStatus @default(PENDING)
+  status ApprovalStatus @default(PENDING)
 
   //審査を行った日付
   decidedAt DateTime?
@@ -717,7 +717,7 @@ enum InquiryAssigneeSide {
   COMMITTEE // 実委側
 }
 
-enum InquiryViewerScope {
+enum ViewerScope {
   ALL // 全員
   BUREAU // 特定局
   INDIVIDUAL // 個人
@@ -802,7 +802,7 @@ model InquiryViewer {
   inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
 
   // 閲覧者スコープ
-  scope InquiryViewerScope
+  scope ViewerScope
 
   // scope = BUREAU の場合の局
   bureauValue Bureau?

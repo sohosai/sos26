@@ -16,6 +16,7 @@ export * from "./lib/token";
 export * from "./schemas/auth";
 export * from "./schemas/committee-member";
 export * from "./schemas/committee-project";
+export * from "./schemas/common";
 export * from "./schemas/file";
 export * from "./schemas/form";
 export * from "./schemas/inquiry";

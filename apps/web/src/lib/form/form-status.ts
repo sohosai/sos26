@@ -1,5 +1,5 @@
 import type { BadgeProps } from "@radix-ui/themes";
-import type { FormAuthorizationStatus } from "@sos26/shared";
+import type { ApprovalStatus } from "@sos26/shared";
 
 export type FormDisplayStatus =
 	| "DRAFT" // 公開申請前
@@ -16,7 +16,7 @@ export type FormStatusInfo = {
 };
 
 type AuthorizationSummary = {
-	status: FormAuthorizationStatus;
+	status: ApprovalStatus;
 	deliveredAt: Date;
 	deadlineAt: Date | null;
 } | null;
