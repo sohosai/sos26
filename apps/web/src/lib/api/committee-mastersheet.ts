@@ -1,9 +1,13 @@
 import {
+	type CreateMastersheetAccessRequestResponse,
 	type CreateMastersheetColumnRequest,
 	type CreateMastersheetColumnResponse,
+	createMastersheetAccessRequestEndpoint,
 	createMastersheetColumnEndpoint,
 	type DeleteMastersheetColumnResponse,
+	type DiscoverMastersheetColumnsResponse,
 	deleteMastersheetColumnEndpoint,
+	discoverMastersheetColumnsEndpoint,
 	type GetMastersheetDataResponse,
 	getMastersheetDataEndpoint,
 	type UpdateMastersheetColumnRequest,
@@ -86,5 +90,25 @@ export async function upsertMastersheetOverride(
 ): Promise<UpsertMastersheetOverrideResponse> {
 	return callBodyApi(upsertMastersheetOverrideEndpoint, body, {
 		pathParams: { columnId, projectId },
+	});
+}
+
+/**
+ * GET /committee/mastersheet/columns/discover
+ * PUBLIC カラム全件 + 自分の PRIVATE カラム一覧を取得
+ */
+export async function discoverMastersheetColumns(): Promise<DiscoverMastersheetColumnsResponse> {
+	return callGetApi(discoverMastersheetColumnsEndpoint);
+}
+
+/**
+ * POST /committee/mastersheet/columns/:columnId/access-request
+ * 閲覧申請を送信
+ */
+export async function createMastersheetAccessRequest(
+	columnId: string
+): Promise<CreateMastersheetAccessRequestResponse> {
+	return callNoBodyApi(createMastersheetAccessRequestEndpoint, {
+		pathParams: { columnId },
 	});
 }
