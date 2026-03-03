@@ -409,6 +409,24 @@ export type CreateMastersheetViewResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
+// PATCH /committee/mastersheet/views/:viewId
+// ─────────────────────────────────────────────────────────────
+
+export const updateMastersheetViewRequestSchema = z.object({
+	state: z.string(),
+});
+export type UpdateMastersheetViewRequest = z.infer<
+	typeof updateMastersheetViewRequestSchema
+>;
+
+export const updateMastersheetViewResponseSchema = z.object({
+	view: mastersheetViewSchema,
+});
+export type UpdateMastersheetViewResponse = z.infer<
+	typeof updateMastersheetViewResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
 // DELETE /committee/mastersheet/views/:viewId
 // ─────────────────────────────────────────────────────────────
 

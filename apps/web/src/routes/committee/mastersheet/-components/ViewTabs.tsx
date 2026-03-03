@@ -9,6 +9,7 @@ import {
 	createMastersheetView,
 	deleteMastersheetView,
 	listMastersheetViews,
+	updateMastersheetView,
 } from "@/lib/api/committee-mastersheet";
 import styles from "./ViewTabs.module.scss";
 
@@ -85,20 +86,17 @@ export function ViewTabs({
 			const sv = viewsRef.current.find(v => v.id === activeViewId);
 			if (!sv || currentStateStr === sv.state) return;
 			try {
-				await deleteMastersheetView(sv.id);
-				const res = await createMastersheetView({
-					name: sv.name,
+				const res = await updateMastersheetView(sv.id, {
 					state: currentStateStr,
 				});
-				setViews(prev => prev.filter(v => v.id !== sv.id).concat(res.view));
-				onActiveViewIdChange(res.view.id);
+				setViews(prev => prev.map(v => (v.id === sv.id ? res.view : v)));
 			} catch {
 				toast.error("自動保存に失敗しました");
 			}
 		}, 1000);
 
 		return () => clearTimeout(timer);
-	}, [currentStateStr, activeViewId, onActiveViewIdChange]);
+	}, [currentStateStr, activeViewId]);
 
 	const activeView =
 		activeViewId !== null ? views.find(v => v.id === activeViewId) : undefined;

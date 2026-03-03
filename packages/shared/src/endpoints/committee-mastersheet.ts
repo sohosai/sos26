@@ -19,6 +19,8 @@ import {
 	updateMastersheetAccessRequestResponseSchema,
 	updateMastersheetColumnRequestSchema,
 	updateMastersheetColumnResponseSchema,
+	updateMastersheetViewRequestSchema,
+	updateMastersheetViewResponseSchema,
 	upsertMastersheetCellRequestSchema,
 	upsertMastersheetCellResponseSchema,
 	upsertMastersheetOverrideRequestSchema,
@@ -309,6 +311,26 @@ export const createMastersheetViewEndpoint: BodyEndpoint<
 	query: undefined,
 	request: createMastersheetViewRequestSchema,
 	response: createMastersheetViewResponseSchema,
+} as const;
+
+/**
+ * PATCH /committee/mastersheet/views/:viewId
+ * ビューの state を更新（自分のビューのみ）
+ */
+export const updateMastersheetViewEndpoint: BodyEndpoint<
+	"PATCH",
+	"/committee/mastersheet/views/:viewId",
+	typeof mastersheetViewIdPathParamsSchema,
+	undefined,
+	typeof updateMastersheetViewRequestSchema,
+	typeof updateMastersheetViewResponseSchema
+> = {
+	method: "PATCH",
+	path: "/committee/mastersheet/views/:viewId",
+	pathParams: mastersheetViewIdPathParamsSchema,
+	query: undefined,
+	request: updateMastersheetViewRequestSchema,
+	response: updateMastersheetViewResponseSchema,
 } as const;
 
 /**

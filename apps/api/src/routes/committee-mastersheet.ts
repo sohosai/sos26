@@ -8,6 +8,7 @@ import {
 	mastersheetViewIdPathParamsSchema,
 	updateMastersheetAccessRequestRequestSchema,
 	updateMastersheetColumnRequestSchema,
+	updateMastersheetViewRequestSchema,
 	upsertMastersheetCellRequestSchema,
 	upsertMastersheetOverrideRequestSchema,
 } from "@sos26/shared";
@@ -1133,7 +1134,7 @@ committeeMastersheetRoute.get(
 
 		const views = await prisma.mastersheetView.findMany({
 			where: { createdById: userId },
-			orderBy: { updatedAt: "desc" },
+			orderBy: { createdAt: "asc" },
 		});
 
 		return c.json({ views });
@@ -1158,6 +1159,36 @@ committeeMastersheetRoute.post(
 		});
 
 		return c.json({ view }, 201);
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// PATCH /committee/mastersheet/views/:viewId
+// ─────────────────────────────────────────────────────────────
+
+committeeMastersheetRoute.patch(
+	"/views/:viewId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const userId = c.get("user").id;
+		const { viewId } = mastersheetViewIdPathParamsSchema.parse(c.req.param());
+		const body = await c.req.json().catch(() => ({}));
+		const data = updateMastersheetViewRequestSchema.parse(body);
+
+		const view = await prisma.mastersheetView.findFirst({
+			where: { id: viewId },
+		});
+		if (!view) throw Errors.notFound("ビューが見つかりません");
+		if (view.createdById !== userId)
+			throw Errors.forbidden("自分のビューのみ更新できます");
+
+		const updated = await prisma.mastersheetView.update({
+			where: { id: viewId },
+			data: { state: data.state },
+		});
+
+		return c.json({ view: updated });
 	}
 );
 

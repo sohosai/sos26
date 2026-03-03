@@ -19,11 +19,14 @@ import {
 	listMastersheetViewsEndpoint,
 	type UpdateMastersheetColumnRequest,
 	type UpdateMastersheetColumnResponse,
+	type UpdateMastersheetViewRequest,
+	type UpdateMastersheetViewResponse,
 	type UpsertMastersheetCellRequest,
 	type UpsertMastersheetCellResponse,
 	type UpsertMastersheetOverrideRequest,
 	type UpsertMastersheetOverrideResponse,
 	updateMastersheetColumnEndpoint,
+	updateMastersheetViewEndpoint,
 	upsertMastersheetCellEndpoint,
 	upsertMastersheetOverrideEndpoint,
 } from "@sos26/shared";
@@ -136,6 +139,19 @@ export async function createMastersheetView(
 	body: CreateMastersheetViewRequest
 ): Promise<CreateMastersheetViewResponse> {
 	return callBodyApi(createMastersheetViewEndpoint, body);
+}
+
+/**
+ * PATCH /committee/mastersheet/views/:viewId
+ * ビューの state を更新
+ */
+export async function updateMastersheetView(
+	viewId: string,
+	body: UpdateMastersheetViewRequest
+): Promise<UpdateMastersheetViewResponse> {
+	return callBodyApi(updateMastersheetViewEndpoint, body, {
+		pathParams: { viewId },
+	});
 }
 
 /**
