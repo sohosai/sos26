@@ -113,7 +113,7 @@ export function ColumnFilterPopover<TData extends RowData>({
 				onClick={e => e.stopPropagation()}
 				className={`${styles.triggerBtn}${isFiltered ? ` ${styles.active}` : ""}`}
 			>
-				<IconFilter size={12} />
+				<IconFilter size={18} />
 			</Popover.Trigger>
 			<Popover.Content>
 				{variant === "number" ? (
