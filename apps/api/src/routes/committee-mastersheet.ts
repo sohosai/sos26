@@ -1185,7 +1185,10 @@ committeeMastersheetRoute.patch(
 
 		const updated = await prisma.mastersheetView.update({
 			where: { id: viewId },
-			data: { state: data.state },
+			data: {
+				...(data.name !== undefined && { name: data.name }),
+				...(data.state !== undefined && { state: data.state }),
+			},
 		});
 
 		return c.json({ view: updated });

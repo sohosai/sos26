@@ -413,7 +413,8 @@ export type CreateMastersheetViewResponse = z.infer<
 // ─────────────────────────────────────────────────────────────
 
 export const updateMastersheetViewRequestSchema = z.object({
-	state: z.string(),
+	name: z.string().min(1).optional(),
+	state: z.string().optional(),
 });
 export type UpdateMastersheetViewRequest = z.infer<
 	typeof updateMastersheetViewRequestSchema

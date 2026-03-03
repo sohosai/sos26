@@ -1,10 +1,9 @@
-import { TextField as RadixTextField } from "@radix-ui/themes";
+import { DropdownMenu } from "@radix-ui/themes";
 import type { ListMastersheetViewsResponse } from "@sos26/shared";
-import { IconPlus, IconX } from "@tabler/icons-react";
+import { IconDotsVertical, IconPlus } from "@tabler/icons-react";
 import type { SortingState, VisibilityState } from "@tanstack/react-table";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/primitives";
 import {
 	createMastersheetView,
 	deleteMastersheetView,
@@ -30,6 +29,17 @@ type Props = {
 	onActiveViewIdChange: (viewId: string) => void;
 };
 
+function nextViewName(views: SavedView[]): string {
+	const nums = views
+		.map(v => {
+			const m = v.name.match(/^ビュー(\d+)$/);
+			return m?.[1] ? Number.parseInt(m[1], 10) : 0;
+		})
+		.filter(n => n > 0);
+	const max = nums.length > 0 ? Math.max(...nums) : 0;
+	return `ビュー${max + 1}`;
+}
+
 export function ViewTabs({
 	activeViewId,
 	currentState,
@@ -37,10 +47,16 @@ export function ViewTabs({
 	onActiveViewIdChange,
 }: Props) {
 	const [views, setViews] = useState<SavedView[]>([]);
-	const [addMode, setAddMode] = useState(false);
-	const [saveName, setSaveName] = useState("");
-	const [saving, setSaving] = useState(false);
-	const [deletingId, setDeletingId] = useState<string | null>(null);
+	const [editingId, setEditingId] = useState<string | null>(null);
+	const [editingName, setEditingName] = useState("");
+	// Escape キーで blur ハンドラをスキップするためのフラグ
+	const escapeRef = useRef(false);
+	const renameInputRef = useRef<HTMLInputElement>(null);
+
+	// リネーム開始時に input をフォーカス
+	useEffect(() => {
+		if (editingId) renameInputRef.current?.focus();
+	}, [editingId]);
 
 	const viewsRef = useRef<SavedView[]>([]);
 	useEffect(() => {
@@ -50,7 +66,6 @@ export function ViewTabs({
 	// 初期ロード：ビューがなければ「ビュー1」を自動作成し、最初のビューを適用
 	// biome-ignore lint/correctness/useExhaustiveDependencies: 初回のみ実行。各コールバックとinitialStateはマウント時点の値で十分
 	useEffect(() => {
-		// マウント時点の currentState を使って初期ビューを作成する
 		const initialState = currentState;
 		listMastersheetViews()
 			.then(async res => {
@@ -104,33 +119,24 @@ export function ViewTabs({
 	const isDirty =
 		activeView !== undefined && currentStateStr !== activeView.state;
 
-	async function handleSaveNew() {
-		const name = saveName.trim();
-		if (!name) return;
-		setSaving(true);
+	async function handleAddView() {
+		const name = nextViewName(viewsRef.current);
 		try {
 			const res = await createMastersheetView({ name, state: currentStateStr });
 			setViews(prev => [...prev, res.view]);
-			setSaveName("");
-			setAddMode(false);
 			onSelectView(res.view.id, JSON.parse(res.view.state) as ViewState);
 			onActiveViewIdChange(res.view.id);
-			toast.success("ビューを保存しました");
 		} catch {
-			toast.error("ビューの保存に失敗しました");
-		} finally {
-			setSaving(false);
+			toast.error("ビューの追加に失敗しました");
 		}
 	}
 
 	async function handleDelete(viewId: string) {
-		setDeletingId(viewId);
 		try {
 			await deleteMastersheetView(viewId);
 			const remaining = views.filter(v => v.id !== viewId);
 
 			if (remaining.length === 0) {
-				// 最後のビューを削除したら「ビュー1」を再作成（現在の状態を引き継ぐ）
 				const res = await createMastersheetView({
 					name: "ビュー1",
 					state: JSON.stringify(currentState),
@@ -141,7 +147,6 @@ export function ViewTabs({
 			} else {
 				setViews(remaining);
 				if (activeViewId === viewId) {
-					// 削除したビューがアクティブだったら最初のビューへ移動
 					const first = remaining[0];
 					if (first) {
 						const state = JSON.parse(first.state) as ViewState;
@@ -152,8 +157,24 @@ export function ViewTabs({
 			}
 		} catch {
 			toast.error("ビューの削除に失敗しました");
-		} finally {
-			setDeletingId(null);
+		}
+	}
+
+	async function handleRename(viewId: string) {
+		if (escapeRef.current) {
+			escapeRef.current = false;
+			return;
+		}
+		const name = editingName.trim();
+		setEditingId(null);
+		if (!name) return;
+		const sv = views.find(v => v.id === viewId);
+		if (!sv || name === sv.name) return;
+		try {
+			const res = await updateMastersheetView(viewId, { name });
+			setViews(prev => prev.map(v => (v.id === viewId ? res.view : v)));
+		} catch {
+			toast.error("名前の変更に失敗しました");
 		}
 	}
 
@@ -172,84 +193,86 @@ export function ViewTabs({
 			{views.map(view => {
 				const isActive = view.id === activeViewId;
 				const isThisDirty = isActive && isDirty;
+				const isEditing = editingId === view.id;
 				return (
 					<div
 						key={view.id}
 						className={`${styles.tabWrapper} ${isActive ? styles.activeWrapper : ""}`}
 					>
-						<button
-							type="button"
-							className={styles.tab}
-							onClick={() => handleSelectView(view)}
-						>
-							{view.name}
-							{isThisDirty && (
-								<span className={styles.dirtyMark} title="自動保存待ち">
-									*
-								</span>
-							)}
-						</button>
-						<button
-							type="button"
-							className={styles.deleteBtn}
-							aria-label={`${view.name}を削除`}
-							disabled={deletingId === view.id}
-							onClick={() => handleDelete(view.id)}
-						>
-							<IconX size={10} />
-						</button>
+						{isEditing ? (
+							<input
+								ref={renameInputRef}
+								className={styles.renameInput}
+								value={editingName}
+								onChange={e => setEditingName(e.target.value)}
+								onKeyDown={e => {
+									if (e.key === "Enter" && !e.nativeEvent.isComposing)
+										handleRename(view.id);
+									if (e.key === "Escape") {
+										escapeRef.current = true;
+										setEditingId(null);
+									}
+								}}
+								onBlur={() => handleRename(view.id)}
+							/>
+						) : (
+							<button
+								type="button"
+								className={styles.tab}
+								onClick={() => handleSelectView(view)}
+							>
+								{view.name}
+								{isThisDirty && (
+									<span className={styles.dirtyMark} title="自動保存待ち">
+										*
+									</span>
+								)}
+							</button>
+						)}
+
+						{!isEditing && (
+							<DropdownMenu.Root>
+								<DropdownMenu.Trigger>
+									<button
+										type="button"
+										className={styles.menuBtn}
+										aria-label={`${view.name}のメニュー`}
+									>
+										<IconDotsVertical size={14} />
+									</button>
+								</DropdownMenu.Trigger>
+								<DropdownMenu.Content size="2">
+									<DropdownMenu.Item
+										onClick={() => {
+											setEditingId(view.id);
+											setEditingName(view.name);
+											escapeRef.current = false;
+										}}
+									>
+										名前を変更
+									</DropdownMenu.Item>
+									<DropdownMenu.Separator />
+									<DropdownMenu.Item
+										color="red"
+										onClick={() => handleDelete(view.id)}
+									>
+										削除
+									</DropdownMenu.Item>
+								</DropdownMenu.Content>
+							</DropdownMenu.Root>
+						)}
 					</div>
 				);
 			})}
 
-			{/* 新規ビュー追加 */}
-			{addMode ? (
-				<div className={styles.addForm}>
-					<RadixTextField.Root
-						size="1"
-						placeholder="ビュー名"
-						value={saveName}
-						autoFocus
-						onChange={e => setSaveName(e.target.value)}
-						onKeyDown={e => {
-							if (e.key === "Enter") handleSaveNew();
-							if (e.key === "Escape") {
-								setAddMode(false);
-								setSaveName("");
-							}
-						}}
-						style={{ width: 120 }}
-					/>
-					<Button
-						size="1"
-						intent="primary"
-						loading={saving}
-						disabled={!saveName.trim()}
-						onClick={handleSaveNew}
-					>
-						保存
-					</Button>
-					<Button
-						size="1"
-						intent="secondary"
-						onClick={() => {
-							setAddMode(false);
-							setSaveName("");
-						}}
-					>
-						キャンセル
-					</Button>
-				</div>
-			) : (
-				<button
-					type="button"
-					className={styles.addBtn}
-					onClick={() => setAddMode(true)}
-					aria-label="新規ビューを追加"
-				>
-					<IconPlus size={13} />
-				</button>
-			)}
+			<button
+				type="button"
+				className={styles.addBtn}
+				onClick={handleAddView}
+				aria-label="新規ビューを追加"
+			>
+				<IconPlus size={13} />
+			</button>
 		</div>
 	);
 }

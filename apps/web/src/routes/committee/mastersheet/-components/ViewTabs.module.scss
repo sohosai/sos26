@@ -11,7 +11,7 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-1);
-	padding: var(--space-2) var(--space-3);
+	padding: 10px var(--space-4);
 	background: none;
 	border: none;
 	cursor: pointer;
@@ -23,25 +23,9 @@
 		color 0.1s,
 		background 0.1s;
 
-	&:hover:not(.active) {
+	&:hover {
 		color: var(--gray-12);
 		background: var(--gray-2);
-	}
-
-	// デフォルトタブのアクティブライン
-	&.active {
-		color: var(--gray-12);
-		font-weight: 500;
-
-		&::after {
-			content: "";
-			position: absolute;
-			bottom: -1px;
-			left: 0;
-			right: 0;
-			height: 2px;
-			background-color: var(--accent-9);
-		}
 	}
 }
 
@@ -51,22 +35,22 @@
 	line-height: 1;
 }
 
-// タブ + 削除ボタンのラッパー
+// タブ + メニューボタンのラッパー
 .tabWrapper {
 	position: relative;
 	display: flex;
 	align-items: stretch;
 
-	.deleteBtn {
+	.menuBtn {
 		opacity: 0;
 	}
 
-	&:hover .deleteBtn,
-	&.activeWrapper .deleteBtn {
+	&:hover .menuBtn,
+	&.activeWrapper .menuBtn {
 		opacity: 1;
 	}
 
-	// アクティブラインはラッパー全体（タブ＋削除ボタン）にかける
+	// アクティブラインはラッパー全体（タブ＋メニューボタン）にかける
 	&.activeWrapper::after {
 		content: "";
 		position: absolute;
@@ -84,22 +68,41 @@
 	}
 }
 
-.deleteBtn {
+// 三点リーダーメニューボタン
+.menuBtn {
 	display: flex;
 	align-items: center;
+	justify-content: center;
 	padding: 0 var(--space-1);
-	padding-right: var(--space-2);
 	background: none;
 	border: none;
 	cursor: pointer;
 	color: var(--gray-8);
+	border-radius: var(--radius-1);
 	transition:
 		opacity 0.1s,
-		color 0.1s;
+		color 0.1s,
+		background 0.1s;
 
 	&:hover {
 		color: var(--gray-11);
+		background: var(--gray-3);
 	}
+}
+
+// インラインリネーム用 input
+.renameInput {
+	padding: 10px var(--space-4);
+	font-size: var(--font-size-2);
+	font-weight: 500;
+	color: var(--gray-12);
+	background: var(--color-surface);
+	border: none;
+	border-bottom: 2px solid var(--accent-9);
+	outline: none;
+	width: 120px;
+	min-width: 60px;
+	border-radius: var(--radius-2) var(--radius-2) 0 0;
 }
 
 // [+] ボタン
@@ -107,7 +110,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	padding: var(--space-2);
+	padding: var(--space-2) var(--space-3);
 	background: none;
 	border: none;
 	cursor: pointer;
@@ -121,13 +124,5 @@
 		color: var(--gray-12);
 		background: var(--gray-2);
 	}
-}
-
-// 新規ビュー名入力フォーム
-.addForm {
-	display: flex;
-	align-items: center;
-	gap: var(--space-1);
-	padding: var(--space-1) var(--space-2);
 }
 
