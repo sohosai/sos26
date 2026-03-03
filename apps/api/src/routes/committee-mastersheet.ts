@@ -472,6 +472,12 @@ committeeMastersheetRoute.post(
 			if (!hasAccess)
 				throw Errors.forbidden("このフォームへのアクセス権がありません");
 
+			const existing = await prisma.mastersheetColumn.findUnique({
+				where: { formItemId: data.formItemId },
+			});
+			if (existing)
+				throw Errors.alreadyExists("このフォーム項目のカラムは既に存在します");
+
 			const col = await prisma.mastersheetColumn.create({
 				data: {
 					type: "FORM_ITEM",

@@ -117,19 +117,26 @@ export function AddFormItemColumnsDialog({
 		}
 	}
 
+	const existingFormItemIds = new Set(
+		columns.flatMap(c => (c.formItemId ? [c.formItemId] : []))
+	);
+
 	function renderItemRow(item: FormItem) {
 		const selected = selectedItemIds.has(item.id);
+		const alreadyAdded = existingFormItemIds.has(item.id);
 		return (
 			<button
 				key={item.id}
 				type="button"
-				className={`${styles.itemCard}${selected ? ` ${styles.itemCardSelected}` : ""}`}
-				onClick={() => toggleItem(item.id)}
+				className={`${styles.itemCard}${selected ? ` ${styles.itemCardSelected}` : ""}${alreadyAdded ? ` ${styles.itemCardDisabled}` : ""}`}
+				onClick={() => !alreadyAdded && toggleItem(item.id)}
+				disabled={alreadyAdded}
 			>
 				<RadixCheckbox
 					size="2"
-					checked={selected}
-					onCheckedChange={() => toggleItem(item.id)}
+					checked={alreadyAdded || selected}
+					disabled={alreadyAdded}
+					onCheckedChange={() => !alreadyAdded && toggleItem(item.id)}
 				/>
 				<div className={styles.itemInfo}>
 					<Text size="2" truncate>
@@ -138,6 +145,11 @@ export function AddFormItemColumnsDialog({
 					<Badge size="1" color="gray">
 						{FORM_ITEM_TYPE_LABEL[item.type] ?? item.type}
 					</Badge>
+					{alreadyAdded && (
+						<Badge size="1" color="green">
+							追加済み
+						</Badge>
+					)}
 				</div>
 			</button>
 		);

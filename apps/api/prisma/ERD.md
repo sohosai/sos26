@@ -285,7 +285,7 @@ erDiagram
   String description "nullable"
   Int sortOrder
   String createdById FK
-  String formItemId FK "nullable"
+  String formItemId FK,UK "nullable"
   MastersheetDataType dataType "nullable"
   MastersheetColumnVisibility visibility "nullable"
   DateTime createdAt
@@ -421,7 +421,7 @@ erDiagram
 "InquiryActivity" }o--|| "User" : actor
 "InquiryActivity" }o--o| "User" : target
 "MastersheetColumn" }o--|| "User" : createdBy
-"MastersheetColumn" }o--o| "FormItem" : formItem
+"MastersheetColumn" |o--o| "FormItem" : formItem
 "MastersheetColumnOption" }o--|| "MastersheetColumn" : column
 "MastersheetCellValue" }o--|| "MastersheetColumn" : column
 "MastersheetCellValue" }o--|| "Project" : project
