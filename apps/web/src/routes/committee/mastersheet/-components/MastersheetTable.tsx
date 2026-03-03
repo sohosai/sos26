@@ -233,7 +233,7 @@ export function MastersheetTable({
 			features={{
 				sorting: true,
 				globalFilter: true,
-				columnVisibility: true,
+				columnVisibility: false,
 				selection: true,
 				copy: true,
 				csvExport: true,

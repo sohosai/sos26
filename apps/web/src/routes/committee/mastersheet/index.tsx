@@ -1,5 +1,5 @@
 import { Flex, Heading, Text } from "@radix-ui/themes";
-import { IconLayoutColumns, IconSearch } from "@tabler/icons-react";
+import { IconLayoutColumns } from "@tabler/icons-react";
 import {
 	createFileRoute,
 	useNavigate,
@@ -10,8 +10,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/primitives";
 import { getMastersheetData } from "@/lib/api/committee-mastersheet";
-import { ColumnDiscoverDialog } from "./-components/ColumnDiscoverDialog";
-import { ColumnManagerDialog } from "./-components/ColumnManagerDialog";
+import { ColumnPanel } from "./-components/ColumnPanel";
 import { MastersheetTable } from "./-components/MastersheetTable";
 import { type ViewState, ViewSwitcher } from "./-components/ViewSwitcher";
 
@@ -45,15 +44,16 @@ function MastersheetPage() {
 	const search = Route.useSearch();
 	const router = useRouter();
 	const navigate = useNavigate({ from: "/committee/mastersheet/" });
-	const [manageOpen, setManageOpen] = useState(false);
-	const [discoverOpen, setDiscoverOpen] = useState(false);
+	const [columnPanelOpen, setColumnPanelOpen] = useState(false);
 	const [tableKey, setTableKey] = useState(0);
-	const [tableInit, setTableInit] = useState<ViewState>({
-		sorting: search.sorting as SortingState | undefined,
-		columnVisibility: search.columnVisibility as VisibilityState | undefined,
-	});
+	const [tableInitSorting, setTableInitSorting] = useState<
+		SortingState | undefined
+	>(search.sorting as SortingState | undefined);
+	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
+		(search.columnVisibility as VisibilityState | undefined) ?? {}
+	);
 
-	async function handleManageSuccess() {
+	async function handleColumnSuccess() {
 		await router.invalidate();
 	}
 
@@ -61,12 +61,22 @@ function MastersheetPage() {
 		navigate({ search: prev => ({ ...prev, sorting }) });
 	}
 
-	function handleColumnVisibilityChange(columnVisibility: VisibilityState) {
-		navigate({ search: prev => ({ ...prev, columnVisibility }) });
+	function handleColumnVisibilityChange(visibility: VisibilityState) {
+		setColumnVisibility(visibility);
+		navigate({ search: prev => ({ ...prev, columnVisibility: visibility }) });
+	}
+
+	function handleToggleColumn(columnId: string, visible: boolean) {
+		const next = { ...columnVisibility, [columnId]: visible };
+		setColumnVisibility(next);
+		navigate({ search: prev => ({ ...prev, columnVisibility: next }) });
+		setTableKey(k => k + 1);
 	}
 
 	function handleApplyView(viewState: ViewState) {
-		setTableInit(viewState);
+		setTableInitSorting(viewState.sorting);
+		const nextVisibility = viewState.columnVisibility ?? {};
+		setColumnVisibility(nextVisibility);
 		navigate({
 			search: () => ({
 				sorting: viewState.sorting,
@@ -85,11 +95,8 @@ function MastersheetPage() {
 				}}
 				onApply={handleApplyView}
 			/>
-			<Button intent="secondary" onClick={() => setDiscoverOpen(true)}>
-				<IconSearch size={16} /> カラムを探す
-			</Button>
-			<Button intent="secondary" onClick={() => setManageOpen(true)}>
-				<IconLayoutColumns size={16} /> カラムを管理
+			<Button intent="secondary" onClick={() => setColumnPanelOpen(true)}>
+				<IconLayoutColumns size={16} /> カラム
 			</Button>
 		</Flex>
 	);
@@ -106,21 +113,19 @@ function MastersheetPage() {
 				key={tableKey}
 				columns={columns}
 				rows={rows}
-				initialSorting={tableInit.sorting}
-				initialColumnVisibility={tableInit.columnVisibility}
+				initialSorting={tableInitSorting}
+				initialColumnVisibility={columnVisibility}
 				onSortingChange={handleSortingChange}
 				onColumnVisibilityChange={handleColumnVisibilityChange}
 				toolbarExtra={toolbarButtons}
 			/>
-			<ColumnManagerDialog
-				open={manageOpen}
-				onOpenChange={setManageOpen}
+			<ColumnPanel
+				open={columnPanelOpen}
+				onOpenChange={setColumnPanelOpen}
 				columns={columns}
-				onSuccess={handleManageSuccess}
-			/>
-			<ColumnDiscoverDialog
-				open={discoverOpen}
-				onOpenChange={setDiscoverOpen}
+				columnVisibility={columnVisibility}
+				onToggleColumn={handleToggleColumn}
+				onSuccess={handleColumnSuccess}
 			/>
 		</div>
 	);
