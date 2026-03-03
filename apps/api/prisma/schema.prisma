@@ -916,7 +916,7 @@ model MastersheetColumn {
   createdBy   User                  @relation("MastersheetColumnCreatedBy", fields: [createdById], references: [id])
 
   // フォーム由来カラムの場合（同一フォーム項目のカラムは1つのみ）
-  formItemId String?  @unique
+  formItemId String?   @unique
   formItem   FormItem? @relation(fields: [formItemId], references: [id])
 
   // 自由追加カラムの場合
