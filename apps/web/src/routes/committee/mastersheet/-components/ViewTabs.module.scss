@@ -1,0 +1,133 @@
+.viewTabs {
+	display: flex;
+	align-items: stretch;
+	border-bottom: 1px solid var(--gray-5);
+	margin-bottom: var(--space-3);
+	gap: 0;
+}
+
+.tab {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	padding: var(--space-2) var(--space-3);
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: var(--font-size-2);
+	color: var(--gray-10);
+	white-space: nowrap;
+	border-radius: var(--radius-2) var(--radius-2) 0 0;
+	transition:
+		color 0.1s,
+		background 0.1s;
+
+	&:hover:not(.active) {
+		color: var(--gray-12);
+		background: var(--gray-2);
+	}
+
+	// デフォルトタブのアクティブライン
+	&.active {
+		color: var(--gray-12);
+		font-weight: 500;
+
+		&::after {
+			content: "";
+			position: absolute;
+			bottom: -1px;
+			left: 0;
+			right: 0;
+			height: 2px;
+			background-color: var(--accent-9);
+		}
+	}
+}
+
+.dirtyMark {
+	color: var(--amber-9);
+	font-weight: bold;
+	line-height: 1;
+}
+
+// タブ + 削除ボタンのラッパー
+.tabWrapper {
+	position: relative;
+	display: flex;
+	align-items: stretch;
+
+	.deleteBtn {
+		opacity: 0;
+	}
+
+	&:hover .deleteBtn,
+	&.activeWrapper .deleteBtn {
+		opacity: 1;
+	}
+
+	// アクティブラインはラッパー全体（タブ＋削除ボタン）にかける
+	&.activeWrapper::after {
+		content: "";
+		position: absolute;
+		bottom: -1px;
+		left: 0;
+		right: 0;
+		height: 2px;
+		background-color: var(--accent-9);
+	}
+
+	// タブ自体のアクティブスタイル（activeWrapper 内）
+	&.activeWrapper .tab {
+		color: var(--gray-12);
+		font-weight: 500;
+	}
+}
+
+.deleteBtn {
+	display: flex;
+	align-items: center;
+	padding: 0 var(--space-1);
+	padding-right: var(--space-2);
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--gray-8);
+	transition:
+		opacity 0.1s,
+		color 0.1s;
+
+	&:hover {
+		color: var(--gray-11);
+	}
+}
+
+// [+] ボタン
+.addBtn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--space-2);
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--gray-9);
+	border-radius: var(--radius-2) var(--radius-2) 0 0;
+	transition:
+		color 0.1s,
+		background 0.1s;
+
+	&:hover {
+		color: var(--gray-12);
+		background: var(--gray-2);
+	}
+}
+
+// 新規ビュー名入力フォーム
+.addForm {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	padding: var(--space-1) var(--space-2);
+}
+
