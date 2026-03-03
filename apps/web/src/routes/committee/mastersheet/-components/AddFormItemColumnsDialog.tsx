@@ -118,11 +118,17 @@ export function AddFormItemColumnsDialog({
 	}
 
 	function renderItemRow(item: FormItem) {
+		const selected = selectedItemIds.has(item.id);
 		return (
-			<div key={item.id} className={styles.itemRow}>
+			<button
+				key={item.id}
+				type="button"
+				className={`${styles.itemCard}${selected ? ` ${styles.itemCardSelected}` : ""}`}
+				onClick={() => toggleItem(item.id)}
+			>
 				<RadixCheckbox
 					size="2"
-					checked={selectedItemIds.has(item.id)}
+					checked={selected}
 					onCheckedChange={() => toggleItem(item.id)}
 				/>
 				<div className={styles.itemInfo}>
@@ -133,13 +139,13 @@ export function AddFormItemColumnsDialog({
 						{FORM_ITEM_TYPE_LABEL[item.type] ?? item.type}
 					</Badge>
 				</div>
-			</div>
+			</button>
 		);
 	}
 
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
-			<Dialog.Content maxWidth="720px">
+			<Dialog.Content maxWidth="800px">
 				<Dialog.Title>フォームから情報を作成</Dialog.Title>
 
 				<div className={styles.body}>
