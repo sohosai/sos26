@@ -5,6 +5,7 @@ import type {
 } from "@sos26/shared";
 import { IconFileText, IconPencil } from "@tabler/icons-react";
 import { useRouter } from "@tanstack/react-router";
+import type { ColumnFiltersState } from "@tanstack/react-table";
 import {
 	type ColumnDef,
 	createColumnHelper,
@@ -40,8 +41,10 @@ type Props = {
 	toolbarExtra?: ReactNode;
 	initialSorting?: SortingState;
 	initialColumnVisibility?: VisibilityState;
+	initialColumnFilters?: ColumnFiltersState;
 	onSortingChange?: (sorting: SortingState) => void;
 	onColumnVisibilityChange?: (visibility: VisibilityState) => void;
+	onColumnFiltersChange?: (filters: ColumnFiltersState) => void;
 };
 
 const columnHelper = createColumnHelper<MastersheetRow>();
@@ -79,26 +82,31 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 				{ctx.getValue() as number}
 			</Text>
 		),
+		meta: { filterVariant: "text" },
 	}),
 	columnHelper.accessor(row => row.project.name, {
 		id: "name",
 		header: "企画名",
 		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
+		meta: { filterVariant: "text" },
 	}),
 	columnHelper.accessor(row => row.project.type, {
 		id: "type",
 		header: "種別",
 		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
+		meta: { filterVariant: "text" },
 	}),
 	columnHelper.accessor(row => row.project.organizationName, {
 		id: "organizationName",
 		header: "団体名",
 		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
+		meta: { filterVariant: "text" },
 	}),
 	columnHelper.accessor(row => row.project.owner.name, {
 		id: "ownerName",
 		header: "担当者",
 		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
+		meta: { filterVariant: "text" },
 	}),
 	columnHelper.accessor(row => row.project.subOwner?.name ?? "", {
 		id: "subOwnerName",
@@ -113,6 +121,7 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 				);
 			return <Text size="2">{name}</Text>;
 		},
+		meta: { filterVariant: "text" },
 	}),
 ];
 
@@ -123,11 +132,18 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 			id: col.id,
 			header: () => <ColHeader col={col} />,
 			cell: FormItemCell,
-			meta: { formItemType: col.formItemType ?? undefined },
+			meta: {
+				formItemType: col.formItemType ?? undefined,
+				filterVariant: "text",
+			},
 		});
 	}
 
 	if (col.dataType === "SELECT") {
+		const selectOptions = col.options.map(o => ({
+			value: o.id,
+			label: o.label,
+		}));
 		return columnHelper.accessor(
 			row => row.cells[col.id]?.cellValue?.selectedOptionIds?.[0] ?? "",
 			{
@@ -136,16 +152,18 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 				cell: SelectCell,
 				meta: {
 					editable: true,
-					selectOptions: col.options.map(o => ({
-						value: o.id,
-						label: o.label,
-					})),
+					selectOptions,
+					filterVariant: "select",
 				},
 			}
 		);
 	}
 
 	if (col.dataType === "MULTI_SELECT") {
+		const selectOptions = col.options.map(o => ({
+			value: o.id,
+			label: o.label,
+		}));
 		return columnHelper.accessor(
 			row => row.cells[col.id]?.cellValue?.selectedOptionIds ?? [],
 			{
@@ -153,10 +171,8 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 				header: () => <ColHeader col={col} />,
 				cell: MultiSelectCell,
 				meta: {
-					selectOptions: col.options.map(o => ({
-						value: o.id,
-						label: o.label,
-					})),
+					selectOptions,
+					filterVariant: "select",
 				},
 			}
 		);
@@ -164,12 +180,12 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 
 	if (col.dataType === "NUMBER") {
 		return columnHelper.accessor(
-			row => row.cells[col.id]?.cellValue?.numberValue?.toString() ?? "",
+			row => row.cells[col.id]?.cellValue?.numberValue ?? null,
 			{
 				id: col.id,
 				header: () => <ColHeader col={col} />,
 				cell: EditableCell,
-				meta: { editable: true, type: "number" },
+				meta: { editable: true, type: "number", filterVariant: "number" },
 			}
 		);
 	}
@@ -207,8 +223,10 @@ export function MastersheetTable({
 	toolbarExtra,
 	initialSorting,
 	initialColumnVisibility,
+	initialColumnFilters,
 	onSortingChange,
 	onColumnVisibilityChange,
+	onColumnFiltersChange,
 }: Props) {
 	const router = useRouter();
 
@@ -258,15 +276,18 @@ export function MastersheetTable({
 				sorting: true,
 				globalFilter: true,
 				columnVisibility: false,
+				columnFilter: true,
 				selection: true,
 				copy: true,
 				csvExport: true,
 			}}
 			initialSorting={initialSorting}
 			initialColumnVisibility={initialColumnVisibility}
+			initialColumnFilters={initialColumnFilters}
 			onCellEdit={handleCellEdit}
 			onSortingChange={onSortingChange}
 			onColumnVisibilityChange={onColumnVisibilityChange}
+			onColumnFiltersChange={onColumnFiltersChange}
 			toolbarExtra={toolbarExtra}
 		/>
 	);

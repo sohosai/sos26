@@ -1,7 +1,11 @@
 import { Heading, Text } from "@radix-ui/themes";
 import { IconLayoutColumns } from "@tabler/icons-react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import type { SortingState, VisibilityState } from "@tanstack/react-table";
+import type {
+	ColumnFiltersState,
+	SortingState,
+	VisibilityState,
+} from "@tanstack/react-table";
 import { useState } from "react";
 import { Button } from "@/components/primitives";
 import { getMastersheetData } from "@/lib/api/committee-mastersheet";
@@ -38,6 +42,7 @@ function MastersheetPage() {
 	const [tableKey, setTableKey] = useState(0);
 	const [sorting, setSorting] = useState<SortingState | undefined>(undefined);
 	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 	const [activeViewId, setActiveViewId] = useState<string | null>(null);
 
 	async function handleColumnSuccess() {
@@ -80,6 +85,7 @@ function MastersheetPage() {
 				: false;
 		}
 		setColumnVisibility(completeVisibility);
+		setColumnFilters(viewState.columnFilters ?? []);
 		setTableKey(k => k + 1);
 	}
 
@@ -106,6 +112,7 @@ function MastersheetPage() {
 				currentState={{
 					sorting,
 					columnVisibility,
+					columnFilters,
 					knownColumnIds: [...FIXED_COLUMN_IDS, ...columns.map(c => c.id)],
 				}}
 				onSelectView={handleSelectView}
@@ -117,8 +124,10 @@ function MastersheetPage() {
 				rows={rows}
 				initialSorting={sorting}
 				initialColumnVisibility={columnVisibility}
+				initialColumnFilters={columnFilters}
 				onSortingChange={handleSortingChange}
 				onColumnVisibilityChange={handleColumnVisibilityChange}
+				onColumnFiltersChange={setColumnFilters}
 				toolbarExtra={toolbarExtra}
 			/>
 			<ColumnPanel

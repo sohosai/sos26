@@ -1,7 +1,11 @@
 import { DropdownMenu } from "@radix-ui/themes";
 import type { ListMastersheetViewsResponse } from "@sos26/shared";
 import { IconDotsVertical, IconPlus } from "@tabler/icons-react";
-import type { SortingState, VisibilityState } from "@tanstack/react-table";
+import type {
+	ColumnFiltersState,
+	SortingState,
+	VisibilityState,
+} from "@tanstack/react-table";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -18,6 +22,7 @@ export type ViewState = {
 	columnVisibility?: VisibilityState;
 	/** このビューを保存した時点で存在していたカラムID一覧。未収録のカラムは非表示扱い */
 	knownColumnIds?: string[];
+	columnFilters?: ColumnFiltersState;
 };
 
 type SavedView = ListMastersheetViewsResponse["views"][number];

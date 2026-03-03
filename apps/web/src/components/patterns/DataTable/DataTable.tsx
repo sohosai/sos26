@@ -62,6 +62,7 @@ type DataTableProps<T> = {
 	initialSorting?: SortingState;
 	initialGlobalFilter?: string;
 	initialColumnVisibility?: VisibilityState;
+	initialColumnFilters?: ColumnFiltersState;
 	onCellEdit?: (row: T, columnId: string, value: unknown) => void;
 	/** ツールバーに追加する任意の要素（ボタンなど） */
 	toolbarExtra?: ReactNode;
@@ -69,6 +70,8 @@ type DataTableProps<T> = {
 	onSortingChange?: (sorting: SortingState) => void;
 	/** カラム表示変化を通知 */
 	onColumnVisibilityChange?: (visibility: VisibilityState) => void;
+	/** カラムフィルター変化を通知 */
+	onColumnFiltersChange?: (filters: ColumnFiltersState) => void;
 	/** rowSelection=true のとき行選択変化を通知 */
 	onRowSelectionChange?: (rows: T[]) => void;
 	/** rowSelection=true のとき行IDを返す関数（デフォルト: 行インデックス） */
@@ -151,10 +154,12 @@ export function DataTable<T extends RowData>({
 	initialSorting = [],
 	initialGlobalFilter = "",
 	initialColumnVisibility = {} as VisibilityState,
+	initialColumnFilters = [],
 	onCellEdit,
 	toolbarExtra,
 	onSortingChange,
 	onColumnVisibilityChange,
+	onColumnFiltersChange,
 	onRowSelectionChange,
 	getRowId,
 }: DataTableProps<T>) {
@@ -167,7 +172,8 @@ export function DataTable<T extends RowData>({
 	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
 		initialColumnVisibility
 	);
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+	const [columnFilters, setColumnFilters] =
+		useState<ColumnFiltersState>(initialColumnFilters);
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 	const tableRef = useRef<HTMLDivElement>(null);
 
@@ -271,6 +277,7 @@ export function DataTable<T extends RowData>({
 	// ソート・カラム表示変化を親に通知（初回マウント時はスキップ）
 	useChangeCallback(sorting, onSortingChange);
 	useChangeCallback(columnVisibility, onColumnVisibilityChange);
+	useChangeCallback(columnFilters, onColumnFiltersChange);
 
 	useCopyToClipboard(table, selected, cellSelection && f.copy);
 
