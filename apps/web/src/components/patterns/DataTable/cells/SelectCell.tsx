@@ -22,9 +22,12 @@ export function SelectCell<TData extends RowData>({
 		<Select
 			aria-label={column.id}
 			variant="ghost"
+			size="1"
+			placeholder="─"
 			options={resolvedOptions}
-			value={initialValue}
+			value={initialValue || undefined}
 			onValueChange={val => {
+				table.options.meta?.clearSelection?.();
 				table.options.meta?.updateData(row.original, column.id, val);
 			}}
 		/>

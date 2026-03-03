@@ -9,6 +9,7 @@ export {
 	FileCell,
 	FormCellStatusBadge,
 	MultiSelectCell,
+	MultiSelectEditCell,
 	NameCell,
 	SelectCell,
 	TagCell,

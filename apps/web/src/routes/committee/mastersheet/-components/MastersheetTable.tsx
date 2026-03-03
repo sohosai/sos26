@@ -16,7 +16,7 @@ import { type ReactNode, useMemo } from "react";
 import {
 	DataTable,
 	EditableCell,
-	MultiSelectCell,
+	MultiSelectEditCell,
 	SelectCell,
 } from "@/components/patterns";
 import {
@@ -170,8 +170,9 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 			{
 				id: col.id,
 				header: () => <ColHeader col={col} />,
-				cell: MultiSelectCell,
+				cell: MultiSelectEditCell,
 				meta: {
+					editable: true,
 					selectOptions,
 					filterVariant: "select",
 				},
@@ -213,6 +214,11 @@ function buildCustomPayload(
 	if (dataType === "SELECT") {
 		return {
 			selectedOptionIds: typeof value === "string" && value ? [value] : [],
+		};
+	}
+	if (dataType === "MULTI_SELECT") {
+		return {
+			selectedOptionIds: Array.isArray(value) ? (value as string[]) : [],
 		};
 	}
 	return { textValue: typeof value === "string" ? value : null };
