@@ -9,7 +9,7 @@ import {
 import type {
 	DiscoverMastersheetColumnsResponse,
 	GetMastersheetDataResponse,
-	MastersheetColumnVisibility,
+	MastersheetViewerInput,
 } from "@sos26/shared";
 import {
 	IconEdit,
@@ -21,13 +21,15 @@ import {
 import type { VisibilityState } from "@tanstack/react-table";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button, IconButton, Select, TextField } from "@/components/primitives";
+import { Button, IconButton, TextField } from "@/components/primitives";
+import { ViewerSelector } from "@/components/support/ViewerSelector";
 import {
 	createMastersheetAccessRequest,
 	deleteMastersheetColumn,
 	discoverMastersheetColumns,
 	updateMastersheetColumn,
 } from "@/lib/api/committee-mastersheet";
+import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { isClientError } from "@/lib/http/error";
 import { AddCustomColumnDialog } from "./AddCustomColumnDialog";
 import { AddFormItemColumnsDialog } from "./AddFormItemColumnsDialog";
@@ -39,11 +41,6 @@ import styles from "./ColumnPanel.module.scss";
 
 type ApiColumn = GetMastersheetDataResponse["columns"][number];
 type DiscoverColumn = DiscoverMastersheetColumnsResponse["columns"][number];
-
-const VISIBILITY_OPTIONS = [
-	{ value: "PRIVATE", label: "非公開（自分のみ）" },
-	{ value: "PUBLIC", label: "公開（全委員）" },
-];
 
 const DATA_TYPE_LABEL: Record<string, string> = {
 	TEXT: "テキスト",
@@ -65,10 +62,27 @@ type EditColumnFormProps = {
 function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 	const [name, setName] = useState(col.name);
 	const [description, setDescription] = useState(col.description ?? "");
-	const [visibility, setVisibility] = useState<string>(
-		col.visibility ?? "PRIVATE"
+	const [viewers, setViewers] = useState<MastersheetViewerInput[]>(
+		col.viewers.map(v => ({
+			scope: v.scope,
+			bureauValue: v.bureauValue ?? undefined,
+			userId: v.userId ?? undefined,
+		}))
 	);
+	const [committeeMembers, setCommitteeMembers] = useState<
+		{ id: string; name: string }[]
+	>([]);
 	const [loading, setLoading] = useState(false);
+
+	useEffect(() => {
+		listCommitteeMembers()
+			.then(res =>
+				setCommitteeMembers(
+					res.committeeMembers.map(m => ({ id: m.user.id, name: m.user.name }))
+				)
+			)
+			.catch(() => toast.error("委員一覧の取得に失敗しました"));
+	}, []);
 
 	async function handleSubmit() {
 		if (!name.trim()) {
@@ -80,10 +94,7 @@ function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 			await updateMastersheetColumn(col.id, {
 				name: name.trim(),
 				description: description.trim() || null,
-				visibility:
-					col.type === "CUSTOM"
-						? (visibility as MastersheetColumnVisibility)
-						: undefined,
+				viewers: col.type === "CUSTOM" ? viewers : undefined,
 			});
 			toast.success("カラムを更新しました");
 			onSuccess();
@@ -100,13 +111,13 @@ function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 			<TextField label="説明" value={description} onChange={setDescription} />
 			{col.type === "CUSTOM" && (
 				<div className={styles.field}>
-					<Text as="label" size="2" weight="medium">
-						公開設定
+					<Text size="2" weight="medium">
+						閲覧権限
 					</Text>
-					<Select
-						options={VISIBILITY_OPTIONS}
-						value={visibility}
-						onValueChange={setVisibility}
+					<ViewerSelector
+						viewers={viewers}
+						onChange={setViewers}
+						committeeMembers={committeeMembers}
 					/>
 				</div>
 			)}

@@ -1,14 +1,16 @@
 import { Dialog, TextField as RadixTextField, Text } from "@radix-ui/themes";
 import type {
 	GetMastersheetDataResponse,
-	MastersheetColumnVisibility,
 	MastersheetDataType,
+	MastersheetViewerInput,
 } from "@sos26/shared";
 import { IconX } from "@tabler/icons-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button, IconButton, Select, TextField } from "@/components/primitives";
+import { ViewerSelector } from "@/components/support/ViewerSelector";
 import { createMastersheetColumn } from "@/lib/api/committee-mastersheet";
+import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { isClientError } from "@/lib/http/error";
 import styles from "./AddCustomColumnDialog.module.scss";
 
@@ -19,11 +21,6 @@ const DATA_TYPE_OPTIONS = [
 	{ value: "NUMBER", label: "数値" },
 	{ value: "SELECT", label: "単一選択" },
 	{ value: "MULTI_SELECT", label: "複数選択" },
-];
-
-const VISIBILITY_OPTIONS = [
-	{ value: "PRIVATE", label: "非公開（自分のみ）" },
-	{ value: "PUBLIC", label: "公開（全委員）" },
 ];
 
 type OptionEntry = { id: number; label: string };
@@ -70,10 +67,24 @@ export function AddCustomColumnDialog({
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
 	const [dataType, setDataType] = useState("TEXT");
-	const [visibility, setVisibility] = useState("PRIVATE");
+	const [viewers, setViewers] = useState<MastersheetViewerInput[]>([]);
+	const [committeeMembers, setCommitteeMembers] = useState<
+		{ id: string; name: string }[]
+	>([]);
 	const [options, setOptions] = useState<OptionEntry[]>([]);
 	const [loading, setLoading] = useState(false);
 	const nextId = useRef(0);
+
+	useEffect(() => {
+		if (!open) return;
+		listCommitteeMembers()
+			.then(res =>
+				setCommitteeMembers(
+					res.committeeMembers.map(m => ({ id: m.user.id, name: m.user.name }))
+				)
+			)
+			.catch(() => toast.error("委員一覧の取得に失敗しました"));
+	}, [open]);
 
 	const showOptions = dataType === "SELECT" || dataType === "MULTI_SELECT";
 
@@ -96,7 +107,7 @@ export function AddCustomColumnDialog({
 			setName("");
 			setDescription("");
 			setDataType("TEXT");
-			setVisibility("PRIVATE");
+			setViewers([]);
 			setOptions([]);
 		}
 		onOpenChange(open);
@@ -120,7 +131,7 @@ export function AddCustomColumnDialog({
 				description: description.trim() || undefined,
 				sortOrder: columns.length,
 				dataType: dataType as MastersheetDataType,
-				visibility: visibility as MastersheetColumnVisibility,
+				viewers,
 				options: optionsInput,
 			});
 			toast.success("カラムを追加しました");
@@ -155,13 +166,13 @@ export function AddCustomColumnDialog({
 						/>
 					</div>
 					<div className={styles.field}>
-						<Text as="label" size="2" weight="medium">
-							公開設定 *
+						<Text size="2" weight="medium">
+							閲覧権限
 						</Text>
-						<Select
-							options={VISIBILITY_OPTIONS}
-							value={visibility}
-							onValueChange={setVisibility}
+						<ViewerSelector
+							viewers={viewers}
+							onChange={setViewers}
+							committeeMembers={committeeMembers}
 						/>
 					</div>
 					<TextField

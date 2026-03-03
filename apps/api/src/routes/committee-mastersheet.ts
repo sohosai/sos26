@@ -104,6 +104,12 @@ function formatColumnDef(col: ColumnFull, userId: string) {
 		formItemType: col.formItem?.type ?? null,
 		dataType: col.dataType,
 		visibility: col.visibility,
+		viewers: col.viewers.map(v => ({
+			id: v.id,
+			scope: v.scope,
+			bureauValue: v.bureauValue,
+			userId: v.userId,
+		})),
 		options: col.options,
 		createdAt: col.createdAt,
 	};
@@ -488,26 +494,47 @@ committeeMastersheetRoute.post(
 		}
 
 		// CUSTOM
-		const col = await prisma.mastersheetColumn.create({
-			data: {
-				type: "CUSTOM",
-				name: data.name,
-				description: data.description ?? null,
-				sortOrder: data.sortOrder,
-				createdById: userId,
-				dataType: data.dataType,
-				visibility: data.visibility,
-				options: data.options?.length ? { create: data.options } : undefined,
+		const visibility = data.viewers.length > 0 ? "PUBLIC" : "PRIVATE";
+		const col = await prisma.$transaction(
+			async tx => {
+				const created = await tx.mastersheetColumn.create({
+					data: {
+						type: "CUSTOM",
+						name: data.name,
+						description: data.description ?? null,
+						sortOrder: data.sortOrder,
+						createdById: userId,
+						dataType: data.dataType,
+						visibility,
+						options: data.options?.length
+							? { create: data.options }
+							: undefined,
+					},
+				});
+				if (data.viewers.length > 0) {
+					await tx.mastersheetColumnViewer.createMany({
+						data: data.viewers.map(v => ({
+							columnId: created.id,
+							scope: v.scope,
+							bureauValue: v.bureauValue ?? null,
+							userId: v.userId ?? null,
+						})),
+					});
+				}
+				return tx.mastersheetColumn.findUniqueOrThrow({
+					where: { id: created.id },
+					include: {
+						formItem: { select: { id: true, formId: true, type: true } },
+						options: {
+							orderBy: { sortOrder: "asc" },
+							select: { id: true, label: true, sortOrder: true },
+						},
+						viewers: true,
+					},
+				});
 			},
-			include: {
-				formItem: { select: { id: true, formId: true, type: true } },
-				options: {
-					orderBy: { sortOrder: "asc" },
-					select: { id: true, label: true, sortOrder: true },
-				},
-				viewers: true,
-			},
-		});
+			{ isolationLevel: "Serializable" }
+		);
 
 		return c.json({ column: formatColumnDef(col, userId) }, 201);
 	}
@@ -530,19 +557,55 @@ committeeMastersheetRoute.patch(
 
 		const body = await c.req.json().catch(() => ({}));
 		const data = updateMastersheetColumnRequestSchema.parse(body);
+		const { viewers, ...columnFields } = data;
 
-		const col = await prisma.mastersheetColumn.update({
-			where: { id: columnId },
-			data,
-			include: {
-				formItem: { select: { id: true, formId: true, type: true } },
-				options: {
-					orderBy: { sortOrder: "asc" },
-					select: { id: true, label: true, sortOrder: true },
-				},
-				viewers: true,
+		const col = await prisma.$transaction(
+			async tx => {
+				const visibility =
+					viewers !== undefined
+						? viewers.length > 0
+							? "PUBLIC"
+							: "PRIVATE"
+						: undefined;
+
+				await tx.mastersheetColumn.update({
+					where: { id: columnId },
+					data: {
+						...columnFields,
+						...(visibility !== undefined ? { visibility } : {}),
+					},
+				});
+
+				if (viewers !== undefined) {
+					await tx.mastersheetColumnViewer.deleteMany({
+						where: { columnId },
+					});
+					if (viewers.length > 0) {
+						await tx.mastersheetColumnViewer.createMany({
+							data: viewers.map(v => ({
+								columnId,
+								scope: v.scope,
+								bureauValue: v.bureauValue ?? null,
+								userId: v.userId ?? null,
+							})),
+						});
+					}
+				}
+
+				return tx.mastersheetColumn.findUniqueOrThrow({
+					where: { id: columnId },
+					include: {
+						formItem: { select: { id: true, formId: true, type: true } },
+						options: {
+							orderBy: { sortOrder: "asc" },
+							select: { id: true, label: true, sortOrder: true },
+						},
+						viewers: true,
+					},
+				});
 			},
-		});
+			{ isolationLevel: "Serializable" }
+		);
 
 		return c.json({ column: formatColumnDef(col, userId) });
 	}

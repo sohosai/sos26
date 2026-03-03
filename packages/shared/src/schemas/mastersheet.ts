@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { bureauSchema } from "./committee-member";
+import { viewerScopeSchema } from "./common";
 import { formItemTypeSchema } from "./form";
 import { userSchema } from "./user";
 
@@ -55,6 +57,36 @@ export const mastersheetViewIdPathParamsSchema = z.object({
 });
 
 // ─────────────────────────────────────────────────────────────
+// 閲覧者設定
+// ─────────────────────────────────────────────────────────────
+
+export const mastersheetViewerInputSchema = z
+	.object({
+		scope: viewerScopeSchema,
+		bureauValue: bureauSchema.optional(),
+		userId: z.cuid().optional(),
+	})
+	.superRefine((data, ctx) => {
+		if (data.scope === "BUREAU" && !data.bureauValue) {
+			ctx.addIssue({
+				code: "custom",
+				message: "局を指定してください",
+				path: ["bureauValue"],
+			});
+		}
+		if (data.scope === "INDIVIDUAL" && !data.userId) {
+			ctx.addIssue({
+				code: "custom",
+				message: "ユーザーを指定してください",
+				path: ["userId"],
+			});
+		}
+	});
+export type MastersheetViewerInput = z.infer<
+	typeof mastersheetViewerInputSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
 // 内部ヘルパー（export しない）
 // ─────────────────────────────────────────────────────────────
 
@@ -64,6 +96,13 @@ const columnOptionSchema = z.object({
 	id: z.string(),
 	label: z.string(),
 	sortOrder: z.number().int(),
+});
+
+const columnViewerSchema = z.object({
+	id: z.string(),
+	scope: viewerScopeSchema,
+	bureauValue: bureauSchema.nullable(),
+	userId: z.string().nullable(),
 });
 
 /** セル値の共通フィールド（フォーム由来・自由追加・オーバーライド共通） */
@@ -89,6 +128,7 @@ const mastersheetColumnDefSchema = z.object({
 	// CUSTOM の場合
 	dataType: mastersheetDataTypeSchema.nullable(),
 	visibility: mastersheetColumnVisibilitySchema.nullable(),
+	viewers: z.array(columnViewerSchema),
 	options: z.array(columnOptionSchema),
 	createdAt: z.coerce.date(),
 });
@@ -157,7 +197,7 @@ export const createMastersheetColumnRequestSchema = z.discriminatedUnion(
 			description: z.string().optional(),
 			sortOrder: z.number().int(),
 			dataType: mastersheetDataTypeSchema,
-			visibility: mastersheetColumnVisibilitySchema,
+			viewers: z.array(mastersheetViewerInputSchema),
 			options: z.array(columnOptionInputSchema).optional(),
 		}),
 	]
@@ -181,7 +221,7 @@ export const updateMastersheetColumnRequestSchema = z.object({
 	name: z.string().min(1).optional(),
 	description: z.string().nullable().optional(),
 	sortOrder: z.number().int().optional(),
-	visibility: mastersheetColumnVisibilitySchema.optional(),
+	viewers: z.array(mastersheetViewerInputSchema).optional(),
 });
 export type UpdateMastersheetColumnRequest = z.infer<
 	typeof updateMastersheetColumnRequestSchema
