@@ -29,6 +29,7 @@ export async function notifyFormAuthorizationRequested(input: {
 		await sendFormAuthorizationRequestedPush({
 			userId: input.approverUserId,
 			formTitle: input.formTitle,
+			url: `${env.APP_URL}/committee/forms/${input.formId}/`,
 		});
 	} catch (err) {
 		console.error(

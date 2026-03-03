@@ -30,6 +30,7 @@ export async function notifyNoticeAuthorizationDecided(input: {
 			userId: input.requestedByUserId,
 			noticeTitle: input.noticeTitle,
 			status: input.status,
+			url: `${env.APP_URL}/committee/notice/${input.noticeId}/`,
 		});
 	} catch (err) {
 		console.error(

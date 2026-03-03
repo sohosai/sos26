@@ -41,10 +41,26 @@ export async function notifyInquiryCommentAdded(input: {
 				});
 			})
 		);
-		await sendInquiryCommentAddedPush({
-			userIds: assignees.map(assignee => assignee.userId),
-			inquiryTitle: input.inquiryTitle,
-		});
+
+		const committeeUserIds = assignees
+			.filter(assignee => assignee.side === "COMMITTEE")
+			.map(assignee => assignee.userId);
+		const projectUserIds = assignees
+			.filter(assignee => assignee.side === "PROJECT")
+			.map(assignee => assignee.userId);
+
+		await Promise.all([
+			sendInquiryCommentAddedPush({
+				userIds: committeeUserIds,
+				inquiryTitle: input.inquiryTitle,
+				url: `${env.APP_URL}/committee/support/${input.inquiryId}`,
+			}),
+			sendInquiryCommentAddedPush({
+				userIds: projectUserIds,
+				inquiryTitle: input.inquiryTitle,
+				url: `${env.APP_URL}/project/support/${input.inquiryId}`,
+			}),
+		]);
 	} catch (err) {
 		console.error("[Notification] notifyInquiryCommentAdded failed", err);
 	}

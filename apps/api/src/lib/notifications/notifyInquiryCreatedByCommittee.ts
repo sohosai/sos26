@@ -34,6 +34,8 @@ export async function notifyInquiryCreatedByCommittee(input: {
 		await sendInquiryCreatedPush({
 			userIds: users.map(user => user.id),
 			inquiryTitle: input.inquiryTitle,
+			target: "PROJECT",
+			url,
 		});
 	} catch (err) {
 		console.error("[Notification] notifyInquiryCreatedByCommittee failed", err);

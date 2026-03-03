@@ -53,6 +53,7 @@ export async function notifyNoticeDelivered(input: {
 		await sendNoticeDeliveredPush({
 			userIds: [...userIds],
 			noticeTitle: input.noticeTitle,
+			url,
 		});
 	} catch (err) {
 		console.error("[Notification] notifyNoticeDelivered failed", err);

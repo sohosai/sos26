@@ -30,6 +30,7 @@ export async function notifyFormAuthorizationDecided(input: {
 			userId: input.requestedByUserId,
 			formTitle: input.formTitle,
 			status: input.status,
+			url: `${env.APP_URL}/committee/forms/${input.formId}/`,
 		});
 	} catch (err) {
 		console.error("[Notification] notifyFormAuthorizationDecided failed", err);

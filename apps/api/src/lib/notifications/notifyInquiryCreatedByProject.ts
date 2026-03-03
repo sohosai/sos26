@@ -42,6 +42,8 @@ export async function notifyInquiryCreatedByProject(input: {
 		await sendInquiryCreatedPush({
 			userIds: adminPermissions.map(perm => perm.committeeMember.user.id),
 			inquiryTitle: input.inquiryTitle,
+			target: "COMMITTEE",
+			url,
 		});
 	} catch (err) {
 		console.error("[Notification] notifyInquiryCreatedByProject failed", err);

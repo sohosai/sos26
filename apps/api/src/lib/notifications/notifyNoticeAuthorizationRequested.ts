@@ -29,6 +29,7 @@ export async function notifyNoticeAuthorizationRequested(input: {
 		await sendNoticeAuthorizationRequestedPush({
 			userId: input.approverUserId,
 			noticeTitle: input.noticeTitle,
+			url: `${env.APP_URL}/committee/notice/${input.noticeId}/`,
 		});
 	} catch (err) {
 		console.error(

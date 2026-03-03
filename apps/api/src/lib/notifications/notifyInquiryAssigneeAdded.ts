@@ -29,6 +29,7 @@ export async function notifyInquiryAssigneeAdded(input: {
 		await sendInquiryAssigneeAddedPush({
 			userId: input.addedUserId,
 			inquiryTitle: input.inquiryTitle,
+			url,
 		});
 	} catch (err) {
 		console.error("[Notification] notifyInquiryAssigneeAdded failed", err);
