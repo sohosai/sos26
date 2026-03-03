@@ -1,0 +1,102 @@
+.body {
+	display: flex;
+	height: 380px;
+	margin-bottom: var(--space-4);
+	overflow: hidden;
+}
+
+.left {
+	width: 220px;
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	border-right: 1px solid var(--gray-5);
+	padding-right: var(--space-4);
+	min-height: 0;
+}
+
+.right {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	padding-left: var(--space-4);
+	min-height: 0;
+}
+
+.panelTitle {
+	display: block;
+	flex-shrink: 0;
+}
+
+.formList {
+	flex: 1;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.formCard {
+	width: 100%;
+	text-align: left;
+	background: none;
+	border: 1px solid var(--gray-4);
+	border-radius: var(--radius-2);
+	padding: var(--space-2) var(--space-3);
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	transition: background 0.1s;
+
+	&:hover {
+		background: var(--gray-2);
+	}
+}
+
+.formCardSelected {
+	background: var(--accent-3);
+	border-color: var(--accent-7);
+
+	&:hover {
+		background: var(--accent-4);
+	}
+}
+
+.itemList {
+	flex: 1;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.itemRow {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	padding: var(--space-2) var(--space-2);
+	border-radius: var(--radius-2);
+
+	&:hover {
+		background: var(--gray-2);
+	}
+}
+
+.itemInfo {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	flex: 1;
+	min-width: 0;
+}
+
+.footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding-top: var(--space-3);
+	border-top: 1px solid var(--gray-5);
+}
