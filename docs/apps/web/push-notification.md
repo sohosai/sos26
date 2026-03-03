@@ -85,8 +85,19 @@ subscribe時には、VAPID 公開鍵がひつようです。
 `apps/web/public/sw.js` では `push` イベントを受けて
 `self.registration.showNotification(...)` を呼び出します。
 
-- `data.title` を通知タイトルとして使用
-- `data.body` を通知本文として使用
+受け取る payload 項目（主なもの）:
+
+- `title`（必須）
+- `body`
+- `icon`, `badge`, `image`
+- `lang`, `tag`, `dir`
+- `renotify`, `requireInteraction`, `silent`
+- `timestamp`, `vibrate`
+- `actions`
+- `data`（例: `url`）
+
+Service Worker はこれらを `showNotification()` の options に渡します。
+`notificationclick` では `data.url` があればそのURLを開きます。
 
 通知表示は `self.registration.showNotification()` を利用します。
 

@@ -55,14 +55,19 @@ Web Push 通知の Subscription 管理および送信処理をまとめます。
 
 ## 3. Push Payload 定義
 
-Push 通知の payload は shared schema で定義されています。
+- 必須
+  - `title`
+- 主な任意項目
+  - `body`
+  - `icon`, `badge`, `image`
+  - `lang`, `tag`, `dir`
+  - `renotify`, `requireInteraction`, `silent`
+  - `timestamp`, `vibrate`
+  - `actions`（最大2件）
+  - `data`（任意の追加情報。例: `url`）
 
-- title（必須）
-- body（任意）
-
-以上は最低限の内容であるため、その他の情報を付与することも可能。
-詳しくは以下を参照
-https://developer.mozilla.org/en-US/docs/Web/API/Notification/Notification
+`/push/send` は上記の payload をそのまま push service に渡し、
+Service Worker 側で `showNotification()` の options として利用します。
 
 ---
 
