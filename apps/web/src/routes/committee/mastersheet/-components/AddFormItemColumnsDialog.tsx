@@ -1,7 +1,6 @@
 import {
 	Badge,
 	Dialog,
-	Flex,
 	Checkbox as RadixCheckbox,
 	Text,
 } from "@radix-ui/themes";
@@ -137,6 +136,7 @@ export function AddFormItemColumnsDialog({
 					checked={alreadyAdded || selected}
 					disabled={alreadyAdded}
 					onCheckedChange={() => !alreadyAdded && toggleItem(item.id)}
+					aria-hidden="true"
 				/>
 				<div className={styles.itemInfo}>
 					<Text size="2" truncate>
@@ -231,7 +231,7 @@ export function AddFormItemColumnsDialog({
 					<Text size="2" color="gray">
 						{selectedItemIds.size}件の質問を選択中
 					</Text>
-					<Flex gap="2">
+					<div className={styles.footerActions}>
 						<Button
 							intent="secondary"
 							size="2"
@@ -248,7 +248,7 @@ export function AddFormItemColumnsDialog({
 						>
 							カラムを作成
 						</Button>
-					</Flex>
+					</div>
 				</div>
 			</Dialog.Content>
 		</Dialog.Root>

@@ -26,6 +26,12 @@
 	min-width: 0;
 }
 
+.listItemName {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+
 .listItemStatus {
 	flex-shrink: 0;
 }

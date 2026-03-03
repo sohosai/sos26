@@ -1,7 +1,8 @@
-import { Flex, Popover, Text, TextField } from "@radix-ui/themes";
+import { Popover, Text, TextField } from "@radix-ui/themes";
 import { IconFilter } from "@tabler/icons-react";
 import type { Column, RowData } from "@tanstack/react-table";
 import { Checkbox } from "@/components/primitives";
+import styles from "./ColumnFilterPopover.module.scss";
 
 type NumberRangeValue = { min: string; max: string };
 type SelectValue = string[];
@@ -13,7 +14,7 @@ function TextFilter<TData extends RowData>({
 }) {
 	const value = (column.getFilterValue() as string | undefined) ?? "";
 	return (
-		<Flex direction="column" gap="2" style={{ minWidth: "180px" }}>
+		<div className={`${styles.filter} ${styles.filterWide}`}>
 			<Text size="1" weight="bold">
 				テキスト検索
 			</Text>
@@ -23,7 +24,7 @@ function TextFilter<TData extends RowData>({
 				value={value}
 				onChange={e => column.setFilterValue(e.target.value || undefined)}
 			/>
-		</Flex>
+		</div>
 	);
 }
 
@@ -40,7 +41,7 @@ function NumberFilter<TData extends RowData>({
 		column.setFilterValue(next.min || next.max ? next : undefined);
 	};
 	return (
-		<Flex direction="column" gap="2" style={{ minWidth: "160px" }}>
+		<div className={styles.filter}>
 			<Text size="1" weight="bold">
 				数値フィルター
 			</Text>
@@ -58,7 +59,7 @@ function NumberFilter<TData extends RowData>({
 				value={value.max}
 				onChange={e => update("max", e.target.value)}
 			/>
-		</Flex>
+		</div>
 	);
 }
 
@@ -81,11 +82,7 @@ function SelectFilter<TData extends RowData>({
 	};
 
 	return (
-		<Flex
-			direction="column"
-			gap="1"
-			style={{ minWidth: "160px", maxHeight: "240px", overflowY: "auto" }}
-		>
+		<div className={styles.selectFilter}>
 			<Text size="1" weight="bold" mb="1">
 				選択フィルター
 			</Text>
@@ -98,7 +95,7 @@ function SelectFilter<TData extends RowData>({
 					onCheckedChange={() => toggle(opt.value)}
 				/>
 			))}
-		</Flex>
+		</div>
 	);
 }
 
@@ -114,14 +111,7 @@ export function ColumnFilterPopover<TData extends RowData>({
 		<Popover.Root>
 			<Popover.Trigger
 				onClick={e => e.stopPropagation()}
-				style={{
-					background: "none",
-					border: "none",
-					cursor: "pointer",
-					padding: "2px",
-					lineHeight: 0,
-					color: isFiltered ? "var(--accent-9)" : "var(--gray-9)",
-				}}
+				className={`${styles.triggerBtn}${isFiltered ? ` ${styles.active}` : ""}`}
 			>
 				<IconFilter size={12} />
 			</Popover.Trigger>

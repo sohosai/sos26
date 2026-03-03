@@ -1,7 +1,6 @@
 import {
 	Badge,
 	Dialog,
-	Flex,
 	TextField as RadixTextField,
 	Separator,
 	Text,
@@ -241,7 +240,7 @@ function AccessibleColumnRow({
 								{typeLabel}
 							</Badge>
 						</div>
-						<Flex align="center" gap="2" style={{ flexShrink: 0 }}>
+						<div className={styles.cardRight}>
 							{col.isOwner && !confirmingDelete && (
 								<div className={styles.ownerActions}>
 									<IconButton
@@ -268,7 +267,7 @@ function AccessibleColumnRow({
 							>
 								{isVisible ? "非表示にする" : "表示する"}
 							</Button>
-						</Flex>
+						</div>
 					</div>
 					{col.description && (
 						<Text size="1" color="gray">
@@ -280,7 +279,7 @@ function AccessibleColumnRow({
 							<Text size="1" color="gray">
 								削除すると元に戻せません。
 							</Text>
-							<Flex gap="2" mt="2">
+							<div className={styles.confirmDeleteActions}>
 								<Button
 									intent="danger"
 									size="1"
@@ -296,7 +295,7 @@ function AccessibleColumnRow({
 								>
 									キャンセル
 								</Button>
-							</Flex>
+							</div>
 						</div>
 					)}
 				</div>
@@ -533,7 +532,7 @@ export function ColumnPanel({
 				<Dialog.Content maxWidth="800px" minHeight="560px">
 					<div className={styles.header}>
 						<Dialog.Title mb="0">カラム</Dialog.Title>
-						<Flex gap="2" align="center">
+						<div className={styles.headerActions}>
 							<Button
 								intent="secondary"
 								size="2"
@@ -554,12 +553,13 @@ export function ColumnPanel({
 							>
 								<IconX size={16} />
 							</IconButton>
-						</Flex>
+						</div>
 					</div>
 
 					<div className={styles.searchBar}>
 						<RadixTextField.Root
 							placeholder="カラムを検索..."
+							aria-label="カラムを検索"
 							value={searchText}
 							onChange={e => setSearchText(e.target.value)}
 						>

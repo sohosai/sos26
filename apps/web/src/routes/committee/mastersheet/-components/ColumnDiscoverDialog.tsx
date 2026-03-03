@@ -1,4 +1,4 @@
-import { Badge, Dialog, Flex, Text } from "@radix-ui/themes";
+import { Badge, Dialog, Text } from "@radix-ui/themes";
 import type { DiscoverMastersheetColumnsResponse } from "@sos26/shared";
 import { IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
@@ -31,14 +31,14 @@ function DiscoverColumnItem({
 	return (
 		<div className={styles.listItem}>
 			<div className={styles.listItemInfo}>
-				<Flex align="center" gap="2">
+				<div className={styles.listItemName}>
 					<Text size="2" weight="medium" truncate>
 						{col.name}
 					</Text>
 					<Badge size="1" color={col.type === "FORM_ITEM" ? "blue" : "gray"}>
 						{col.type === "FORM_ITEM" ? "フォーム" : "カスタム"}
 					</Badge>
-				</Flex>
+				</div>
 				<Text size="1" color="gray">
 					{col.createdByName}
 				</Text>

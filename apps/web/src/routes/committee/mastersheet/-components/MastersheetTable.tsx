@@ -24,6 +24,7 @@ import {
 	upsertMastersheetOverride,
 } from "@/lib/api/committee-mastersheet";
 import { FormItemCell } from "./FormItemCell";
+import styles from "./MastersheetTable.module.scss";
 
 type MastersheetRow = {
 	project: GetMastersheetDataResponse["rows"][number]["project"];
@@ -51,7 +52,7 @@ const columnHelper = createColumnHelper<MastersheetRow>();
 
 function ColHeader({ col }: { col: ApiColumn }) {
 	return (
-		<span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+		<span className={styles.colHeader}>
 			{col.type === "FORM_ITEM" ? (
 				<Tooltip content="フォーム由来カラム">
 					<IconFileText

@@ -124,3 +124,8 @@
 	padding-top: var(--space-3);
 	border-top: 1px solid var(--gray-5);
 }
+
+.footerActions {
+	display: flex;
+	gap: var(--space-2);
+}
