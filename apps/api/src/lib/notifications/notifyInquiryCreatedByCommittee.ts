@@ -1,6 +1,7 @@
 import { sendInquiryCreatedEmail } from "../emails";
 import { env } from "../env";
 import { prisma } from "../prisma";
+import { sendInquiryCreatedPush } from "../push";
 
 export async function notifyInquiryCreatedByCommittee(input: {
 	inquiryId: string;
@@ -14,7 +15,7 @@ export async function notifyInquiryCreatedByCommittee(input: {
 				id: { in: input.projectAssigneeUserIds },
 				deletedAt: null,
 			},
-			select: { email: true },
+			select: { email: true, id: true },
 		});
 
 		const url = `${env.APP_URL}/project/support/${input.inquiryId}`;
@@ -30,6 +31,10 @@ export async function notifyInquiryCreatedByCommittee(input: {
 				})
 			)
 		);
+		await sendInquiryCreatedPush({
+			userIds: users.map(user => user.id),
+			inquiryTitle: input.inquiryTitle,
+		});
 	} catch (err) {
 		console.error("[Notification] notifyInquiryCreatedByCommittee failed", err);
 	}

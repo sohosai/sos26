@@ -1,6 +1,7 @@
 import { sendNoticeDeliveredEmail } from "../emails";
 import { env } from "../env";
 import { prisma } from "../prisma";
+import { sendNoticeDeliveredPush } from "../push";
 
 export async function notifyNoticeDelivered(input: {
 	noticeTitle: string;
@@ -49,6 +50,10 @@ export async function notifyNoticeDelivered(input: {
 				})
 			)
 		);
+		await sendNoticeDeliveredPush({
+			userIds: [...userIds],
+			noticeTitle: input.noticeTitle,
+		});
 	} catch (err) {
 		console.error("[Notification] notifyNoticeDelivered failed", err);
 	}

@@ -1,6 +1,7 @@
 import { sendInquiryCommentAddedEmail } from "../emails";
 import { env } from "../env";
 import { prisma } from "../prisma";
+import { sendInquiryCommentAddedPush } from "../push";
 
 export async function notifyInquiryCommentAdded(input: {
 	inquiryId: string;
@@ -19,6 +20,7 @@ export async function notifyInquiryCommentAdded(input: {
 			},
 			select: {
 				side: true,
+				userId: true,
 				user: { select: { email: true } },
 			},
 		});
@@ -39,6 +41,10 @@ export async function notifyInquiryCommentAdded(input: {
 				});
 			})
 		);
+		await sendInquiryCommentAddedPush({
+			userIds: assignees.map(assignee => assignee.userId),
+			inquiryTitle: input.inquiryTitle,
+		});
 	} catch (err) {
 		console.error("[Notification] notifyInquiryCommentAdded failed", err);
 	}

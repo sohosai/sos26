@@ -1,6 +1,7 @@
 import { sendNoticeAuthorizationDecidedEmail } from "../emails";
 import { env } from "../env";
 import { prisma } from "../prisma";
+import { sendNoticeAuthorizationDecidedPush } from "../push";
 
 export async function notifyNoticeAuthorizationDecided(input: {
 	requestedByUserId: string;
@@ -24,6 +25,11 @@ export async function notifyNoticeAuthorizationDecided(input: {
 				timeZone: "Asia/Tokyo",
 			}),
 			url: `${env.APP_URL}/committee/notice/${input.noticeId}/`,
+		});
+		await sendNoticeAuthorizationDecidedPush({
+			userId: input.requestedByUserId,
+			noticeTitle: input.noticeTitle,
+			status: input.status,
 		});
 	} catch (err) {
 		console.error(
