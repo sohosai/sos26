@@ -16,69 +16,74 @@ Web 側の責務は以下です。
 
 ---
 
-## 2. 関連ファイル
+## 1. 関連ファイル
 
-- Service Worker
-  - `apps/web/public/sw.js`
 - Push API クライアント
   - `apps/web/src/lib/api/push.ts`
-- テスト UI
-  - `apps/web/src/routes/pushNotification/index.tsx`
+- Push 許可・ローカル状態管理
+  - `apps/web/src/lib/push.ts`
+- 設定画面（通知 ON/OFF）
+  - `apps/web/src/routes/settings/index.tsx`
+- Service Worker
+  - `apps/web/public/sw.js`
+---
+## 2. 通知許可（Permission）
+
+通知許可は `Notification.permission` を参照します。
+
+- `granted`: 通知可能
+- `denied`: ユーザーに拒否されている
+- `default`: 未選択（ダイアログ表示可能）
+
+実装上の注意:
+
+- ブラウザの仕様上、アプリコードから `denied` を解除することはできません。
+- そのため「通知 OFF」は、許可状態の変更ではなく **購読解除（unsubscribe）** と
+  **サーバー登録解除** で実現します。
 
 ---
 
-## 3. Push 通知の有効化フロー
+## 3. Push ON フロー
 
-### 3.1 Service Worker の登録
+`enablePush()`（`apps/web/src/lib/api/push.ts`）で次を実施します。
 
-Service Worker は以下のように登録します。
+1. `navigator.serviceWorker.register("/sw.js")`
+2. `registration.pushManager.subscribe(...)`
+3. `subscription.toJSON()` を `/push/subscribe` に送信
 
-`navigator.serviceWorker.register("/sw.js")`
+送信 payload は共通 schema（`@sos26/shared`）を使います。
+subscribe時には、VAPID 公開鍵がひつようです。
+---
+
+## 4. Push OFF フロー
+
+`disablePush()`（`apps/web/src/lib/api/push.ts`）で次を実施します。
+
+1. `pushManager.getSubscription()` で現在購読を取得
+2. `subscription.unsubscribe()` を実行
+3. `subscription.endpoint` を `/push/unsubscribe` に送信
+
+この順により、ブラウザ側・サーバー側の両方で通知停止を同期します。
+
 
 ---
 
-### 3.2 Push Subscription の生成
+## 5. 設定画面の挙動
 
-Service Worker 登録後、Push Subscription を生成します。
+`/settings` のトグルでは:
 
-```ts
-registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: env.VITE_VAPID_PUBLIC_KEY })
-```
+- ON
+  - 許可確認 → 購読 → ローカル状態更新
+- OFF
+  - 購読解除 API 呼び出し → ローカル状態更新
+  - 同期失敗時は warning toast を表示
 
-- `applicationServerKey` には VAPID 公開鍵を指定します
-- 初回はブラウザの通知許可ダイアログが表示されます
-
----
-
-### 3.3 Subscription を API に送信
-
-生成した Subscription は API の `/push/subscribe` に送信します。
-
-`callBodyApi(pushSubscribeEndpoint, { userId, subscription })`
-
-- Subscription は `subscription.toJSON()` したものを送信します
-- DB への保存処理は API 側で行われます
 
 ---
 
-## 4. Push API クライアント
-
-Push 通知関連の API 呼び出しは
-`apps/web/src/lib/api/push.ts` にまとめています。
-
-- `enablePush(userId)`
-  - Service Worker を登録
-  - Push Subscription を生成
-  - `/push/subscribe` API を呼び出す
-- `sendPush(param)`
-  - `/push/send` API を呼び出す（主にテスト用）
-
----
-
-## 5. Service Worker の通知表示
-
-Service Worker では `push` イベントを受け取り、
-payload の内容をもとに通知を表示します。
+## 6. Service Worker の通知表示
+`apps/web/public/sw.js` では `push` イベントを受けて
+`self.registration.showNotification(...)` を呼び出します。
 
 - `data.title` を通知タイトルとして使用
 - `data.body` を通知本文として使用

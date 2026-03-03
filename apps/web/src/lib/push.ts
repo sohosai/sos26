@@ -69,8 +69,10 @@ export async function disablePushByPreference(): Promise<void> {
 	setSubscribedFlag(false);
 	try {
 		await disablePush();
-	} catch {
-		toast.error("Push通知の無効化に失敗しました");
+		toast.success("Push通知を無効にしました");
+	} catch (error) {
+		console.error(error);
+		toast.warning("Push通知を無効化しましたが、同期処理に失敗しました");
 	}
 }
 

@@ -40,10 +40,22 @@ export async function disablePush(): Promise<void> {
 	}
 
 	const endpoint = subscription.endpoint;
+	let unsubscribeError: unknown = null;
+
+	try {
+		await subscription.unsubscribe();
+	} catch (error) {
+		unsubscribeError = error;
+	}
+
 	await subscription.unsubscribe();
 	await callBodyApi(pushUnsubscribeEndpoint, {
 		endpoint,
 	} satisfies PushUnsubscribeRequest);
+
+	if (unsubscribeError) {
+		throw unsubscribeError;
+	}
 }
 
 /**
