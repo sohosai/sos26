@@ -1,4 +1,5 @@
-import { enablePush } from "@/lib/api/push";
+import { toast } from "sonner";
+import { disablePush, enablePush } from "./api/push";
 
 // ユーザーがPushを有効にしているか
 const PUSH_ENABLED_KEY = "sos26.push.enabled";
@@ -63,32 +64,42 @@ export function setPromptedFlag(prompted: boolean): void {
 	window.localStorage.setItem(PUSH_PROMPTED_KEY, String(prompted));
 }
 
-export function disablePushByPreference(): void {
+export async function disablePushByPreference(): Promise<void> {
 	setPushEnabledPreference(false);
 	setSubscribedFlag(false);
+	try {
+		await disablePush();
+	} catch {
+		toast.error("Push通知の無効化に失敗しました");
+	}
 }
 
 export async function enablePushByPreference(): Promise<boolean> {
-	if (!isPushSupported()) return false;
-	if (!getPushEnabledPreference()) return false;
-
-	if (Notification.permission === "denied") {
-		setPushEnabledPreference(false);
+	if (!isPushSupported()) {
+		toast.error("このブラウザはPush通知に対応していません");
 		return false;
 	}
 
-	if (Notification.permission === "default") {
-		const permission = await Notification.requestPermission();
+	try {
+		setPushEnabledPreference(true);
+
+		const permission = await ensurePushPermission();
 		if (permission !== "granted") {
-			if (permission === "denied") setPushEnabledPreference(false);
+			if (permission === "denied") {
+				setPushEnabledPreference(false);
+				toast.error("通知が拒否されています");
+			}
 			return false;
 		}
-	}
 
-	if (!getSubscribedFlag()) {
-		await enablePush();
-		setSubscribedFlag(true);
+		if (!getSubscribedFlag()) {
+			await enablePush();
+			setSubscribedFlag(true);
+		}
+		toast.success("Push通知を有効化しました");
+		return true;
+	} catch {
+		toast.error("Push通知の有効化に失敗しました");
+		return false;
 	}
-
-	return true;
 }

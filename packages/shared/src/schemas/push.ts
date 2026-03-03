@@ -34,6 +34,21 @@ export const pushSubscribeResponseSchema = z.object({
 });
 
 /**
+ * Push通知解除リクエスト
+ */
+export const pushUnsubscribeRequestSchema = z.object({
+	endpoint: z.url(),
+});
+
+export type PushUnsubscribeRequest = z.infer<
+	typeof pushUnsubscribeRequestSchema
+>;
+
+export const pushUnsubscribeResponseSchema = z.object({
+	ok: z.boolean(),
+});
+
+/**
  * Push通知で送信する payload
  */
 export const pushPayloadSchema = z.object({

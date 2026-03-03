@@ -1,18 +1,12 @@
 import { Card, Flex, Heading, Text } from "@radix-ui/themes";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { Switch } from "@/components/primitives";
-import { enablePush } from "@/lib/api/push";
 import { requireAuth } from "@/lib/auth";
 import {
 	disablePushByPreference,
-	ensurePushPermission,
+	enablePushByPreference,
 	getPushEnabledPreference,
-	getSubscribedFlag,
-	isPushSupported,
-	setPushEnabledPreference,
-	setSubscribedFlag,
 } from "@/lib/push";
 import styles from "./index.module.scss";
 
@@ -31,42 +25,13 @@ function SettingsPage() {
 	}, []);
 
 	const handleTogglePush = async (checked: boolean) => {
-		if (!isPushSupported()) {
-			toast.error("このブラウザはPush通知に対応していません");
-			return;
-		}
-
 		if (!checked) {
-			disablePushByPreference();
+			await disablePushByPreference();
 			setPushEnabled(false);
-			toast.success("Push通知を無効にしました（仮設定）");
-			return;
-		}
-
-		try {
-			setPushEnabledPreference(true);
-
-			const permission = await ensurePushPermission();
-			if (permission !== "granted") {
-				if (permission === "denied") {
-					setPushEnabledPreference(false);
-					toast.error("通知が拒否されています");
-				}
-				setPushEnabled(false);
-				return;
+		} else {
+			if (await enablePushByPreference()) {
+				setPushEnabled(true);
 			}
-
-			if (!getSubscribedFlag()) {
-				await enablePush();
-				setSubscribedFlag(true);
-			}
-
-			setPushEnabled(true);
-			toast.success("Push通知を有効化しました");
-		} catch (error) {
-			console.error(error);
-			setPushEnabled(false);
-			toast.error("Push通知の有効化に失敗しました");
 		}
 	};
 
