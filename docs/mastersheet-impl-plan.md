@@ -6,19 +6,32 @@
 
 ---
 
+## 残タスク一覧
+
+> Phase 0〜4・5-A・5-D は完了済み。以下が未実装。
+
+| # | タスク | Phase | 概要 |
+|---|--------|-------|------|
+| 1 | **FORM_ITEM「元に戻す」ボタン** | 5-B | オーバーライド済みセルに「元に戻す」ボタンを追加（編集自体は実装済み） |
+| 2 | **閲覧申請の承認 UI** | 5-C | ColumnPanel に届いた申請を表示し承認/却下できるようにする |
+| 3 | **編集履歴パネル** | 5-E | `CellHistoryPanel` を新規作成（`FormItemCell` にアイコン追加） |
+| 4 | **配信設定モーダル統合** | 6 | DataTable に `rowSelection` を追加し、配信先選択を置き換え |
+
+タスク 1〜3 は独立して着手可能。
+
+---
+
 ## フェーズ概要
 
 ```
-Phase 0: Enum リネーム
-Phase 1: DB スキーマ追加 + マイグレーション
-Phase 2: shared パッケージ 型定義・スキーマ追加
-Phase 3: API エンドポイント実装
-Phase 4: DataTable コンポーネント拡張
-Phase 5: マスターシートページ実装
-Phase 6: 配信設定モーダル統合（§8）
+Phase 0: Enum リネーム           ✅
+Phase 1: DB スキーマ追加          ✅
+Phase 2: shared 型定義            ✅
+Phase 3: API エンドポイント        ✅
+Phase 4: DataTable 拡張           ✅
+Phase 5: マスターシートページ      🔄 一部未完了（詳細は各 Sub-Phase 参照）
+Phase 6: 配信設定モーダル統合      ⬜ 未着手
 ```
-
-Phase 4 は Phase 3 と並行可能。それ以外は概ね順番に実施する。
 
 ---
 
@@ -394,18 +407,20 @@ TanStack Router の `search` 機能でテーブル状態（フィルター・ソ
 
 ## Phase 5: マスターシートページ実装
 
-### ルート構成
+### ルート構成（現状）
 
 ```
 apps/web/src/routes/committee/mastersheet/
-├── index.tsx                     # マスターシート本体ページ
+├── index.tsx                          # マスターシート本体ページ ✅
 └── -components/
-    ├── MastersheetTable.tsx      # DataTable ラッパー（動的カラム生成）✅
-    ├── FormItemCell.tsx          # FORM_ITEM セル表示コンポーネント ✅
-    ├── ColumnManagerDialog.tsx   # カラム追加・設定 UI
-    ├── ColumnDiscoverDialog.tsx  # カラム一覧・発見・閲覧申請
-    ├── CellHistoryPanel.tsx      # 編集履歴パネル
-    └── ViewSwitcher.tsx          # ビュー切替 UI
+    ├── MastersheetTable.tsx           # DataTable ラッパー（動的カラム生成）✅
+    ├── FormItemCell.tsx               # FORM_ITEM セル（表示 + 編集）✅（「元に戻す」ボタンは未対応）
+    ├── ViewTabs.tsx                   # ビュー切替タブ（メモリ上のみ）✅
+    ├── ColumnPanel.tsx                # カラム管理パネル ✅（承認 UI は未対応）
+    ├── AddFormItemColumnsDialog.tsx   # フォーム由来カラム追加 ✅
+    ├── AddCustomColumnDialog.tsx      # カスタムカラム追加 ✅
+    ├── ColumnDiscoverDialog.tsx       # カラム発見・閲覧申請 ✅
+    └── CellHistoryPanel.tsx          # 編集履歴パネル（未実装）
 ```
 
 ---
@@ -415,162 +430,146 @@ apps/web/src/routes/committee/mastersheet/
 **対応内容:**
 - `GET /committee/mastersheet/data` を loader で取得・表示
 - 固定6列（企画番号・企画名・種別・団体名・担当者・副担当者）
-- 動的カラム: `FORM_ITEM` → `FormItemCell`（表示のみ）、`CUSTOM TEXT/NUMBER` → `EditableCell`、`CUSTOM SELECT` → `SelectCell`、`CUSTOM MULTI_SELECT` → `MultiSelectCell`（表示のみ）
+- 動的カラム: `FORM_ITEM` → `FormItemCell`（表示のみ）、`CUSTOM TEXT/NUMBER` → `EditableCell`、`CUSTOM SELECT` → `SelectCell`、`CUSTOM MULTI_SELECT` → `MultiSelectEditCell`
 - `onCellEdit` 時に `PUT /cells/...` or `PUT /overrides/...` を呼び分け + `router.invalidate()`
 - `SelectCell` に `meta.selectOptions` サポートを追加
 - `ColumnMeta` に `formItemType` フィールドを追加
-
-**未対応（以降の Sub-Phase で対応）:**
-- FORM_ITEM セルの編集（override）
-- MULTI_SELECT の編集
-- カラム管理・発見 UI
-- 編集履歴
-- ビュー保存・URL 連動
+- `MultiSelectEditCell` 新規作成（Popover + Checkbox リスト、Escape でキャンセル）
 
 ---
 
-### Phase 5-B: FORM_ITEM セル インライン編集
+### Phase 5-B: FORM_ITEM「元に戻す」ボタン（未実装）
 
-**目的**: FORM_ITEM カラムを上書き（override）できるようにする。
+**現状:** TEXT/TEXTAREA/NUMBER のダブルクリック編集は実装済み。FILE/SELECT/CHECKBOX は表示のみ（仕様通り）。
+
+**目的**: オーバーライド済みセルから元の回答値に戻せるようにする。
 
 **対象ファイル:**
-- `FormItemCell.tsx` — EditableCell 相当のダブルクリック編集を組み込む
+- `FormItemCell.tsx` — OVERRIDDEN / STALE_OVERRIDE 状態のセルにボタンを追加
 
 **実装方針:**
-- `formItemType` が `TEXT` / `TEXTAREA` / `NUMBER` の場合のみ編集可能にする
-- ダブルクリックで `<input>` を表示し、Enter/blur でコミット
-- コミット時 `table.options.meta?.updateData(row, columnId, value)` を呼ぶ（既存の `onCellEdit` ルーティングが `upsertMastersheetOverride` を呼ぶ）
-- `FILE` / `SELECT` / `CHECKBOX` 型は引き続き表示のみ（別途対応検討）
-- オーバーライド済みの場合は「元に戻す（DELETE /overrides/...）」ボタンを追加検討
+- `FormItemCell` の `FormEditableCell` の隣（または下）に、`cell.status === "OVERRIDDEN" || cell.status === "STALE_OVERRIDE"` のときのみ「元に戻す」アイコンボタン（`IconRotateClockwise` 等）をホバーで表示
+- クリックで `deleteMastersheetOverride(columnId, projectId)` を呼び、`table.options.meta?.updateData(...)` で即時 UI 更新（または `router.invalidate()`）
 
-**考慮点:**
-- 編集中は status badge を非表示にする
-- `STALE_OVERRIDE` のとき編集を確定すると `isStale` がリセットされる（サーバー側で処理）
+**API（実装済み）:**
+- `DELETE /committee/mastersheet/overrides/:columnId/:projectId`
+
+**新規追加が必要な API クライアント関数:**
+- `deleteMastersheetOverride(columnId, projectId)` → `apps/web/src/lib/api/committee-mastersheet.ts`
 
 ---
 
-### Phase 5-C: ColumnManagerDialog（カラム管理）
+### Phase 5-C: ColumnPanel 拡張（閲覧申請の承認 UI）（未実装）
 
-**目的**: 自分が作成したカラムの追加・編集・削除ができる UI。
+**現状:** ColumnPanel にはカラム追加・編集・削除・カラム発見ダイアログは実装済み。ただし、**自分のカラムへの閲覧申請を承認/却下する UI がない**。
+
+**目的**: 自分が作成したカスタムカラムに届いた閲覧申請を確認・承認/却下できるようにする。
 
 **対象ファイル:**
-- `ColumnManagerDialog.tsx` — 新規作成
-- `index.tsx` — ツールバーに「カラムを管理」ボタンを追加
+- `ColumnPanel.tsx` — 自分のカラムリストに申請バッジと承認 UI を追加
+
+**実装方針:**
+
+`GET /committee/mastersheet/columns/discover` のレスポンスには申請情報が含まれていないため、カラムパネル用のデータ取得方法を検討する。
+
+方針 A（推奨）: `ColumnPanel` 初期化時に `GET /columns/discover` に自分のカラムのフィルタをかけて申請一覧を取得
+→ ただし現 API は申請情報を discover に含めていないため、API 側の変更が必要。
+
+方針 B: 既存の `GET /committee/mastersheet/data` レスポンスの `columns` に `pendingAccessRequests` フィールドを追加する。
+
+**推奨は方針 B**（追加 API 呼び出し不要、データの鮮度を保てる）:
+
+1. `GET /data` のレスポンス型 `GetMastersheetDataResponse` の `columns` に以下を追加:
+   ```typescript
+   pendingAccessRequests?: Array<{
+     id: string;
+     requester: { id: string; name: string };
+     createdAt: string;
+   }>;
+   ```
+   自分が作成したカラムのみ含める（他人のカラムは `[]`）。
+
+2. `ColumnPanel.tsx` の自分のカラムカード内に「N件の申請」バッジを追加:
+   ```
+   [カラム名]  [申請 2件▼]  [編集] [削除]
+   ```
+   クリックで申請一覧を展開し、各申請に [承認] [却下] ボタン。
+
+3. 承認/却下後 `router.invalidate()` で再取得。
+
+**API（実装済み）:**
+- `PATCH /committee/mastersheet/access-requests/:requestId`
+
+**新規追加が必要な API クライアント関数:**
+- `updateMastersheetAccessRequest(requestId, status)` → `apps/web/src/lib/api/committee-mastersheet.ts`
+
+**shared スキーマ変更（方針 B の場合）:**
+- `GetMastersheetDataResponse` の `columns` に `pendingAccessRequests` フィールドを追加
+- API 側 `GET /data` でカラム作成者のみ申請データを付加
+
+---
+
+### Phase 5-D: ColumnDiscoverDialog（カラム発見・閲覧申請）✅ **実装済み**
+
+**対応内容:**
+- `GET /columns/discover` で全公開カラム一覧を取得・表示
+- `hasAccess=true`: 「表示中」バッジ
+- `pendingRequest=true`: 「申請中」バッジ
+- それ以外: [閲覧申請] ボタン → `POST /columns/:columnId/access-request`
+- 申請後はローカル state を更新し「申請中」バッジに切り替え
+
+---
+
+### Phase 5-E: CellHistoryPanel（編集履歴）（未実装）
+
+**目的**: セルの編集履歴（誰がいつ何を変えたか）を確認できる UI。
+
+**対象ファイル:**
+- `CellHistoryPanel.tsx` — 新規作成（Popover）
+- `FormItemCell.tsx` — 履歴アイコン（`IconHistory`）を追加
 
 **UI 構成:**
 ```
-[カラムを管理] ボタン → ダイアログ
-  タブ: [自分のカラム一覧] [新規追加]
-
-  自分のカラム一覧タブ:
-    - カラム名・種別・公開設定を一覧表示
-    - 各行に [編集] [削除] アクション
-    - 編集: インラインフォームで name/description/sortOrder/visibility を変更
-    - 削除: 確認ダイアログ → DELETE /columns/:columnId
-
-  新規追加タブ:
-    - 種別選択: FORM_ITEM / CUSTOM
-    - FORM_ITEM: フォーム・項目のセレクタ
-    - CUSTOM: dataType・visibility・選択肢（SELECT/MULTI_SELECT の場合）
-    → POST /columns
+FormItemCell のホバー時に履歴アイコンを表示
+アイコンクリック → Popover
+  ヘッダー: 「編集履歴」
+  リスト（降順）:
+    ┌─────────────────────────────┐
+    │ 田中太郎  2026/02/25 14:30  │
+    │ 「未定」→「確定済み」         │
+    ├─────────────────────────────┤
+    │ 佐藤花子  2026/02/20 10:00  │
+    │ （初回入力）「未定」          │
+    └─────────────────────────────┘
+  履歴なし: 「編集履歴はありません」
 ```
 
-**API:**
-- `POST /committee/mastersheet/columns` → `createMastersheetColumn()`
-- `PATCH /committee/mastersheet/columns/:columnId` → `updateMastersheetColumn()`
-- `DELETE /committee/mastersheet/columns/:columnId` → `deleteMastersheetColumn()`
+**実装方針:**
+- `useState` で open/loading/data を管理（loader には含めない）
+- Popover open 時に `getMastersheetHistory(columnId, projectId)` を fetch
+- `oldValue` / `newValue` は JSON 文字列（サーバー側でシリアライズ済み）→ `JSON.parse` して表示
+- CUSTOM カラムの `EditableCell` にも同じアイコンを追加することを検討（後回し可）
 
-**完了後**: `router.invalidate()` でテーブルを再取得。
+**API（実装済み）:**
+- `GET /committee/mastersheet/columns/:columnId/history/:projectId`
+
+**新規追加が必要な API クライアント関数:**
+- `getMastersheetCellHistory(columnId, projectId)` → `apps/web/src/lib/api/committee-mastersheet.ts`
 
 ---
 
-### Phase 5-D: ColumnDiscoverDialog（カラム発見・閲覧申請）
+### Phase 5-F: ビュー保存 ✅ **実装済み**
 
-**目的**: 他ユーザーが作成した PUBLIC カラムを一覧表示し、閲覧申請を送れる UI。
-
-**対象ファイル:**
-- `ColumnDiscoverDialog.tsx` — 新規作成
-- `index.tsx` — ツールバーに「カラムを追加」ボタンを追加
-
-**UI 構成:**
-```
-[カラムを追加] ボタン → ダイアログ
-  - GET /columns/discover で全公開カラム一覧を取得
-  - カラム名・作成者・種別を一覧表示
-  - hasAccess=true: 「表示中」バッジ
-  - pendingRequest=true: 「申請中」バッジ
-  - それ以外: [閲覧申請] ボタン → POST /columns/:columnId/access-request
-```
-
-**API:**
-- `GET /committee/mastersheet/columns/discover` → `discoverMastersheetColumns()`
-- `POST /committee/mastersheet/columns/:columnId/access-request` → `createMastersheetAccessRequest()`
-
-**閲覧申請の承認 UI** は別途（通知経由 or 専用ページ）で対応。
+**対応内容:**
+- DB からビュー一覧取得・初期適用（ビューがなければ「ビュー1」を自動作成）
+- タブ切り替えでテーブル状態を復元
+- アクティブビューへの 1 秒デバウンス自動保存
+- タブ追加・リネーム・削除
+- ダーティマーク（未保存変更を `*` で表示）
 
 ---
 
-### Phase 5-E: CellHistoryPanel（編集履歴）
-
-**目的**: セルを右クリック（またはアイコンクリック）で編集履歴を表示する。
-
-**対象ファイル:**
-- `CellHistoryPanel.tsx` — 新規作成（Popover またはサイドパネル）
-- `FormItemCell.tsx` — 履歴アイコンを追加
-
-**UI 構成:**
-```
-セル右クリック or アイコンクリック → パネル表示
-  - GET /columns/:columnId/history/:projectId
-  - 編集日時・編集者・変更前後の値を降順リスト表示
-```
-
-**API:**
-- `GET /committee/mastersheet/columns/:columnId/history/:projectId` → `getMastersheetHistory()`
-
-**実装上の注意:**
-- 履歴取得は非同期（クリック時に fetch）なので TanStack Query または `useState` + `useEffect` で管理
-- loader には含めない（パフォーマンス上の理由）
-
----
-
-### Phase 5-F: ViewSwitcher（ビュー保存・URL 連動）
-
-**目的**: フィルター・ソート・表示カラムの状態を保存・復元できる UI。
-
-**対象ファイル:**
-- `ViewSwitcher.tsx` — 新規作成
-- `index.tsx` — URL search params でテーブル状態を管理
-- `MastersheetTable.tsx` — `initialSorting` / `initialColumnVisibility` を props で受け取る
-
-**Phase 5-F-1: URL 連動**
-- TanStack Router の `validateSearch` で `{ sorting, filters, columns }` を URL クエリに保持
-- ページリロード・URL 共有でも同じ表示状態を再現
-
-**Phase 5-F-2: ビュー保存**
-```
-[ビュー保存] ボタン → 名前入力 → POST /views
-[ビュー切替] ドロップダウン → GET /views で一覧 → 選択で状態を適用
-[ビュー削除] → DELETE /views/:viewId
-```
-
-**API:**
-- `GET /committee/mastersheet/views` → `listMastersheetViews()`
-- `POST /committee/mastersheet/views` → `createMastersheetView()`
-- `DELETE /committee/mastersheet/views/:viewId` → `deleteMastersheetView()`
-
-**state のシリアライズ形式（DB 保存用）:**
-```json
-{
-  "columnVisibility": { "colId1": false },
-  "sorting": [{ "id": "colId2", "desc": true }],
-  "columnFilters": [{ "id": "colId3", "value": "..." }]
-}
-```
-
----
-
-## Phase 6: 配信設定モーダル統合
+## Phase 6: 配信設定モーダル統合（未実装）
 
 お知らせ・フォームの配信先選択 UI をマスターシートで実現する。
 
@@ -578,6 +577,15 @@ apps/web/src/routes/committee/mastersheet/
 
 - `apps/web/src/routes/committee/notices/$noticeId/` — 配信申請フローの企画選択部分
 - `apps/web/src/routes/committee/forms/$formId/` — 同上
+
+### 前提条件
+
+DataTable に `rowSelection` 機能を追加する必要がある（現在未実装）。
+
+**DataTable 変更内容:**
+- `features.rowSelection?: boolean` を追加
+- `rowSelection=true` 時は `selection`（セル選択）を無効化し、代わりに行頭チェックボックスを追加
+- `onSelectionChange?: (selectedIds: string[]) => void` prop を追加
 
 ### 実装方針
 
@@ -589,6 +597,11 @@ apps/web/src/routes/committee/mastersheet/
   onSelectionChange={(selectedProjectIds) => setDeliveryTargets(selectedProjectIds)}
 />
 ```
+
+**実装ステップ:**
+1. `DataTable` に `rowSelection` feature を追加（TanStack Table の `useRowSelection` を利用）
+2. `MastersheetTable` に `onSelectionChange` prop を追加
+3. 配信申請フローの企画選択部分を `MastersheetTable` に置き換え
 
 ---
 
