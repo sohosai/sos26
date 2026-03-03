@@ -1,8 +1,9 @@
-import { Text } from "@radix-ui/themes";
+import { Text, Tooltip } from "@radix-ui/themes";
 import type {
 	GetMastersheetDataResponse,
 	UpsertMastersheetCellRequest,
 } from "@sos26/shared";
+import { IconFileText, IconPencil } from "@tabler/icons-react";
 import { useRouter } from "@tanstack/react-router";
 import {
 	type ColumnDef,
@@ -44,6 +45,29 @@ type Props = {
 };
 
 const columnHelper = createColumnHelper<MastersheetRow>();
+
+function ColHeader({ col }: { col: ApiColumn }) {
+	return (
+		<span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+			{col.type === "FORM_ITEM" ? (
+				<Tooltip content="フォーム由来カラム">
+					<IconFileText
+						size={12}
+						style={{ color: "var(--gray-8)", flexShrink: 0 }}
+					/>
+				</Tooltip>
+			) : (
+				<Tooltip content="カスタムカラム">
+					<IconPencil
+						size={12}
+						style={{ color: "var(--gray-8)", flexShrink: 0 }}
+					/>
+				</Tooltip>
+			)}
+			{col.name}
+		</span>
+	);
+}
 
 // biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
 const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
@@ -97,7 +121,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 	if (col.type === "FORM_ITEM") {
 		return columnHelper.accessor(row => row.cells[col.id] ?? null, {
 			id: col.id,
-			header: col.name,
+			header: () => <ColHeader col={col} />,
 			cell: FormItemCell,
 			meta: { formItemType: col.formItemType ?? undefined },
 		});
@@ -108,7 +132,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 			row => row.cells[col.id]?.cellValue?.selectedOptionIds?.[0] ?? "",
 			{
 				id: col.id,
-				header: col.name,
+				header: () => <ColHeader col={col} />,
 				cell: SelectCell,
 				meta: {
 					editable: true,
@@ -126,7 +150,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 			row => row.cells[col.id]?.cellValue?.selectedOptionIds ?? [],
 			{
 				id: col.id,
-				header: col.name,
+				header: () => <ColHeader col={col} />,
 				cell: MultiSelectCell,
 				meta: {
 					selectOptions: col.options.map(o => ({
@@ -143,7 +167,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 			row => row.cells[col.id]?.cellValue?.numberValue?.toString() ?? "",
 			{
 				id: col.id,
-				header: col.name,
+				header: () => <ColHeader col={col} />,
 				cell: EditableCell,
 				meta: { editable: true, type: "number" },
 			}
@@ -155,7 +179,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 		row => row.cells[col.id]?.cellValue?.textValue ?? "",
 		{
 			id: col.id,
-			header: col.name,
+			header: () => <ColHeader col={col} />,
 			cell: EditableCell,
 			meta: { editable: true, type: "text" },
 		}
