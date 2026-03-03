@@ -19,8 +19,28 @@
 }
 
 .sectionHeader {
-	display: block;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
 	padding: var(--space-1) 0;
+	background: none;
+	border: none;
+	cursor: pointer;
+	border-radius: var(--radius-1);
+
+	&:hover {
+		background: var(--gray-2);
+	}
+
+	.chevron {
+		transition: transform 0.15s;
+		color: var(--gray-8);
+
+		&.closed {
+			transform: rotate(-90deg);
+		}
+	}
 }
 
 .separator {

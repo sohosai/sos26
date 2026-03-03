@@ -12,6 +12,7 @@ import type {
 	MastersheetViewerInput,
 } from "@sos26/shared";
 import {
+	IconChevronDown,
 	IconEdit,
 	IconPlus,
 	IconSearch,
@@ -19,6 +20,7 @@ import {
 	IconX,
 } from "@tabler/icons-react";
 import type { VisibilityState } from "@tanstack/react-table";
+import type React from "react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button, IconButton, TextField } from "@/components/primitives";
@@ -48,6 +50,52 @@ const DATA_TYPE_LABEL: Record<string, string> = {
 	SELECT: "単一選択",
 	MULTI_SELECT: "複数選択",
 };
+
+const FIXED_COLUMNS = [
+	{ id: "number", name: "企画番号" },
+	{ id: "name", name: "企画名" },
+	{ id: "type", name: "種別" },
+	{ id: "organizationName", name: "団体名" },
+	{ id: "ownerName", name: "担当者" },
+	{ id: "subOwnerName", name: "副担当者" },
+];
+
+// ─────────────────────────────────────────────────────────────
+// 固定カラム行（トグルのみ、編集・削除なし）
+// ─────────────────────────────────────────────────────────────
+
+function FixedColumnRow({
+	col,
+	isVisible,
+	onToggle,
+}: {
+	col: { id: string; name: string };
+	isVisible: boolean;
+	onToggle: (visible: boolean) => void;
+}) {
+	return (
+		<div className={styles.columnCard}>
+			<div className={styles.cardTop}>
+				<div className={styles.cardContent}>
+					<div className={styles.cardTitleRow}>
+						<div className={styles.cardName}>
+							<Text size="2" weight="medium" truncate>
+								{col.name}
+							</Text>
+						</div>
+						<Button
+							size="1"
+							intent={isVisible ? "secondary" : "primary"}
+							onClick={() => onToggle(!isVisible)}
+						>
+							{isVisible ? "非表示にする" : "表示する"}
+						</Button>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}
 
 // ─────────────────────────────────────────────────────────────
 // カラム編集フォーム
@@ -333,11 +381,57 @@ function RequestableColumnRow({
 // セクションヘッダー
 // ─────────────────────────────────────────────────────────────
 
-function SectionHeader({ label, count }: { label: string; count: number }) {
+function SectionHeader({
+	label,
+	count,
+	isOpen,
+	onToggle,
+}: {
+	label: string;
+	count: number;
+	isOpen: boolean;
+	onToggle: () => void;
+}) {
 	return (
-		<Text size="1" weight="bold" color="gray" className={styles.sectionHeader}>
-			{label} · {count}件
-		</Text>
+		<button type="button" className={styles.sectionHeader} onClick={onToggle}>
+			<Text size="1" weight="bold" color="gray">
+				{label} · {count}件
+			</Text>
+			<IconChevronDown
+				size={12}
+				className={`${styles.chevron} ${isOpen ? "" : styles.closed}`}
+			/>
+		</button>
+	);
+}
+
+// ─────────────────────────────────────────────────────────────
+// アコーディオンセクション
+// ─────────────────────────────────────────────────────────────
+
+function Section({
+	label,
+	count,
+	isOpen,
+	onToggle,
+	children,
+}: {
+	label: string;
+	count: number;
+	isOpen: boolean;
+	onToggle: () => void;
+	children: React.ReactNode;
+}) {
+	return (
+		<>
+			<SectionHeader
+				label={label}
+				count={count}
+				isOpen={isOpen}
+				onToggle={onToggle}
+			/>
+			{isOpen && children}
+		</>
 	);
 }
 
@@ -368,6 +462,16 @@ export function ColumnPanel({
 	const [requesting, setRequesting] = useState<Set<string>>(new Set());
 	const [addCustomOpen, setAddCustomOpen] = useState(false);
 	const [addFormItemOpen, setAddFormItemOpen] = useState(false);
+	const [sectionsOpen, setSectionsOpen] = useState({
+		fixed: true,
+		visible: true,
+		hidden: true,
+		requestable: true,
+	});
+
+	function toggleSection(key: keyof typeof sectionsOpen) {
+		setSectionsOpen(prev => ({ ...prev, [key]: !prev[key] }));
+	}
 
 	useEffect(() => {
 		if (!open) return;
@@ -399,6 +503,9 @@ export function ColumnPanel({
 	}
 
 	const query = searchText.toLowerCase();
+	const filteredFixedColumns = FIXED_COLUMNS.filter(
+		c => !query || c.name.includes(query)
+	);
 	const filteredColumns = query
 		? columns.filter(c => c.name.toLowerCase().includes(query))
 		: columns;
@@ -415,6 +522,7 @@ export function ColumnPanel({
 
 	const isEmpty =
 		!discoverLoading &&
+		filteredFixedColumns.length === 0 &&
 		visibleColumns.length === 0 &&
 		hiddenColumns.length === 0 &&
 		requestable.length === 0;
@@ -468,9 +576,38 @@ export function ColumnPanel({
 							</Text>
 						)}
 
-						{visibleColumns.length > 0 && (
+						{filteredFixedColumns.length > 0 && (
 							<>
-								<SectionHeader label="表示中" count={visibleColumns.length} />
+								<Section
+									label="基本カラム"
+									count={filteredFixedColumns.length}
+									isOpen={sectionsOpen.fixed}
+									onToggle={() => toggleSection("fixed")}
+								>
+									{filteredFixedColumns.map(col => (
+										<FixedColumnRow
+											key={col.id}
+											col={col}
+											isVisible={columnVisibility[col.id] !== false}
+											onToggle={v => onToggleColumn(col.id, v)}
+										/>
+									))}
+								</Section>
+								{(visibleColumns.length > 0 ||
+									hiddenColumns.length > 0 ||
+									(!discoverLoading && requestable.length > 0)) && (
+									<Separator size="4" className={styles.separator} />
+								)}
+							</>
+						)}
+
+						{visibleColumns.length > 0 && (
+							<Section
+								label="表示中"
+								count={visibleColumns.length}
+								isOpen={sectionsOpen.visible}
+								onToggle={() => toggleSection("visible")}
+							>
 								{visibleColumns.map(col => (
 									<AccessibleColumnRow
 										key={col.id}
@@ -480,7 +617,7 @@ export function ColumnPanel({
 										onSuccess={onSuccess}
 									/>
 								))}
-							</>
+							</Section>
 						)}
 
 						{hiddenColumns.length > 0 && (
@@ -488,16 +625,22 @@ export function ColumnPanel({
 								{visibleColumns.length > 0 && (
 									<Separator size="4" className={styles.separator} />
 								)}
-								<SectionHeader label="非表示" count={hiddenColumns.length} />
-								{hiddenColumns.map(col => (
-									<AccessibleColumnRow
-										key={col.id}
-										col={col}
-										isVisible={false}
-										onToggle={v => onToggleColumn(col.id, v)}
-										onSuccess={onSuccess}
-									/>
-								))}
+								<Section
+									label="非表示"
+									count={hiddenColumns.length}
+									isOpen={sectionsOpen.hidden}
+									onToggle={() => toggleSection("hidden")}
+								>
+									{hiddenColumns.map(col => (
+										<AccessibleColumnRow
+											key={col.id}
+											col={col}
+											isVisible={false}
+											onToggle={v => onToggleColumn(col.id, v)}
+											onSuccess={onSuccess}
+										/>
+									))}
+								</Section>
 							</>
 						)}
 
@@ -506,15 +649,21 @@ export function ColumnPanel({
 								{(visibleColumns.length > 0 || hiddenColumns.length > 0) && (
 									<Separator size="4" className={styles.separator} />
 								)}
-								<SectionHeader label="参加可能" count={requestable.length} />
-								{requestable.map(col => (
-									<RequestableColumnRow
-										key={col.id}
-										col={col}
-										requesting={requesting.has(col.id)}
-										onRequest={() => handleRequest(col.id)}
-									/>
-								))}
+								<Section
+									label="参加可能"
+									count={requestable.length}
+									isOpen={sectionsOpen.requestable}
+									onToggle={() => toggleSection("requestable")}
+								>
+									{requestable.map(col => (
+										<RequestableColumnRow
+											key={col.id}
+											col={col}
+											requesting={requesting.has(col.id)}
+											onRequest={() => handleRequest(col.id)}
+										/>
+									))}
+								</Section>
 							</>
 						)}
 

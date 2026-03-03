@@ -22,6 +22,15 @@ export const Route = createFileRoute("/committee/mastersheet/")({
 	component: MastersheetPage,
 });
 
+const FIXED_COLUMN_IDS = [
+	"number",
+	"name",
+	"type",
+	"organizationName",
+	"ownerName",
+	"subOwnerName",
+] as const;
+
 function MastersheetPage() {
 	const { columns, rows } = Route.useLoaderData();
 	const router = useRouter();
@@ -58,9 +67,14 @@ function MastersheetPage() {
 		const savedVisibility = viewState.columnVisibility ?? {};
 		const knownIds = new Set(viewState.knownColumnIds ?? []);
 		const completeVisibility: VisibilityState = {};
+		// 固定カラム：knownColumnIds 未収録でもデフォルト表示
+		for (const id of FIXED_COLUMN_IDS) {
+			completeVisibility[id] = knownIds.has(id)
+				? (savedVisibility[id] ?? true)
+				: true;
+		}
+		// 動的カラム：knownColumnIds 未収録はビュー作成後に追加されたものなので非表示
 		for (const col of columns) {
-			// knownColumnIds に含まれていれば保存値を使用（デフォルト: 表示）
-			// 含まれていなければ、このビュー作成後に追加されたカラムなので非表示
 			completeVisibility[col.id] = knownIds.has(col.id)
 				? (savedVisibility[col.id] ?? true)
 				: false;
@@ -92,7 +106,7 @@ function MastersheetPage() {
 				currentState={{
 					sorting,
 					columnVisibility,
-					knownColumnIds: columns.map(c => c.id),
+					knownColumnIds: [...FIXED_COLUMN_IDS, ...columns.map(c => c.id)],
 				}}
 				onSelectView={handleSelectView}
 				onActiveViewIdChange={handleActiveViewIdChange}
