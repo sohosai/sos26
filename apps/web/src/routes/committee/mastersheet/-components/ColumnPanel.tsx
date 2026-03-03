@@ -8,6 +8,7 @@ import {
 import type {
 	DiscoverMastersheetColumnsResponse,
 	GetMastersheetDataResponse,
+	ListMastersheetAccessRequestsResponse,
 	MastersheetViewerInput,
 } from "@sos26/shared";
 import {
@@ -28,6 +29,8 @@ import {
 	createMastersheetAccessRequest,
 	deleteMastersheetColumn,
 	discoverMastersheetColumns,
+	listMastersheetAccessRequests,
+	updateMastersheetAccessRequest,
 	updateMastersheetColumn,
 } from "@/lib/api/committee-mastersheet";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
@@ -42,6 +45,7 @@ import styles from "./ColumnPanel.module.scss";
 
 type ApiColumn = GetMastersheetDataResponse["columns"][number];
 type DiscoverColumn = DiscoverMastersheetColumnsResponse["columns"][number];
+type AccessRequest = ListMastersheetAccessRequestsResponse["requests"][number];
 
 const DATA_TYPE_LABEL: Record<string, string> = {
 	TEXT: "テキスト",
@@ -194,6 +198,8 @@ type AccessibleColumnRowProps = {
 	isVisible: boolean;
 	onToggle: (visible: boolean) => void;
 	onSuccess: () => void;
+	accessRequests: AccessRequest[];
+	onRequestHandled: (id: string) => void;
 };
 
 function AccessibleColumnRow({
@@ -201,10 +207,16 @@ function AccessibleColumnRow({
 	isVisible,
 	onToggle,
 	onSuccess,
+	accessRequests,
+	onRequestHandled,
 }: AccessibleColumnRowProps) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [confirmingDelete, setConfirmingDelete] = useState(false);
 	const [deleteLoading, setDeleteLoading] = useState(false);
+	const [showRequests, setShowRequests] = useState(false);
+	const [requestLoading, setRequestLoading] = useState<Set<string>>(new Set());
+
+	const colRequests = accessRequests.filter(r => r.columnId === col.id);
 
 	async function handleDelete() {
 		setDeleteLoading(true);
@@ -216,6 +228,28 @@ function AccessibleColumnRow({
 			toast.error(isClientError(error) ? error.message : "削除に失敗しました");
 		} finally {
 			setDeleteLoading(false);
+		}
+	}
+
+	async function handleDecide(
+		requestId: string,
+		status: "APPROVED" | "REJECTED"
+	) {
+		setRequestLoading(prev => new Set(prev).add(requestId));
+		try {
+			await updateMastersheetAccessRequest(requestId, status);
+			onRequestHandled(requestId);
+			if (status === "APPROVED") {
+				onSuccess();
+			}
+		} catch (error) {
+			toast.error(isClientError(error) ? error.message : "操作に失敗しました");
+		} finally {
+			setRequestLoading(prev => {
+				const next = new Set(prev);
+				next.delete(requestId);
+				return next;
+			});
 		}
 	}
 
@@ -241,6 +275,23 @@ function AccessibleColumnRow({
 							</Badge>
 						</div>
 						<div className={styles.cardRight}>
+							{colRequests.length > 0 && !confirmingDelete && (
+								<button
+									type="button"
+									className={styles.requestBadgeBtn}
+									onClick={() => setShowRequests(p => !p)}
+								>
+									<Badge color="orange">
+										{colRequests.length}件の申請
+										<IconChevronDown
+											size={10}
+											style={{
+												transform: showRequests ? "rotate(180deg)" : undefined,
+											}}
+										/>
+									</Badge>
+								</button>
+							)}
 							{col.isOwner && !confirmingDelete && (
 								<div className={styles.ownerActions}>
 									<IconButton
@@ -296,6 +347,33 @@ function AccessibleColumnRow({
 									キャンセル
 								</Button>
 							</div>
+						</div>
+					)}
+					{showRequests && colRequests.length > 0 && (
+						<div className={styles.requestList}>
+							{colRequests.map(req => (
+								<div key={req.id} className={styles.requestRow}>
+									<Text size="2">{req.requester.name}</Text>
+									<div className={styles.requestRowActions}>
+										<Button
+											size="1"
+											intent="primary"
+											loading={requestLoading.has(req.id)}
+											onClick={() => handleDecide(req.id, "APPROVED")}
+										>
+											承認
+										</Button>
+										<Button
+											size="1"
+											intent="danger"
+											loading={requestLoading.has(req.id)}
+											onClick={() => handleDecide(req.id, "REJECTED")}
+										>
+											却下
+										</Button>
+									</div>
+								</div>
+							))}
 						</div>
 					)}
 				</div>
@@ -458,6 +536,7 @@ export function ColumnPanel({
 	const [searchText, setSearchText] = useState("");
 	const [discoverLoading, setDiscoverLoading] = useState(false);
 	const [discoverColumns, setDiscoverColumns] = useState<DiscoverColumn[]>([]);
+	const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
 	const [requesting, setRequesting] = useState<Set<string>>(new Set());
 	const [addCustomOpen, setAddCustomOpen] = useState(false);
 	const [addFormItemOpen, setAddFormItemOpen] = useState(false);
@@ -481,6 +560,17 @@ export function ColumnPanel({
 			.catch(() => toast.error("カラム一覧の取得に失敗しました"))
 			.finally(() => setDiscoverLoading(false));
 	}, [open]);
+
+	useEffect(() => {
+		if (!open) return;
+		listMastersheetAccessRequests()
+			.then(res => setAccessRequests(res.requests))
+			.catch(() => {});
+	}, [open]);
+
+	function handleRequestHandled(id: string) {
+		setAccessRequests(prev => prev.filter(r => r.id !== id));
+	}
 
 	async function handleRequest(columnId: string) {
 		setRequesting(prev => new Set(prev).add(columnId));
@@ -615,6 +705,8 @@ export function ColumnPanel({
 										isVisible={true}
 										onToggle={v => onToggleColumn(col.id, v)}
 										onSuccess={onSuccess}
+										accessRequests={accessRequests}
+										onRequestHandled={handleRequestHandled}
 									/>
 								))}
 							</Section>
@@ -638,6 +730,8 @@ export function ColumnPanel({
 											isVisible={false}
 											onToggle={v => onToggleColumn(col.id, v)}
 											onSuccess={onSuccess}
+											accessRequests={accessRequests}
+											onRequestHandled={handleRequestHandled}
 										/>
 									))}
 								</Section>

@@ -371,6 +371,24 @@ export type UpdateMastersheetAccessRequestResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
+// GET /committee/mastersheet/access-requests
+// ─────────────────────────────────────────────────────────────
+
+export const listMastersheetAccessRequestsResponseSchema = z.object({
+	requests: z.array(
+		z.object({
+			id: z.string(),
+			columnId: z.string(),
+			requester: z.object({ id: z.string(), name: z.string() }),
+			createdAt: z.coerce.date(),
+		})
+	),
+});
+export type ListMastersheetAccessRequestsResponse = z.infer<
+	typeof listMastersheetAccessRequestsResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
 // GET /committee/mastersheet/views
 // ─────────────────────────────────────────────────────────────
 

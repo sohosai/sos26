@@ -1006,6 +1006,57 @@ committeeMastersheetRoute.get(
 // POST /committee/mastersheet/columns/:columnId/access-request
 // ─────────────────────────────────────────────────────────────
 
+/** FORM_ITEM カラムへの閲覧申請（PENDING）を作成 */
+async function createFormItemAccessRequest(
+	columnId: string,
+	formId: string,
+	userId: string
+) {
+	const form = await prisma.form.findFirst({
+		where: { id: formId, deletedAt: null },
+		include: { collaborators: { where: { deletedAt: null } } },
+	});
+	if (!form) throw Errors.notFound("フォームが見つかりません");
+
+	const hasAccess =
+		form.ownerId === userId ||
+		form.collaborators.some(c => c.userId === userId);
+	if (hasAccess) throw Errors.alreadyExists("既にアクセス権があります");
+
+	const pending = await prisma.mastersheetAccessRequest.findFirst({
+		where: { columnId, requesterId: userId, status: "PENDING" },
+	});
+	if (pending) throw Errors.alreadyExists("既に申請中です");
+
+	await prisma.mastersheetAccessRequest.create({
+		data: { columnId, requesterId: userId, status: "PENDING" },
+	});
+}
+
+/** CUSTOM カラムへの閲覧申請（PENDING）を作成 */
+async function createCustomAccessRequest(
+	col: ColumnFull,
+	columnId: string,
+	userId: string
+) {
+	if (col.createdById === userId)
+		throw Errors.alreadyExists("既にアクセス権があります");
+
+	const viewerEntry = col.viewers.find(
+		v => v.scope === "ALL" || (v.scope === "INDIVIDUAL" && v.userId === userId)
+	);
+	if (viewerEntry) throw Errors.alreadyExists("既にアクセス権があります");
+
+	const pending = await prisma.mastersheetAccessRequest.findFirst({
+		where: { columnId, requesterId: userId, status: "PENDING" },
+	});
+	if (pending) throw Errors.alreadyExists("既に申請中です");
+
+	await prisma.mastersheetAccessRequest.create({
+		data: { columnId, requesterId: userId, status: "PENDING" },
+	});
+}
+
 committeeMastersheetRoute.post(
 	"/columns/:columnId/access-request",
 	requireAuth,
@@ -1020,55 +1071,9 @@ committeeMastersheetRoute.post(
 
 		if (col.type === "FORM_ITEM") {
 			if (!col.formItem) throw Errors.notFound("フォーム項目が見つかりません");
-
-			// FORM_ITEM: 即時 FormCollaborator 作成（isWrite=false）
-			const form = await prisma.form.findFirst({
-				where: { id: col.formItem.formId, deletedAt: null },
-			});
-			if (!form) throw Errors.notFound("フォームが見つかりません");
-
-			const existing = await prisma.formCollaborator.findFirst({
-				where: { formId: col.formItem.formId, userId, deletedAt: null },
-			});
-			if (existing || form.ownerId === userId) {
-				throw Errors.alreadyExists("既にアクセス権があります");
-			}
-
-			await prisma.formCollaborator.upsert({
-				where: {
-					formId_userId: { formId: col.formItem.formId, userId },
-				},
-				create: {
-					formId: col.formItem.formId,
-					userId,
-					isWrite: false,
-				},
-				update: { deletedAt: null },
-			});
+			await createFormItemAccessRequest(columnId, col.formItem.formId, userId);
 		} else {
-			// CUSTOM: MastersheetAccessRequest を作成
-			const pending = await prisma.mastersheetAccessRequest.findFirst({
-				where: { columnId, requesterId: userId, status: "PENDING" },
-			});
-			if (pending) throw Errors.alreadyExists("既に申請中です");
-
-			// 既にアクセス権があるかチェック
-			if (col.createdById === userId) {
-				throw Errors.alreadyExists("既にアクセス権があります");
-			}
-			const viewerEntry = col.viewers.find(
-				v =>
-					v.scope === "ALL" || (v.scope === "INDIVIDUAL" && v.userId === userId)
-			);
-			if (viewerEntry) throw Errors.alreadyExists("既にアクセス権があります");
-
-			await prisma.mastersheetAccessRequest.create({
-				data: {
-					columnId,
-					requesterId: userId,
-					status: "PENDING",
-				},
-			});
+			await createCustomAccessRequest(col, columnId, userId);
 		}
 
 		return c.json({ success: true as const }, 201);
@@ -1097,11 +1102,26 @@ committeeMastersheetRoute.patch(
 			async tx => {
 				const request = await tx.mastersheetAccessRequest.findFirst({
 					where: { id: requestId },
-					include: { column: true },
+					include: {
+						column: {
+							include: {
+								formItem: {
+									include: { form: { select: { ownerId: true } } },
+								},
+							},
+						},
+					},
 				});
 				if (!request) throw Errors.notFound("申請が見つかりません");
-				if (request.column.createdById !== userId)
+
+				// 権限チェック（種別によって承認者が異なる）
+				const canDecide =
+					request.column.type === "FORM_ITEM"
+						? request.column.formItem?.form.ownerId === userId
+						: request.column.createdById === userId;
+				if (!canDecide)
 					throw Errors.forbidden("この申請を操作する権限がありません");
+
 				if (request.status !== "PENDING")
 					throw Errors.invalidRequest("この申請は既に処理済みです");
 
@@ -1111,19 +1131,76 @@ committeeMastersheetRoute.patch(
 				});
 
 				if (status === "APPROVED") {
-					await tx.mastersheetColumnViewer.create({
-						data: {
-							columnId: request.columnId,
-							scope: "INDIVIDUAL",
-							userId: request.requesterId,
-						},
-					});
+					if (request.column.type === "FORM_ITEM" && request.column.formItem) {
+						// FORM_ITEM: FormCollaborator を作成（isWrite=false）
+						await tx.formCollaborator.upsert({
+							where: {
+								formId_userId: {
+									formId: request.column.formItem.formId,
+									userId: request.requesterId,
+								},
+							},
+							create: {
+								formId: request.column.formItem.formId,
+								userId: request.requesterId,
+								isWrite: false,
+							},
+							update: { deletedAt: null },
+						});
+					} else {
+						// CUSTOM: MastersheetColumnViewer を作成
+						await tx.mastersheetColumnViewer.create({
+							data: {
+								columnId: request.columnId,
+								scope: "INDIVIDUAL",
+								userId: request.requesterId,
+							},
+						});
+					}
 				}
 			},
 			{ isolationLevel: "Serializable" }
 		);
 
 		return c.json({ success: true as const });
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// GET /committee/mastersheet/access-requests
+// 自分が承認権限を持つ PENDING 申請一覧
+// ─────────────────────────────────────────────────────────────
+
+committeeMastersheetRoute.get(
+	"/access-requests",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const userId = c.get("user").id;
+		const requests = await prisma.mastersheetAccessRequest.findMany({
+			where: {
+				status: "PENDING",
+				OR: [
+					{ column: { type: "CUSTOM", createdById: userId } },
+					{
+						column: {
+							type: "FORM_ITEM",
+							formItem: { form: { ownerId: userId } },
+						},
+					},
+				],
+			},
+			include: { requester: { select: { id: true, name: true } } },
+			orderBy: { createdAt: "asc" },
+		});
+		return c.json({
+			requests: requests.map(r => ({
+				id: r.id,
+				columnId: r.columnId,
+				requester: r.requester,
+				createdAt: r.createdAt,
+			})),
+		});
 	}
 );
 

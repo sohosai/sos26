@@ -15,8 +15,12 @@ import {
 	discoverMastersheetColumnsEndpoint,
 	type GetMastersheetDataResponse,
 	getMastersheetDataEndpoint,
+	type ListMastersheetAccessRequestsResponse,
 	type ListMastersheetViewsResponse,
+	listMastersheetAccessRequestsEndpoint,
 	listMastersheetViewsEndpoint,
+	type UpdateMastersheetAccessRequestRequest,
+	type UpdateMastersheetAccessRequestResponse,
 	type UpdateMastersheetColumnRequest,
 	type UpdateMastersheetColumnResponse,
 	type UpdateMastersheetViewRequest,
@@ -25,6 +29,7 @@ import {
 	type UpsertMastersheetCellResponse,
 	type UpsertMastersheetOverrideRequest,
 	type UpsertMastersheetOverrideResponse,
+	updateMastersheetAccessRequestEndpoint,
 	updateMastersheetColumnEndpoint,
 	updateMastersheetViewEndpoint,
 	upsertMastersheetCellEndpoint,
@@ -121,6 +126,31 @@ export async function createMastersheetAccessRequest(
 	return callNoBodyApi(createMastersheetAccessRequestEndpoint, {
 		pathParams: { columnId },
 	});
+}
+
+/**
+ * GET /committee/mastersheet/access-requests
+ * 自分が承認権限を持つ PENDING 申請一覧
+ */
+export async function listMastersheetAccessRequests(): Promise<ListMastersheetAccessRequestsResponse> {
+	return callGetApi(listMastersheetAccessRequestsEndpoint);
+}
+
+/**
+ * PATCH /committee/mastersheet/access-requests/:requestId
+ * 閲覧申請を承認・却下
+ */
+export async function updateMastersheetAccessRequest(
+	requestId: string,
+	status: UpdateMastersheetAccessRequestRequest["status"]
+): Promise<UpdateMastersheetAccessRequestResponse> {
+	return callBodyApi(
+		updateMastersheetAccessRequestEndpoint,
+		{ status },
+		{
+			pathParams: { requestId },
+		}
+	);
 }
 
 /**

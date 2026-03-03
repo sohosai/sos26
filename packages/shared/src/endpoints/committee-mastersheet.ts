@@ -10,6 +10,7 @@ import {
 	discoverMastersheetColumnsResponseSchema,
 	getMastersheetDataResponseSchema,
 	getMastersheetHistoryResponseSchema,
+	listMastersheetAccessRequestsResponseSchema,
 	listMastersheetViewsResponseSchema,
 	mastersheetAccessRequestIdPathParamsSchema,
 	mastersheetColumnIdPathParamsSchema,
@@ -249,11 +250,33 @@ export const createMastersheetAccessRequestEndpoint: NoBodyEndpoint<
 } as const;
 
 /**
+ * GET /committee/mastersheet/access-requests
+ * 自分が承認権限を持つ PENDING 申請一覧
+ *
+ * - CUSTOM: カラム作成者
+ * - FORM_ITEM: フォームオーナー
+ */
+export const listMastersheetAccessRequestsEndpoint: GetEndpoint<
+	"/committee/mastersheet/access-requests",
+	undefined,
+	undefined,
+	typeof listMastersheetAccessRequestsResponseSchema
+> = {
+	method: "GET",
+	path: "/committee/mastersheet/access-requests",
+	pathParams: undefined,
+	query: undefined,
+	request: undefined,
+	response: listMastersheetAccessRequestsResponseSchema,
+} as const;
+
+/**
  * PATCH /committee/mastersheet/access-requests/:requestId
  * 閲覧申請を承認・却下
  *
- * - カラム管理者のみ
- * - APPROVED 時は MastersheetColumnViewer を作成して権限付与
+ * - CUSTOM: カラム作成者のみ
+ * - FORM_ITEM: フォームオーナーのみ
+ * - APPROVED 時は種別に応じて MastersheetColumnViewer または FormCollaborator を作成
  */
 export const updateMastersheetAccessRequestEndpoint: BodyEndpoint<
 	"PATCH",
