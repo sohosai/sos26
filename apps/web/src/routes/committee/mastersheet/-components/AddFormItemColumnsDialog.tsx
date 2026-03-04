@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/primitives";
 import { getFormDetail, listMyForms } from "@/lib/api/committee-form";
 import { createMastersheetColumn } from "@/lib/api/committee-mastersheet";
+import { useAuthStore } from "@/lib/auth";
 import { isClientError } from "@/lib/http/error";
 import styles from "./AddFormItemColumnsDialog.module.scss";
 
@@ -42,6 +43,7 @@ export function AddFormItemColumnsDialog({
 	columns,
 	onSuccess,
 }: Props) {
+	const userId = useAuthStore().user?.id;
 	const [forms, setForms] = useState<Form[]>([]);
 	const [formsLoading, setFormsLoading] = useState(true);
 	const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
@@ -60,10 +62,16 @@ export function AddFormItemColumnsDialog({
 		setItems([]);
 		setSelectedItemIds(new Set());
 		listMyForms()
-			.then(res => setForms(res.forms))
+			.then(res => {
+				const accessible = res.forms.filter(
+					f =>
+						f.owner.id === userId || f.collaborators.some(c => c.id === userId)
+				);
+				setForms(accessible);
+			})
 			.catch(() => toast.error("フォーム一覧の取得に失敗しました"))
 			.finally(() => setFormsLoading(false));
-	}, [open]);
+	}, [open, userId]);
 
 	useEffect(() => {
 		if (!selectedFormId) {
