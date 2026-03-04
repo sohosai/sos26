@@ -61,6 +61,7 @@ erDiagram
   String projectId FK
   String userId FK
   SubOwnerRequestStatus status
+  String pendingProjectId UK "nullable"
   DateTime decidedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
@@ -423,6 +424,7 @@ Properties as follows:
 - `projectId`:
 - `userId`:
 - `status`:
+- `pendingProjectId`:
 - `decidedAt`:
 - `createdAt`:
 - `updatedAt`:

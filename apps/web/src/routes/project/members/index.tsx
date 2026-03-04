@@ -50,7 +50,7 @@ const buildMemberActions = (
 		label: "副責任者に指名",
 		icon: <IconUserUp size={16} />,
 		hidden:
-			!isPrivileged ||
+			!isOwner ||
 			member.role !== "MEMBER" ||
 			hasSubOwner ||
 			hasPendingSubOwnerRequest,

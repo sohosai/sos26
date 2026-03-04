@@ -189,6 +189,9 @@ model ProjectSubOwnerRequest {
 
   status SubOwnerRequestStatus @default(PENDING)
 
+  // PENDING のときだけ projectId を入れる（1企画1件のPENDINGを一意制約で担保）
+  pendingProjectId String? @unique
+
   // 承認 or 却下した日時
   decidedAt DateTime?
 
