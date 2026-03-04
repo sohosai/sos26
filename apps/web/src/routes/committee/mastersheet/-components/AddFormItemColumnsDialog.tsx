@@ -132,12 +132,19 @@ export function AddFormItemColumnsDialog({
 		const selected = selectedItemIds.has(item.id);
 		const alreadyAdded = existingFormItemIds.has(item.id);
 		return (
-			<button
+			// biome-ignore lint/a11y/useSemanticElements: button cannot nest RadixCheckbox (which renders as button)
+			<div
 				key={item.id}
-				type="button"
+				role="button"
+				tabIndex={alreadyAdded ? -1 : 0}
 				className={`${styles.itemCard}${selected ? ` ${styles.itemCardSelected}` : ""}${alreadyAdded ? ` ${styles.itemCardDisabled}` : ""}`}
 				onClick={() => !alreadyAdded && toggleItem(item.id)}
-				disabled={alreadyAdded}
+				onKeyDown={e => {
+					if (!alreadyAdded && (e.key === "Enter" || e.key === " ")) {
+						e.preventDefault();
+						toggleItem(item.id);
+					}
+				}}
 			>
 				<RadixCheckbox
 					size="2"
@@ -159,7 +166,7 @@ export function AddFormItemColumnsDialog({
 						</Badge>
 					)}
 				</div>
-			</button>
+			</div>
 		);
 	}
 
