@@ -444,23 +444,6 @@ projectRoute.post(
 				);
 			}
 
-			const membership = await tx.projectMember.findFirst({
-				where: {
-					projectId: project.id,
-					userId,
-					deletedAt: null,
-				},
-				select: {
-					id: true,
-				},
-			});
-
-			if (!membership) {
-				throw Errors.forbidden(
-					"副責任者リクエストを承認できるのはメンバーのみです"
-				);
-			}
-
 			// 既に副責任者がいる場合はエラー
 			if (currentProject.subOwnerId) {
 				throw Errors.invalidRequest("既に副責任者が任命されています");
