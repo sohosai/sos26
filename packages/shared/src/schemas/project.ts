@@ -77,6 +77,7 @@ export type ListMyProjectsResponse = z.infer<
 
 export const listProjectMembersResponseSchema = z.object({
 	members: z.array(projectMemberSchema),
+	pendingSubOwnerRequestUserId: z.string().nullable(),
 });
 
 export type ListProjectMembersResponse = z.infer<
@@ -180,9 +181,26 @@ export const assignSubOwnerRequestSchema = z.undefined();
 
 export const assignSubOwnerResponseSchema = z.object({
 	success: z.literal(true),
-	subOwnerId: z.string(),
+	requestId: z.string(),
+	status: z.literal("PENDING"),
 });
 
 export type AssignSubOwnerResponse = z.infer<
 	typeof assignSubOwnerResponseSchema
+>;
+
+// ─────────────────────────────────────────────
+// POST /project/:projectId/sub-owner-request/approve
+// POST /project/:projectId/sub-owner-request/reject
+// ─────────────────────────────────────────────
+
+export const decideSubOwnerRequestRequestSchema = z.undefined();
+
+export const decideSubOwnerRequestResponseSchema = z.object({
+	success: z.literal(true),
+	status: z.enum(["APPROVED", "REJECTED"]),
+});
+
+export type DecideSubOwnerRequestResponse = z.infer<
+	typeof decideSubOwnerRequestResponseSchema
 >;
