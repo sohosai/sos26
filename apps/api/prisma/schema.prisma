@@ -195,7 +195,6 @@ model ProjectSubOwnerRequest {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([projectId, userId, status])
   @@index([projectId])
   @@index([userId])
 }

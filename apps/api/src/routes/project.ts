@@ -35,7 +35,7 @@ projectRoute.post("/create", requireAuth, async c => {
 
 	if (hasOtherPrivilegedProject) {
 		throw Errors.invalidRequest(
-			"このユーザーはすでに他の企画で責任者または副責任者です"
+			"このユーザーは既に他の企画で責任者または副責任者です"
 		);
 	}
 
@@ -105,7 +105,7 @@ projectRoute.post("/join", requireAuth, async c => {
 		throw Errors.notFound("招待コードが無効です");
 	}
 
-	// すでにメンバーか確認
+	// 既にメンバーか確認
 	const alreadyMember = await prisma.projectMember.findFirst({
 		where: {
 			projectId: project.id,
@@ -115,7 +115,7 @@ projectRoute.post("/join", requireAuth, async c => {
 	});
 
 	if (alreadyMember) {
-		throw Errors.alreadyExists("すでにこの企画に参加しています");
+		throw Errors.alreadyExists("既にこの企画に参加しています");
 	}
 
 	await prisma.projectMember.create({
@@ -344,9 +344,9 @@ projectRoute.post(
 			throw Errors.notFound("対象ユーザーは企画メンバーではありません");
 		}
 
-		// すでに副責任者がいる場合はエラー
+		// 既に副責任者がいる場合はエラー
 		if (project.subOwnerId) {
-			throw Errors.invalidRequest("すでに副責任者が任命されています");
+			throw Errors.invalidRequest("既に副責任者が任命されています");
 		}
 
 		// 責任者は指定不可
@@ -367,7 +367,7 @@ projectRoute.post(
 
 		if (hasOtherPrivilegedProject) {
 			throw Errors.invalidRequest(
-				"このユーザーはすでに他の企画で責任者または副責任者です"
+				"このユーザーは既に他の企画で責任者または副責任者です"
 			);
 		}
 
@@ -380,7 +380,7 @@ projectRoute.post(
 		});
 
 		if (existingRequest) {
-			throw Errors.invalidRequest("すでに副責任者リクエストが送信されています");
+			throw Errors.invalidRequest("既に副責任者リクエストが送信されています");
 		}
 
 		const request = await prisma.projectSubOwnerRequest.create({
@@ -430,9 +430,9 @@ projectRoute.post(
 			);
 		}
 
-		// すでに副責任者がいる場合はエラー
+		// 既に副責任者がいる場合はエラー
 		if (project.subOwnerId) {
-			throw Errors.invalidRequest("すでに副責任者が任命されています");
+			throw Errors.invalidRequest("既に副責任者が任命されています");
 		}
 
 		// 他企画で責任者、副責任者をやっていないかチェック
@@ -448,7 +448,7 @@ projectRoute.post(
 
 		if (hasOtherPrivilegedProject) {
 			throw Errors.invalidRequest(
-				"すでに他の企画で責任者または副責任者のユーザーは副責任者になることはできません"
+				"既に他の企画で責任者または副責任者のユーザーは副責任者になることはできません"
 			);
 		}
 

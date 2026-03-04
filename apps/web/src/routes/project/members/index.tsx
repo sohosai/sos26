@@ -327,7 +327,7 @@ function RouteComponent() {
 
 			<AlertDialog.Root
 				open={subOwnerRequestDialogOpen}
-				onOpenChange={setSubOwnerRequestDialogOpen}
+				// onOpenChange={setSubOwnerRequestDialogOpen}
 			>
 				<AlertDialog.Content maxWidth="420px">
 					<AlertDialog.Title>副責任者リクエストの確認</AlertDialog.Title>
