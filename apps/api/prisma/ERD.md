@@ -56,6 +56,15 @@ erDiagram
   DateTime joinedAt
   DateTime deletedAt "nullable"
 }
+"ProjectSubOwnerRequest" {
+  String id PK
+  String projectId FK
+  String userId FK
+  SubOwnerRequestStatus status
+  DateTime decidedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
 "CommitteeMember" {
   String id PK
   String userId FK,UK
@@ -291,6 +300,8 @@ erDiagram
 "Project" }o--o| "User" : subOwner
 "ProjectMember" }o--|| "Project" : project
 "ProjectMember" }o--|| "User" : user
+"ProjectSubOwnerRequest" }o--|| "Project" : project
+"ProjectSubOwnerRequest" }o--|| "User" : user
 "CommitteeMember" |o--|| "User" : user
 "CommitteeMemberPermission" }o--|| "CommitteeMember" : committeeMember
 "UserPushSubscription" }o--|| "User" : user
@@ -403,6 +414,18 @@ Properties as follows:
 - `userId`:
 - `joinedAt`:
 - `deletedAt`:
+
+### `ProjectSubOwnerRequest`
+
+Properties as follows:
+
+- `id`:
+- `projectId`:
+- `userId`:
+- `status`:
+- `decidedAt`:
+- `createdAt`:
+- `updatedAt`:
 
 ### `CommitteeMember`
 
