@@ -19,7 +19,7 @@ export const projectMenuItems: MenuItem[] = [
 		to: "/project/forms",
 	},
 	{
-		label: "問い合わせ",
+		label: "お問い合わせ",
 		icon: <IconMessageCircleQuestion size={18} />,
 		to: "/project/support",
 	},
@@ -47,7 +47,7 @@ export const committeeMenuItems: MenuItem[] = [
 		to: "/committee/forms",
 	},
 	{
-		label: "問い合わせ",
+		label: "お問い合わせ",
 		icon: <IconMessageCircleQuestion size={18} />,
 		to: "/committee/support",
 	},

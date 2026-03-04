@@ -754,7 +754,7 @@ model Inquiry {
   projectId String
   project   Project @relation(fields: [projectId], references: [id])
 
-  // 問い合わせに紐づくフォーム
+  // お問い合わせに紐づくフォーム
   relatedFormId String?
   relatedForm   Form?   @relation(fields: [relatedFormId], references: [id])
 
