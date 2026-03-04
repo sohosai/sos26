@@ -1,6 +1,7 @@
 import { sendInquiryAssigneeAddedEmail } from "../emails";
 import { env } from "../env";
 import { prisma } from "../prisma";
+import { sendInquiryAssigneeAddedPush } from "../push";
 
 export async function notifyInquiryAssigneeAdded(input: {
 	addedUserId: string;
@@ -22,6 +23,11 @@ export async function notifyInquiryAssigneeAdded(input: {
 
 		await sendInquiryAssigneeAddedEmail({
 			email: user.email,
+			inquiryTitle: input.inquiryTitle,
+			url,
+		});
+		await sendInquiryAssigneeAddedPush({
+			userId: input.addedUserId,
 			inquiryTitle: input.inquiryTitle,
 			url,
 		});
