@@ -198,7 +198,6 @@ export const decideSubOwnerRequestRequestSchema = z.undefined();
 
 export const decideSubOwnerRequestResponseSchema = z.object({
 	success: z.literal(true),
-	status: z.enum(["APPROVED", "REJECTED"]),
 });
 
 export type DecideSubOwnerRequestResponse = z.infer<

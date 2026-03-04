@@ -1,8 +1,8 @@
-import { Heading } from "@radix-ui/themes";
+import { AlertDialog, Heading } from "@radix-ui/themes";
 import { IconPlus, IconTrash, IconUserUp } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DataTable, TagCell } from "@/components/patterns";
 import {
@@ -12,8 +12,10 @@ import {
 import { Button } from "@/components/primitives";
 import { InviteMemberDialog } from "@/components/project/members/InviteMemberDialog";
 import {
+	approveSubOwnerRequest,
 	assignSubOwner,
 	listProjectMembers,
+	rejectSubOwnerRequest,
 	removeProjectMember,
 } from "@/lib/api/project";
 import { useAuthStore } from "@/lib/auth";
@@ -29,9 +31,13 @@ export type MemberRow = {
 	joinedAt: Date;
 };
 
+const pendingSubOwnerLabel = "副責任者承認待ち";
+
 const buildMemberActions = (
 	member: MemberRow,
+	isPrivileged: boolean,
 	hasSubOwner: boolean,
+	hasPendingSubOwnerRequest: boolean,
 	onAssign: (id: string) => void,
 	onDelete: (id: string) => void
 ): ActionItem<MemberRow>[] => [
@@ -39,14 +45,18 @@ const buildMemberActions = (
 		key: "assign-sub-owner",
 		label: "副責任者に指名",
 		icon: <IconUserUp size={16} />,
-		hidden: member.role !== "MEMBER" || hasSubOwner,
+		hidden:
+			!isPrivileged ||
+			member.role !== "MEMBER" ||
+			hasSubOwner ||
+			hasPendingSubOwnerRequest,
 		onClick: m => onAssign(m.userId),
 	},
 	{
 		key: "delete-member",
 		label: "削除",
 		icon: <IconTrash size={16} />,
-		hidden: member.role !== "MEMBER",
+		hidden: !isPrivileged || member.role !== "MEMBER",
 		onClick: m => onDelete(m.userId),
 	},
 ];
@@ -60,6 +70,7 @@ const roleLabelMap: Record<MemberRow["role"], string> = {
 const roleColorMap: Record<string, string> = {
 	責任者: "red",
 	副責任者: "orange",
+	副責任者承認待ち: "orange",
 	メンバー: "gray",
 };
 
@@ -69,50 +80,128 @@ export const Route = createFileRoute("/project/members/")({
 	component: RouteComponent,
 	loader: async () => {
 		const { selectedProjectId } = useProjectStore.getState();
-		if (!selectedProjectId) return { members: [] as MemberRow[] };
+		if (!selectedProjectId) {
+			return {
+				members: [] as MemberRow[],
+				pendingSubOwnerRequestUserId: null as string | null,
+			};
+		}
+
 		const data = await listProjectMembers(selectedProjectId);
 		return {
-			members: data.members.map((m: Omit<MemberRow, "roleLabel">) => ({
-				...m,
-				roleLabel: [roleLabelMap[m.role]],
-			})),
+			members: data.members.map((m: Omit<MemberRow, "roleLabel">) => {
+				const roleLabel =
+					m.role === "MEMBER" && data.pendingSubOwnerRequestUserId === m.userId
+						? pendingSubOwnerLabel
+						: roleLabelMap[m.role];
+				return {
+					...m,
+					roleLabel: [roleLabel],
+				};
+			}),
+			pendingSubOwnerRequestUserId: data.pendingSubOwnerRequestUserId,
 		};
 	},
 });
 
 function RouteComponent() {
-	const { members: initialMembers } = Route.useLoaderData();
+	const {
+		members: initialMembers,
+		pendingSubOwnerRequestUserId: initialPendingSubOwnerRequestUserId,
+	} = Route.useLoaderData();
 	const [members, setMembers] = useState<MemberRow[]>(initialMembers);
+	const [pendingSubOwnerRequestUserId, setPendingSubOwnerRequestUserId] =
+		useState<string | null>(initialPendingSubOwnerRequestUserId);
 
 	useEffect(() => {
 		setMembers(initialMembers);
-	}, [initialMembers]);
+		setPendingSubOwnerRequestUserId(initialPendingSubOwnerRequestUserId);
+	}, [initialMembers, initialPendingSubOwnerRequestUserId]);
+
 	const [dialogOpen, setDialogOpen] = useState(false);
+	const [subOwnerRequestDialogOpen, setSubOwnerRequestDialogOpen] =
+		useState(false);
+
 	const project = useProject();
 	const { user } = useAuthStore();
 
+	useEffect(() => {
+		const hasOwnPendingRequest = pendingSubOwnerRequestUserId === user?.id;
+		setSubOwnerRequestDialogOpen(hasOwnPendingRequest);
+	}, [pendingSubOwnerRequestUserId, user?.id]);
+
 	const hasSubOwner = members.some(member => member.role === "SUB_OWNER");
+	const hasPendingSubOwnerRequest = pendingSubOwnerRequestUserId !== null;
 
 	const isPrivileged =
 		project.ownerId === user?.id || project.subOwnerId === user?.id;
+
+	const pendingRequestedByName = useMemo(() => {
+		if (pendingSubOwnerRequestUserId !== user?.id) return null;
+		const owner = members.find(m => m.userId === project.ownerId);
+		return owner?.name ?? null;
+	}, [members, pendingSubOwnerRequestUserId, project.ownerId, user?.id]);
+
 	const handleAssign = async (memberId: string) => {
 		try {
 			await assignSubOwner(project.id, memberId);
+			setPendingSubOwnerRequestUserId(memberId);
+			setMembers(prev =>
+				prev.map(m => ({
+					...m,
+					roleLabel: [
+						m.role === "MEMBER" && m.userId === memberId
+							? pendingSubOwnerLabel
+							: roleLabelMap[m.role],
+					],
+				}))
+			);
+			toast.success("副責任者の確認待ちにしました");
+		} catch {
+			toast.error("副責任者の任命に失敗しました");
+		}
+	};
 
+	const handleApproveSubOwnerRequest = async () => {
+		try {
+			await approveSubOwnerRequest(project.id);
+			setSubOwnerRequestDialogOpen(false);
+			setPendingSubOwnerRequestUserId(null);
 			setMembers(prev =>
 				prev.map(m => {
-					if (m.userId === memberId) {
+					if (m.userId === user?.id) {
 						return {
 							...m,
 							role: "SUB_OWNER" as const,
 							roleLabel: [roleLabelMap.SUB_OWNER],
 						};
 					}
-					return m;
+					return {
+						...m,
+						roleLabel: [roleLabelMap[m.role]],
+					};
 				})
 			);
+			toast.success("副責任者リクエストを承認しました");
 		} catch {
-			toast.error("副責任者の任命に失敗しました");
+			toast.error("副責任者リクエストの承認に失敗しました");
+		}
+	};
+
+	const handleRejectSubOwnerRequest = async () => {
+		try {
+			await rejectSubOwnerRequest(project.id);
+			setSubOwnerRequestDialogOpen(false);
+			setPendingSubOwnerRequestUserId(null);
+			setMembers(prev =>
+				prev.map(m => ({
+					...m,
+					roleLabel: [roleLabelMap[m.role]],
+				}))
+			);
+			toast.success("副責任者リクエストを辞退しました");
+		} catch {
+			toast.error("副責任者リクエストの辞退に失敗しました");
 		}
 	};
 
@@ -120,6 +209,9 @@ function RouteComponent() {
 		try {
 			await removeProjectMember(project.id, memberId);
 			setMembers(prev => prev.filter(m => m.userId !== memberId));
+			if (pendingSubOwnerRequestUserId === memberId) {
+				setPendingSubOwnerRequestUserId(null);
+			}
 		} catch {
 			toast.error("メンバーの削除に失敗しました");
 		}
@@ -156,7 +248,9 @@ function RouteComponent() {
 							item={row.original}
 							actions={buildMemberActions(
 								row.original,
+								isPrivileged,
 								hasSubOwner,
+								hasPendingSubOwnerRequest,
 								handleAssign,
 								handleDeleteMember
 							)}
@@ -196,6 +290,43 @@ function RouteComponent() {
 			/>
 
 			<InviteMemberDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+
+			<AlertDialog.Root
+				open={subOwnerRequestDialogOpen}
+				onOpenChange={setSubOwnerRequestDialogOpen}
+			>
+				<AlertDialog.Content maxWidth="420px">
+					<AlertDialog.Title>副責任者リクエストの確認</AlertDialog.Title>
+					<AlertDialog.Description size="2">
+						{pendingRequestedByName
+							? `${pendingRequestedByName} さんから副責任者リクエストが届いています。承認または辞退を選択してください。`
+							: "副責任者リクエストが届いています。承認または辞退を選択してください。"}
+					</AlertDialog.Description>
+					<div
+						style={{
+							display: "flex",
+							justifyContent: "flex-end",
+							gap: "8px",
+							marginTop: "16px",
+						}}
+					>
+						<Button
+							intent="secondary"
+							size="2"
+							onClick={handleRejectSubOwnerRequest}
+						>
+							辞退する
+						</Button>
+						<Button
+							intent="primary"
+							size="2"
+							onClick={handleApproveSubOwnerRequest}
+						>
+							承認する
+						</Button>
+					</div>
+				</AlertDialog.Content>
+			</AlertDialog.Root>
 		</div>
 	);
 }
