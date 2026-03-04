@@ -135,6 +135,10 @@ function RouteComponent() {
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [subOwnerRequestDialogOpen, setSubOwnerRequestDialogOpen] =
 		useState(false);
+	const [isApprovingSubOwnerRequest, setIsApprovingSubOwnerRequest] =
+		useState(false);
+	const [isRejectingSubOwnerRequest, setIsRejectingSubOwnerRequest] =
+		useState(false);
 
 	const project = useProject();
 	const { user } = useAuthStore();
@@ -178,6 +182,7 @@ function RouteComponent() {
 	};
 
 	const handleApproveSubOwnerRequest = async () => {
+		setIsApprovingSubOwnerRequest(true);
 		try {
 			await approveSubOwnerRequest(project.id);
 			setSubOwnerRequestDialogOpen(false);
@@ -200,6 +205,8 @@ function RouteComponent() {
 			toast.success("副責任者リクエストを承認しました");
 		} catch {
 			toast.error("副責任者リクエストの承認に失敗しました");
+		} finally {
+			setIsApprovingSubOwnerRequest(false);
 		}
 	};
 
@@ -220,6 +227,7 @@ function RouteComponent() {
 	};
 
 	const handleRejectSubOwnerRequest = async () => {
+		setIsRejectingSubOwnerRequest(true);
 		try {
 			await rejectSubOwnerRequest(project.id);
 			setSubOwnerRequestDialogOpen(false);
@@ -233,6 +241,8 @@ function RouteComponent() {
 			toast.success("副責任者リクエストを辞退しました");
 		} catch {
 			toast.error("副責任者リクエストの辞退に失敗しました");
+		} finally {
+			setIsRejectingSubOwnerRequest(false);
 		}
 	};
 
@@ -348,6 +358,8 @@ function RouteComponent() {
 							intent="secondary"
 							size="2"
 							onClick={handleRejectSubOwnerRequest}
+							loading={isRejectingSubOwnerRequest}
+							disabled={isApprovingSubOwnerRequest}
 						>
 							辞退する
 						</Button>
@@ -355,6 +367,8 @@ function RouteComponent() {
 							intent="primary"
 							size="2"
 							onClick={handleApproveSubOwnerRequest}
+							loading={isApprovingSubOwnerRequest}
+							disabled={isRejectingSubOwnerRequest}
 						>
 							承認する
 						</Button>
