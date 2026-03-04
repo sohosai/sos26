@@ -447,7 +447,7 @@ function AccessibleColumnRow({
 }
 
 // ─────────────────────────────────────────────────────────────
-// 閲覧申請カラムカード（参加可能セクション）
+// 閲覧申請カラムカード（他のカラムセクション）
 // ─────────────────────────────────────────────────────────────
 
 type RequestableColumnRowProps = {
@@ -796,7 +796,7 @@ export function ColumnPanel({
 									<Separator size="4" className={styles.separator} />
 								)}
 								<Section
-									label="参加可能"
+									label="他のカラム"
 									count={requestable.length}
 									isOpen={sectionsOpen.requestable}
 									onToggle={() => toggleSection("requestable")}
