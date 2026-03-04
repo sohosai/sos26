@@ -223,6 +223,26 @@ export const approveSubOwnerRequestEndpoint: BodyEndpoint<
 } as const;
 
 /**
+ * POST /project/:projectId/sub-owner-request/cancel
+ * 責任者が副責任者リクエストを取り消す
+ */
+export const cancelSubOwnerRequestEndpoint: BodyEndpoint<
+	"POST",
+	"/project/:projectId/sub-owner-request/cancel",
+	typeof projectIdPathParamsSchema,
+	undefined,
+	typeof decideSubOwnerRequestRequestSchema,
+	typeof decideSubOwnerRequestResponseSchema
+> = {
+	method: "POST",
+	path: "/project/:projectId/sub-owner-request/cancel",
+	pathParams: projectIdPathParamsSchema,
+	query: undefined,
+	request: decideSubOwnerRequestRequestSchema,
+	response: decideSubOwnerRequestResponseSchema,
+} as const;
+
+/**
  * POST /project/:projectId/sub-owner-request/reject
  * 指名されたユーザーが副責任者リクエストを辞退する
  */

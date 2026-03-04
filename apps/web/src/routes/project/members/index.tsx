@@ -1,5 +1,5 @@
 import { AlertDialog, Heading } from "@radix-ui/themes";
-import { IconPlus, IconTrash, IconUserUp } from "@tabler/icons-react";
+import { IconPlus, IconTrash, IconUserUp, IconX } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
@@ -14,6 +14,7 @@ import { InviteMemberDialog } from "@/components/project/members/InviteMemberDia
 import {
 	approveSubOwnerRequest,
 	assignSubOwner,
+	cancelSubOwnerRequest,
 	listProjectMembers,
 	rejectSubOwnerRequest,
 	removeProjectMember,
@@ -36,10 +37,13 @@ const pendingSubOwnerLabel = "副責任者承認待ち";
 const buildMemberActions = (
 	member: MemberRow,
 	isPrivileged: boolean,
+	isOwner: boolean,
 	hasSubOwner: boolean,
 	hasPendingSubOwnerRequest: boolean,
+	pendingSubOwnerRequestUserId: string | null,
 	onAssign: (id: string) => void,
-	onDelete: (id: string) => void
+	onDelete: (id: string) => void,
+	onCancelSubOwnerRequest: () => void
 ): ActionItem<MemberRow>[] => [
 	{
 		key: "assign-sub-owner",
@@ -58,6 +62,16 @@ const buildMemberActions = (
 		icon: <IconTrash size={16} />,
 		hidden: !isPrivileged || member.role !== "MEMBER",
 		onClick: m => onDelete(m.userId),
+	},
+	{
+		key: "cancel-sub-owner-request",
+		label: "副責任者リクエスト取り消し",
+		icon: <IconX size={16} />,
+		hidden:
+			!isOwner ||
+			pendingSubOwnerRequestUserId !== member.userId ||
+			member.role !== "MEMBER",
+		onClick: () => onCancelSubOwnerRequest(),
 	},
 ];
 
@@ -135,6 +149,7 @@ function RouteComponent() {
 
 	const isPrivileged =
 		project.ownerId === user?.id || project.subOwnerId === user?.id;
+	const isOwner = project.ownerId === user?.id;
 
 	const pendingRequestedByName = useMemo(() => {
 		if (pendingSubOwnerRequestUserId !== user?.id) return null;
@@ -185,6 +200,22 @@ function RouteComponent() {
 			toast.success("副責任者リクエストを承認しました");
 		} catch {
 			toast.error("副責任者リクエストの承認に失敗しました");
+		}
+	};
+
+	const handleCancelSubOwnerRequest = async () => {
+		try {
+			await cancelSubOwnerRequest(project.id);
+			setPendingSubOwnerRequestUserId(null);
+			setMembers(prev =>
+				prev.map(m => ({
+					...m,
+					roleLabel: [roleLabelMap[m.role]],
+				}))
+			);
+			toast.success("副責任者リクエストを取り消しました");
+		} catch {
+			toast.error("副責任者リクエストの取り消しに失敗しました");
 		}
 	};
 
@@ -249,10 +280,13 @@ function RouteComponent() {
 							actions={buildMemberActions(
 								row.original,
 								isPrivileged,
+								isOwner,
 								hasSubOwner,
 								hasPendingSubOwnerRequest,
+								pendingSubOwnerRequestUserId,
 								handleAssign,
-								handleDeleteMember
+								handleDeleteMember,
+								handleCancelSubOwnerRequest
 							)}
 						/>
 					),

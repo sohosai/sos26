@@ -476,6 +476,49 @@ projectRoute.post(
 );
 
 /**
+ * POST /project/:projectId/sub-owner-request/cancel
+ * 責任者が副責任者リクエストを取り消す
+ */
+projectRoute.post(
+	"/:projectId/sub-owner-request/cancel",
+	requireAuth,
+	requireProjectMember,
+	async c => {
+		const role = c.get("projectRole");
+		const project = c.get("project");
+
+		if (role !== "OWNER") {
+			throw Errors.forbidden(
+				"副責任者リクエストを取り消せるのは責任者のみです"
+			);
+		}
+
+		const request = await prisma.projectSubOwnerRequest.findFirst({
+			where: {
+				projectId: project.id,
+				status: "PENDING",
+			},
+		});
+
+		if (!request) {
+			throw Errors.notFound("取り消し対象の副責任者リクエストが見つかりません");
+		}
+
+		await prisma.projectSubOwnerRequest.update({
+			where: { id: request.id },
+			data: {
+				status: "REJECTED",
+				decidedAt: new Date(),
+			},
+		});
+
+		return c.json({
+			success: true,
+		});
+	}
+);
+
+/**
  * POST /project/:projectId/sub-owner-request/reject
  * 指名されたユーザーが副責任者リクエストを辞退する
  */

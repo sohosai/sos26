@@ -4,6 +4,7 @@ import {
 	assignSubOwnerEndpoint,
 	type CreateProjectRequest,
 	type CreateProjectResponse,
+	cancelSubOwnerRequestEndpoint,
 	createProjectEndpoint,
 	type DecideSubOwnerRequestResponse,
 	type GetProjectDetailResponse,
@@ -137,6 +138,18 @@ export async function approveSubOwnerRequest(
 	projectId: string
 ): Promise<DecideSubOwnerRequestResponse> {
 	return callBodyApi(approveSubOwnerRequestEndpoint, undefined, {
+		pathParams: { projectId },
+	});
+}
+
+/**
+ * POST /project/:projectId/sub-owner-request/cancel
+ * 副責任者リクエストを取り消し
+ */
+export async function cancelSubOwnerRequest(
+	projectId: string
+): Promise<DecideSubOwnerRequestResponse> {
+	return callBodyApi(cancelSubOwnerRequestEndpoint, undefined, {
 		pathParams: { projectId },
 	});
 }

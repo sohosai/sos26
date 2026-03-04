@@ -21,6 +21,7 @@
   - [POST `/project/:projectId/members/:userId/remove`](#post-projectprojectidmembersuseridremove)
   - [POST `/project/:projectId/members/:userId/assign`](#post-projectprojectidmembersuseridassign)
   - [POST `/project/:projectId/sub-owner-request/approve`](#post-projectprojectidsub-owner-requestapprove)
+  - [POST `/project/:projectId/sub-owner-request/cancel`](#post-projectprojectidsub-owner-requestcancel)
   - [POST `/project/:projectId/sub-owner-request/reject`](#post-projectprojectidsub-owner-requestreject)
 - [役職と制約](#役職と制約)
 
@@ -48,6 +49,7 @@
 | POST | `/project/:projectId/members/:userId/remove` | メンバー削除（責任者/副責任者） |
 | POST | `/project/:projectId/members/:userId/assign` | 副責任者リクエストの送信（責任者のみ） |
 | POST | `/project/:projectId/sub-owner-request/approve` | 副責任者リクエストを承認（依頼対象メンバー） |
+| POST | `/project/:projectId/sub-owner-request/cancel` | 副責任者リクエストを取り消し（責任者のみ） |
 | POST | `/project/:projectId/sub-owner-request/reject` | 副責任者リクエストを辞退（依頼対象メンバー） |
 
 ---
@@ -153,6 +155,19 @@
   - `projectSubOwnerRequest.status = APPROVED`
   - `projectSubOwnerRequest.decidedAt = now`
   - `project.subOwnerId = userId`
+- レスポンス:
+  - `success: true`
+
+### POST `/project/:projectId/sub-owner-request/cancel`
+
+責任者が `PENDING` の副責任者リクエストを取り消します。
+
+- 認証必須
+- 実行者は `OWNER` のみ
+- 対象企画に `PENDING` リクエストが存在すること
+- 取り消し時の更新:
+  - `projectSubOwnerRequest.status = REJECTED`
+  - `projectSubOwnerRequest.decidedAt = now`
 - レスポンス:
   - `success: true`
 
