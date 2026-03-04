@@ -44,7 +44,8 @@ const getColumnFull = async (columnId: string) => {
 				orderBy: { sortOrder: "asc" },
 				select: { id: true, label: true, sortOrder: true },
 			},
-			viewers: true,
+			createdBy: { select: { name: true } },
+			viewers: { include: { user: { select: { name: true } } } },
 		},
 	});
 	if (!col) throw Errors.notFound("カラムが見つかりません");
@@ -110,6 +111,7 @@ function formatColumnDef(col: ColumnFull, userId: string) {
 		description: col.description,
 		sortOrder: col.sortOrder,
 		createdById: col.createdById,
+		createdByName: col.createdBy.name,
 		isOwner: col.createdById === userId,
 		formItemId: col.formItemId,
 		formItemType: col.formItem?.type ?? null,
@@ -120,6 +122,7 @@ function formatColumnDef(col: ColumnFull, userId: string) {
 			scope: v.scope,
 			bureauValue: v.bureauValue,
 			userId: v.userId,
+			userName: v.user?.name ?? null,
 		})),
 		options:
 			col.type === "FORM_ITEM" && col.formItem?.options?.length
@@ -290,7 +293,8 @@ committeeMastersheetRoute.get(
 					orderBy: { sortOrder: "asc" },
 					select: { id: true, label: true, sortOrder: true },
 				},
-				viewers: true,
+				createdBy: { select: { name: true } },
+				viewers: { include: { user: { select: { name: true } } } },
 			},
 			orderBy: { sortOrder: "asc" },
 		});
@@ -526,7 +530,8 @@ committeeMastersheetRoute.post(
 						orderBy: { sortOrder: "asc" },
 						select: { id: true, label: true, sortOrder: true },
 					},
-					viewers: true,
+					createdBy: { select: { name: true } },
+					viewers: { include: { user: { select: { name: true } } } },
 				},
 			});
 
@@ -579,7 +584,8 @@ committeeMastersheetRoute.post(
 							orderBy: { sortOrder: "asc" },
 							select: { id: true, label: true, sortOrder: true },
 						},
-						viewers: true,
+						createdBy: { select: { name: true } },
+						viewers: { include: { user: { select: { name: true } } } },
 					},
 				});
 			},
@@ -660,7 +666,8 @@ committeeMastersheetRoute.patch(
 							orderBy: { sortOrder: "asc" },
 							select: { id: true, label: true, sortOrder: true },
 						},
-						viewers: true,
+						createdBy: { select: { name: true } },
+						viewers: { include: { user: { select: { name: true } } } },
 					},
 				});
 			},
@@ -1020,7 +1027,7 @@ committeeMastersheetRoute.get(
 					orderBy: { sortOrder: "asc" },
 					select: { id: true, label: true, sortOrder: true },
 				},
-				viewers: true,
+				viewers: { include: { user: { select: { name: true } } } },
 				createdBy: { select: { name: true } },
 				accessRequests: {
 					where: { requesterId: userId, status: "PENDING" },

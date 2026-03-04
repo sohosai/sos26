@@ -11,6 +11,7 @@ import type {
 	ListMastersheetAccessRequestsResponse,
 	MastersheetViewerInput,
 } from "@sos26/shared";
+import { bureauLabelMap } from "@sos26/shared";
 import {
 	IconChevronDown,
 	IconEdit,
@@ -24,7 +25,10 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button, IconButton, TextField } from "@/components/primitives";
-import { ViewerSelector } from "@/components/support/ViewerSelector";
+import {
+	getScopeColor,
+	ViewerSelector,
+} from "@/components/support/ViewerSelector";
 import {
 	createMastersheetAccessRequest,
 	deleteMastersheetColumn,
@@ -96,6 +100,53 @@ function FixedColumnRow({
 					</div>
 				</div>
 			</div>
+		</div>
+	);
+}
+
+// ─────────────────────────────────────────────────────────────
+// カラムメタデータ表示
+// ─────────────────────────────────────────────────────────────
+
+function ColumnMetaBadges({ col }: { col: ApiColumn }) {
+	return (
+		<div className={styles.cardMeta}>
+			<Text size="1" color="gray">
+				作成者: {col.createdByName}
+			</Text>
+			<Text size="1" color="gray">
+				|
+			</Text>
+			{col.type === "FORM_ITEM" ? (
+				<Text size="1" color="gray">
+					フォームのアクセス権に準ずる
+				</Text>
+			) : (
+				<div className={styles.viewerBadges}>
+					{col.viewers.length === 0 ? (
+						<Badge size="1" variant="soft" color="gray">
+							非公開
+						</Badge>
+					) : col.viewers.some(v => v.scope === "ALL") ? (
+						<Badge size="1" variant="soft" color="blue">
+							全員
+						</Badge>
+					) : (
+						col.viewers.map(v => (
+							<Badge
+								key={v.id}
+								size="1"
+								variant="soft"
+								color={getScopeColor(v.scope)}
+							>
+								{v.scope === "BUREAU" && v.bureauValue
+									? (bureauLabelMap[v.bureauValue] ?? v.bureauValue)
+									: (v.userName ?? "不明")}
+							</Badge>
+						))
+					)}
+				</div>
+			)}
 		</div>
 	);
 }
@@ -325,6 +376,7 @@ function AccessibleColumnRow({
 							{col.description}
 						</Text>
 					)}
+					<ColumnMetaBadges col={col} />
 					{confirmingDelete && (
 						<div className={styles.confirmDelete}>
 							<Text size="1" color="gray">

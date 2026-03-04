@@ -103,6 +103,7 @@ const columnViewerSchema = z.object({
 	scope: viewerScopeSchema,
 	bureauValue: bureauSchema.nullable(),
 	userId: z.string().nullable(),
+	userName: z.string().nullable(),
 });
 
 /** セル値の共通フィールド（フォーム由来・自由追加・オーバーライド共通） */
@@ -121,6 +122,7 @@ const mastersheetColumnDefSchema = z.object({
 	description: z.string().nullable(),
 	sortOrder: z.number().int(),
 	createdById: z.string(),
+	createdByName: z.string(),
 	isOwner: z.boolean(),
 	// FORM_ITEM の場合
 	formItemId: z.string().nullable(),
