@@ -181,7 +181,7 @@ function buildFormItemCell(
 	const response = deliveryId ? responseByDelivery.get(deliveryId) : undefined;
 	const override = overrideByColProject.get(colId)?.get(projectId);
 	const status = computeCellStatus(deliveryId, response, override);
-	const answer = response
+	const answer = response?.submittedAt
 		? answerByResponseItem.get(response.id)?.get(formItem.id)
 		: undefined;
 	const formValue = answer
@@ -499,7 +499,7 @@ committeeMastersheetRoute.post(
 			if (!hasAccess)
 				throw Errors.forbidden("このフォームへのアクセス権がありません");
 
-			const existing = await prisma.mastersheetColumn.findUnique({
+			const existing = await prisma.mastersheetColumn.findFirst({
 				where: { formItemId: data.formItemId },
 			});
 			if (existing)

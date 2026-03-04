@@ -48,7 +48,6 @@ function getDisplayText(
 type FormEditableCellProps = {
 	initialText: string;
 	isNumberType: boolean;
-	isDraft: boolean;
 	onCommit: (value: string) => void;
 	onStartEdit: () => void;
 };
@@ -56,7 +55,6 @@ type FormEditableCellProps = {
 function FormEditableCell({
 	initialText,
 	isNumberType,
-	isDraft,
 	onCommit,
 	onStartEdit,
 }: FormEditableCellProps) {
@@ -92,7 +90,6 @@ function FormEditableCell({
 				size={Math.max(value.length, 1)}
 				data-editing={isEditingRef.current}
 				data-focused={isFocused}
-				data-draft={isDraft}
 				onChange={e => {
 					if (isEditingRef.current) {
 						setValue(e.target.value);
@@ -168,8 +165,6 @@ export function FormItemCell<TData extends RowData>({
 
 	const effectiveValue = cell.override ?? cell.formValue ?? null;
 	const displayText = getDisplayText(effectiveValue, formItemType);
-	const isDraft = cell.status === "DRAFT";
-
 	// ファイル型は Link 表示のみ（編集不可）
 	// URL なしの場合は下の !isEditable ブランチで「─」を表示
 	if (formItemType === "FILE" && displayText) {
@@ -185,7 +180,7 @@ export function FormItemCell<TData extends RowData>({
 		return (
 			<Text
 				size="2"
-				color={isDraft || cell.status === "NOT_ANSWERED" ? "gray" : undefined}
+				color={cell.status === "NOT_ANSWERED" ? "gray" : undefined}
 				truncate
 			>
 				{displayText ?? "─"}
@@ -211,7 +206,6 @@ export function FormItemCell<TData extends RowData>({
 		<FormEditableCell
 			initialText={initialText}
 			isNumberType={isNumberType}
-			isDraft={isDraft}
 			onCommit={handleCommit}
 			onStartEdit={handleStartEdit}
 		/>

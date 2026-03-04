@@ -6,8 +6,4 @@
 		opacity: 1;
 	}
 
-	// 下書き状態（非編集時）はグレー文字
-	&[data-draft="true"] {
-		color: var(--gray-11);
-	}
 }
