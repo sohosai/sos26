@@ -29,7 +29,17 @@ const getColumnFull = async (columnId: string) => {
 	const col = await prisma.mastersheetColumn.findFirst({
 		where: { id: columnId },
 		include: {
-			formItem: { select: { id: true, formId: true, type: true } },
+			formItem: {
+				select: {
+					id: true,
+					formId: true,
+					type: true,
+					options: {
+						orderBy: { sortOrder: "asc" },
+						select: { id: true, label: true, sortOrder: true },
+					},
+				},
+			},
 			options: {
 				orderBy: { sortOrder: "asc" },
 				select: { id: true, label: true, sortOrder: true },
@@ -111,7 +121,10 @@ function formatColumnDef(col: ColumnFull, userId: string) {
 			bureauValue: v.bureauValue,
 			userId: v.userId,
 		})),
-		options: col.options,
+		options:
+			col.type === "FORM_ITEM" && col.formItem?.options?.length
+				? col.formItem.options
+				: col.options,
 		createdAt: col.createdAt,
 	};
 }
@@ -262,7 +275,17 @@ committeeMastersheetRoute.get(
 		// 1. カラム一覧 + 権限フィルタ
 		const allColumns = await prisma.mastersheetColumn.findMany({
 			include: {
-				formItem: { select: { id: true, formId: true, type: true } },
+				formItem: {
+					select: {
+						id: true,
+						formId: true,
+						type: true,
+						options: {
+							orderBy: { sortOrder: "asc" as const },
+							select: { id: true, label: true, sortOrder: true },
+						},
+					},
+				},
 				options: {
 					orderBy: { sortOrder: "asc" },
 					select: { id: true, label: true, sortOrder: true },
@@ -488,7 +511,17 @@ committeeMastersheetRoute.post(
 					formItemId: data.formItemId,
 				},
 				include: {
-					formItem: { select: { id: true, formId: true, type: true } },
+					formItem: {
+						select: {
+							id: true,
+							formId: true,
+							type: true,
+							options: {
+								orderBy: { sortOrder: "asc" as const },
+								select: { id: true, label: true, sortOrder: true },
+							},
+						},
+					},
 					options: {
 						orderBy: { sortOrder: "asc" },
 						select: { id: true, label: true, sortOrder: true },
@@ -531,7 +564,17 @@ committeeMastersheetRoute.post(
 				return tx.mastersheetColumn.findUniqueOrThrow({
 					where: { id: created.id },
 					include: {
-						formItem: { select: { id: true, formId: true, type: true } },
+						formItem: {
+							select: {
+								id: true,
+								formId: true,
+								type: true,
+								options: {
+									orderBy: { sortOrder: "asc" as const },
+									select: { id: true, label: true, sortOrder: true },
+								},
+							},
+						},
 						options: {
 							orderBy: { sortOrder: "asc" },
 							select: { id: true, label: true, sortOrder: true },
@@ -602,7 +645,17 @@ committeeMastersheetRoute.patch(
 				return tx.mastersheetColumn.findUniqueOrThrow({
 					where: { id: columnId },
 					include: {
-						formItem: { select: { id: true, formId: true, type: true } },
+						formItem: {
+							select: {
+								id: true,
+								formId: true,
+								type: true,
+								options: {
+									orderBy: { sortOrder: "asc" as const },
+									select: { id: true, label: true, sortOrder: true },
+								},
+							},
+						},
 						options: {
 							orderBy: { sortOrder: "asc" },
 							select: { id: true, label: true, sortOrder: true },
@@ -952,7 +1005,17 @@ committeeMastersheetRoute.get(
 				],
 			},
 			include: {
-				formItem: { select: { id: true, formId: true, type: true } },
+				formItem: {
+					select: {
+						id: true,
+						formId: true,
+						type: true,
+						options: {
+							orderBy: { sortOrder: "asc" as const },
+							select: { id: true, label: true, sortOrder: true },
+						},
+					},
+				},
 				options: {
 					orderBy: { sortOrder: "asc" },
 					select: { id: true, label: true, sortOrder: true },

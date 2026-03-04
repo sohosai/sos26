@@ -2,6 +2,7 @@ import { Text, Tooltip } from "@radix-ui/themes";
 import type {
 	GetMastersheetDataResponse,
 	UpsertMastersheetCellRequest,
+	UpsertMastersheetOverrideRequest,
 } from "@sos26/shared";
 import { IconFileText, IconPencil } from "@tabler/icons-react";
 import { useRouter } from "@tanstack/react-router";
@@ -129,6 +130,69 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 // biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
 function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 	if (col.type === "FORM_ITEM") {
+		// SELECT 型: SelectCell で選択UI
+		if (col.formItemType === "SELECT") {
+			const selectOptions = col.options.map(o => ({
+				value: o.id,
+				label: o.label,
+			}));
+			return columnHelper.accessor(
+				row => {
+					const cell = row.cells[col.id];
+					if (
+						!cell?.status ||
+						cell.status === "NOT_DELIVERED" ||
+						cell.status === "NOT_ANSWERED"
+					)
+						return "";
+					const effective = cell.override ?? cell.formValue ?? null;
+					return effective?.selectedOptionIds?.[0] ?? "";
+				},
+				{
+					id: col.id,
+					header: () => <ColHeader col={col} />,
+					cell: SelectCell,
+					meta: {
+						editable: true,
+						selectOptions,
+						filterVariant: "select",
+					},
+				}
+			);
+		}
+
+		// CHECKBOX 型: MultiSelectEditCell で複数選択UI
+		if (col.formItemType === "CHECKBOX") {
+			const selectOptions = col.options.map(o => ({
+				value: o.id,
+				label: o.label,
+			}));
+			return columnHelper.accessor(
+				row => {
+					const cell = row.cells[col.id];
+					if (
+						!cell?.status ||
+						cell.status === "NOT_DELIVERED" ||
+						cell.status === "NOT_ANSWERED"
+					)
+						return [];
+					const effective = cell.override ?? cell.formValue ?? null;
+					return effective?.selectedOptionIds ?? [];
+				},
+				{
+					id: col.id,
+					header: () => <ColHeader col={col} />,
+					cell: MultiSelectEditCell,
+					meta: {
+						editable: true,
+						selectOptions,
+						filterVariant: "select",
+					},
+				}
+			);
+		}
+
+		// TEXT / TEXTAREA / NUMBER / FILE: FormItemCell
 		return columnHelper.accessor(row => row.cells[col.id] ?? null, {
 			id: col.id,
 			header: () => <ColHeader col={col} />,
@@ -204,6 +268,26 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 	);
 }
 
+function buildOverridePayload(
+	formItemType: ApiColumn["formItemType"],
+	value: unknown
+): UpsertMastersheetOverrideRequest {
+	if (formItemType === "SELECT") {
+		return {
+			selectedOptionIds: typeof value === "string" && value ? [value] : [],
+		};
+	}
+	if (formItemType === "CHECKBOX") {
+		return {
+			selectedOptionIds: Array.isArray(value) ? (value as string[]) : [],
+		};
+	}
+	return {
+		textValue: typeof value === "string" ? value : null,
+		numberValue: typeof value === "number" ? value : null,
+	};
+}
+
 function buildCustomPayload(
 	dataType: ApiColumn["dataType"],
 	value: unknown
@@ -260,10 +344,11 @@ export function MastersheetTable({
 		if (!col) return;
 
 		if (col.type === "FORM_ITEM") {
-			await upsertMastersheetOverride(columnId, row.project.id, {
-				textValue: typeof value === "string" ? value : null,
-				numberValue: typeof value === "number" ? value : null,
-			});
+			await upsertMastersheetOverride(
+				columnId,
+				row.project.id,
+				buildOverridePayload(col.formItemType, value)
+			);
 		} else {
 			await upsertMastersheetCell(
 				columnId,
