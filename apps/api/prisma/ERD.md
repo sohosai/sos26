@@ -42,6 +42,7 @@ erDiagram
   String organizationName
   String organizationNamePhonetic
   ProjectType type
+  ProjectLocation location
   String ownerId FK
   String subOwnerId FK "nullable"
   String(6) inviteCode UK
@@ -387,6 +388,7 @@ Properties as follows:
 - `organizationName`:
 - `organizationNamePhonetic`:
 - `type`:
+- `location`:
 - `ownerId`:
 - `subOwnerId`:
 - `inviteCode`:
