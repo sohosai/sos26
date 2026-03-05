@@ -1202,7 +1202,7 @@ committeeMastersheetRoute.patch(
 
 				if (status === "APPROVED") {
 					if (request.column.type === "FORM_ITEM" && request.column.formItem) {
-						// FORM_ITEM: FormCollaborator を作成（isWrite=false）
+						// FORM_ITEM: FormCollaborator を作成
 						await tx.formCollaborator.upsert({
 							where: {
 								formId_userId: {
@@ -1213,7 +1213,7 @@ committeeMastersheetRoute.patch(
 							create: {
 								formId: request.column.formItem.formId,
 								userId: request.requesterId,
-								isWrite: false,
+								isWrite: true,
 							},
 							update: { deletedAt: null },
 						});

@@ -175,14 +175,10 @@ export function FormItemCell<TData extends RowData>({
 		);
 	}
 
-	// 編集不可 or 未回答はテキスト表示のみ
-	if (!isEditable || cell.status === "NOT_ANSWERED") {
+	// 編集不可（FILE型等）はテキスト表示のみ
+	if (!isEditable) {
 		return (
-			<Text
-				size="2"
-				color={cell.status === "NOT_ANSWERED" ? "gray" : undefined}
-				truncate
-			>
+			<Text size="2" truncate>
 				{displayText ?? "─"}
 			</Text>
 		);

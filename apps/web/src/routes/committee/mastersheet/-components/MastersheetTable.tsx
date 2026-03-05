@@ -130,7 +130,7 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 // biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
 function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 	if (col.type === "FORM_ITEM") {
-		// SELECT 型: SelectCell で選択UI
+		// SELECT 型: SelectCell で選択UI（NOT_DELIVERED は編集不可）
 		if (col.formItemType === "SELECT") {
 			const selectOptions = col.options.map(o => ({
 				value: o.id,
@@ -139,19 +139,23 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 			return columnHelper.accessor(
 				row => {
 					const cell = row.cells[col.id];
-					if (
-						!cell?.status ||
-						cell.status === "NOT_DELIVERED" ||
-						cell.status === "NOT_ANSWERED"
-					)
-						return "";
-					const effective = cell.override ?? cell.formValue ?? null;
+					const effective = cell?.override ?? cell?.formValue ?? null;
 					return effective?.selectedOptionIds?.[0] ?? "";
 				},
 				{
 					id: col.id,
 					header: () => <ColHeader col={col} />,
-					cell: SelectCell,
+					cell: props => {
+						const cell = props.row.original.cells[col.id];
+						if (!cell?.status || cell.status === "NOT_DELIVERED") {
+							return (
+								<Text color="gray" size="2">
+									─
+								</Text>
+							);
+						}
+						return <SelectCell {...props} />;
+					},
 					meta: {
 						editable: true,
 						selectOptions,
@@ -161,7 +165,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 			);
 		}
 
-		// CHECKBOX 型: MultiSelectEditCell で複数選択UI
+		// CHECKBOX 型: MultiSelectEditCell で複数選択UI（NOT_DELIVERED は編集不可）
 		if (col.formItemType === "CHECKBOX") {
 			const selectOptions = col.options.map(o => ({
 				value: o.id,
@@ -170,19 +174,23 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 			return columnHelper.accessor(
 				row => {
 					const cell = row.cells[col.id];
-					if (
-						!cell?.status ||
-						cell.status === "NOT_DELIVERED" ||
-						cell.status === "NOT_ANSWERED"
-					)
-						return [];
-					const effective = cell.override ?? cell.formValue ?? null;
+					const effective = cell?.override ?? cell?.formValue ?? null;
 					return effective?.selectedOptionIds ?? [];
 				},
 				{
 					id: col.id,
 					header: () => <ColHeader col={col} />,
-					cell: MultiSelectEditCell,
+					cell: props => {
+						const cell = props.row.original.cells[col.id];
+						if (!cell?.status || cell.status === "NOT_DELIVERED") {
+							return (
+								<Text color="gray" size="2">
+									─
+								</Text>
+							);
+						}
+						return <MultiSelectEditCell {...props} />;
+					},
 					meta: {
 						editable: true,
 						selectOptions,
