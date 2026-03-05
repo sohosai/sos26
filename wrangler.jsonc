@@ -10,7 +10,7 @@
       "name": "sos26-dev",
       "routes": [
         {
-          "pattern": "dev.sos26.sohosai.com",
+          "pattern": "dev.sos26.sohosai.com/*",
           "custom_domain": true
         }
       ]
