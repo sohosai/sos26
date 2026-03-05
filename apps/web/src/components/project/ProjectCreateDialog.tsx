@@ -28,8 +28,8 @@ type FormErrors = Partial<Record<keyof FormState, string>>;
 
 const TYPE_OPTIONS = [
 	{ id: "NORMAL", label: "通常企画" },
-	{ id: "STAGE", label: "ステージ企画" },
 	{ id: "FOOD", label: "食品企画" },
+	{ id: "STAGE", label: "ステージ企画" },
 ];
 
 const LOCATION_OPTIONS_DEFAULT = [
