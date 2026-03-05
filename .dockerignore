@@ -1,0 +1,13 @@
+.git
+.github
+.vscode
+.turbo
+node_modules
+**/node_modules
+**/.turbo
+**/dist
+coverage
+docs
+*.log
+*.tsbuildinfo
+.DS_Store
