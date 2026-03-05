@@ -3,6 +3,9 @@ import { z } from "zod";
 export const projectTypeSchema = z.enum(["STAGE", "FOOD", "NORMAL"]);
 export type ProjectType = z.infer<typeof projectTypeSchema>;
 
+export const projectLocationSchema = z.enum(["INDOOR", "OUTDOOR", "STAGE"]);
+export type ProjectLocation = z.infer<typeof projectLocationSchema>;
+
 export const projectSchema = z.object({
 	id: z.cuid(),
 	number: z.number().int().positive(),
@@ -11,6 +14,7 @@ export const projectSchema = z.object({
 	organizationName: z.string().min(1),
 	organizationNamePhonetic: z.string().min(1),
 	type: projectTypeSchema,
+	location: projectLocationSchema,
 	ownerId: z.string().min(1),
 	subOwnerId: z.string().nullable(),
 	inviteCode: z.string().length(6),
@@ -49,6 +53,7 @@ export const createProjectRequestSchema = z.object({
 	organizationName: z.string().min(1),
 	organizationNamePhonetic: z.string().min(1),
 	type: projectTypeSchema,
+	location: projectLocationSchema,
 });
 
 export type CreateProjectRequest = z.infer<typeof createProjectRequestSchema>;
@@ -121,6 +126,7 @@ export const updateProjectDetailRequestSchema = z.object({
 	organizationName: z.string().min(1).optional(),
 	organizationNamePhonetic: z.string().min(1).optional(),
 	type: projectTypeSchema.optional(),
+	location: projectLocationSchema.optional(),
 });
 
 export type UpdateProjectDetailRequest = z.infer<

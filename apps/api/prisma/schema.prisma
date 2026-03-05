@@ -107,6 +107,17 @@ enum ProjectType {
   NORMAL
 }
 
+enum ProjectLocation {
+  //屋内
+  INDOOR
+
+  //屋外
+  OUTDOOR
+
+  //ステージ
+  STAGE
+}
+
 model Project {
   id String @id @default(cuid())
 
@@ -123,6 +134,9 @@ model Project {
 
   //企画区分
   type ProjectType
+
+  //企画実施場所
+  location ProjectLocation
 
   //責任者
   ownerId String
