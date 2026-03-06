@@ -51,18 +51,26 @@ const requireOwner = async (formId: string, userId: string) => {
 	const form = await getFormOrThrow(formId);
 	if (form.ownerId !== userId)
 		throw Errors.forbidden("この操作は作成者のみ行えます");
+	if (form.isActive)
+		throw Errors.invalidRequest("有効化されたフォームは変更できません");
 	return form;
 };
 
 // 作成者または書き込み権限を持つ共同編集者を許可
 const requireWriteAccess = async (formId: string, userId: string) => {
 	const form = await getFormOrThrow(formId);
-	if (form.ownerId === userId) return form;
+	if (form.ownerId === userId) {
+		if (form.isActive)
+			throw Errors.invalidRequest("有効化されたフォームは変更できません");
+		return form;
+	}
 	const isWriteCollaborator = form.collaborators.some(
 		c => c.user.id === userId && c.isWrite
 	);
 	if (!isWriteCollaborator)
 		throw Errors.forbidden("この操作は作成者または共同編集者のみ行えます");
+	if (form.isActive)
+		throw Errors.invalidRequest("有効化されたフォームは変更できません");
 	return form;
 };
 

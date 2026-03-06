@@ -119,7 +119,8 @@ function RouteComponent() {
 	const isWriteCollaborator = form.collaborators.some(
 		c => c.user.id === user?.id && c.isWrite
 	);
-	const canEdit = (isOwner || isWriteCollaborator) && canCreate;
+	const canEdit =
+		(isOwner || isWriteCollaborator) && canCreate && !form.isActive;
 
 	const previewForm = useMemo(() => formDetailToPreviewForm(form), [form]);
 
