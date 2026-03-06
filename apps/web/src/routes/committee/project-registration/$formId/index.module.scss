@@ -99,3 +99,17 @@
 	gap: var(--space-2);
 	margin-top: var(--space-4);
 }
+
+.collaboratorRow {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.collaboratorName {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}

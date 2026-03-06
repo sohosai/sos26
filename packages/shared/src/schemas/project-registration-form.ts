@@ -67,14 +67,34 @@ export type ProjectRegistrationForm = z.infer<
 >;
 
 // フォーム詳細（items, authorizations 含む）
+export const projectRegistrationFormCollaboratorSchema = z.object({
+	id: z.string(),
+	formId: z.string(),
+	userId: z.string(),
+	isWrite: z.boolean(),
+	deletedAt: z.coerce.date().nullable(),
+	createdAt: z.coerce.date(),
+	updatedAt: z.coerce.date(),
+});
+export type ProjectRegistrationFormCollaborator = z.infer<
+	typeof projectRegistrationFormCollaboratorSchema
+>;
+
+// フォーム詳細（items, authorizations, collaborators 含む）
 export const projectRegistrationFormDetailSchema =
 	projectRegistrationFormSchema.extend({
+		owner: userSchema.pick({ id: true, name: true }),
 		items: z.array(projectRegistrationFormItemSchema),
 		authorizations: z.array(
 			projectRegistrationFormAuthorizationSchema.extend({
 				requestedBy: userSchema,
 				requestedTo: userSchema,
 			})
+		),
+		collaborators: z.array(
+			projectRegistrationFormCollaboratorSchema
+				.pick({ id: true, isWrite: true })
+				.extend({ user: userSchema.pick({ id: true, name: true }) })
 		),
 	});
 export type ProjectRegistrationFormDetail = z.infer<
@@ -112,9 +132,41 @@ export const projectRegistrationFormAuthorizationPathParamsSchema = z.object({
 	authorizationId: z.string().min(1),
 });
 
+export const projectRegistrationFormCollaboratorPathParamsSchema = z.object({
+	formId: z.string().min(1),
+	userId: z.string().min(1),
+});
+
 // ─────────────────────────────────────────────────────────────
-// POST /committee/project-registration-forms/create
+// POST /committee/project-registration-forms/:formId/collaborators/:userId
 // ─────────────────────────────────────────────────────────────
+
+export const addProjectRegistrationFormCollaboratorRequestSchema = z.object({
+	isWrite: z.boolean().default(true),
+});
+export type AddProjectRegistrationFormCollaboratorRequest = z.infer<
+	typeof addProjectRegistrationFormCollaboratorRequestSchema
+>;
+
+export const addProjectRegistrationFormCollaboratorResponseSchema = z.object({
+	collaborator: projectRegistrationFormCollaboratorSchema,
+});
+export type AddProjectRegistrationFormCollaboratorResponse = z.infer<
+	typeof addProjectRegistrationFormCollaboratorResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// DELETE /committee/project-registration-forms/:formId/collaborators/:userId
+// ─────────────────────────────────────────────────────────────
+
+export const removeProjectRegistrationFormCollaboratorResponseSchema = z.object(
+	{
+		success: z.literal(true),
+	}
+);
+export type RemoveProjectRegistrationFormCollaboratorResponse = z.infer<
+	typeof removeProjectRegistrationFormCollaboratorResponseSchema
+>;
 
 export const createProjectRegistrationFormRequestSchema = z.object({
 	title: z.string().min(1).optional(),

@@ -96,6 +96,7 @@ model User {
   requestedProjectRegistrationFormAuthorizations ProjectRegistrationFormAuthorization[] @relation("ProjectRegFormRequestedBy")
   receivedProjectRegistrationFormAuthorizations  ProjectRegistrationFormAuthorization[] @relation("ProjectRegFormRequestedTo")
   projectRegistrationForms                       ProjectRegistrationForm[]
+  projectRegistrationFormCollaborators           ProjectRegistrationFormCollaborator[]
 
   @@unique([firebaseUid, deletedAt])
   @@unique([email, deletedAt])
@@ -548,6 +549,25 @@ model FormCollaborator {
   @@unique([formId, userId])
 }
 
+model ProjectRegistrationFormCollaborator {
+  id String @id @default(cuid())
+
+  formId String
+  userId String
+
+  form ProjectRegistrationForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  user User                    @relation(fields: [userId], references: [id])
+
+  // 編集権限を持つのか
+  isWrite Boolean @default(false)
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([formId, userId])
+}
+
 //Formに関する承認待ちの状態Enum
 enum FormAuthorizationStatus {
   //承認待ち
@@ -956,7 +976,11 @@ model ProjectRegistrationForm {
   authorizations ProjectRegistrationFormAuthorization[]
 
   // 企画登録時の回答
+  // 企画登録時の回答
   responses ProjectRegistrationFormResponse[]
+
+  // 共同編集者
+  collaborators ProjectRegistrationFormCollaborator[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())

@@ -1,6 +1,8 @@
 import {
+	addProjectRegistrationFormCollaboratorRequestSchema,
 	createProjectRegistrationFormRequestSchema,
 	projectRegistrationFormAuthorizationPathParamsSchema,
+	projectRegistrationFormCollaboratorPathParamsSchema,
 	projectRegistrationFormIdPathParamsSchema,
 	requestProjectRegistrationFormAuthorizationRequestSchema,
 	updateProjectRegistrationFormAuthorizationRequestSchema,
@@ -22,6 +24,7 @@ const getFormOrThrow = async (formId: string) => {
 	const form = await prisma.projectRegistrationForm.findFirst({
 		where: { id: formId, deletedAt: null },
 		include: {
+			owner: { select: { id: true, name: true } },
 			items: {
 				include: { options: { orderBy: { sortOrder: "asc" } } },
 				orderBy: { sortOrder: "asc" },
@@ -32,6 +35,10 @@ const getFormOrThrow = async (formId: string) => {
 					requestedTo: true,
 				},
 				orderBy: { createdAt: "desc" },
+			},
+			collaborators: {
+				where: { deletedAt: null },
+				include: { user: { select: { id: true, name: true } } },
 			},
 		},
 	});
@@ -44,6 +51,18 @@ const requireOwner = async (formId: string, userId: string) => {
 	const form = await getFormOrThrow(formId);
 	if (form.ownerId !== userId)
 		throw Errors.forbidden("この操作は作成者のみ行えます");
+	return form;
+};
+
+// 作成者または書き込み権限を持つ共同編集者を許可
+const requireWriteAccess = async (formId: string, userId: string) => {
+	const form = await getFormOrThrow(formId);
+	if (form.ownerId === userId) return form;
+	const isWriteCollaborator = form.collaborators.some(
+		c => c.user.id === userId && c.isWrite
+	);
+	if (!isWriteCollaborator)
+		throw Errors.forbidden("この操作は作成者または共同編集者のみ行えます");
 	return form;
 };
 
@@ -171,7 +190,7 @@ committeeProjectRegistrationFormRoute.patch(
 			c.req.param()
 		);
 		const userId = c.get("user").id;
-		await requireOwner(formId, userId);
+		await requireWriteAccess(formId, userId);
 
 		const body = await c.req.json().catch(() => ({}));
 		const { items, ...formData } =
@@ -210,6 +229,10 @@ committeeProjectRegistrationFormRoute.patch(
 						authorizations: {
 							include: { requestedBy: true, requestedTo: true },
 							orderBy: { createdAt: "desc" },
+						},
+						collaborators: {
+							where: { deletedAt: null },
+							include: { user: { select: { id: true, name: true } } },
 						},
 					},
 				});
@@ -388,6 +411,114 @@ committeeProjectRegistrationFormRoute.patch(
 		);
 
 		return c.json({ authorization });
+	}
+);
+
+// ─────────────────────────────────────────
+// POST /committee/project-registration-forms/:formId/collaborators/:userId
+// 共同編集者を追加（作成者のみ、対象はCREATE権限必須）
+// ─────────────────────────────────────────
+committeeProjectRegistrationFormRoute.post(
+	"/:formId/collaborators/:userId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const cm = c.get("committeeMember");
+		await requireCreatePermission(cm.id);
+
+		const { formId, userId: targetUserId } =
+			projectRegistrationFormCollaboratorPathParamsSchema.parse({
+				formId: c.req.param("formId"),
+				userId: c.req.param("userId"),
+			});
+		const userId = c.get("user").id;
+
+		await requireOwner(formId, userId);
+
+		if (targetUserId === userId)
+			throw Errors.invalidRequest(
+				"作成者を共同編集者に追加することはできません"
+			);
+
+		// 対象ユーザーが委員会メンバーかつCREATE権限を持つか確認
+		const targetMember = await prisma.committeeMember.findFirst({
+			where: { user: { id: targetUserId }, deletedAt: null },
+			include: { permissions: true },
+		});
+		if (
+			!targetMember ||
+			!targetMember.permissions.some(
+				p => p.permission === "PROJECT_REGISTRATION_FORM_CREATE"
+			)
+		) {
+			throw Errors.invalidRequest(
+				"対象ユーザーが委員会メンバーでないか、企画登録フォームの作成権限がありません"
+			);
+		}
+
+		const body = await c.req.json().catch(() => ({}));
+		const { isWrite } =
+			addProjectRegistrationFormCollaboratorRequestSchema.parse(body);
+
+		const existing = await prisma.projectRegistrationFormCollaborator.findFirst(
+			{
+				where: { formId, userId: targetUserId },
+			}
+		);
+
+		if (existing) {
+			if (!existing.deletedAt)
+				throw Errors.alreadyExists("既に共同編集者として追加されています");
+			// 論理削除済みの場合は再有効化
+			const collaborator =
+				await prisma.projectRegistrationFormCollaborator.update({
+					where: { id: existing.id },
+					data: { deletedAt: null, isWrite },
+				});
+			return c.json({ collaborator });
+		}
+
+		const collaborator =
+			await prisma.projectRegistrationFormCollaborator.create({
+				data: { formId, userId: targetUserId, isWrite },
+			});
+		return c.json({ collaborator });
+	}
+);
+
+// ─────────────────────────────────────────
+// DELETE /committee/project-registration-forms/:formId/collaborators/:userId
+// 共同編集者を削除（作成者のみ）
+// ─────────────────────────────────────────
+committeeProjectRegistrationFormRoute.delete(
+	"/:formId/collaborators/:userId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const cm = c.get("committeeMember");
+		await requireCreatePermission(cm.id);
+
+		const { formId, userId: targetUserId } =
+			projectRegistrationFormCollaboratorPathParamsSchema.parse({
+				formId: c.req.param("formId"),
+				userId: c.req.param("userId"),
+			});
+		const userId = c.get("user").id;
+
+		await requireOwner(formId, userId);
+
+		const collaborator =
+			await prisma.projectRegistrationFormCollaborator.findFirst({
+				where: { formId, userId: targetUserId, deletedAt: null },
+			});
+		if (!collaborator)
+			throw Errors.notFound("対象ユーザーは共同編集者ではありません");
+
+		await prisma.projectRegistrationFormCollaborator.update({
+			where: { id: collaborator.id },
+			data: { deletedAt: new Date() },
+		});
+		return c.json({ success: true as const });
 	}
 );
 

@@ -1,11 +1,15 @@
 import {
+	addProjectRegistrationFormCollaboratorRequestSchema,
+	addProjectRegistrationFormCollaboratorResponseSchema,
 	createProjectRegistrationFormRequestSchema,
 	createProjectRegistrationFormResponseSchema,
 	deleteProjectRegistrationFormResponseSchema,
 	getProjectRegistrationFormDetailResponseSchema,
 	listProjectRegistrationFormsResponseSchema,
 	projectRegistrationFormAuthorizationPathParamsSchema,
+	projectRegistrationFormCollaboratorPathParamsSchema,
 	projectRegistrationFormIdPathParamsSchema,
+	removeProjectRegistrationFormCollaboratorResponseSchema,
 	requestProjectRegistrationFormAuthorizationRequestSchema,
 	requestProjectRegistrationFormAuthorizationResponseSchema,
 	updateProjectRegistrationFormAuthorizationRequestSchema,
@@ -153,4 +157,45 @@ export const updateProjectRegistrationFormAuthorizationEndpoint: BodyEndpoint<
 	query: undefined,
 	request: updateProjectRegistrationFormAuthorizationRequestSchema,
 	response: updateProjectRegistrationFormAuthorizationResponseSchema,
+} as const;
+
+/**
+ * POST /committee/project-registration-forms/:formId/collaborators/:userId
+ * 共同編集者を追加
+ * 権限: PROJECT_REGISTRATION_FORM_CREATE (作成者のみ追加可能, 対象もCREATE権限必須)
+ */
+export const addProjectRegistrationFormCollaboratorEndpoint: BodyEndpoint<
+	"POST",
+	"/committee/project-registration-forms/:formId/collaborators/:userId",
+	typeof projectRegistrationFormCollaboratorPathParamsSchema,
+	undefined,
+	typeof addProjectRegistrationFormCollaboratorRequestSchema,
+	typeof addProjectRegistrationFormCollaboratorResponseSchema
+> = {
+	method: "POST",
+	path: "/committee/project-registration-forms/:formId/collaborators/:userId",
+	pathParams: projectRegistrationFormCollaboratorPathParamsSchema,
+	query: undefined,
+	request: addProjectRegistrationFormCollaboratorRequestSchema,
+	response: addProjectRegistrationFormCollaboratorResponseSchema,
+} as const;
+
+/**
+ * DELETE /committee/project-registration-forms/:formId/collaborators/:userId
+ * 共同編集者を削除
+ * 権限: PROJECT_REGISTRATION_FORM_CREATE (作成者のみ)
+ */
+export const removeProjectRegistrationFormCollaboratorEndpoint: NoBodyEndpoint<
+	"DELETE",
+	"/committee/project-registration-forms/:formId/collaborators/:userId",
+	typeof projectRegistrationFormCollaboratorPathParamsSchema,
+	undefined,
+	typeof removeProjectRegistrationFormCollaboratorResponseSchema
+> = {
+	method: "DELETE",
+	path: "/committee/project-registration-forms/:formId/collaborators/:userId",
+	pathParams: projectRegistrationFormCollaboratorPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: removeProjectRegistrationFormCollaboratorResponseSchema,
 } as const;

@@ -172,6 +172,15 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"ProjectRegistrationFormCollaborator" {
+  String id PK
+  String formId FK
+  String userId FK
+  Boolean isWrite
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
 "FormAuthorization" {
   String id PK
   String formId FK
@@ -376,6 +385,8 @@ erDiagram
 "FormItemOption" }o--|| "FormItem" : formItem
 "FormCollaborator" }o--|| "Form" : form
 "FormCollaborator" }o--|| "User" : user
+"ProjectRegistrationFormCollaborator" }o--|| "ProjectRegistrationForm" : form
+"ProjectRegistrationFormCollaborator" }o--|| "User" : user
 "FormAuthorization" }o--|| "Form" : form
 "FormAuthorization" }o--|| "User" : requestedBy
 "FormAuthorization" }o--|| "User" : requestedTo
@@ -627,6 +638,18 @@ Properties as follows:
 - `updatedAt`:
 
 ### `FormCollaborator`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `userId`:
+- `isWrite`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormCollaborator`
 
 Properties as follows:
 

@@ -1,4 +1,7 @@
 import {
+	type AddProjectRegistrationFormCollaboratorRequest,
+	type AddProjectRegistrationFormCollaboratorResponse,
+	addProjectRegistrationFormCollaboratorEndpoint,
 	type CreateProjectRegistrationFormRequest,
 	type CreateProjectRegistrationFormResponse,
 	createProjectRegistrationFormEndpoint,
@@ -8,8 +11,10 @@ import {
 	getProjectRegistrationFormDetailEndpoint,
 	type ListProjectRegistrationFormsResponse,
 	listProjectRegistrationFormsEndpoint,
+	type RemoveProjectRegistrationFormCollaboratorResponse,
 	type RequestProjectRegistrationFormAuthorizationRequest,
 	type RequestProjectRegistrationFormAuthorizationResponse,
+	removeProjectRegistrationFormCollaboratorEndpoint,
 	requestProjectRegistrationFormAuthorizationEndpoint,
 	type UpdateProjectRegistrationFormAuthorizationRequest,
 	type UpdateProjectRegistrationFormAuthorizationResponse,
@@ -101,5 +106,32 @@ export async function updateProjectRegistrationFormAuthorization(
 ): Promise<UpdateProjectRegistrationFormAuthorizationResponse> {
 	return callBodyApi(updateProjectRegistrationFormAuthorizationEndpoint, body, {
 		pathParams: { formId, authorizationId },
+	});
+}
+
+/**
+ * POST /committee/project-registration-forms/:formId/collaborators/:userId
+ * 共同編集者を追加
+ */
+export async function addProjectRegistrationFormCollaborator(
+	formId: string,
+	userId: string,
+	body: AddProjectRegistrationFormCollaboratorRequest
+): Promise<AddProjectRegistrationFormCollaboratorResponse> {
+	return callBodyApi(addProjectRegistrationFormCollaboratorEndpoint, body, {
+		pathParams: { formId, userId },
+	});
+}
+
+/**
+ * DELETE /committee/project-registration-forms/:formId/collaborators/:userId
+ * 共同編集者を削除
+ */
+export async function removeProjectRegistrationFormCollaborator(
+	formId: string,
+	userId: string
+): Promise<RemoveProjectRegistrationFormCollaboratorResponse> {
+	return callNoBodyApi(removeProjectRegistrationFormCollaboratorEndpoint, {
+		pathParams: { formId, userId },
 	});
 }

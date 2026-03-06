@@ -1,14 +1,6 @@
 import { AlertDialog, Badge, Heading, Separator, Text } from "@radix-ui/themes";
 import type { ProjectRegistrationFormDetail } from "@sos26/shared";
-import {
-	IconArrowLeft,
-	IconCalendar,
-	IconCheck,
-	IconClock,
-	IconSend,
-	IconTrash,
-	IconX,
-} from "@tabler/icons-react";
+import { IconArrowLeft, IconCalendar, IconClock } from "@tabler/icons-react";
 import {
 	createFileRoute,
 	Link,
@@ -21,15 +13,17 @@ import type { Form } from "@/components/form/type";
 import { Button } from "@/components/primitives";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import {
+	addProjectRegistrationFormCollaborator,
 	deleteProjectRegistrationForm,
 	getProjectRegistrationFormDetail,
+	removeProjectRegistrationFormCollaborator,
 	updateProjectRegistrationFormAuthorization,
 } from "@/lib/api/committee-project-registration-form";
 import { useAuthStore } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { FormItemsPreview } from "@/routes/committee/forms/$formId/-components/FormItemsPreview";
-import { RequestAuthorizationDialog } from "../-components/RequestAuthorizationDialog";
 import { EditProjectRegistrationFormDialog } from "./-components/EditProjectRegistrationFormDialog";
+import { ProjectRegistrationFormDetailSidebar } from "./-components/ProjectRegistrationFormDetailSidebar";
 import styles from "./index.module.scss";
 
 const PROJECT_TYPE_LABELS: Record<string, string> = {
@@ -84,10 +78,6 @@ export const Route = createFileRoute(
 			currentMember?.permissions.some(
 				p => p.permission === "PROJECT_REGISTRATION_FORM_CREATE"
 			) === true;
-		const canDeliver =
-			currentMember?.permissions.some(
-				p => p.permission === "PROJECT_REGISTRATION_FORM_DELIVER"
-			) === true;
 		const approvers = committeeMembers
 			.filter(m =>
 				m.permissions.some(
@@ -95,37 +85,92 @@ export const Route = createFileRoute(
 				)
 			)
 			.map(m => ({ userId: m.user.id, name: m.user.name }));
-		return { form, canCreate, canDeliver, approvers };
+		const existingCollaboratorIds = new Set(
+			form.collaborators.map(c => c.user.id)
+		);
+		const availableMembers = committeeMembers
+			.filter(
+				m =>
+					m.user.id !== form.ownerId &&
+					!existingCollaboratorIds.has(m.user.id) &&
+					m.permissions.some(
+						p => p.permission === "PROJECT_REGISTRATION_FORM_CREATE"
+					)
+			)
+			.map(m => ({ userId: m.user.id, name: m.user.name }));
+		return { form, canCreate, approvers, availableMembers };
 	},
 });
 
 function RouteComponent() {
 	const { formId } = Route.useParams();
-	const { form, canCreate, canDeliver, approvers } = Route.useLoaderData();
+	const { form, canCreate, approvers, availableMembers } =
+		Route.useLoaderData();
 	const navigate = useNavigate();
 	const router = useRouter();
 	const { user } = useAuthStore();
 
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-	const [authRequestOpen, setAuthRequestOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
-	const [approvingId, setApprovingId] = useState<string | null>(null);
-	const [rejectingId, setRejectingId] = useState<string | null>(null);
+	const [removingId, setRemovingId] = useState<string | null>(null);
 
 	const isOwner = form.ownerId === user?.id;
-	const canEdit = isOwner && canCreate;
-
-	const latestAuth = form.authorizations[0] ?? null;
-	const isApprover =
-		canDeliver &&
-		latestAuth?.status === "PENDING" &&
-		latestAuth.requestedToId === user?.id;
-
-	const canRequestAuth =
-		canEdit && !form.isActive && latestAuth?.status !== "PENDING";
+	const isWriteCollaborator = form.collaborators.some(
+		c => c.user.id === user?.id && c.isWrite
+	);
+	const canEdit = (isOwner || isWriteCollaborator) && canCreate;
 
 	const previewForm = useMemo(() => formDetailToPreviewForm(form), [form]);
+
+	const handleAddCollaborator = async (targetUserId: string) => {
+		try {
+			await addProjectRegistrationFormCollaborator(formId, targetUserId, {
+				isWrite: true,
+			});
+			await router.invalidate();
+			toast.success("共同編集者を追加しました");
+		} catch {
+			toast.error("共同編集者の追加に失敗しました");
+		}
+	};
+
+	const handleRemoveCollaborator = async (targetUserId: string) => {
+		setRemovingId(targetUserId);
+		try {
+			await removeProjectRegistrationFormCollaborator(formId, targetUserId);
+			await router.invalidate();
+			toast.success("共同編集者を削除しました");
+		} catch {
+			toast.error("共同編集者の削除に失敗しました");
+		} finally {
+			setRemovingId(null);
+		}
+	};
+
+	const handleApprove = async (authId: string) => {
+		try {
+			await updateProjectRegistrationFormAuthorization(formId, authId, {
+				status: "APPROVED",
+			});
+			await router.invalidate();
+			toast.success("承認しました。フォームが有効化されました。");
+		} catch {
+			toast.error("承認に失敗しました");
+		}
+	};
+
+	const handleReject = async (authId: string) => {
+		try {
+			await updateProjectRegistrationFormAuthorization(formId, authId, {
+				status: "REJECTED",
+			});
+			await router.invalidate();
+			toast.success("却下しました");
+		} catch {
+			toast.error("却下に失敗しました");
+		}
+	};
 
 	const handleDelete = async () => {
 		setIsDeleting(true);
@@ -136,36 +181,6 @@ function RouteComponent() {
 			toast.error("フォームの削除に失敗しました");
 		} finally {
 			setIsDeleting(false);
-		}
-	};
-
-	const handleApprove = async (authId: string) => {
-		setApprovingId(authId);
-		try {
-			await updateProjectRegistrationFormAuthorization(formId, authId, {
-				status: "APPROVED",
-			});
-			await router.invalidate();
-			toast.success("承認しました。フォームが有効化されました。");
-		} catch {
-			toast.error("承認に失敗しました");
-		} finally {
-			setApprovingId(null);
-		}
-	};
-
-	const handleReject = async (authId: string) => {
-		setRejectingId(authId);
-		try {
-			await updateProjectRegistrationFormAuthorization(formId, authId, {
-				status: "REJECTED",
-			});
-			await router.invalidate();
-			toast.success("却下しました");
-		} catch {
-			toast.error("却下に失敗しました");
-		} finally {
-			setRejectingId(null);
 		}
 	};
 
@@ -235,110 +250,28 @@ function RouteComponent() {
 				<FormItemsPreview items={previewForm.items} />
 			</div>
 
-			{/* サイドバー */}
-			<div className={styles.sidebarWrapper}>
-				<aside className={styles.sidebar}>
-					<div className={styles.section}>
-						{canEdit && (
-							<Button
-								intent="secondary"
-								size="2"
-								onClick={() => setEditDialogOpen(true)}
-							>
-								編集
-							</Button>
-						)}
-						{canRequestAuth && (
-							<Button
-								intent="primary"
-								size="2"
-								onClick={() => setAuthRequestOpen(true)}
-							>
-								<IconSend size={14} />
-								承認申請
-							</Button>
-						)}
-						{canEdit && isOwner && (
-							<Button
-								intent="ghost"
-								size="2"
-								onClick={() => setDeleteConfirmOpen(true)}
-							>
-								<IconTrash size={14} />
-								削除
-							</Button>
-						)}
-					</div>
-
-					{latestAuth && (
-						<>
-							<Separator size="4" />
-							<div className={styles.section}>
-								<Text size="2" weight="medium" color="gray">
-									承認依頼
-								</Text>
-								{isApprover && (
-									<Text size="2" color="orange" weight="medium">
-										あなたに承認リクエストが届いています
-									</Text>
-								)}
-								<div className={styles.authRow}>
-									<Text size="2" color="gray">
-										申請日
-									</Text>
-									<Text size="2">
-										{formatDate(latestAuth.createdAt, "datetime")}
-									</Text>
-								</div>
-								<div className={styles.authRow}>
-									<Text size="2" color="gray">
-										ステータス
-									</Text>
-									<AuthStatusBadge status={latestAuth.status} />
-								</div>
-								{isApprover && latestAuth.status === "PENDING" && (
-									<div className={styles.authActions}>
-										<Button
-											intent="primary"
-											size="2"
-											onClick={() => handleApprove(latestAuth.id)}
-											loading={approvingId === latestAuth.id}
-											disabled={rejectingId !== null}
-										>
-											<IconCheck size={16} />
-											承認
-										</Button>
-										<Button
-											intent="secondary"
-											size="2"
-											onClick={() => handleReject(latestAuth.id)}
-											loading={rejectingId === latestAuth.id}
-											disabled={approvingId !== null}
-										>
-											<IconX size={16} />
-											却下
-										</Button>
-									</div>
-								)}
-							</div>
-						</>
-					)}
-				</aside>
-			</div>
+			<ProjectRegistrationFormDetailSidebar
+				form={form}
+				userId={user?.id ?? ""}
+				isOwner={isOwner}
+				canEdit={canEdit}
+				availableMembers={availableMembers}
+				approvers={approvers}
+				removingId={removingId}
+				onAddCollaborator={handleAddCollaborator}
+				onRemoveCollaborator={handleRemoveCollaborator}
+				onApprove={handleApprove}
+				onReject={handleReject}
+				onAuthRequestSuccess={() => router.invalidate()}
+				onEdit={() => setEditDialogOpen(true)}
+				onDelete={() => setDeleteConfirmOpen(true)}
+			/>
 
 			<EditProjectRegistrationFormDialog
 				open={editDialogOpen}
 				onOpenChange={setEditDialogOpen}
 				formId={form.id}
 				initialForm={form}
-				onSuccess={() => router.invalidate()}
-			/>
-
-			<RequestAuthorizationDialog
-				open={authRequestOpen}
-				onOpenChange={setAuthRequestOpen}
-				formId={form.id}
-				approvers={approvers}
 				onSuccess={() => router.invalidate()}
 			/>
 
@@ -395,32 +328,6 @@ function FormStatusBadge({ form }: { form: ProjectRegistrationFormDetail }) {
 	return (
 		<Badge variant="soft" color="gray">
 			下書き
-		</Badge>
-	);
-}
-
-function AuthStatusBadge({ status }: { status: string }) {
-	if (status === "PENDING")
-		return (
-			<Badge variant="soft" color="yellow">
-				保留中
-			</Badge>
-		);
-	if (status === "APPROVED")
-		return (
-			<Badge variant="soft" color="green">
-				承認済み
-			</Badge>
-		);
-	if (status === "REJECTED")
-		return (
-			<Badge variant="soft" color="red">
-				却下
-			</Badge>
-		);
-	return (
-		<Badge variant="soft" color="gray">
-			{status}
 		</Badge>
 	);
 }
