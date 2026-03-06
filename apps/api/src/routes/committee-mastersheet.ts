@@ -2,6 +2,7 @@ import type { CommitteeMember, Prisma } from "@prisma/client";
 import {
 	createMastersheetColumnRequestSchema,
 	createMastersheetViewRequestSchema,
+	editFormItemCellRequestSchema,
 	mastersheetAccessRequestIdPathParamsSchema,
 	mastersheetColumnIdPathParamsSchema,
 	mastersheetColumnProjectPathParamsSchema,
@@ -10,7 +11,6 @@ import {
 	updateMastersheetColumnRequestSchema,
 	updateMastersheetViewRequestSchema,
 	upsertMastersheetCellRequestSchema,
-	upsertMastersheetOverrideRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
@@ -135,15 +135,12 @@ function formatColumnDef(col: ColumnFull, userId: string) {
 function computeCellStatus(
 	deliveryId: string | undefined,
 	response: { submittedAt: Date | null } | undefined,
-	override: { isStale: boolean } | undefined
+	latestHistory: { trigger: string } | undefined
 ) {
 	if (!deliveryId) return "NOT_DELIVERED" as const;
-	if (!response) return "NOT_ANSWERED" as const;
-	if (!response.submittedAt) return "DRAFT" as const;
-	if (override)
-		return override.isStale
-			? ("STALE_OVERRIDE" as const)
-			: ("OVERRIDDEN" as const);
+	if (!response?.submittedAt && !latestHistory) return "NOT_ANSWERED" as const;
+	if (latestHistory?.trigger === "COMMITTEE_EDIT")
+		return "COMMITTEE_EDITED" as const;
 	return "SUBMITTED" as const;
 }
 
@@ -159,11 +156,11 @@ type FormResponseWithAnswers = Prisma.FormResponseGetPayload<{
 	};
 }>;
 
-type OverrideWithOptions = Prisma.MastersheetOverrideGetPayload<{
-	include: { selectedOptions: { select: { optionId: true } } };
+type HistoryWithOptions = Prisma.FormItemEditHistoryGetPayload<{
+	include: {
+		selectedOptions: { select: { formItemOptionId: true } };
+	};
 }>;
-
-type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 function buildFormItemCell(
 	colId: string,
@@ -175,12 +172,30 @@ function buildFormItemCell(
 		string,
 		Map<string, FormResponseWithAnswers["answers"][0]>
 	>,
-	overrideByColProject: Map<string, Map<string, OverrideWithOptions>>
+	latestHistoryByCell: Map<string, HistoryWithOptions>
 ) {
 	const deliveryId = deliveryByFormProject.get(formItem.formId)?.get(projectId);
 	const response = deliveryId ? responseByDelivery.get(deliveryId) : undefined;
-	const override = overrideByColProject.get(colId)?.get(projectId);
-	const status = computeCellStatus(deliveryId, response, override);
+	const historyKey = `${formItem.id}:${projectId}`;
+	const latestHistory = latestHistoryByCell.get(historyKey);
+	const status = computeCellStatus(deliveryId, response, latestHistory);
+
+	// 表示値: 履歴があれば履歴の値、なければ FormAnswer
+	if (latestHistory) {
+		return {
+			columnId: colId,
+			status,
+			formValue: {
+				textValue: latestHistory.textValue,
+				numberValue: latestHistory.numberValue,
+				fileUrl: latestHistory.fileUrl,
+				selectedOptionIds: latestHistory.selectedOptions.map(
+					s => s.formItemOptionId
+				),
+			},
+		};
+	}
+
 	const answer = response?.submittedAt
 		? answerByResponseItem.get(response.id)?.get(formItem.id)
 		: undefined;
@@ -196,71 +211,7 @@ function buildFormItemCell(
 		columnId: colId,
 		status,
 		formValue,
-		override: override
-			? {
-					textValue: override.textValue,
-					numberValue: override.numberValue,
-					fileUrl: override.fileUrl,
-					selectedOptionIds: override.selectedOptions.map(s => s.optionId),
-					isStale: override.isStale,
-				}
-			: null,
 	};
-}
-
-async function upsertOverrideRecord(
-	tx: PrismaTx,
-	existing: OverrideWithOptions | null,
-	data: {
-		textValue?: string | null;
-		numberValue?: number | null;
-		fileUrl?: string | null;
-	},
-	columnId: string,
-	projectId: string,
-	userId: string
-): Promise<string> {
-	if (existing) {
-		await tx.mastersheetOverride.update({
-			where: { id: existing.id },
-			data: {
-				textValue: data.textValue ?? null,
-				numberValue: data.numberValue ?? null,
-				fileUrl: data.fileUrl ?? null,
-				isStale: false,
-				editorId: userId,
-			},
-		});
-		return existing.id;
-	}
-	const created = await tx.mastersheetOverride.create({
-		data: {
-			columnId,
-			projectId,
-			textValue: data.textValue ?? null,
-			numberValue: data.numberValue ?? null,
-			fileUrl: data.fileUrl ?? null,
-			isStale: false,
-			editorId: userId,
-		},
-	});
-	return created.id;
-}
-
-async function syncOverrideOptions(
-	tx: PrismaTx,
-	overrideId: string,
-	selectedOptionIds: string[] | undefined
-): Promise<void> {
-	if (selectedOptionIds === undefined) return;
-	await tx.mastersheetOverrideSelectedOption.deleteMany({
-		where: { overrideId },
-	});
-	if (selectedOptionIds.length > 0) {
-		await tx.mastersheetOverrideSelectedOption.createMany({
-			data: selectedOptionIds.map(optionId => ({ overrideId, optionId })),
-		});
-	}
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -378,22 +329,24 @@ committeeMastersheetRoute.get(
 			);
 		}
 
-		const formItemColIds = formItemCols.map(c => c.id);
-		const overrides = formItemColIds.length
-			? await prisma.mastersheetOverride.findMany({
-					where: { columnId: { in: formItemColIds } },
-					include: { selectedOptions: { select: { optionId: true } } },
+		// FormItemEditHistory: 最新の履歴を取得
+		const formItemIds = formItemCols
+			.flatMap(c => (c.formItem ? [c.formItem.id] : []))
+			.filter((id, i, arr) => arr.indexOf(id) === i);
+		const allHistory = formItemIds.length
+			? await prisma.formItemEditHistory.findMany({
+					where: { formItemId: { in: formItemIds } },
+					orderBy: { createdAt: "desc" },
+					include: {
+						selectedOptions: { select: { formItemOptionId: true } },
+					},
 				})
 			: [];
 
-		const overrideByColProject = new Map<
-			string,
-			Map<string, (typeof overrides)[0]>
-		>();
-		for (const o of overrides) {
-			if (!overrideByColProject.has(o.columnId))
-				overrideByColProject.set(o.columnId, new Map());
-			overrideByColProject.get(o.columnId)?.set(o.projectId, o);
+		const latestHistoryByCell = new Map<string, (typeof allHistory)[0]>();
+		for (const h of allHistory) {
+			const key = `${h.formItemId}:${h.projectId}`;
+			if (!latestHistoryByCell.has(key)) latestHistoryByCell.set(key, h);
 		}
 
 		// 4. CUSTOM: セル値をバッチ取得
@@ -426,7 +379,7 @@ committeeMastersheetRoute.get(
 						deliveryByFormProject,
 						responseByDelivery,
 						answerByResponseItem,
-						overrideByColProject
+						latestHistoryByCell
 					);
 				}
 				// CUSTOM
@@ -796,12 +749,12 @@ committeeMastersheetRoute.put(
 );
 
 // ─────────────────────────────────────────────────────────────
-// PUT /committee/mastersheet/overrides/:columnId/:projectId
-// フォーム由来カラムの回答をオーバーライド
+// PUT /committee/mastersheet/edits/:columnId/:projectId
+// フォーム由来カラムの値を編集（FormItemEditHistory に COMMITTEE_EDIT を追加）
 // ─────────────────────────────────────────────────────────────
 
 committeeMastersheetRoute.put(
-	"/overrides/:columnId/:projectId",
+	"/edits/:columnId/:projectId",
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
@@ -812,7 +765,9 @@ committeeMastersheetRoute.put(
 
 		const col = await getColumnFull(columnId);
 		if (col.type !== "FORM_ITEM")
-			throw Errors.invalidRequest("FORM_ITEM カラムのみオーバーライドできます");
+			throw Errors.invalidRequest("FORM_ITEM カラムのみ編集できます");
+		if (!col.formItemId)
+			throw Errors.invalidRequest("フォーム項目が紐づいていません");
 
 		const accessibleFormIds = await getAccessibleFormIds(userId);
 		if (!canViewColumn(col, userId, committeeMember, accessibleFormIds))
@@ -824,119 +779,34 @@ committeeMastersheetRoute.put(
 		if (!project) throw Errors.notFound("企画が見つかりません");
 
 		const body = await c.req.json().catch(() => ({}));
-		const data = upsertMastersheetOverrideRequestSchema.parse(body);
+		const data = editFormItemCellRequestSchema.parse(body);
 
-		const override = await prisma.$transaction(
+		const formItemId = col.formItemId;
+
+		const history = await prisma.$transaction(
 			async tx => {
-				const existing = await tx.mastersheetOverride.findUnique({
-					where: { columnId_projectId: { columnId, projectId } },
-					include: { selectedOptions: { select: { optionId: true } } },
-				});
-
-				const oldValue = existing
-					? JSON.stringify({
-							textValue: existing.textValue,
-							numberValue: existing.numberValue,
-							fileUrl: existing.fileUrl,
-							selectedOptionIds: existing.selectedOptions.map(s => s.optionId),
-						})
-					: null;
-				const newValue = JSON.stringify({
-					textValue: data.textValue ?? null,
-					numberValue: data.numberValue ?? null,
-					fileUrl: data.fileUrl ?? null,
-					selectedOptionIds: data.selectedOptionIds ?? [],
-				});
-
-				const overrideId = await upsertOverrideRecord(
-					tx,
-					existing,
-					data,
-					columnId,
-					projectId,
-					userId
-				);
-				await syncOverrideOptions(tx, overrideId, data.selectedOptionIds);
-
-				await tx.mastersheetEditHistory.create({
-					data: { columnId, projectId, oldValue, newValue, editorId: userId },
-				});
-
-				return tx.mastersheetOverride.findUniqueOrThrow({
-					where: { id: overrideId },
-					include: { selectedOptions: { select: { optionId: true } } },
-				});
-			},
-			{ isolationLevel: "Serializable" }
-		);
-
-		return c.json({
-			cell: {
-				columnId,
-				status: "OVERRIDDEN" as const,
-				formValue: null,
-				override: {
-					textValue: override.textValue,
-					numberValue: override.numberValue,
-					fileUrl: override.fileUrl,
-					selectedOptionIds: override.selectedOptions.map(s => s.optionId),
-					isStale: false,
-				},
-			},
-		});
-	}
-);
-
-// ─────────────────────────────────────────────────────────────
-// DELETE /committee/mastersheet/overrides/:columnId/:projectId
-// ─────────────────────────────────────────────────────────────
-
-committeeMastersheetRoute.delete(
-	"/overrides/:columnId/:projectId",
-	requireAuth,
-	requireCommitteeMember,
-	async c => {
-		const userId = c.get("user").id;
-		const committeeMember = c.get("committeeMember");
-		const { columnId, projectId } =
-			mastersheetColumnProjectPathParamsSchema.parse(c.req.param());
-
-		const col = await getColumnFull(columnId);
-		if (col.type !== "FORM_ITEM")
-			throw Errors.invalidRequest(
-				"FORM_ITEM カラムのみオーバーライドを削除できます"
-			);
-
-		const accessibleFormIds = await getAccessibleFormIds(userId);
-		if (!canViewColumn(col, userId, committeeMember, accessibleFormIds))
-			throw Errors.forbidden("このカラムへのアクセス権がありません");
-
-		const override = await prisma.mastersheetOverride.findUnique({
-			where: { columnId_projectId: { columnId, projectId } },
-			include: { selectedOptions: { select: { optionId: true } } },
-		});
-		if (!override) throw Errors.notFound("オーバーライドが見つかりません");
-
-		await prisma.$transaction(
-			async tx => {
-				const oldValue = JSON.stringify({
-					textValue: override.textValue,
-					numberValue: override.numberValue,
-					fileUrl: override.fileUrl,
-					selectedOptionIds: override.selectedOptions.map(s => s.optionId),
-				});
-
-				await tx.mastersheetOverride.delete({ where: { id: override.id } });
-
-				await tx.mastersheetEditHistory.create({
+				const created = await tx.formItemEditHistory.create({
 					data: {
-						columnId,
+						formItemId,
 						projectId,
-						oldValue,
-						newValue: null,
-						editorId: userId,
+						textValue: data.textValue ?? null,
+						numberValue: data.numberValue ?? null,
+						fileUrl: data.fileUrl ?? null,
+						actorId: userId,
+						trigger: "COMMITTEE_EDIT",
 					},
 				});
+
+				if (data.selectedOptionIds?.length) {
+					await tx.formItemEditHistorySelectedOption.createMany({
+						data: data.selectedOptionIds.map(optionId => ({
+							editHistoryId: created.id,
+							formItemOptionId: optionId,
+						})),
+					});
+				}
+
+				return created;
 			},
 			{ isolationLevel: "Serializable" }
 		);
@@ -944,9 +814,13 @@ committeeMastersheetRoute.delete(
 		return c.json({
 			cell: {
 				columnId,
-				status: "SUBMITTED" as const,
-				formValue: null,
-				override: null,
+				status: "COMMITTEE_EDITED" as const,
+				formValue: {
+					textValue: history.textValue,
+					numberValue: history.numberValue,
+					fileUrl: history.fileUrl,
+					selectedOptionIds: data.selectedOptionIds ?? [],
+				},
 			},
 		});
 	}
@@ -967,22 +841,33 @@ committeeMastersheetRoute.get(
 			mastersheetColumnProjectPathParamsSchema.parse(c.req.param());
 
 		const col = await getColumnFull(columnId);
+		if (!col.formItemId)
+			throw Errors.invalidRequest("フォーム項目が紐づいていません");
+
 		const accessibleFormIds = await getAccessibleFormIds(userId);
 		if (!canViewColumn(col, userId, committeeMember, accessibleFormIds))
 			throw Errors.forbidden("このカラムへのアクセス権がありません");
 
-		const history = await prisma.mastersheetEditHistory.findMany({
-			where: { columnId, projectId },
-			include: { editor: { select: { id: true, name: true } } },
+		const history = await prisma.formItemEditHistory.findMany({
+			where: { formItemId: col.formItemId, projectId },
+			include: {
+				actor: { select: { id: true, name: true } },
+				selectedOptions: { select: { formItemOptionId: true } },
+			},
 			orderBy: { createdAt: "desc" },
 		});
 
 		return c.json({
 			history: history.map(h => ({
 				id: h.id,
-				oldValue: h.oldValue,
-				newValue: h.newValue,
-				editor: h.editor,
+				value: JSON.stringify({
+					textValue: h.textValue,
+					numberValue: h.numberValue,
+					fileUrl: h.fileUrl,
+					selectedOptionIds: h.selectedOptions.map(s => s.formItemOptionId),
+				}),
+				actor: h.actor,
+				trigger: h.trigger,
 				createdAt: h.createdAt,
 			})),
 		});

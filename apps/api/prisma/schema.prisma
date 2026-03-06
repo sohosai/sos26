@@ -94,12 +94,13 @@ model User {
 
   // Mastersheet関連
   mastersheetColumns              MastersheetColumn[]        @relation("MastersheetColumnCreatedBy")
-  mastersheetOverrides            MastersheetOverride[]      @relation("MastersheetOverrideEditor")
   mastersheetColumnViewers        MastersheetColumnViewer[]
   mastersheetAccessRequestsMade   MastersheetAccessRequest[] @relation("MastersheetAccessRequester")
   mastersheetAccessRequestsJudged MastersheetAccessRequest[] @relation("MastersheetAccessDecider")
-  mastersheetEditHistories        MastersheetEditHistory[]   @relation("MastersheetEditHistoryEditor")
   mastersheetViews                MastersheetView[]
+
+  // FormItemEditHistory関連
+  formItemEditHistory FormItemEditHistory[] @relation("FormItemEditHistoryActor")
 
   @@unique([firebaseUid, deletedAt])
   @@unique([email, deletedAt])
@@ -153,9 +154,8 @@ model Project {
   formDeliveries   FormDelivery[]
   inquiries        Inquiry[]
 
-  mastersheetCellValues    MastersheetCellValue[]
-  mastersheetOverrides     MastersheetOverride[]
-  mastersheetEditHistories MastersheetEditHistory[]
+  mastersheetCellValues MastersheetCellValue[]
+  formItemEditHistory   FormItemEditHistory[]
 
   @@index([ownerId])
   @@index([subOwnerId])
@@ -492,6 +492,7 @@ model FormItem {
   answers FormAnswer[]
 
   mastersheetColumns MastersheetColumn[]
+  editHistory        FormItemEditHistory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -514,6 +515,8 @@ model FormItemOption {
 
   //回答での選択
   selectedIn FormAnswerSelectedOption[]
+
+  editHistorySelections FormItemEditHistorySelectedOption[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -926,8 +929,6 @@ model MastersheetColumn {
   viewers        MastersheetColumnViewer[]
   options        MastersheetColumnOption[]
   cellValues     MastersheetCellValue[]
-  overrides      MastersheetOverride[]
-  editHistory    MastersheetEditHistory[]
   accessRequests MastersheetAccessRequest[]
 
   createdAt DateTime @default(now())
@@ -982,39 +983,42 @@ model MastersheetCellSelectedOption {
   @@unique([cellId, optionId])
 }
 
-// ─── フォーム回答のオーバーライド ───
+// ─── フォーム設問の編集履歴（append-only）───
 
-model MastersheetOverride {
-  id          String            @id @default(cuid())
-  columnId    String
-  column      MastersheetColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+enum FormItemEditHistoryTrigger {
+  PROJECT_SUBMIT
+  PROJECT_RESUBMIT
+  COMMITTEE_EDIT
+}
+
+model FormItemEditHistory {
+  id          String                             @id @default(cuid())
+  formItemId  String
+  formItem    FormItem                           @relation(fields: [formItemId], references: [id], onDelete: Cascade)
   projectId   String
-  project     Project           @relation(fields: [projectId], references: [id])
+  project     Project                            @relation(fields: [projectId], references: [id])
   textValue   String?
   numberValue Float?
   fileUrl     String?
-  isStale     Boolean           @default(false)
+  actorId     String
+  actor       User                               @relation("FormItemEditHistoryActor", fields: [actorId], references: [id])
+  trigger     FormItemEditHistoryTrigger
+  createdAt   DateTime                           @default(now())
 
-  selectedOptions MastersheetOverrideSelectedOption[]
+  selectedOptions FormItemEditHistorySelectedOption[]
 
-  editorId  String
-  editor    User     @relation("MastersheetOverrideEditor", fields: [editorId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([columnId, projectId])
-  @@index([projectId])
+  @@index([formItemId, projectId, createdAt(sort: Desc)])
+  @@index([actorId])
 }
 
-// ─── SELECT/CHECKBOX オーバーライドの選択肢（中間テーブル）───
+model FormItemEditHistorySelectedOption {
+  id               String              @id @default(cuid())
+  editHistoryId    String
+  editHistory      FormItemEditHistory @relation(fields: [editHistoryId], references: [id], onDelete: Cascade)
+  formItemOptionId String
+  formItemOption   FormItemOption      @relation(fields: [formItemOptionId], references: [id])
 
-model MastersheetOverrideSelectedOption {
-  id         String              @id @default(cuid())
-  overrideId String
-  override   MastersheetOverride @relation(fields: [overrideId], references: [id], onDelete: Cascade)
-  optionId   String
-
-  @@unique([overrideId, optionId])
+  @@unique([editHistoryId, formItemOptionId])
 }
 
 // ─── カラムの公開範囲（自由追加カラム用）───
@@ -1049,23 +1053,6 @@ model MastersheetAccessRequest {
 
   @@index([columnId])
   @@index([requesterId])
-}
-
-// ─── 編集履歴 ───
-
-model MastersheetEditHistory {
-  id        String            @id @default(cuid())
-  columnId  String
-  column    MastersheetColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
-  projectId String
-  project   Project           @relation(fields: [projectId], references: [id])
-  oldValue  String? // JSON シリアライズ
-  newValue  String? // JSON シリアライズ
-  editorId  String
-  editor    User              @relation("MastersheetEditHistoryEditor", fields: [editorId], references: [id])
-  createdAt DateTime          @default(now())
-
-  @@index([columnId, projectId])
 }
 
 // ─── 保存済みビュー ───

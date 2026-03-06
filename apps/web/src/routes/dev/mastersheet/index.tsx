@@ -47,10 +47,8 @@ const TYPE_OPTIONS = [
 const STATUS_OPTIONS: { value: MastersheetCellStatus; label: string }[] = [
 	{ value: "NOT_DELIVERED", label: "未配信" },
 	{ value: "NOT_ANSWERED", label: "未回答" },
-	{ value: "DRAFT", label: "下書き" },
 	{ value: "SUBMITTED", label: "提出済み" },
-	{ value: "OVERRIDDEN", label: "上書き" },
-	{ value: "STALE_OVERRIDE", label: "要確認" },
+	{ value: "COMMITTEE_EDITED", label: "実委編集" },
 ];
 
 const sampleData: ProjectRow[] = [
@@ -70,7 +68,7 @@ const sampleData: ProjectRow[] = [
 		categories: ["exhibition", "indoor"],
 		budget: 80000,
 		fileUrl: null,
-		formStatus: "DRAFT",
+		formStatus: "NOT_ANSWERED",
 	},
 	{
 		number: 3,
@@ -79,7 +77,7 @@ const sampleData: ProjectRow[] = [
 		categories: ["stage", "outdoor"],
 		budget: 200000,
 		fileUrl: "https://example.com/files/report3.pdf",
-		formStatus: "OVERRIDDEN",
+		formStatus: "COMMITTEE_EDITED",
 	},
 	{
 		number: 4,
@@ -106,7 +104,7 @@ const sampleData: ProjectRow[] = [
 		categories: ["stage", "indoor"],
 		budget: 120000,
 		fileUrl: "https://example.com/files/report6.pdf",
-		formStatus: "STALE_OVERRIDE",
+		formStatus: "SUBMITTED",
 	},
 ];
 

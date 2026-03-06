@@ -12,10 +12,8 @@ const STATUS_CONFIG: Record<
 > = {
 	NOT_DELIVERED: { label: "未配信", color: "gray" },
 	NOT_ANSWERED: { label: "未回答", color: "orange" },
-	DRAFT: { label: "下書き", color: "yellow" },
 	SUBMITTED: { label: "提出済み", color: "green" },
-	OVERRIDDEN: { label: "上書き", color: "blue" },
-	STALE_OVERRIDE: { label: "要確認", color: "red" },
+	COMMITTEE_EDITED: { label: "実委編集", color: "blue" },
 };
 
 export function FormCellStatusBadge({ status }: Props) {

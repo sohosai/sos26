@@ -311,22 +311,21 @@ erDiagram
   String cellId FK
   String optionId FK
 }
-"MastersheetOverride" {
+"FormItemEditHistory" {
   String id PK
-  String columnId FK
+  String formItemId FK
   String projectId FK
   String textValue "nullable"
   Float numberValue "nullable"
   String fileUrl "nullable"
-  Boolean isStale
-  String editorId FK
+  String actorId FK
+  FormItemEditHistoryTrigger trigger
   DateTime createdAt
-  DateTime updatedAt
 }
-"MastersheetOverrideSelectedOption" {
+"FormItemEditHistorySelectedOption" {
   String id PK
-  String overrideId FK
-  String optionId
+  String editHistoryId FK
+  String formItemOptionId FK
 }
 "MastersheetColumnViewer" {
   String id PK
@@ -344,15 +343,6 @@ erDiagram
   DateTime decidedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
-}
-"MastersheetEditHistory" {
-  String id PK
-  String columnId FK
-  String projectId FK
-  String oldValue "nullable"
-  String newValue "nullable"
-  String editorId FK
-  DateTime createdAt
 }
 "MastersheetView" {
   String id PK
@@ -427,18 +417,16 @@ erDiagram
 "MastersheetCellValue" }o--|| "Project" : project
 "MastersheetCellSelectedOption" }o--|| "MastersheetCellValue" : cell
 "MastersheetCellSelectedOption" }o--|| "MastersheetColumnOption" : option
-"MastersheetOverride" }o--|| "MastersheetColumn" : column
-"MastersheetOverride" }o--|| "Project" : project
-"MastersheetOverride" }o--|| "User" : editor
-"MastersheetOverrideSelectedOption" }o--|| "MastersheetOverride" : override
+"FormItemEditHistory" }o--|| "FormItem" : formItem
+"FormItemEditHistory" }o--|| "Project" : project
+"FormItemEditHistory" }o--|| "User" : actor
+"FormItemEditHistorySelectedOption" }o--|| "FormItemEditHistory" : editHistory
+"FormItemEditHistorySelectedOption" }o--|| "FormItemOption" : formItemOption
 "MastersheetColumnViewer" }o--|| "MastersheetColumn" : column
 "MastersheetColumnViewer" }o--o| "User" : user
 "MastersheetAccessRequest" }o--|| "MastersheetColumn" : column
 "MastersheetAccessRequest" }o--|| "User" : requester
 "MastersheetAccessRequest" }o--o| "User" : decidedBy
-"MastersheetEditHistory" }o--|| "MastersheetColumn" : column
-"MastersheetEditHistory" }o--|| "Project" : project
-"MastersheetEditHistory" }o--|| "User" : editor
 "MastersheetView" }o--|| "User" : createdBy
 "InquiryAttachment" }o--|| "Inquiry" : inquiry
 "InquiryAttachment" }o--o| "InquiryComment" : comment
@@ -850,28 +838,27 @@ Properties as follows:
 - `cellId`:
 - `optionId`:
 
-### `MastersheetOverride`
+### `FormItemEditHistory`
 
 Properties as follows:
 
 - `id`:
-- `columnId`:
+- `formItemId`:
 - `projectId`:
 - `textValue`:
 - `numberValue`:
 - `fileUrl`:
-- `isStale`:
-- `editorId`:
+- `actorId`:
+- `trigger`:
 - `createdAt`:
-- `updatedAt`:
 
-### `MastersheetOverrideSelectedOption`
+### `FormItemEditHistorySelectedOption`
 
 Properties as follows:
 
 - `id`:
-- `overrideId`:
-- `optionId`:
+- `editHistoryId`:
+- `formItemOptionId`:
 
 ### `MastersheetColumnViewer`
 
@@ -895,18 +882,6 @@ Properties as follows:
 - `decidedAt`:
 - `createdAt`:
 - `updatedAt`:
-
-### `MastersheetEditHistory`
-
-Properties as follows:
-
-- `id`:
-- `columnId`:
-- `projectId`:
-- `oldValue`:
-- `newValue`:
-- `editorId`:
-- `createdAt`:
 
 ### `MastersheetView`
 

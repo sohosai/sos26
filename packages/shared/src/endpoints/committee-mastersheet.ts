@@ -5,9 +5,10 @@ import {
 	createMastersheetViewRequestSchema,
 	createMastersheetViewResponseSchema,
 	deleteMastersheetColumnResponseSchema,
-	deleteMastersheetOverrideResponseSchema,
 	deleteMastersheetViewResponseSchema,
 	discoverMastersheetColumnsResponseSchema,
+	editFormItemCellRequestSchema,
+	editFormItemCellResponseSchema,
 	getMastersheetDataResponseSchema,
 	getMastersheetHistoryResponseSchema,
 	listMastersheetAccessRequestsResponseSchema,
@@ -24,8 +25,6 @@ import {
 	updateMastersheetViewResponseSchema,
 	upsertMastersheetCellRequestSchema,
 	upsertMastersheetCellResponseSchema,
-	upsertMastersheetOverrideRequestSchema,
-	upsertMastersheetOverrideResponseSchema,
 } from "../schemas/mastersheet";
 import type { BodyEndpoint, GetEndpoint, NoBodyEndpoint } from "./types";
 
@@ -145,42 +144,23 @@ export const upsertMastersheetCellEndpoint: BodyEndpoint<
 } as const;
 
 /**
- * PUT /committee/mastersheet/overrides/:columnId/:projectId
- * フォーム由来カラムの回答をオーバーライド（isStale=false にリセット・編集履歴記録）
+ * PUT /committee/mastersheet/edits/:columnId/:projectId
+ * フォーム由来カラムの値を編集（FormItemEditHistory に COMMITTEE_EDIT を追加）
  */
-export const upsertMastersheetOverrideEndpoint: BodyEndpoint<
+export const editFormItemCellEndpoint: BodyEndpoint<
 	"PUT",
-	"/committee/mastersheet/overrides/:columnId/:projectId",
+	"/committee/mastersheet/edits/:columnId/:projectId",
 	typeof mastersheetColumnProjectPathParamsSchema,
 	undefined,
-	typeof upsertMastersheetOverrideRequestSchema,
-	typeof upsertMastersheetOverrideResponseSchema
+	typeof editFormItemCellRequestSchema,
+	typeof editFormItemCellResponseSchema
 > = {
 	method: "PUT",
-	path: "/committee/mastersheet/overrides/:columnId/:projectId",
+	path: "/committee/mastersheet/edits/:columnId/:projectId",
 	pathParams: mastersheetColumnProjectPathParamsSchema,
 	query: undefined,
-	request: upsertMastersheetOverrideRequestSchema,
-	response: upsertMastersheetOverrideResponseSchema,
-} as const;
-
-/**
- * DELETE /committee/mastersheet/overrides/:columnId/:projectId
- * オーバーライドを削除して元データに戻す（履歴記録）
- */
-export const deleteMastersheetOverrideEndpoint: NoBodyEndpoint<
-	"DELETE",
-	"/committee/mastersheet/overrides/:columnId/:projectId",
-	typeof mastersheetColumnProjectPathParamsSchema,
-	undefined,
-	typeof deleteMastersheetOverrideResponseSchema
-> = {
-	method: "DELETE",
-	path: "/committee/mastersheet/overrides/:columnId/:projectId",
-	pathParams: mastersheetColumnProjectPathParamsSchema,
-	query: undefined,
-	request: undefined,
-	response: deleteMastersheetOverrideResponseSchema,
+	request: editFormItemCellRequestSchema,
+	response: editFormItemCellResponseSchema,
 } as const;
 
 // ─────────────────────────────────────────────────────────────

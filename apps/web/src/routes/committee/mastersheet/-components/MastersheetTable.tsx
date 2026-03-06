@@ -1,8 +1,8 @@
 import { Text, Tooltip } from "@radix-ui/themes";
 import type {
+	EditFormItemCellRequest,
 	GetMastersheetDataResponse,
 	UpsertMastersheetCellRequest,
-	UpsertMastersheetOverrideRequest,
 } from "@sos26/shared";
 import { IconFileText, IconPencil } from "@tabler/icons-react";
 import { useRouter } from "@tanstack/react-router";
@@ -21,8 +21,8 @@ import {
 	SelectCell,
 } from "@/components/patterns";
 import {
+	editFormItemCell,
 	upsertMastersheetCell,
-	upsertMastersheetOverride,
 } from "@/lib/api/committee-mastersheet";
 import { FormItemCell } from "./FormItemCell";
 import styles from "./MastersheetTable.module.scss";
@@ -139,7 +139,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 			return columnHelper.accessor(
 				row => {
 					const cell = row.cells[col.id];
-					const effective = cell?.override ?? cell?.formValue ?? null;
+					const effective = cell?.formValue ?? null;
 					return effective?.selectedOptionIds?.[0] ?? "";
 				},
 				{
@@ -174,7 +174,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 			return columnHelper.accessor(
 				row => {
 					const cell = row.cells[col.id];
-					const effective = cell?.override ?? cell?.formValue ?? null;
+					const effective = cell?.formValue ?? null;
 					return effective?.selectedOptionIds ?? [];
 				},
 				{
@@ -276,10 +276,10 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 	);
 }
 
-function buildOverridePayload(
+function buildEditPayload(
 	formItemType: ApiColumn["formItemType"],
 	value: unknown
-): UpsertMastersheetOverrideRequest {
+): EditFormItemCellRequest {
 	if (formItemType === "SELECT") {
 		return {
 			selectedOptionIds: typeof value === "string" && value ? [value] : [],
@@ -352,10 +352,10 @@ export function MastersheetTable({
 		if (!col) return;
 
 		if (col.type === "FORM_ITEM") {
-			await upsertMastersheetOverride(
+			await editFormItemCell(
 				columnId,
 				row.project.id,
-				buildOverridePayload(col.formItemType, value)
+				buildEditPayload(col.formItemType, value)
 			);
 		} else {
 			await upsertMastersheetCell(
