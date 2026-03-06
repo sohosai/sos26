@@ -992,18 +992,18 @@ enum FormItemEditHistoryTrigger {
 }
 
 model FormItemEditHistory {
-  id          String                             @id @default(cuid())
+  id          String                     @id @default(cuid())
   formItemId  String
-  formItem    FormItem                           @relation(fields: [formItemId], references: [id], onDelete: Cascade)
+  formItem    FormItem                   @relation(fields: [formItemId], references: [id], onDelete: Cascade)
   projectId   String
-  project     Project                            @relation(fields: [projectId], references: [id])
+  project     Project                    @relation(fields: [projectId], references: [id])
   textValue   String?
   numberValue Float?
   fileUrl     String?
   actorId     String
-  actor       User                               @relation("FormItemEditHistoryActor", fields: [actorId], references: [id])
+  actor       User                       @relation("FormItemEditHistoryActor", fields: [actorId], references: [id])
   trigger     FormItemEditHistoryTrigger
-  createdAt   DateTime                           @default(now())
+  createdAt   DateTime                   @default(now())
 
   selectedOptions FormItemEditHistorySelectedOption[]
 
