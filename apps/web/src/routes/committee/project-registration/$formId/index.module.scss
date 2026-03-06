@@ -1,0 +1,101 @@
+.layout {
+	display: grid;
+	grid-template-columns: 1fr 260px;
+	gap: var(--space-6);
+	max-width: 1100px;
+
+	@media (max-width: 768px) {
+		grid-template-columns: 1fr;
+	}
+}
+
+.main {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-5);
+	min-width: 0;
+}
+
+.backLink {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	color: var(--accent-11);
+	cursor: pointer;
+	width: fit-content;
+	background: none;
+	border: none;
+	padding: 0;
+	font: inherit;
+	text-decoration: none;
+
+	&:hover {
+		text-decoration: underline;
+	}
+}
+
+.titleSection {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.meta {
+	display: flex;
+	align-items: center;
+	gap: var(--space-4);
+	flex-wrap: wrap;
+}
+
+.metaItem {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1);
+	color: var(--gray-9);
+}
+
+.filterBadges {
+	display: flex;
+	gap: var(--space-2);
+	flex-wrap: wrap;
+}
+
+.sidebarWrapper {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+}
+
+.sidebar {
+	border: 1px solid var(--gray-5);
+	border-radius: var(--radius-3);
+	padding: var(--space-4);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.authRow {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.authActions {
+	display: flex;
+	gap: var(--space-2);
+}
+
+.deleteActions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-2);
+	margin-top: var(--space-4);
+}
