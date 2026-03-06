@@ -1,0 +1,54 @@
+.dialogContent {
+	max-width: 640px;
+	max-height: 90dvh;
+	overflow: hidden;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.dialogHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--space-4) var(--space-5);
+	border-bottom: 1px solid var(--gray-4);
+	flex-shrink: 0;
+}
+
+.dialogInner {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding: var(--space-4) var(--space-5);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.checkboxGroup {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-3);
+}
+
+.itemsSection {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.dialogFooter {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-2);
+	padding: var(--space-4) var(--space-5);
+	border-top: 1px solid var(--gray-4);
+	flex-shrink: 0;
+}
