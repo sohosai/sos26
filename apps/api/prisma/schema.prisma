@@ -85,12 +85,13 @@ model User {
   files File[]
 
   // Inquiry関連
-  createdInquiries          Inquiry[]         @relation("InquiryCreatedBy")
-  inquiryAssignments        InquiryAssignee[] @relation("InquiryAssignee")
-  inquiryViewerEntries      InquiryViewer[]   @relation("InquiryViewer")
-  inquiryComments           InquiryComment[]  @relation("InquiryCommentCreatedBy")
-  inquiryActivitiesAsActor  InquiryActivity[] @relation("InquiryActivityActor")
-  inquiryActivitiesAsTarget InquiryActivity[] @relation("InquiryActivityTarget")
+  createdInquiries          Inquiry[]                @relation("InquiryCreatedBy")
+  inquiryAssignments        InquiryAssignee[]        @relation("InquiryAssignee")
+  inquiryViewerEntries      InquiryViewer[]          @relation("InquiryViewer")
+  inquiryComments           InquiryComment[]         @relation("InquiryCommentCreatedBy")
+  inquiryActivitiesAsActor  InquiryActivity[]        @relation("InquiryActivityActor")
+  inquiryActivitiesAsTarget InquiryActivity[]        @relation("InquiryActivityTarget")
+  projectSubOwnerRequests   ProjectSubOwnerRequest[]
 
   @@unique([firebaseUid, deletedAt])
   @@unique([email, deletedAt])
@@ -139,10 +140,11 @@ model Project {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  projectMembers   ProjectMember[]
-  noticeDeliveries NoticeDelivery[]
-  formDeliveries   FormDelivery[]
-  inquiries        Inquiry[]
+  projectMembers          ProjectMember[]
+  noticeDeliveries        NoticeDelivery[]
+  formDeliveries          FormDelivery[]
+  inquiries               Inquiry[]
+  projectSubOwnerRequests ProjectSubOwnerRequest[]
 
   @@index([ownerId])
   @@index([subOwnerId])
@@ -162,6 +164,40 @@ model ProjectMember {
   deletedAt DateTime?
 
   @@unique([projectId, userId, deletedAt])
+  @@index([projectId])
+  @@index([userId])
+}
+
+// 副責任者の承認待ちの状態Enum
+enum SubOwnerRequestStatus {
+  PENDING // 承認待ち
+  APPROVED // 承認済み
+  REJECTED // 却下
+}
+
+// 副責任者の承認確認
+model ProjectSubOwnerRequest {
+  id String @id @default(cuid())
+
+  // 対象プロジェクト
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // 指名された副責任者リクエスト対象ユーザー
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  status SubOwnerRequestStatus @default(PENDING)
+
+  // PENDING のときだけ projectId を入れる（1企画1件のPENDINGを一意制約で担保）
+  pendingProjectId String? @unique
+
+  // 承認 or 却下した日時
+  decidedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([projectId])
   @@index([userId])
 }

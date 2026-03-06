@@ -6,7 +6,7 @@ import {
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
-import { prisma } from "../lib/prisma";
+import { handlePrismaError, prisma } from "../lib/prisma";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -35,7 +35,7 @@ projectRoute.post("/create", requireAuth, async c => {
 
 	if (hasOtherPrivilegedProject) {
 		throw Errors.invalidRequest(
-			"このユーザーはすでに他の企画で責任者または副責任者です"
+			"このユーザーは既に他の企画で責任者または副責任者です"
 		);
 	}
 
@@ -105,7 +105,7 @@ projectRoute.post("/join", requireAuth, async c => {
 		throw Errors.notFound("招待コードが無効です");
 	}
 
-	// すでにメンバーか確認
+	// 既にメンバーか確認
 	const alreadyMember = await prisma.projectMember.findFirst({
 		where: {
 			projectId: project.id,
@@ -115,7 +115,7 @@ projectRoute.post("/join", requireAuth, async c => {
 	});
 
 	if (alreadyMember) {
-		throw Errors.alreadyExists("すでにこの企画に参加しています");
+		throw Errors.alreadyExists("既にこの企画に参加しています");
 	}
 
 	await prisma.projectMember.create({
@@ -223,6 +223,17 @@ projectRoute.get(
 			},
 		});
 
+		// PENDINGの副責任者リクエストを取得
+		const pendingRequest = await prisma.projectSubOwnerRequest.findFirst({
+			where: {
+				projectId: project.id,
+				status: "PENDING",
+			},
+			orderBy: {
+				createdAt: "desc",
+			},
+		});
+
 		const result = members.map(m => {
 			let role: ProjectMemberRole = "MEMBER";
 
@@ -242,7 +253,10 @@ projectRoute.get(
 			};
 		});
 
-		return c.json({ members: result });
+		return c.json({
+			members: result,
+			pendingSubOwnerRequestUserId: pendingRequest?.userId || null,
+		});
 	}
 );
 
@@ -280,9 +294,25 @@ projectRoute.post(
 			throw Errors.invalidRequest("責任者・副責任者は削除できません");
 		}
 
-		await prisma.projectMember.update({
-			where: { id: member.id },
-			data: { deletedAt: new Date() },
+		// 削除対象が副責任者リクエストの対象ユーザーであればリクエストも拒否する
+		await prisma.$transaction(async tx => {
+			await tx.projectSubOwnerRequest.updateMany({
+				where: {
+					projectId: project.id,
+					userId,
+					status: "PENDING",
+				},
+				data: {
+					status: "REJECTED",
+					decidedAt: new Date(),
+					pendingProjectId: null,
+				},
+			});
+
+			await tx.projectMember.update({
+				where: { id: member.id },
+				data: { deletedAt: new Date() },
+			});
 		});
 
 		return c.json({ success: true });
@@ -291,7 +321,7 @@ projectRoute.post(
 
 // ─────────────────────────────────────────
 // POST /project/:projectId/members/:userId/assign
-// メンバーを副責任者に任命
+// メンバーに副責任者リクエストを送信
 // ─────────────────────────────────────────
 projectRoute.post(
 	"/:projectId/members/:userId/assign",
@@ -318,9 +348,9 @@ projectRoute.post(
 			throw Errors.notFound("対象ユーザーは企画メンバーではありません");
 		}
 
-		// すでに副責任者がいる場合はエラー
+		// 既に副責任者がいる場合はエラー
 		if (project.subOwnerId) {
-			throw Errors.invalidRequest("すでに副責任者が任命されています");
+			throw Errors.invalidRequest("既に副責任者が任命されています");
 		}
 
 		// 責任者は指定不可
@@ -341,20 +371,212 @@ projectRoute.post(
 
 		if (hasOtherPrivilegedProject) {
 			throw Errors.invalidRequest(
-				"このユーザーはすでに他の企画で責任者または副責任者です"
+				"このユーザーは既に他の企画で責任者または副責任者です"
 			);
 		}
 
-		await prisma.project.update({
-			where: { id: project.id },
-			data: {
-				subOwnerId: userId,
+		// 既存のPENDINGのリクエストがないか確認
+		const existingRequest = await prisma.projectSubOwnerRequest.findFirst({
+			where: {
+				projectId: project.id,
+				status: "PENDING",
 			},
+		});
+
+		if (existingRequest) {
+			throw Errors.invalidRequest("既に副責任者リクエストが送信されています");
+		}
+
+		const request = await prisma.projectSubOwnerRequest
+			.create({
+				data: {
+					projectId: project.id,
+					userId,
+					status: "PENDING",
+					pendingProjectId: project.id,
+				},
+			})
+			.catch(handlePrismaError);
+
+		return c.json({
+			success: true,
+			requestId: request.id,
+			status: request.status,
+		});
+	}
+);
+
+/**
+ * POST /project/:projectId/sub-owner-request/approve
+ * 指名されたユーザーが副責任者リクエストを承認する
+ */
+projectRoute.post(
+	"/:projectId/sub-owner-request/approve",
+	requireAuth,
+	requireProjectMember,
+	async c => {
+		const userId = c.get("user").id;
+		const project = c.get("project");
+
+		await prisma.$transaction(async tx => {
+			const currentProject = await tx.project.findFirst({
+				where: {
+					id: project.id,
+					deletedAt: null,
+				},
+				select: {
+					id: true,
+					ownerId: true,
+					subOwnerId: true,
+				},
+			});
+
+			if (!currentProject) {
+				throw Errors.notFound("企画が見つかりません");
+			}
+
+			if (
+				currentProject.ownerId === userId ||
+				currentProject.subOwnerId === userId
+			) {
+				throw Errors.forbidden(
+					"副責任者リクエストを承認できるのはメンバーのみです"
+				);
+			}
+
+			// 既に副責任者がいる場合はエラー
+			if (currentProject.subOwnerId) {
+				throw Errors.invalidRequest("既に副責任者が任命されています");
+			}
+			// 他企画で責任者、副責任者をやっていないかチェック
+			const hasOtherPrivilegedProject = await tx.project.findFirst({
+				where: {
+					deletedAt: null,
+					id: {
+						not: project.id,
+					},
+					OR: [{ ownerId: userId }, { subOwnerId: userId }],
+				},
+				select: {
+					id: true,
+				},
+			});
+
+			if (hasOtherPrivilegedProject) {
+				throw Errors.invalidRequest(
+					"既に他の企画で責任者または副責任者のユーザーは副責任者になることはできません"
+				);
+			}
+
+			const approveResult = await tx.projectSubOwnerRequest.updateMany({
+				where: {
+					projectId: project.id,
+					userId,
+					status: "PENDING",
+				},
+				data: {
+					status: "APPROVED",
+					decidedAt: new Date(),
+					pendingProjectId: null,
+				},
+			});
+
+			if (approveResult.count !== 1) {
+				throw Errors.notFound("副責任者リクエストの承認対象が見つかりません");
+			}
+
+			const updateProjectResult = await tx.project.updateMany({
+				where: {
+					id: project.id,
+					subOwnerId: null,
+				},
+				data: {
+					subOwnerId: userId,
+				},
+			});
+
+			if (updateProjectResult.count !== 1) {
+				throw Errors.invalidRequest("既に副責任者が任命されています");
+			}
 		});
 
 		return c.json({
 			success: true,
-			subOwnerId: userId,
+		});
+	}
+);
+
+/**
+ * POST /project/:projectId/sub-owner-request/cancel
+ * 責任者が副責任者リクエストを取り消す
+ */
+projectRoute.post(
+	"/:projectId/sub-owner-request/cancel",
+	requireAuth,
+	requireProjectMember,
+	async c => {
+		const role = c.get("projectRole");
+		const project = c.get("project");
+
+		if (role !== "OWNER") {
+			throw Errors.forbidden(
+				"副責任者リクエストを取り消せるのは責任者のみです"
+			);
+		}
+
+		const cancelResult = await prisma.projectSubOwnerRequest.updateMany({
+			where: {
+				projectId: project.id,
+				status: "PENDING",
+			},
+			data: {
+				status: "REJECTED",
+				decidedAt: new Date(),
+				pendingProjectId: null,
+			},
+		});
+
+		if (cancelResult.count < 1) {
+			throw Errors.notFound("取り消し対象の副責任者リクエストが見つかりません");
+		}
+
+		return c.json({
+			success: true,
+		});
+	}
+);
+
+/**
+ * POST /project/:projectId/sub-owner-request/reject
+ * 指名されたユーザーが副責任者リクエストを辞退する
+ */
+projectRoute.post(
+	"/:projectId/sub-owner-request/reject",
+	requireAuth,
+	requireProjectMember,
+	async c => {
+		const userId = c.get("user").id;
+		const project = c.get("project");
+
+		const rejectResult = await prisma.projectSubOwnerRequest.updateMany({
+			where: {
+				projectId: project.id,
+				userId,
+				status: "PENDING",
+			},
+			data: {
+				status: "REJECTED",
+				decidedAt: new Date(),
+				pendingProjectId: null,
+			},
+		});
+
+		if (rejectResult.count < 1) {
+			throw Errors.notFound("副責任者リクエストの辞退対象が見つかりません");
+		}
+
+		return c.json({
+			success: true,
 		});
 	}
 );
