@@ -23,8 +23,12 @@ const generateInviteCode = () =>
 // ─────────────────────────────────────────
 projectRoute.post("/create", requireAuth, async c => {
 	const body = await c.req.json().catch(() => ({}));
-	const { registrationFormAnswers, ...data } =
-		createProjectRequestSchema.parse(body);
+	const {
+		registrationFormAnswers,
+		agreedToRegistrationConstraints: _agreedToRegistrationConstraints,
+		agreedToInfoImmutability: _agreedToInfoImmutability,
+		...data
+	} = createProjectRequestSchema.parse(body);
 	const userId = c.get("user").id;
 
 	// ── 他の企画で責任者・副責任者をやっていないか確認 ──

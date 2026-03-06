@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { AnswerField } from "@/components/form/Answer/AnswerField";
 import type { FormAnswers, FormAnswerValue } from "@/components/form/type";
 import { RadioGroup, RadioGroupItem } from "@/components/patterns";
-import { Button, TextField } from "@/components/primitives";
+import { Button, Checkbox, TextField } from "@/components/primitives";
 import { createProject } from "@/lib/api/project";
 import { getActiveProjectRegistrationForms } from "@/lib/api/project-registration-form";
 import styles from "./ProjectCreateDialog.module.scss";
@@ -227,6 +227,83 @@ function RegFormStep({
 	);
 }
 
+type ConsentStepProps = {
+	consented1: boolean;
+	consented2: boolean;
+	errors: { consented1?: string; consented2?: string };
+	isSubmitting: boolean;
+	onConsent1Change: (checked: boolean) => void;
+	onConsent2Change: (checked: boolean) => void;
+	onSubmit: (e: React.FormEvent) => void;
+	onBack: () => void;
+};
+
+function ConsentStep({
+	consented1,
+	consented2,
+	errors,
+	isSubmitting,
+	onConsent1Change,
+	onConsent2Change,
+	onSubmit,
+	onBack,
+}: ConsentStepProps) {
+	return (
+		<form className={styles.form} onSubmit={onSubmit} noValidate>
+			<div className={styles.header}>
+				<Text size="5" weight="bold">
+					同意事項
+				</Text>
+				<Text size="2" color="gray">
+					以下の事項をご確認の上、同意してください。
+				</Text>
+			</div>
+
+			<div className={styles.fields}>
+				<div className={styles.field}>
+					<Checkbox
+						label="企画登録に回答した方は、別の企画団体の企画責任者または副企画責任者になることはできません。"
+						checked={consented1}
+						onCheckedChange={onConsent1Change}
+					/>
+					{errors.consented1 && (
+						<Text size="1" color="red">
+							{errors.consented1}
+						</Text>
+					)}
+				</div>
+
+				<div className={styles.field}>
+					<Checkbox
+						label="ここで回答した内容(企画区分・企画実施場所・企画名・企画団体名)の修正・変更は、企画応募期間が終了すると簡単に行うことができません。"
+						checked={consented2}
+						onCheckedChange={onConsent2Change}
+					/>
+					{errors.consented2 && (
+						<Text size="1" color="red">
+							{errors.consented2}
+						</Text>
+					)}
+				</div>
+			</div>
+
+			<div className={styles.footer}>
+				<Button
+					type="button"
+					intent="secondary"
+					onClick={onBack}
+					disabled={isSubmitting}
+				>
+					戻る
+				</Button>
+				<Button type="submit" loading={isSubmitting}>
+					登録する
+				</Button>
+			</div>
+		</form>
+	);
+}
+
 function resolveLocation(newType: string, prevLocation: string): string {
 	if (newType === "STAGE") return "STAGE";
 	if (prevLocation === "STAGE") return "";
@@ -245,8 +322,9 @@ function buildStep1Errors(step1: Step1State): Step1Errors {
 	return errs;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>
 export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
-	// ステップ: 0 = 基本情報, 1〜N = 企画登録フォーム
+	// ステップ: 0 = 基本情報, 1〜N = 企画登録フォーム, N+1 = 同意事項
 	const [step, setStep] = useState(0);
 	const [step1, setStep1] = useState<Step1State>(EMPTY_STEP1);
 	const [step1Errors, setStep1Errors] = useState<Step1Errors>({});
@@ -256,12 +334,18 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 	const [regFormErrors, setRegFormErrors] = useState<Record<string, string>[]>(
 		[]
 	);
+	const [consented1, setConsented1] = useState(false);
+	const [consented2, setConsented2] = useState(false);
+	const [consentErrors, setConsentErrors] = useState<{
+		consented1?: string;
+		consented2?: string;
+	}>({});
 	const [isFetching, setIsFetching] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const isStage = step1.type === "STAGE";
-	const totalSteps = 1 + regForms.length; // step0 + regForms
-	const isLastStep = step === totalSteps - 1;
+	const totalSteps = 1 + regForms.length; // step0 + regForms (同意ステップは含まない)
+	const isConsentStep = step > 0 && step === 1 + regForms.length;
 
 	const handleClose = () => {
 		onOpenChange(false);
@@ -272,6 +356,9 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 		setRegForms([]);
 		setRegFormAnswers([]);
 		setRegFormErrors([]);
+		setConsented1(false);
+		setConsented2(false);
+		setConsentErrors({});
 	};
 
 	// ─── Step 1 ───
@@ -308,22 +395,11 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 				parsed.data as ProjectType,
 				parsedLoc.data as ProjectLocation
 			);
-			if (forms.length === 0) {
-				// フォームなし → 直接送信
-				await submitProject(
-					parsed.data as ProjectType,
-					parsedLoc.data as ProjectLocation,
-					[]
-				);
-			} else {
-				const sortedForms = [...forms].sort(
-					(a, b) => a.sortOrder - b.sortOrder
-				);
-				setRegForms(sortedForms);
-				setRegFormAnswers(sortedForms.map(f => initFormAnswers(f.items)));
-				setRegFormErrors(sortedForms.map(() => ({})));
-				setStep(1);
-			}
+			const sortedForms = [...forms].sort((a, b) => a.sortOrder - b.sortOrder);
+			setRegForms(sortedForms);
+			setRegFormAnswers(sortedForms.map(f => initFormAnswers(f.items)));
+			setRegFormErrors(sortedForms.map(() => ({})));
+			setStep(1);
 		} catch {
 			toast.error("追加フォームの取得に失敗しました");
 		} finally {
@@ -392,6 +468,8 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 				type,
 				location,
 				registrationFormAnswers: regAnswers.length > 0 ? regAnswers : undefined,
+				agreedToRegistrationConstraints: true,
+				agreedToInfoImmutability: true,
 			});
 			onCreated(res.project);
 			handleClose();
@@ -404,8 +482,11 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 
 	const handleFinalSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		const lastFormIndex = step - 1;
-		if (lastFormIndex >= 0 && !validateRegStep(lastFormIndex)) return;
+		const errs: { consented1?: string; consented2?: string } = {};
+		if (!consented1) errs.consented1 = "同意が必要です";
+		if (!consented2) errs.consented2 = "同意が必要です";
+		setConsentErrors(errs);
+		if (Object.keys(errs).length > 0) return;
 
 		const parsed = projectTypeSchema.safeParse(step1.type);
 		const parsedLoc = projectLocationSchema.safeParse(step1.location);
@@ -420,7 +501,7 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 
 	// ─── Render ───
 
-	const currentRegForm = step > 0 ? regForms[step - 1] : null;
+	const currentRegForm = step > 0 && !isConsentStep ? regForms[step - 1] : null;
 	const currentRegAnswers = step > 0 ? (regFormAnswers[step - 1] ?? {}) : {};
 	const currentRegErrors = step > 0 ? (regFormErrors[step - 1] ?? {}) : {};
 
@@ -571,6 +652,24 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 							</Button>
 						</div>
 					</div>
+				) : isConsentStep ? (
+					/* ─── 同意事項ステップ ─── */
+					<ConsentStep
+						consented1={consented1}
+						consented2={consented2}
+						errors={consentErrors}
+						isSubmitting={isSubmitting}
+						onConsent1Change={checked => {
+							setConsented1(checked);
+							setConsentErrors(prev => ({ ...prev, consented1: undefined }));
+						}}
+						onConsent2Change={checked => {
+							setConsented2(checked);
+							setConsentErrors(prev => ({ ...prev, consented2: undefined }));
+						}}
+						onSubmit={handleFinalSubmit}
+						onBack={handleBack}
+					/>
 				) : (
 					/* ─── ステップ2〜N: 企画登録フォーム ─── */
 					currentRegForm && (
@@ -580,7 +679,7 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 							errors={currentRegErrors}
 							step={step}
 							totalSteps={totalSteps}
-							isLastStep={isLastStep}
+							isLastStep={false}
 							isSubmitting={isSubmitting}
 							onAnswerChange={(itemId, val) =>
 								updateRegAnswer(step - 1, itemId, val)

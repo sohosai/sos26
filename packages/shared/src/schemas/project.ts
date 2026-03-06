@@ -63,6 +63,8 @@ export const createProjectRequestSchema = z.object({
 			})
 		)
 		.optional(),
+	agreedToRegistrationConstraints: z.literal(true),
+	agreedToInfoImmutability: z.literal(true),
 });
 
 export type CreateProjectRequest = z.infer<typeof createProjectRequestSchema>;
