@@ -4,6 +4,7 @@ import {
 	projectRegistrationFormAuthorizationPathParamsSchema,
 	projectRegistrationFormCollaboratorPathParamsSchema,
 	projectRegistrationFormIdPathParamsSchema,
+	reorderProjectRegistrationFormsRequestSchema,
 	requestProjectRegistrationFormAuthorizationRequestSchema,
 	updateProjectRegistrationFormAuthorizationRequestSchema,
 	updateProjectRegistrationFormRequestSchema,
@@ -108,26 +109,41 @@ committeeProjectRegistrationFormRoute.post(
 			createProjectRegistrationFormRequestSchema.parse(body);
 		const userId = c.get("user").id;
 
-		const form = await prisma.projectRegistrationForm.create({
-			data: {
-				...formData,
-				ownerId: userId,
-				items: {
-					create: items.map(({ options, ...item }) => ({
-						...item,
-						options: options?.length ? { create: options } : undefined,
-					})),
+		const form = await prisma.$transaction(async tx => {
+			const { sortOrder } = formData;
+
+			// 指定位置以降のフォームを +1 シフトして挿入スペースを確保
+			await tx.projectRegistrationForm.updateMany({
+				where: { sortOrder: { gte: sortOrder }, deletedAt: null },
+				data: { sortOrder: { increment: 1 } },
+			});
+
+			return tx.projectRegistrationForm.create({
+				data: {
+					...formData,
+					ownerId: userId,
+					items: {
+						create: items.map(({ options, ...item }) => ({
+							...item,
+							options: options?.length ? { create: options } : undefined,
+						})),
+					},
 				},
-			},
-			include: {
-				items: {
-					include: { options: { orderBy: { sortOrder: "asc" } } },
-					orderBy: { sortOrder: "asc" },
+				include: {
+					owner: { select: { id: true, name: true } },
+					items: {
+						include: { options: { orderBy: { sortOrder: "asc" } } },
+						orderBy: { sortOrder: "asc" },
+					},
+					authorizations: {
+						include: { requestedBy: true, requestedTo: true },
+					},
+					collaborators: {
+						where: { deletedAt: null },
+						include: { user: { select: { id: true, name: true } } },
+					},
 				},
-				authorizations: {
-					include: { requestedBy: true, requestedTo: true },
-				},
-			},
+			});
 		});
 
 		return c.json({ form });
@@ -183,6 +199,46 @@ committeeProjectRegistrationFormRoute.get(
 );
 
 // ─────────────────────────────────────────
+// PATCH /committee/project-registration-forms/reorder
+// 有効なフォームの表示順を一括更新（DnD並び替え用）
+// ─────────────────────────────────────────
+committeeProjectRegistrationFormRoute.patch(
+	"/reorder",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const cm = c.get("committeeMember");
+		await requireCreatePermission(cm.id);
+
+		const body = await c.req.json().catch(() => ({}));
+		const { orderedIds } =
+			reorderProjectRegistrationFormsRequestSchema.parse(body);
+
+		// 指定された全IDが有効な（isActive=true, 未削除）フォームか確認
+		const forms = await prisma.projectRegistrationForm.findMany({
+			where: { id: { in: orderedIds }, isActive: true, deletedAt: null },
+			select: { id: true },
+		});
+		if (forms.length !== orderedIds.length) {
+			throw Errors.invalidRequest(
+				"指定されたフォームの中に無効なものが含まれています"
+			);
+		}
+
+		await prisma.$transaction(
+			orderedIds.map((id, index) =>
+				prisma.projectRegistrationForm.update({
+					where: { id },
+					data: { sortOrder: index },
+				})
+			)
+		);
+
+		return c.json({ success: true as const });
+	}
+);
+
+// ─────────────────────────────────────────
 // PATCH /committee/project-registration-forms/:formId
 // 企画登録フォームを更新（作成者 + CREATE権限）
 // ─────────────────────────────────────────
@@ -206,6 +262,41 @@ committeeProjectRegistrationFormRoute.patch(
 
 		const form = await prisma.$transaction(
 			async tx => {
+				const existing = await tx.projectRegistrationForm.findUniqueOrThrow({
+					where: { id: formId },
+					select: { sortOrder: true },
+				});
+
+				// sortOrder が変更される場合は既存フォームをシフト
+				if (
+					formData.sortOrder !== undefined &&
+					formData.sortOrder !== existing.sortOrder
+				) {
+					const oldOrder = existing.sortOrder;
+					const newOrder = formData.sortOrder;
+					if (newOrder < oldOrder) {
+						// 上に移動: [newOrder, oldOrder) の範囲を +1
+						await tx.projectRegistrationForm.updateMany({
+							where: {
+								id: { not: formId },
+								sortOrder: { gte: newOrder, lt: oldOrder },
+								deletedAt: null,
+							},
+							data: { sortOrder: { increment: 1 } },
+						});
+					} else {
+						// 下に移動: (oldOrder, newOrder] の範囲を -1
+						await tx.projectRegistrationForm.updateMany({
+							where: {
+								id: { not: formId },
+								sortOrder: { gt: oldOrder, lte: newOrder },
+								deletedAt: null,
+							},
+							data: { sortOrder: { decrement: 1 } },
+						});
+					}
+				}
+
 				await tx.projectRegistrationForm.update({
 					where: { id: formId },
 					data: { ...formData },
@@ -230,6 +321,7 @@ committeeProjectRegistrationFormRoute.patch(
 				return tx.projectRegistrationForm.findUniqueOrThrow({
 					where: { id: formId },
 					include: {
+						owner: { select: { id: true, name: true } },
 						items: {
 							include: { options: { orderBy: { sortOrder: "asc" } } },
 							orderBy: { sortOrder: "asc" },

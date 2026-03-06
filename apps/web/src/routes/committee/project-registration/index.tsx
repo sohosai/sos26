@@ -105,6 +105,16 @@ function ProjectRegistrationPage() {
 	const router = useRouter();
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
+	const activeForms = forms
+		.filter(f => f.isActive)
+		.sort((a, b) => a.sortOrder - b.sortOrder)
+		.map(f => ({
+			id: f.id,
+			title: f.title,
+			filterTypes: f.filterTypes,
+			filterLocations: f.filterLocations,
+		}));
+
 	const buildActions = (form: FormRow): ActionItem<FormRow>[] => [
 		{
 			key: "detail",
@@ -225,6 +235,7 @@ function ProjectRegistrationPage() {
 			<CreateProjectRegistrationFormDialog
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}
+				activeForms={activeForms}
 				onSuccess={() => router.invalidate()}
 			/>
 		</div>

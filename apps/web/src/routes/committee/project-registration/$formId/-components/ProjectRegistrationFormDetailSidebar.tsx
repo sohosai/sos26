@@ -274,7 +274,9 @@ function AuthDetailSection({
 				<Text size="2" color="gray">
 					ステータス
 				</Text>
-				<AuthStatusBadge status={auth.status} />
+				<div>
+					<AuthStatusBadge status={auth.status} />
+				</div>
 			</div>
 			{isApprover && auth.status === "PENDING" && (
 				<div className={styles.authorizationActions}>

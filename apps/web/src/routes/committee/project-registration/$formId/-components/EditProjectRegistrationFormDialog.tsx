@@ -6,11 +6,19 @@ import {
 	type ProjectRegistrationFormValues,
 } from "../../-components/ProjectRegistrationFormDialog";
 
+type FormPreview = {
+	id: string;
+	title: string;
+	filterTypes: string[];
+	filterLocations: string[];
+};
+
 type Props = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	formId: string;
 	initialForm: ProjectRegistrationFormDetail;
+	activeForms?: FormPreview[];
 	onSuccess?: () => void;
 };
 
@@ -20,7 +28,7 @@ function toFormValues(
 	return {
 		title: form.title,
 		description: form.description ?? "",
-		sortOrder: String(form.sortOrder),
+		sortOrder: form.sortOrder,
 		filterTypes: form.filterTypes,
 		filterLocations: form.filterLocations,
 		items: [...form.items]
@@ -43,6 +51,7 @@ export function EditProjectRegistrationFormDialog({
 	onOpenChange,
 	formId,
 	initialForm,
+	activeForms,
 	onSuccess,
 }: Props) {
 	const handleSubmit = async (values: ProjectRegistrationFormValues) => {
@@ -50,7 +59,7 @@ export function EditProjectRegistrationFormDialog({
 			await updateProjectRegistrationForm(formId, {
 				title: values.title.trim(),
 				description: values.description.trim() || null,
-				sortOrder: Number(values.sortOrder) || 0,
+				sortOrder: values.sortOrder,
 				filterTypes: values.filterTypes,
 				filterLocations: values.filterLocations,
 				items: values.items.map((item, index) => ({
@@ -78,6 +87,7 @@ export function EditProjectRegistrationFormDialog({
 			dialogTitle="企画登録フォームを編集"
 			submitLabel="保存"
 			initialValues={toFormValues(initialForm)}
+			activeForms={activeForms}
 			onSubmit={handleSubmit}
 			onSuccess={onSuccess}
 		/>

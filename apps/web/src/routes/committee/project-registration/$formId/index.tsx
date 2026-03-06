@@ -16,6 +16,7 @@ import {
 	addProjectRegistrationFormCollaborator,
 	deleteProjectRegistrationForm,
 	getProjectRegistrationFormDetail,
+	listProjectRegistrationForms,
 	removeProjectRegistrationFormCollaborator,
 	updateProjectRegistrationFormAuthorization,
 } from "@/lib/api/committee-project-registration-form";
@@ -66,10 +67,12 @@ export const Route = createFileRoute(
 		meta: [{ title: "企画登録フォーム詳細 | 雙峰祭オンラインシステム" }],
 	}),
 	loader: async ({ params }) => {
-		const [{ form }, { committeeMembers }] = await Promise.all([
-			getProjectRegistrationFormDetail(params.formId),
-			listCommitteeMembers(),
-		]);
+		const [{ form }, { committeeMembers }, { forms: allForms }] =
+			await Promise.all([
+				getProjectRegistrationFormDetail(params.formId),
+				listCommitteeMembers(),
+				listProjectRegistrationForms(),
+			]);
 		const currentUserId = useAuthStore.getState().user?.id;
 		const currentMember = committeeMembers.find(
 			m => m.user.id === currentUserId
@@ -98,13 +101,22 @@ export const Route = createFileRoute(
 					)
 			)
 			.map(m => ({ userId: m.user.id, name: m.user.name }));
-		return { form, canCreate, approvers, availableMembers };
+		const activeForms = allForms
+			.filter(f => f.isActive && f.id !== params.formId)
+			.sort((a, b) => a.sortOrder - b.sortOrder)
+			.map(f => ({
+				id: f.id,
+				title: f.title,
+				filterTypes: f.filterTypes,
+				filterLocations: f.filterLocations,
+			}));
+		return { form, canCreate, approvers, availableMembers, activeForms };
 	},
 });
 
 function RouteComponent() {
 	const { formId } = Route.useParams();
-	const { form, canCreate, approvers, availableMembers } =
+	const { form, canCreate, approvers, availableMembers, activeForms } =
 		Route.useLoaderData();
 	const navigate = useNavigate();
 	const router = useRouter();
@@ -273,6 +285,7 @@ function RouteComponent() {
 				onOpenChange={setEditDialogOpen}
 				formId={form.id}
 				initialForm={form}
+				activeForms={activeForms}
 				onSuccess={() => router.invalidate()}
 			/>
 

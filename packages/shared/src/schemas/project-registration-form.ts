@@ -171,7 +171,7 @@ export type RemoveProjectRegistrationFormCollaboratorResponse = z.infer<
 export const createProjectRegistrationFormRequestSchema = z.object({
 	title: z.string().min(1).optional(),
 	description: z.string().optional(),
-	sortOrder: z.number().int().default(0),
+	sortOrder: z.number().int().min(0).default(0),
 	filterTypes: z.array(projectTypeSchema).default([]),
 	filterLocations: z.array(projectLocationSchema).default([]),
 	items: z.array(projectRegistrationFormItemInputSchema).default([]),
@@ -228,7 +228,7 @@ export type GetProjectRegistrationFormDetailResponse = z.infer<
 export const updateProjectRegistrationFormRequestSchema = z.object({
 	title: z.string().min(1).optional(),
 	description: z.string().nullable().optional(),
-	sortOrder: z.number().int().optional(),
+	sortOrder: z.number().int().min(0).optional(),
 	filterTypes: z.array(projectTypeSchema).optional(),
 	filterLocations: z.array(projectLocationSchema).optional(),
 	items: z.array(projectRegistrationFormItemInputSchema).optional(),
@@ -253,6 +253,25 @@ export const deleteProjectRegistrationFormResponseSchema = z.object({
 });
 export type DeleteProjectRegistrationFormResponse = z.infer<
 	typeof deleteProjectRegistrationFormResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// PATCH /committee/project-registration-forms/reorder
+// 有効なフォームの表示順を一括更新
+// ─────────────────────────────────────────────────────────────
+
+export const reorderProjectRegistrationFormsRequestSchema = z.object({
+	orderedIds: z.array(z.string().min(1)),
+});
+export type ReorderProjectRegistrationFormsRequest = z.infer<
+	typeof reorderProjectRegistrationFormsRequestSchema
+>;
+
+export const reorderProjectRegistrationFormsResponseSchema = z.object({
+	success: z.literal(true),
+});
+export type ReorderProjectRegistrationFormsResponse = z.infer<
+	typeof reorderProjectRegistrationFormsResponseSchema
 >;
 
 // ─────────────────────────────────────────────────────────────

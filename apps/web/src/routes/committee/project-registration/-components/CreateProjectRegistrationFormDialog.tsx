@@ -5,15 +5,24 @@ import {
 	type ProjectRegistrationFormValues,
 } from "./ProjectRegistrationFormDialog";
 
+type FormPreview = {
+	id: string;
+	title: string;
+	filterTypes: string[];
+	filterLocations: string[];
+};
+
 type Props = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	activeForms?: FormPreview[];
 	onSuccess?: () => void;
 };
 
 export function CreateProjectRegistrationFormDialog({
 	open,
 	onOpenChange,
+	activeForms,
 	onSuccess,
 }: Props) {
 	const handleSubmit = async (values: ProjectRegistrationFormValues) => {
@@ -21,7 +30,7 @@ export function CreateProjectRegistrationFormDialog({
 			await createProjectRegistrationForm({
 				title: values.title.trim(),
 				description: values.description.trim() || undefined,
-				sortOrder: Number(values.sortOrder) || 0,
+				sortOrder: values.sortOrder,
 				filterTypes: values.filterTypes,
 				filterLocations: values.filterLocations,
 				items: values.items.map((item, index) => ({
@@ -48,6 +57,7 @@ export function CreateProjectRegistrationFormDialog({
 			onOpenChange={onOpenChange}
 			dialogTitle="企画登録フォームを作成"
 			submitLabel="作成"
+			activeForms={activeForms}
 			onSubmit={handleSubmit}
 			onSuccess={onSuccess}
 		/>

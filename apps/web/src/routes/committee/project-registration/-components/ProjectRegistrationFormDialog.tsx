@@ -1,6 +1,6 @@
 import { Dialog, Text, VisuallyHidden } from "@radix-ui/themes";
 import type { ProjectLocation, ProjectType } from "@sos26/shared";
-import { IconPlus, IconX } from "@tabler/icons-react";
+import { IconArrowsSort, IconPlus, IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FormItemList } from "@/components/form/Builder/ItemList";
@@ -13,6 +13,7 @@ import {
 	TextField,
 } from "@/components/primitives";
 import styles from "./ProjectRegistrationFormDialog.module.scss";
+import { ReorderFormsDialog } from "./ReorderFormsDialog";
 
 const TYPE_OPTIONS: { value: ProjectType; label: string }[] = [
 	{ value: "NORMAL", label: "通常企画" },
@@ -29,10 +30,17 @@ const LOCATION_OPTIONS: { value: ProjectLocation; label: string }[] = [
 export type ProjectRegistrationFormValues = {
 	title: string;
 	description: string;
-	sortOrder: string;
+	sortOrder: number;
 	filterTypes: ProjectType[];
 	filterLocations: ProjectLocation[];
 	items: FormItem[];
+};
+
+type FormPreview = {
+	id: string;
+	title: string;
+	filterTypes: string[];
+	filterLocations: string[];
 };
 
 type Props = {
@@ -41,6 +49,7 @@ type Props = {
 	dialogTitle: string;
 	submitLabel: string;
 	initialValues?: ProjectRegistrationFormValues;
+	activeForms?: FormPreview[];
 	onSubmit: (values: ProjectRegistrationFormValues) => Promise<void>;
 	onSuccess?: () => void;
 };
@@ -49,7 +58,7 @@ function makeDefaultValues(): ProjectRegistrationFormValues {
 	return {
 		title: "",
 		description: "",
-		sortOrder: "0",
+		sortOrder: 0,
 		filterTypes: [],
 		filterLocations: [],
 		items: [
@@ -64,6 +73,7 @@ export function ProjectRegistrationFormDialog({
 	dialogTitle,
 	submitLabel,
 	initialValues,
+	activeForms,
 	onSubmit,
 	onSuccess,
 }: Props) {
@@ -80,6 +90,7 @@ export function ProjectRegistrationFormDialog({
 	const [items, setItems] = useState<FormItem[]>(init.items);
 	const [errors, setErrors] = useState<Record<string, string>>({});
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [pickerOpen, setPickerOpen] = useState(false);
 
 	useEffect(() => {
 		if (open) {
@@ -191,123 +202,150 @@ export function ProjectRegistrationFormDialog({
 	};
 
 	return (
-		<Dialog.Root open={open} onOpenChange={onOpenChange}>
-			<Dialog.Content className={styles.dialogContent}>
-				<VisuallyHidden>
-					<Dialog.Title>{dialogTitle}</Dialog.Title>
-				</VisuallyHidden>
-				<div className={styles.dialogHeader}>
-					<Text size="5" weight="bold">
-						{dialogTitle}
-					</Text>
-					<IconButton aria-label="閉じる" onClick={() => onOpenChange(false)}>
-						<IconX size={16} />
-					</IconButton>
-				</div>
-				<div className={styles.dialogInner}>
-					<div className={styles.field}>
-						<TextField
-							label="フォームタイトル *"
-							value={title}
-							onChange={setTitle}
-							placeholder="例：屋外企画向け追加情報"
-						/>
-						{errors.__title && (
-							<Text size="1" color="red">
-								{errors.__title}
-							</Text>
-						)}
-					</div>
-
-					<div className={styles.field}>
-						<TextArea
-							label="説明（任意）"
-							value={description}
-							onChange={setDescription}
-							placeholder="フォームの説明や注意事項"
-							rows={2}
-							resize="none"
-							autoGrow
-						/>
-					</div>
-
-					<div className={styles.field}>
-						<Text as="label" size="2" weight="medium">
-							対象企画区分（空=全区分）
+		<>
+			<Dialog.Root open={open} onOpenChange={onOpenChange}>
+				<Dialog.Content className={styles.dialogContent}>
+					<VisuallyHidden>
+						<Dialog.Title>{dialogTitle}</Dialog.Title>
+					</VisuallyHidden>
+					<div className={styles.dialogHeader}>
+						<Text size="5" weight="bold">
+							{dialogTitle}
 						</Text>
-						<div className={styles.checkboxGroup}>
-							{TYPE_OPTIONS.map(opt => (
-								<Checkbox
-									key={opt.value}
-									label={opt.label}
-									checked={filterTypes.includes(opt.value)}
-									onCheckedChange={() => toggleType(opt.value)}
+						<IconButton aria-label="閉じる" onClick={() => onOpenChange(false)}>
+							<IconX size={16} />
+						</IconButton>
+					</div>
+					<div className={styles.dialogInner}>
+						<div className={styles.field}>
+							<TextField
+								label="フォームタイトル *"
+								value={title}
+								onChange={setTitle}
+								placeholder="例：屋外企画向け追加情報"
+							/>
+							{errors.__title && (
+								<Text size="1" color="red">
+									{errors.__title}
+								</Text>
+							)}
+						</div>
+
+						<div className={styles.field}>
+							<TextArea
+								label="説明（任意）"
+								value={description}
+								onChange={setDescription}
+								placeholder="フォームの説明や注意事項"
+								rows={2}
+								resize="none"
+								autoGrow
+							/>
+						</div>
+
+						<div className={styles.field}>
+							<Text as="label" size="2" weight="medium">
+								表示順
+							</Text>
+							<div className={styles.sortOrderRow}>
+								<TextField
+									label=""
+									type="number"
+									value={String(sortOrder)}
+									onChange={v => setSortOrder(Math.max(0, Number(v) || 0))}
+									placeholder="0"
 								/>
-							))}
+								{activeForms && (
+									<IconButton
+										aria-label="表示位置をプレビューで選択"
+										onClick={() => setPickerOpen(true)}
+									>
+										<IconArrowsSort size={16} />
+									</IconButton>
+								)}
+							</div>
+						</div>
+
+						<div className={styles.field}>
+							<Text as="label" size="2" weight="medium">
+								対象企画区分（空=全区分）
+							</Text>
+							<div className={styles.checkboxGroup}>
+								{TYPE_OPTIONS.map(opt => (
+									<Checkbox
+										key={opt.value}
+										label={opt.label}
+										checked={filterTypes.includes(opt.value)}
+										onCheckedChange={() => toggleType(opt.value)}
+									/>
+								))}
+							</div>
+						</div>
+
+						<div className={styles.field}>
+							<Text as="label" size="2" weight="medium">
+								対象実施場所（空=全場所）
+							</Text>
+							<div className={styles.checkboxGroup}>
+								{LOCATION_OPTIONS.map(opt => (
+									<Checkbox
+										key={opt.value}
+										label={opt.label}
+										checked={filterLocations.includes(opt.value)}
+										onCheckedChange={() => toggleLocation(opt.value)}
+									/>
+								))}
+							</div>
+						</div>
+
+						<div className={styles.itemsSection}>
+							<Text size="2" weight="medium">
+								フォーム項目
+							</Text>
+							<FormItemList
+								items={items}
+								errors={errors}
+								setItems={setItems}
+								onUpdate={updateItem}
+								onRemove={removeItem}
+							/>
+							{errors.__items && (
+								<Text size="1" color="red">
+									{errors.__items}
+								</Text>
+							)}
+							<Button intent="secondary" onClick={addItem} size="2">
+								<IconPlus size={16} stroke={1.5} />
+								項目を追加
+							</Button>
 						</div>
 					</div>
 
-					<div className={styles.field}>
-						<Text as="label" size="2" weight="medium">
-							対象実施場所（空=全場所）
-						</Text>
-						<div className={styles.checkboxGroup}>
-							{LOCATION_OPTIONS.map(opt => (
-								<Checkbox
-									key={opt.value}
-									label={opt.label}
-									checked={filterLocations.includes(opt.value)}
-									onCheckedChange={() => toggleLocation(opt.value)}
-								/>
-							))}
-						</div>
-					</div>
-
-					<div className={styles.field}>
-						<TextField
-							label="表示順"
-							type="number"
-							value={sortOrder}
-							onChange={setSortOrder}
-						/>
-					</div>
-
-					<div className={styles.itemsSection}>
-						<Text size="2" weight="medium">
-							フォーム項目
-						</Text>
-						<FormItemList
-							items={items}
-							errors={errors}
-							setItems={setItems}
-							onUpdate={updateItem}
-							onRemove={removeItem}
-						/>
-						{errors.__items && (
-							<Text size="1" color="red">
-								{errors.__items}
-							</Text>
-						)}
-						<Button intent="secondary" onClick={addItem} size="2">
-							<IconPlus size={16} stroke={1.5} />
-							項目を追加
+					<div className={styles.dialogFooter}>
+						<Button
+							intent="secondary"
+							onClick={() => onOpenChange(false)}
+							disabled={isSubmitting}
+						>
+							キャンセル
+						</Button>
+						<Button onClick={handleSubmit} loading={isSubmitting}>
+							{submitLabel}
 						</Button>
 					</div>
-				</div>
+				</Dialog.Content>
+			</Dialog.Root>
 
-				<div className={styles.dialogFooter}>
-					<Button
-						intent="secondary"
-						onClick={() => onOpenChange(false)}
-						disabled={isSubmitting}
-					>
-						キャンセル
-					</Button>
-					<Button onClick={handleSubmit} loading={isSubmitting}>
-						{submitLabel}
-					</Button>
-				</div>
-			</Dialog.Content>
-		</Dialog.Root>
+			{activeForms && (
+				<ReorderFormsDialog
+					open={pickerOpen}
+					onOpenChange={setPickerOpen}
+					activeForms={activeForms}
+					newFormTitle={title}
+					initialSortOrder={sortOrder}
+					onConfirm={setSortOrder}
+				/>
+			)}
+		</>
 	);
 }
