@@ -288,6 +288,72 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"ProjectRegistrationForm" {
+  String id PK
+  String ownerId FK
+  String title
+  String description "nullable"
+  Boolean isActive
+  Int sortOrder
+  ProjectType filterTypes
+  ProjectLocation filterLocations
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormItem" {
+  String id PK
+  String formId FK
+  String label
+  String description "nullable"
+  FormItemType type
+  Boolean required
+  Int sortOrder
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormItemOption" {
+  String id PK
+  String formItemId FK
+  String label
+  Int sortOrder
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormAuthorization" {
+  String id PK
+  String formId FK
+  String requestedById FK
+  String requestedToId FK
+  ProjectRegistrationFormAuthorizationStatus status
+  DateTime decidedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormResponse" {
+  String id PK
+  String formId FK
+  String projectId FK
+  DateTime submittedAt
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormAnswer" {
+  String id PK
+  String responseId FK
+  String formItemId FK
+  String textValue "nullable"
+  Float numberValue "nullable"
+  String fileUrl "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormAnswerSelectedOption" {
+  String id PK
+  String answerId FK
+  String formItemOptionId FK
+  DateTime createdAt
+}
 "Project" }o--|| "User" : owner
 "Project" }o--o| "User" : subOwner
 "ProjectMember" }o--|| "Project" : project
@@ -340,6 +406,18 @@ erDiagram
 "InquiryAttachment" }o--|| "Inquiry" : inquiry
 "InquiryAttachment" }o--o| "InquiryComment" : comment
 "InquiryAttachment" }o--|| "File" : file
+"ProjectRegistrationForm" }o--|| "User" : owner
+"ProjectRegistrationFormItem" }o--|| "ProjectRegistrationForm" : form
+"ProjectRegistrationFormItemOption" }o--|| "ProjectRegistrationFormItem" : formItem
+"ProjectRegistrationFormAuthorization" }o--|| "ProjectRegistrationForm" : form
+"ProjectRegistrationFormAuthorization" }o--|| "User" : requestedBy
+"ProjectRegistrationFormAuthorization" }o--|| "User" : requestedTo
+"ProjectRegistrationFormResponse" }o--|| "ProjectRegistrationForm" : form
+"ProjectRegistrationFormResponse" }o--|| "Project" : project
+"ProjectRegistrationFormAnswer" }o--|| "ProjectRegistrationFormResponse" : response
+"ProjectRegistrationFormAnswer" }o--|| "ProjectRegistrationFormItem" : formItem
+"ProjectRegistrationFormAnswerSelectedOption" }o--|| "ProjectRegistrationFormAnswer" : answer
+"ProjectRegistrationFormAnswerSelectedOption" }o--|| "ProjectRegistrationFormItemOption" : formItemOption
 ```
 
 ### `EmailVerification`
@@ -714,3 +792,90 @@ Properties as follows:
 - `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
+
+### `ProjectRegistrationForm`
+
+Properties as follows:
+
+- `id`:
+- `ownerId`:
+- `title`:
+- `description`:
+- `isActive`:
+- `sortOrder`:
+- `filterTypes`:
+- `filterLocations`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormItem`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `label`:
+- `description`:
+- `type`:
+- `required`:
+- `sortOrder`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormItemOption`
+
+Properties as follows:
+
+- `id`:
+- `formItemId`:
+- `label`:
+- `sortOrder`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormAuthorization`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `requestedById`:
+- `requestedToId`:
+- `status`:
+- `decidedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormResponse`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `projectId`:
+- `submittedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormAnswer`
+
+Properties as follows:
+
+- `id`:
+- `responseId`:
+- `formItemId`:
+- `textValue`:
+- `numberValue`:
+- `fileUrl`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormAnswerSelectedOption`
+
+Properties as follows:
+
+- `id`:
+- `answerId`:
+- `formItemOptionId`:
+- `createdAt`:
