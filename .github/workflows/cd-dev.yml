@@ -17,9 +17,9 @@ env:
   CLOUDFLARE_ACCOUNT_NAME: jsys
   VITE_API_BASE_URL: https://api.dev.sos26.sohosai.com
   VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY_DEV }}
-  VITE_FIREBASE_AUTH_DOMAIN: sos26-dev.firebaseapp.com
-  VITE_FIREBASE_PROJECT_ID: sos26-dev
-  VITE_VAPID_PUBLIC_KEY: BPWfimwhT9AbgPf6aUT3e_ZdGSdhtxxXovv36i7cTb3YNUKghh3yTI2H63XpYEtDjGLuUfuOFZ3bhRgmtGH4Pcs
+  VITE_FIREBASE_AUTH_DOMAIN: sos26-app-dev.firebaseapp.com
+  VITE_FIREBASE_PROJECT_ID: sos26-app-dev
+  VITE_VAPID_PUBLIC_KEY: BIIgSvVhR00I2Ch6mc5tC6xbNf_qi33-yhkt3o5AS6hKO12HfgM-X1z8w6AWcTDXqB0xM44ph3mDTffv3EAt1Fo
 
 jobs:
   deploy-web:
