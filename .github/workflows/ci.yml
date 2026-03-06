@@ -19,7 +19,6 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-          
 
       - name: Cache Bun download cache
         uses: actions/cache@v4
@@ -31,6 +30,7 @@ jobs:
             ${{ runner.os }}-bun-
 
       - name: Cache Turbo local cache
+        if: github.event_name == 'push' || !github.event.pull_request.draft
         uses: actions/cache@v4
         with:
           path: .turbo
