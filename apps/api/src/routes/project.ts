@@ -422,10 +422,6 @@ projectRoute.get("/registration-forms", requireAuth, async c => {
 				include: { options: { orderBy: { sortOrder: "asc" } } },
 				orderBy: { sortOrder: "asc" },
 			},
-			authorizations: {
-				include: { requestedBy: true, requestedTo: true },
-				orderBy: { createdAt: "desc" },
-			},
 		},
 		orderBy: { sortOrder: "asc" },
 	});

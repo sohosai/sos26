@@ -308,8 +308,17 @@ export type GetActiveProjectRegistrationFormsQuery = z.infer<
 	typeof getActiveProjectRegistrationFormsQuerySchema
 >;
 
+// 企画者向けに公開するフォーム情報（owner/collaborators/authorizations は不要）
+export const activeProjectRegistrationFormSchema =
+	projectRegistrationFormSchema.extend({
+		items: z.array(projectRegistrationFormItemSchema),
+	});
+export type ActiveProjectRegistrationForm = z.infer<
+	typeof activeProjectRegistrationFormSchema
+>;
+
 export const getActiveProjectRegistrationFormsResponseSchema = z.object({
-	forms: z.array(projectRegistrationFormDetailSchema),
+	forms: z.array(activeProjectRegistrationFormSchema),
 });
 export type GetActiveProjectRegistrationFormsResponse = z.infer<
 	typeof getActiveProjectRegistrationFormsResponseSchema
