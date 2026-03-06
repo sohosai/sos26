@@ -695,6 +695,40 @@ committeeFormRoute.get(
 			orderBy: { submittedAt: "desc" },
 		});
 
+		// FormItemEditHistory の最新値を取得
+		const formItems = await prisma.formItem.findMany({
+			where: { formId },
+			select: { id: true },
+		});
+		const formItemIds = formItems.map(fi => fi.id);
+		const projectIds = [
+			...new Set(responses.map(r => r.formDelivery.projectId)),
+		];
+
+		const allHistory =
+			formItemIds.length && projectIds.length
+				? await prisma.formItemEditHistory.findMany({
+						where: {
+							formItemId: { in: formItemIds },
+							projectId: { in: projectIds },
+						},
+						orderBy: { createdAt: "desc" },
+						include: {
+							selectedOptions: {
+								include: {
+									formItemOption: { select: { id: true, label: true } },
+								},
+							},
+						},
+					})
+				: [];
+
+		const latestByCell = new Map<string, (typeof allHistory)[0]>();
+		for (const h of allHistory) {
+			const key = `${h.formItemId}:${h.projectId}`;
+			if (!latestByCell.has(key)) latestByCell.set(key, h);
+		}
+
 		return c.json({
 			responses: responses.map(r => ({
 				id: r.id,
@@ -705,16 +739,33 @@ committeeFormRoute.get(
 				},
 				submittedAt: r.submittedAt,
 				createdAt: r.createdAt,
-				answers: r.answers.map(a => ({
-					formItemId: a.formItemId,
-					textValue: a.textValue,
-					numberValue: a.numberValue,
-					fileUrl: a.fileUrl,
-					selectedOptions: a.selectedOptions.map(s => ({
-						id: s.formItemOption.id,
-						label: s.formItemOption.label,
-					})),
-				})),
+				answers: r.answers.map(a => {
+					const history = latestByCell.get(
+						`${a.formItemId}:${r.formDelivery.projectId}`
+					);
+					if (history) {
+						return {
+							formItemId: a.formItemId,
+							textValue: history.textValue,
+							numberValue: history.numberValue,
+							fileUrl: history.fileUrl,
+							selectedOptions: history.selectedOptions.map(s => ({
+								id: s.formItemOption.id,
+								label: s.formItemOption.label,
+							})),
+						};
+					}
+					return {
+						formItemId: a.formItemId,
+						textValue: a.textValue,
+						numberValue: a.numberValue,
+						fileUrl: a.fileUrl,
+						selectedOptions: a.selectedOptions.map(s => ({
+							id: s.formItemOption.id,
+							label: s.formItemOption.label,
+						})),
+					};
+				}),
 			})),
 		});
 	}
@@ -775,6 +826,31 @@ committeeFormRoute.get(
 		});
 		if (!r) throw Errors.notFound("回答が見つかりません");
 
+		// FormItemEditHistory の最新値を取得
+		const formItemIds = r.answers.map(a => a.formItemId);
+		const projectId = r.formDelivery.project.id;
+		const allHistory = formItemIds.length
+			? await prisma.formItemEditHistory.findMany({
+					where: {
+						formItemId: { in: formItemIds },
+						projectId,
+					},
+					orderBy: { createdAt: "desc" },
+					include: {
+						selectedOptions: {
+							include: {
+								formItemOption: { select: { id: true, label: true } },
+							},
+						},
+					},
+				})
+			: [];
+
+		const latestByItem = new Map<string, (typeof allHistory)[0]>();
+		for (const h of allHistory) {
+			if (!latestByItem.has(h.formItemId)) latestByItem.set(h.formItemId, h);
+		}
+
 		return c.json({
 			response: {
 				id: r.id,
@@ -785,16 +861,31 @@ committeeFormRoute.get(
 				},
 				submittedAt: r.submittedAt,
 				createdAt: r.createdAt,
-				answers: r.answers.map(a => ({
-					formItemId: a.formItemId,
-					textValue: a.textValue,
-					numberValue: a.numberValue,
-					fileUrl: a.fileUrl,
-					selectedOptions: a.selectedOptions.map(s => ({
-						id: s.formItemOption.id,
-						label: s.formItemOption.label,
-					})),
-				})),
+				answers: r.answers.map(a => {
+					const history = latestByItem.get(a.formItemId);
+					if (history) {
+						return {
+							formItemId: a.formItemId,
+							textValue: history.textValue,
+							numberValue: history.numberValue,
+							fileUrl: history.fileUrl,
+							selectedOptions: history.selectedOptions.map(s => ({
+								id: s.formItemOption.id,
+								label: s.formItemOption.label,
+							})),
+						};
+					}
+					return {
+						formItemId: a.formItemId,
+						textValue: a.textValue,
+						numberValue: a.numberValue,
+						fileUrl: a.fileUrl,
+						selectedOptions: a.selectedOptions.map(s => ({
+							id: s.formItemOption.id,
+							label: s.formItemOption.label,
+						})),
+					};
+				}),
 			},
 		});
 	}

@@ -20,7 +20,6 @@ type CellData = {
 	columnId: string;
 	status?: MastersheetCellStatus;
 	formValue?: CellValue | null;
-	override?: (CellValue & { isStale: boolean }) | null;
 	cellValue?: CellValue | null;
 };
 
@@ -163,7 +162,7 @@ export function FormItemCell<TData extends RowData>({
 		);
 	}
 
-	const effectiveValue = cell.override ?? cell.formValue ?? null;
+	const effectiveValue = cell.formValue ?? null;
 	const displayText = getDisplayText(effectiveValue, formItemType);
 	// ファイル型は Link 表示のみ（編集不可）
 	// URL なしの場合は下の !isEditable ブランチで「─」を表示

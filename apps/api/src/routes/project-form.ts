@@ -270,6 +270,56 @@ function assertRequiredAnswered(
 	}
 }
 // ─────────────────────────────────────────────────────────────
+// ヘルパー: FormItemEditHistory にレコードを追加
+// ─────────────────────────────────────────────────────────────
+
+type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+function extractAnswerValues(answer: CreateFormResponseRequest["answers"][0]) {
+	const isText = answer.type === "TEXT" || answer.type === "TEXTAREA";
+	const isSelect = answer.type === "SELECT" || answer.type === "CHECKBOX";
+	return {
+		textValue: isText ? (answer.textValue ?? null) : null,
+		numberValue: answer.type === "NUMBER" ? (answer.numberValue ?? null) : null,
+		fileUrl: answer.type === "FILE" ? (answer.fileUrl ?? null) : null,
+		optionIds: isSelect ? (answer.selectedOptionIds ?? []) : [],
+	};
+}
+
+const appendEditHistory = async (
+	tx: PrismaTx,
+	answers: CreateFormResponseRequest["answers"],
+	projectId: string,
+	actorId: string,
+	trigger: "PROJECT_SUBMIT" | "PROJECT_RESUBMIT"
+) => {
+	for (const answer of answers) {
+		const { textValue, numberValue, fileUrl, optionIds } =
+			extractAnswerValues(answer);
+
+		const history = await tx.formItemEditHistory.create({
+			data: {
+				formItemId: answer.formItemId,
+				projectId,
+				textValue,
+				numberValue,
+				fileUrl,
+				actorId,
+				trigger,
+			},
+		});
+		if (optionIds.length > 0) {
+			await tx.formItemEditHistorySelectedOption.createMany({
+				data: optionIds.map(optionId => ({
+					editHistoryId: history.id,
+					formItemOptionId: optionId,
+				})),
+			});
+		}
+	}
+};
+
+// ─────────────────────────────────────────────────────────────
 // GET /project/:projectId/forms
 // ─────────────────────────────────────────────────────────────
 
@@ -457,16 +507,13 @@ projectFormRoute.post(
 			);
 
 			if (submit) {
-				await tx.mastersheetOverride.updateMany({
-					where: {
-						projectId,
-						column: {
-							formItem: { formId: delivery.formAuthorization.form.id },
-						},
-						isStale: false,
-					},
-					data: { isStale: true },
-				});
+				await appendEditHistory(
+					tx,
+					answers,
+					projectId,
+					userId,
+					"PROJECT_SUBMIT"
+				);
 			}
 
 			return formatResponse(tx, created.id);
@@ -528,16 +575,13 @@ projectFormRoute.patch(
 			);
 
 			if (submit || isAlreadySubmitted) {
-				await tx.mastersheetOverride.updateMany({
-					where: {
-						projectId,
-						column: {
-							formItem: { formId: delivery.formAuthorization.form.id },
-						},
-						isStale: false,
-					},
-					data: { isStale: true },
-				});
+				await appendEditHistory(
+					tx,
+					answers,
+					projectId,
+					userId,
+					isAlreadySubmitted ? "PROJECT_RESUBMIT" : "PROJECT_SUBMIT"
+				);
 			}
 
 			return formatResponse(tx, existing.id);

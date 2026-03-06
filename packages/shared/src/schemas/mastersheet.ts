@@ -28,12 +28,20 @@ export type MastersheetColumnVisibility = z.infer<
 export const mastersheetCellStatusSchema = z.enum([
 	"NOT_DELIVERED", // 未配信
 	"NOT_ANSWERED", // 未回答
-	"DRAFT", // 下書き
 	"SUBMITTED", // 提出済み
-	"OVERRIDDEN", // オーバーライド済み
-	"STALE_OVERRIDE", // 要確認（元データ更新あり）
+	"COMMITTEE_EDITED", // 実委編集済み
 ]);
 export type MastersheetCellStatus = z.infer<typeof mastersheetCellStatusSchema>;
+
+/** 編集履歴のトリガー */
+export const formItemEditHistoryTriggerSchema = z.enum([
+	"PROJECT_SUBMIT",
+	"PROJECT_RESUBMIT",
+	"COMMITTEE_EDIT",
+]);
+export type FormItemEditHistoryTrigger = z.infer<
+	typeof formItemEditHistoryTriggerSchema
+>;
 
 // ─────────────────────────────────────────────────────────────
 // パスパラメータ
@@ -141,10 +149,6 @@ const mastersheetCellSchema = z.object({
 	// FORM_ITEM カラム用
 	status: mastersheetCellStatusSchema.optional(),
 	formValue: cellValueDataSchema.nullable().optional(),
-	override: cellValueDataSchema
-		.extend({ isStale: z.boolean() })
-		.nullable()
-		.optional(),
 	// CUSTOM カラム用
 	cellValue: cellValueDataSchema.nullable().optional(),
 });
@@ -268,51 +272,40 @@ export type UpsertMastersheetCellResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
-// PUT /committee/mastersheet/overrides/:columnId/:projectId
+// PUT /committee/mastersheet/edits/:columnId/:projectId
 // ─────────────────────────────────────────────────────────────
 
-export const upsertMastersheetOverrideRequestSchema = z.object({
+export const editFormItemCellRequestSchema = z.object({
 	textValue: z.string().nullable().optional(),
 	numberValue: z.number().nullable().optional(),
 	fileUrl: z.string().nullable().optional(),
 	selectedOptionIds: z.array(z.string()).optional(),
 });
-export type UpsertMastersheetOverrideRequest = z.infer<
-	typeof upsertMastersheetOverrideRequestSchema
+export type EditFormItemCellRequest = z.infer<
+	typeof editFormItemCellRequestSchema
 >;
 
-export const upsertMastersheetOverrideResponseSchema = z.object({
+export const editFormItemCellResponseSchema = z.object({
 	cell: mastersheetCellSchema,
 });
-export type UpsertMastersheetOverrideResponse = z.infer<
-	typeof upsertMastersheetOverrideResponseSchema
->;
-
-// ─────────────────────────────────────────────────────────────
-// DELETE /committee/mastersheet/overrides/:columnId/:projectId
-// ─────────────────────────────────────────────────────────────
-
-export const deleteMastersheetOverrideResponseSchema = z.object({
-	cell: mastersheetCellSchema,
-});
-export type DeleteMastersheetOverrideResponse = z.infer<
-	typeof deleteMastersheetOverrideResponseSchema
+export type EditFormItemCellResponse = z.infer<
+	typeof editFormItemCellResponseSchema
 >;
 
 // ─────────────────────────────────────────────────────────────
 // GET /committee/mastersheet/columns/:columnId/history/:projectId
 // ─────────────────────────────────────────────────────────────
 
+export const formItemEditHistorySchema = z.object({
+	id: z.string(),
+	value: z.string().nullable(),
+	actor: userSummarySchema,
+	trigger: formItemEditHistoryTriggerSchema,
+	createdAt: z.coerce.date(),
+});
+
 export const getMastersheetHistoryResponseSchema = z.object({
-	history: z.array(
-		z.object({
-			id: z.string(),
-			oldValue: z.string().nullable(),
-			newValue: z.string().nullable(),
-			editor: userSummarySchema,
-			createdAt: z.coerce.date(),
-		})
-	),
+	history: z.array(formItemEditHistorySchema),
 });
 export type GetMastersheetHistoryResponse = z.infer<
 	typeof getMastersheetHistoryResponseSchema

@@ -13,6 +13,9 @@ import {
 	deleteMastersheetColumnEndpoint,
 	deleteMastersheetViewEndpoint,
 	discoverMastersheetColumnsEndpoint,
+	type EditFormItemCellRequest,
+	type EditFormItemCellResponse,
+	editFormItemCellEndpoint,
 	type GetMastersheetDataResponse,
 	getMastersheetDataEndpoint,
 	type ListMastersheetAccessRequestsResponse,
@@ -27,13 +30,10 @@ import {
 	type UpdateMastersheetViewResponse,
 	type UpsertMastersheetCellRequest,
 	type UpsertMastersheetCellResponse,
-	type UpsertMastersheetOverrideRequest,
-	type UpsertMastersheetOverrideResponse,
 	updateMastersheetAccessRequestEndpoint,
 	updateMastersheetColumnEndpoint,
 	updateMastersheetViewEndpoint,
 	upsertMastersheetCellEndpoint,
-	upsertMastersheetOverrideEndpoint,
 } from "@sos26/shared";
 import { callBodyApi, callGetApi, callNoBodyApi } from "./core";
 
@@ -95,15 +95,15 @@ export async function upsertMastersheetCell(
 }
 
 /**
- * PUT /committee/mastersheet/overrides/:columnId/:projectId
- * フォーム由来カラムの回答をオーバーライド
+ * PUT /committee/mastersheet/edits/:columnId/:projectId
+ * フォーム由来カラムの値を編集
  */
-export async function upsertMastersheetOverride(
+export async function editFormItemCell(
 	columnId: string,
 	projectId: string,
-	body: UpsertMastersheetOverrideRequest
-): Promise<UpsertMastersheetOverrideResponse> {
-	return callBodyApi(upsertMastersheetOverrideEndpoint, body, {
+	body: EditFormItemCellRequest
+): Promise<EditFormItemCellResponse> {
+	return callBodyApi(editFormItemCellEndpoint, body, {
 		pathParams: { columnId, projectId },
 	});
 }
