@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formAnswerInputSchema } from "./form";
 
 export const projectTypeSchema = z.enum(["STAGE", "FOOD", "NORMAL"]);
 export type ProjectType = z.infer<typeof projectTypeSchema>;
@@ -54,6 +55,14 @@ export const createProjectRequestSchema = z.object({
 	organizationNamePhonetic: z.string().min(1),
 	type: projectTypeSchema,
 	location: projectLocationSchema,
+	registrationFormAnswers: z
+		.array(
+			z.object({
+				formId: z.string().min(1),
+				answers: z.array(formAnswerInputSchema),
+			})
+		)
+		.optional(),
 });
 
 export type CreateProjectRequest = z.infer<typeof createProjectRequestSchema>;
