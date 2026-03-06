@@ -1,5 +1,6 @@
 import {
 	createProjectRequestSchema,
+	getActiveProjectRegistrationFormsQuerySchema,
 	joinProjectRequestSchema,
 	type ProjectMemberRole,
 	updateProjectDetailRequestSchema,
@@ -22,7 +23,8 @@ const generateInviteCode = () =>
 // ─────────────────────────────────────────
 projectRoute.post("/create", requireAuth, async c => {
 	const body = await c.req.json().catch(() => ({}));
-	const data = createProjectRequestSchema.parse(body);
+	const { registrationFormAnswers, ...data } =
+		createProjectRequestSchema.parse(body);
 	const userId = c.get("user").id;
 
 	// ── 他の企画で責任者・副責任者をやっていないか確認 ──
@@ -45,18 +47,50 @@ projectRoute.post("/create", requireAuth, async c => {
 		inviteCode = generateInviteCode();
 	}
 
-	const project = await prisma.project.create({
-		data: {
-			...data,
-			ownerId: userId,
-			subOwnerId: null,
-			inviteCode,
-			projectMembers: {
-				create: {
-					userId: userId,
+	const project = await prisma.$transaction(async tx => {
+		const created = await tx.project.create({
+			data: {
+				...data,
+				ownerId: userId,
+				subOwnerId: null,
+				inviteCode,
+				projectMembers: {
+					create: {
+						userId: userId,
+					},
 				},
 			},
-		},
+		});
+
+		// 企画登録フォームの回答を保存
+		if (registrationFormAnswers?.length) {
+			for (const { formId, answers } of registrationFormAnswers) {
+				await tx.projectRegistrationFormResponse.create({
+					data: {
+						formId,
+						projectId: created.id,
+						answers: {
+							create: answers.map(answer => ({
+								...answer,
+								selectedOptions:
+									"selectedOptionIds" in answer &&
+									answer.selectedOptionIds?.length
+										? {
+												create: answer.selectedOptionIds.map(
+													formItemOptionId => ({
+														formItemOptionId,
+													})
+												),
+											}
+										: undefined,
+							})),
+						},
+					},
+				});
+			}
+		}
+
+		return created;
 	});
 
 	return c.json({ project });
@@ -358,5 +392,48 @@ projectRoute.post(
 		});
 	}
 );
+
+// ─────────────────────────────────────────────────────────────
+// GET /project/registration-forms
+// 有効な企画登録フォーム一覧を取得（type / location でフィルタ）
+// 企画登録ウィザードのページ2以降に使用
+// ─────────────────────────────────────────────────────────────
+projectRoute.get("/registration-forms", requireAuth, async c => {
+	const query = getActiveProjectRegistrationFormsQuerySchema.parse(
+		c.req.query()
+	);
+
+	const forms = await prisma.projectRegistrationForm.findMany({
+		where: {
+			isActive: true,
+			deletedAt: null,
+			// filterTypes が空なら全区分対象、そうでなければ指定区分に含まれるもの
+			OR: [
+				{ filterTypes: { isEmpty: true } },
+				{ filterTypes: { has: query.type } },
+			],
+		},
+		include: {
+			items: {
+				include: { options: { orderBy: { sortOrder: "asc" } } },
+				orderBy: { sortOrder: "asc" },
+			},
+			authorizations: {
+				include: { requestedBy: true, requestedTo: true },
+				orderBy: { createdAt: "desc" },
+			},
+		},
+		orderBy: { sortOrder: "asc" },
+	});
+
+	// filterLocations もフィルタ（空なら全場所対象）
+	const filtered = forms.filter(
+		f =>
+			f.filterLocations.length === 0 ||
+			f.filterLocations.includes(query.location)
+	);
+
+	return c.json({ forms: filtered });
+});
 
 export { projectRoute };
