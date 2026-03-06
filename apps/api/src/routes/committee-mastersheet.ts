@@ -778,10 +778,35 @@ committeeMastersheetRoute.put(
 		});
 		if (!project) throw Errors.notFound("企画が見つかりません");
 
+		const formItemId = col.formItemId;
+
+		// NOT_ANSWERED（未提出 かつ 履歴なし）は編集不可
+		const [response, latestHistory] = await Promise.all([
+			prisma.formResponse.findFirst({
+				where: {
+					formDelivery: {
+						projectId,
+						formAuthorization: {
+							form: { items: { some: { id: formItemId } } },
+						},
+					},
+					submittedAt: { not: null },
+				},
+				select: { id: true },
+			}),
+			prisma.formItemEditHistory.findFirst({
+				where: { formItemId, projectId },
+				select: { id: true },
+			}),
+		]);
+		if (!response && !latestHistory) {
+			throw Errors.invalidRequest(
+				"未回答の企画は編集できません。提出後に編集してください"
+			);
+		}
+
 		const body = await c.req.json().catch(() => ({}));
 		const data = editFormItemCellRequestSchema.parse(body);
-
-		const formItemId = col.formItemId;
 
 		const history = await prisma.$transaction(
 			async tx => {

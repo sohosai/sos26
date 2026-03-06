@@ -408,6 +408,18 @@ projectFormRoute.get(
 			},
 		});
 
+		// FormItemEditHistory の最新値を取得して表示値をオーバーレイ
+		const formItemIds = form.items.map(item => item.id);
+		const allHistory = await prisma.formItemEditHistory.findMany({
+			where: { formItemId: { in: formItemIds }, projectId },
+			orderBy: { createdAt: "desc" },
+			include: { selectedOptions: true },
+		});
+		const latestByItem = new Map<string, (typeof allHistory)[number]>();
+		for (const h of allHistory) {
+			if (!latestByItem.has(h.formItemId)) latestByItem.set(h.formItemId, h);
+		}
+
 		return c.json({
 			form: {
 				formDeliveryId: delivery.id,
@@ -437,15 +449,29 @@ projectFormRoute.get(
 					? {
 							id: existingResponse.id,
 							submittedAt: existingResponse.submittedAt,
-							answers: existingResponse.answers.map(a => ({
-								formItemId: a.formItemId,
-								textValue: a.textValue,
-								numberValue: a.numberValue,
-								fileUrl: a.fileUrl,
-								selectedOptionIds: a.selectedOptions.map(
-									s => s.formItemOptionId
-								),
-							})),
+							answers: existingResponse.answers.map(a => {
+								const hist = latestByItem.get(a.formItemId);
+								if (hist) {
+									return {
+										formItemId: a.formItemId,
+										textValue: hist.textValue,
+										numberValue: hist.numberValue,
+										fileUrl: hist.fileUrl,
+										selectedOptionIds: hist.selectedOptions.map(
+											s => s.formItemOptionId
+										),
+									};
+								}
+								return {
+									formItemId: a.formItemId,
+									textValue: a.textValue,
+									numberValue: a.numberValue,
+									fileUrl: a.fileUrl,
+									selectedOptionIds: a.selectedOptions.map(
+										s => s.formItemOptionId
+									),
+								};
+							}),
 						}
 					: null,
 			},
