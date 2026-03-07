@@ -154,7 +154,12 @@ export function FormItemCell<TData extends RowData>({
 	const isEditable = !!formItemType && EDITABLE_TYPES.has(formItemType);
 	const isNumberType = formItemType === "NUMBER";
 
-	if (!cell || !cell.status || cell.status === "NOT_DELIVERED") {
+	if (
+		!cell ||
+		!cell.status ||
+		cell.status === "NOT_DELIVERED" ||
+		cell.status === "NOT_ANSWERED"
+	) {
 		return (
 			<Text color="gray" size="2">
 				─

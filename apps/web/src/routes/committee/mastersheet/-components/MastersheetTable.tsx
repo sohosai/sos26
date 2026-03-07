@@ -14,6 +14,7 @@ import {
 	type VisibilityState,
 } from "@tanstack/react-table";
 import { type ReactNode, useMemo } from "react";
+import { toast } from "sonner";
 import {
 	DataTable,
 	EditableCell,
@@ -24,6 +25,7 @@ import {
 	editFormItemCell,
 	upsertMastersheetCell,
 } from "@/lib/api/committee-mastersheet";
+import { isClientError } from "@/lib/http/error";
 import { FormItemCell } from "./FormItemCell";
 import styles from "./MastersheetTable.module.scss";
 
@@ -147,7 +149,11 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 					header: () => <ColHeader col={col} />,
 					cell: props => {
 						const cell = props.row.original.cells[col.id];
-						if (!cell?.status || cell.status === "NOT_DELIVERED") {
+						if (
+							!cell?.status ||
+							cell.status === "NOT_DELIVERED" ||
+							cell.status === "NOT_ANSWERED"
+						) {
 							return (
 								<Text color="gray" size="2">
 									─
@@ -182,7 +188,11 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 					header: () => <ColHeader col={col} />,
 					cell: props => {
 						const cell = props.row.original.cells[col.id];
-						if (!cell?.status || cell.status === "NOT_DELIVERED") {
+						if (
+							!cell?.status ||
+							cell.status === "NOT_DELIVERED" ||
+							cell.status === "NOT_ANSWERED"
+						) {
 							return (
 								<Text color="gray" size="2">
 									─
@@ -351,18 +361,26 @@ export function MastersheetTable({
 		const col = columns.find(c => c.id === columnId);
 		if (!col) return;
 
-		if (col.type === "FORM_ITEM") {
-			await editFormItemCell(
-				columnId,
-				row.project.id,
-				buildEditPayload(col.formItemType, value)
+		try {
+			if (col.type === "FORM_ITEM") {
+				await editFormItemCell(
+					columnId,
+					row.project.id,
+					buildEditPayload(col.formItemType, value)
+				);
+			} else {
+				await upsertMastersheetCell(
+					columnId,
+					row.project.id,
+					buildCustomPayload(col.dataType, value)
+				);
+			}
+		} catch (error) {
+			toast.error(
+				isClientError(error) ? error.message : "セルの更新に失敗しました"
 			);
-		} else {
-			await upsertMastersheetCell(
-				columnId,
-				row.project.id,
-				buildCustomPayload(col.dataType, value)
-			);
+			await router.invalidate();
+			return;
 		}
 
 		await router.invalidate();
