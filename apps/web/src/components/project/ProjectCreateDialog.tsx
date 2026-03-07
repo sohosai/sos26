@@ -322,7 +322,7 @@ function buildStep1Errors(step1: Step1State): Step1Errors {
 	return errs;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: 企画登録マルチステップフォームのロジック
 export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 	// ステップ: 0 = 基本情報, 1〜N = 企画登録フォーム, N+1 = 同意事項
 	const [step, setStep] = useState(0);
