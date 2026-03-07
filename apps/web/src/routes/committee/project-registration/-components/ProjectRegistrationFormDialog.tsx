@@ -105,10 +105,38 @@ export function ProjectRegistrationFormDialog({
 		}
 	}, [open, initialValues]);
 
+	// タイプと場所の選択ロジック
+	const handleStageTypeToggle = () => {
+		if (!filterTypes.includes("STAGE")) {
+			setFilterTypes(["STAGE"]);
+			setFilterLocations(["STAGE"]);
+		} else {
+			setFilterTypes(prev => prev.filter(t => t !== "STAGE"));
+			setFilterLocations(prev => prev.filter(l => l !== "STAGE"));
+		}
+	};
+
+	const handleNormalTypeToggle = (value: ProjectType) => {
+		if (filterTypes.includes("STAGE")) {
+			setFilterTypes([value]);
+			setFilterLocations(prev => prev.filter(l => l !== "STAGE"));
+		} else {
+			const newTypes = filterTypes.includes(value)
+				? filterTypes.filter(t => t !== value)
+				: [...filterTypes, value];
+			setFilterTypes(newTypes);
+			if (newTypes.length > 0 && !newTypes.includes("STAGE")) {
+				setFilterLocations(prev => prev.filter(l => l !== "STAGE"));
+			}
+		}
+	};
+
 	const toggleType = (value: ProjectType) => {
-		setFilterTypes(prev =>
-			prev.includes(value) ? prev.filter(t => t !== value) : [...prev, value]
-		);
+		if (value === "STAGE") {
+			handleStageTypeToggle();
+		} else {
+			handleNormalTypeToggle(value);
+		}
 	};
 
 	const toggleLocation = (value: ProjectLocation) => {
@@ -287,14 +315,27 @@ export function ProjectRegistrationFormDialog({
 								対象実施場所（空=全場所）
 							</Text>
 							<div className={styles.checkboxGroup}>
-								{LOCATION_OPTIONS.map(opt => (
-									<Checkbox
-										key={opt.value}
-										label={opt.label}
-										checked={filterLocations.includes(opt.value)}
-										onCheckedChange={() => toggleLocation(opt.value)}
-									/>
-								))}
+								{LOCATION_OPTIONS.map(opt => {
+									const isStageOpt = opt.value === "STAGE";
+									const stageTypeSelected = filterTypes.includes("STAGE");
+									const nonStageTypeSelected = filterTypes.some(
+										t => t !== "STAGE"
+									);
+									const disabled = isStageOpt
+										? filterTypes.length > 0 && !stageTypeSelected
+										: stageTypeSelected && !nonStageTypeSelected;
+									return (
+										<Checkbox
+											key={opt.value}
+											label={opt.label}
+											checked={filterLocations.includes(opt.value)}
+											onCheckedChange={() =>
+												!disabled && toggleLocation(opt.value)
+											}
+											disabled={disabled}
+										/>
+									);
+								})}
 							</div>
 						</div>
 

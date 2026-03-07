@@ -168,14 +168,52 @@ export type RemoveProjectRegistrationFormCollaboratorResponse = z.infer<
 	typeof removeProjectRegistrationFormCollaboratorResponseSchema
 >;
 
-export const createProjectRegistrationFormRequestSchema = z.object({
-	title: z.string().min(1).optional(),
-	description: z.string().optional(),
-	sortOrder: z.number().int().min(0).default(0),
-	filterTypes: z.array(projectTypeSchema).default([]),
-	filterLocations: z.array(projectLocationSchema).default([]),
-	items: z.array(projectRegistrationFormItemInputSchema).default([]),
-});
+// 企画区分と実施場所の整合性チェック
+function validateFilterTypesLocations(
+	filterTypes: string[],
+	filterLocations: string[]
+): { valid: boolean; message: string } {
+	if (filterTypes.length === 0) return { valid: true, message: "" };
+	const hasStage = filterTypes.includes("STAGE");
+	const hasNonStage = filterTypes.some(t => t !== "STAGE");
+	if (hasStage && !hasNonStage) {
+		return {
+			valid: filterLocations.every(l => l === "STAGE"),
+			message: "ステージ企画区分の場合、実施場所はステージのみ指定できます",
+		};
+	}
+	if (!hasStage && hasNonStage) {
+		return {
+			valid: !filterLocations.includes("STAGE"),
+			message:
+				"ステージ以外の企画区分の場合、実施場所にステージは指定できません",
+		};
+	}
+	return { valid: true, message: "" };
+}
+
+export const createProjectRegistrationFormRequestSchema = z
+	.object({
+		title: z.string().min(1).optional(),
+		description: z.string().optional(),
+		sortOrder: z.number().int().min(0).default(0),
+		filterTypes: z.array(projectTypeSchema).default([]),
+		filterLocations: z.array(projectLocationSchema).default([]),
+		items: z.array(projectRegistrationFormItemInputSchema).default([]),
+	})
+	.superRefine((data, ctx) => {
+		const result = validateFilterTypesLocations(
+			data.filterTypes,
+			data.filterLocations
+		);
+		if (!result.valid) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: result.message,
+				path: ["filterLocations"],
+			});
+		}
+	});
 export type CreateProjectRegistrationFormRequest = z.infer<
 	typeof createProjectRegistrationFormRequestSchema
 >;
@@ -225,14 +263,30 @@ export type GetProjectRegistrationFormDetailResponse = z.infer<
 // PATCH /committee/project-registration-forms/:formId
 // ─────────────────────────────────────────────────────────────
 
-export const updateProjectRegistrationFormRequestSchema = z.object({
-	title: z.string().min(1).optional(),
-	description: z.string().nullable().optional(),
-	sortOrder: z.number().int().min(0).optional(),
-	filterTypes: z.array(projectTypeSchema).optional(),
-	filterLocations: z.array(projectLocationSchema).optional(),
-	items: z.array(projectRegistrationFormItemInputSchema).optional(),
-});
+export const updateProjectRegistrationFormRequestSchema = z
+	.object({
+		title: z.string().min(1).optional(),
+		description: z.string().nullable().optional(),
+		sortOrder: z.number().int().min(0).optional(),
+		filterTypes: z.array(projectTypeSchema).optional(),
+		filterLocations: z.array(projectLocationSchema).optional(),
+		items: z.array(projectRegistrationFormItemInputSchema).optional(),
+	})
+	.superRefine((data, ctx) => {
+		if (data.filterTypes === undefined || data.filterLocations === undefined)
+			return;
+		const result = validateFilterTypesLocations(
+			data.filterTypes,
+			data.filterLocations
+		);
+		if (!result.valid) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: result.message,
+				path: ["filterLocations"],
+			});
+		}
+	});
 export type UpdateProjectRegistrationFormRequest = z.infer<
 	typeof updateProjectRegistrationFormRequestSchema
 >;
