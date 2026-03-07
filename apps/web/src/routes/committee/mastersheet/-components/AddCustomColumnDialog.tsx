@@ -118,6 +118,10 @@ export function AddCustomColumnDialog({
 			toast.error("カラム名を入力してください");
 			return;
 		}
+		if (showOptions && options.filter(o => o.label.trim()).length === 0) {
+			toast.error("選択肢を1つ以上追加してください");
+			return;
+		}
 		setLoading(true);
 		try {
 			const optionsInput = showOptions

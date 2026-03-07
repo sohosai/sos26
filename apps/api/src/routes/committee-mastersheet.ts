@@ -1,4 +1,9 @@
-import type { CommitteeMember, Prisma } from "@prisma/client";
+import type {
+	Bureau,
+	CommitteeMember,
+	Prisma,
+	ViewerScope,
+} from "@prisma/client";
 import {
 	createMastersheetColumnRequestSchema,
 	createMastersheetViewRequestSchema,
@@ -549,6 +554,43 @@ committeeMastersheetRoute.post(
 	}
 );
 
+type TxClient = Prisma.TransactionClient;
+
+async function syncColumnViewers(
+	tx: TxClient,
+	columnId: string,
+	viewers: { scope: ViewerScope; bureauValue?: Bureau; userId?: string }[]
+) {
+	await tx.mastersheetColumnViewer.deleteMany({ where: { columnId } });
+	if (viewers.length > 0) {
+		await tx.mastersheetColumnViewer.createMany({
+			data: viewers.map(v => ({
+				columnId,
+				scope: v.scope,
+				bureauValue: v.bureauValue ?? null,
+				userId: v.userId ?? null,
+			})),
+		});
+	}
+}
+
+async function syncColumnOptions(
+	tx: TxClient,
+	columnId: string,
+	options: { label: string; sortOrder: number }[]
+) {
+	await tx.mastersheetColumnOption.deleteMany({ where: { columnId } });
+	if (options.length > 0) {
+		await tx.mastersheetColumnOption.createMany({
+			data: options.map(o => ({
+				columnId,
+				label: o.label,
+				sortOrder: o.sortOrder,
+			})),
+		});
+	}
+}
+
 // ─────────────────────────────────────────────────────────────
 // PATCH /committee/mastersheet/columns/:columnId
 // ─────────────────────────────────────────────────────────────
@@ -566,7 +608,7 @@ committeeMastersheetRoute.patch(
 
 		const body = await c.req.json().catch(() => ({}));
 		const data = updateMastersheetColumnRequestSchema.parse(body);
-		const { viewers, ...columnFields } = data;
+		const { viewers, options, ...columnFields } = data;
 
 		const col = await prisma.$transaction(
 			async tx => {
@@ -586,19 +628,11 @@ committeeMastersheetRoute.patch(
 				});
 
 				if (viewers !== undefined) {
-					await tx.mastersheetColumnViewer.deleteMany({
-						where: { columnId },
-					});
-					if (viewers.length > 0) {
-						await tx.mastersheetColumnViewer.createMany({
-							data: viewers.map(v => ({
-								columnId,
-								scope: v.scope,
-								bureauValue: v.bureauValue ?? null,
-								userId: v.userId ?? null,
-							})),
-						});
-					}
+					await syncColumnViewers(tx, columnId, viewers);
+				}
+
+				if (options !== undefined) {
+					await syncColumnOptions(tx, columnId, options);
 				}
 
 				return tx.mastersheetColumn.findUniqueOrThrow({

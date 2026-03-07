@@ -228,6 +228,7 @@ export const updateMastersheetColumnRequestSchema = z.object({
 	description: z.string().nullable().optional(),
 	sortOrder: z.number().int().optional(),
 	viewers: z.array(mastersheetViewerInputSchema).optional(),
+	options: z.array(columnOptionInputSchema).optional(),
 });
 export type UpdateMastersheetColumnRequest = z.infer<
 	typeof updateMastersheetColumnRequestSchema

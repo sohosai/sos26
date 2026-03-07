@@ -22,7 +22,7 @@ import {
 } from "@tabler/icons-react";
 import type { VisibilityState } from "@tanstack/react-table";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button, IconButton, TextField } from "@/components/primitives";
 import {
@@ -161,6 +161,8 @@ type EditColumnFormProps = {
 	onCancel: () => void;
 };
 
+type OptionEntry = { id: number; label: string };
+
 function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 	const [name, setName] = useState(col.name);
 	const [description, setDescription] = useState(col.description ?? "");
@@ -176,6 +178,29 @@ function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 	>([]);
 	const [loading, setLoading] = useState(false);
 
+	const showOptions =
+		col.type === "CUSTOM" &&
+		(col.dataType === "SELECT" || col.dataType === "MULTI_SELECT");
+
+	const [options, setOptions] = useState<OptionEntry[]>(() =>
+		col.options.map((o, i) => ({ id: i, label: o.label }))
+	);
+	const nextOptionId = useRef(col.options.length);
+
+	function addOption() {
+		setOptions(prev => [...prev, { id: nextOptionId.current++, label: "" }]);
+	}
+
+	function removeOption(id: number) {
+		setOptions(prev => prev.filter(o => o.id !== id));
+	}
+
+	function updateOption(id: number, value: string) {
+		setOptions(prev =>
+			prev.map(o => (o.id === id ? { ...o, label: value } : o))
+		);
+	}
+
 	useEffect(() => {
 		listCommitteeMembers()
 			.then(res =>
@@ -186,9 +211,21 @@ function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 			.catch(() => toast.error("委員一覧の取得に失敗しました"));
 	}, []);
 
+	function buildOptionsInput() {
+		if (!showOptions) return undefined;
+		return options
+			.filter(o => o.label.trim())
+			.map((o, i) => ({ label: o.label, sortOrder: i }));
+	}
+
 	async function handleSubmit() {
 		if (!name.trim()) {
 			toast.error("カラム名を入力してください");
+			return;
+		}
+		const optionsInput = buildOptionsInput();
+		if (showOptions && (!optionsInput || optionsInput.length === 0)) {
+			toast.error("選択肢を1つ以上追加してください");
 			return;
 		}
 		setLoading(true);
@@ -197,6 +234,7 @@ function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 				name: name.trim(),
 				description: description.trim() || null,
 				viewers: col.type === "CUSTOM" ? viewers : undefined,
+				options: optionsInput,
 			});
 			toast.success("カラムを更新しました");
 			onSuccess();
@@ -221,6 +259,35 @@ function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 						onChange={setViewers}
 						committeeMembers={committeeMembers}
 					/>
+				</div>
+			)}
+			{showOptions && (
+				<div className={styles.field}>
+					<Text size="2" weight="medium">
+						選択肢
+					</Text>
+					{options.map(opt => (
+						<div key={opt.id} className={styles.optionRow}>
+							<div className={styles.optionInput}>
+								<RadixTextField.Root
+									size="2"
+									value={opt.label}
+									placeholder="選択肢のラベル"
+									onChange={e => updateOption(opt.id, e.target.value)}
+								/>
+							</div>
+							<IconButton
+								aria-label="この選択肢を削除"
+								size="1"
+								onClick={() => removeOption(opt.id)}
+							>
+								<IconX size={14} />
+							</IconButton>
+						</div>
+					))}
+					<Button intent="secondary" size="1" onClick={addOption}>
+						+ 選択肢を追加
+					</Button>
 				</div>
 			)}
 			<div className={styles.actions}>
