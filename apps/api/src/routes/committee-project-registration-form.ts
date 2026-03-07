@@ -226,8 +226,8 @@ committeeProjectRegistrationFormRoute.patch(
 		const form = await prisma.$transaction(
 			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: フォーム更新のトランザクション処理
 			async tx => {
-				const existing = await tx.projectRegistrationForm.findUniqueOrThrow({
-					where: { id: formId },
+				const existing = await tx.projectRegistrationForm.findFirstOrThrow({
+					where: { id: formId, deletedAt: null },
 					select: { sortOrder: true, isActive: true },
 				});
 
@@ -249,7 +249,9 @@ committeeProjectRegistrationFormRoute.patch(
 						totalCount - 1
 					);
 					formData = { ...formData, sortOrder: newOrder };
-					if (newOrder < oldOrder) {
+					if (newOrder === oldOrder) {
+						// clamp後に変化なし: シフト不要
+					} else if (newOrder < oldOrder) {
 						// 上に移動: [newOrder, oldOrder) の範囲を +1
 						await tx.projectRegistrationForm.updateMany({
 							where: {
