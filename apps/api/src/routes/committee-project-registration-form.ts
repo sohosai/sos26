@@ -51,30 +51,22 @@ const requireOwner = async (formId: string, userId: string) => {
 	const form = await getFormOrThrow(formId);
 	if (form.ownerId !== userId)
 		throw Errors.forbidden("この操作は作成者のみ行えます");
-	if (form.isActive)
-		throw Errors.invalidRequest("有効化されたフォームは変更できません");
 	return form;
 };
 
 // 作成者または書き込み権限を持つ共同編集者を許可
 const requireWriteAccess = async (formId: string, userId: string) => {
 	const form = await getFormOrThrow(formId);
-	if (form.ownerId === userId) {
-		if (form.isActive)
-			throw Errors.invalidRequest("有効化されたフォームは変更できません");
-		return form;
-	}
+	if (form.ownerId === userId) return form;
 	const isWriteCollaborator = form.collaborators.some(
 		c => c.user.id === userId && c.isWrite
 	);
 	if (!isWriteCollaborator)
 		throw Errors.forbidden("この操作は作成者または共同編集者のみ行えます");
-	if (form.isActive)
-		throw Errors.invalidRequest("有効化されたフォームは変更できません");
 	return form;
 };
 
-// PROJECT_REGISTRATION_FORM_CREATE 権限または委員長チェック
+// PROJECT_REGISTRATION_FORM_CREATE 権限チェック
 const requireCreatePermission = async (committeeMemberId: string) => {
 	const cm = await prisma.committeeMember.findUnique({
 		where: { id: committeeMemberId },
@@ -220,11 +212,15 @@ committeeProjectRegistrationFormRoute.patch(
 			updateProjectRegistrationFormRequestSchema.parse(body);
 
 		const form = await prisma.$transaction(
+			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: フォーム更新のトランザクション処理
 			async tx => {
 				const existing = await tx.projectRegistrationForm.findUniqueOrThrow({
 					where: { id: formId },
-					select: { sortOrder: true },
+					select: { sortOrder: true, isActive: true },
 				});
+
+				if (existing.isActive)
+					throw Errors.invalidRequest("有効化されたフォームは変更できません");
 
 				// sortOrder が変更される場合は既存フォームをシフト
 				if (
@@ -262,6 +258,15 @@ committeeProjectRegistrationFormRoute.patch(
 				});
 
 				if (items !== undefined) {
+					// 既存回答がある場合は設問の変更を禁止（データ整合性の保護）
+					const responseCount = await tx.projectRegistrationFormResponse.count({
+						where: { formId },
+					});
+					if (responseCount > 0)
+						throw Errors.invalidRequest(
+							"回答が存在するフォームの設問は変更できません"
+						);
+
 					// 既存の items を全削除して再作成
 					await tx.projectRegistrationFormItem.deleteMany({
 						where: { formId },
@@ -322,16 +327,27 @@ committeeProjectRegistrationFormRoute.delete(
 		await requireOwner(formId, userId);
 
 		const now = new Date();
-		await prisma.$transaction([
-			prisma.projectRegistrationForm.update({
-				where: { id: formId },
-				data: { deletedAt: now, isActive: false },
-			}),
-			prisma.projectRegistrationFormAuthorization.updateMany({
-				where: { formId, status: "PENDING" },
-				data: { status: "REJECTED", decidedAt: now },
-			}),
-		]);
+		await prisma.$transaction(
+			async tx => {
+				const current = await tx.projectRegistrationForm.findFirst({
+					where: { id: formId, deletedAt: null },
+					select: { isActive: true },
+				});
+				if (!current) throw Errors.notFound("企画登録フォームが見つかりません");
+				if (current.isActive)
+					throw Errors.invalidRequest("有効化されたフォームは削除できません");
+
+				await tx.projectRegistrationForm.update({
+					where: { id: formId },
+					data: { deletedAt: now, isActive: false },
+				});
+				await tx.projectRegistrationFormAuthorization.updateMany({
+					where: { formId, status: "PENDING" },
+					data: { status: "REJECTED", decidedAt: now },
+				});
+			},
+			{ isolationLevel: "Serializable" }
+		);
 
 		return c.json({ success: true as const });
 	}
@@ -492,7 +508,9 @@ committeeProjectRegistrationFormRoute.post(
 			});
 		const userId = c.get("user").id;
 
-		await requireOwner(formId, userId);
+		const form = await requireOwner(formId, userId);
+		if (form.isActive)
+			throw Errors.invalidRequest("有効化されたフォームは変更できません");
 
 		if (targetUserId === userId)
 			throw Errors.invalidRequest(
@@ -564,7 +582,9 @@ committeeProjectRegistrationFormRoute.delete(
 			});
 		const userId = c.get("user").id;
 
-		await requireOwner(formId, userId);
+		const form = await requireOwner(formId, userId);
+		if (form.isActive)
+			throw Errors.invalidRequest("有効化されたフォームは変更できません");
 
 		const collaborator =
 			await prisma.projectRegistrationFormCollaborator.findFirst({
