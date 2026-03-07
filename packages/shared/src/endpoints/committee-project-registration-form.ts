@@ -10,8 +10,6 @@ import {
 	projectRegistrationFormCollaboratorPathParamsSchema,
 	projectRegistrationFormIdPathParamsSchema,
 	removeProjectRegistrationFormCollaboratorResponseSchema,
-	reorderProjectRegistrationFormsRequestSchema,
-	reorderProjectRegistrationFormsResponseSchema,
 	requestProjectRegistrationFormAuthorizationRequestSchema,
 	requestProjectRegistrationFormAuthorizationResponseSchema,
 	updateProjectRegistrationFormAuthorizationRequestSchema,
@@ -117,27 +115,6 @@ export const deleteProjectRegistrationFormEndpoint: NoBodyEndpoint<
 	query: undefined,
 	request: undefined,
 	response: deleteProjectRegistrationFormResponseSchema,
-} as const;
-
-/**
- * PATCH /committee/project-registration-forms/reorder
- * 有効なフォームの表示順を一括更新（DnD並び替え用）
- * 権限: PROJECT_REGISTRATION_FORM_CREATE
- */
-export const reorderProjectRegistrationFormsEndpoint: BodyEndpoint<
-	"PATCH",
-	"/committee/project-registration-forms/reorder",
-	undefined,
-	undefined,
-	typeof reorderProjectRegistrationFormsRequestSchema,
-	typeof reorderProjectRegistrationFormsResponseSchema
-> = {
-	method: "PATCH",
-	path: "/committee/project-registration-forms/reorder",
-	pathParams: undefined,
-	query: undefined,
-	request: reorderProjectRegistrationFormsRequestSchema,
-	response: reorderProjectRegistrationFormsResponseSchema,
 } as const;
 
 /**

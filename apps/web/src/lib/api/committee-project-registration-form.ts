@@ -12,12 +12,9 @@ import {
 	type ListProjectRegistrationFormsResponse,
 	listProjectRegistrationFormsEndpoint,
 	type RemoveProjectRegistrationFormCollaboratorResponse,
-	type ReorderProjectRegistrationFormsRequest,
-	type ReorderProjectRegistrationFormsResponse,
 	type RequestProjectRegistrationFormAuthorizationRequest,
 	type RequestProjectRegistrationFormAuthorizationResponse,
 	removeProjectRegistrationFormCollaboratorEndpoint,
-	reorderProjectRegistrationFormsEndpoint,
 	requestProjectRegistrationFormAuthorizationEndpoint,
 	type UpdateProjectRegistrationFormAuthorizationRequest,
 	type UpdateProjectRegistrationFormAuthorizationResponse,
@@ -81,16 +78,6 @@ export async function deleteProjectRegistrationForm(
 	return callNoBodyApi(deleteProjectRegistrationFormEndpoint, {
 		pathParams: { formId },
 	});
-}
-
-/**
- * PATCH /committee/project-registration-forms/reorder
- * 有効なフォームの表示順を一括更新
- */
-export async function reorderProjectRegistrationForms(
-	body: ReorderProjectRegistrationFormsRequest
-): Promise<ReorderProjectRegistrationFormsResponse> {
-	return callBodyApi(reorderProjectRegistrationFormsEndpoint, body);
 }
 
 /**

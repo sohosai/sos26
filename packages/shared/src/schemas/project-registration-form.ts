@@ -256,25 +256,6 @@ export type DeleteProjectRegistrationFormResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
-// PATCH /committee/project-registration-forms/reorder
-// 有効なフォームの表示順を一括更新
-// ─────────────────────────────────────────────────────────────
-
-export const reorderProjectRegistrationFormsRequestSchema = z.object({
-	orderedIds: z.array(z.string().min(1)),
-});
-export type ReorderProjectRegistrationFormsRequest = z.infer<
-	typeof reorderProjectRegistrationFormsRequestSchema
->;
-
-export const reorderProjectRegistrationFormsResponseSchema = z.object({
-	success: z.literal(true),
-});
-export type ReorderProjectRegistrationFormsResponse = z.infer<
-	typeof reorderProjectRegistrationFormsResponseSchema
->;
-
-// ─────────────────────────────────────────────────────────────
 // POST /committee/project-registration-forms/:formId/authorizations
 // ─────────────────────────────────────────────────────────────
 

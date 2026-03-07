@@ -4,7 +4,6 @@ import {
 	projectRegistrationFormAuthorizationPathParamsSchema,
 	projectRegistrationFormCollaboratorPathParamsSchema,
 	projectRegistrationFormIdPathParamsSchema,
-	reorderProjectRegistrationFormsRequestSchema,
 	requestProjectRegistrationFormAuthorizationRequestSchema,
 	updateProjectRegistrationFormAuthorizationRequestSchema,
 	updateProjectRegistrationFormRequestSchema,
@@ -195,46 +194,6 @@ committeeProjectRegistrationFormRoute.get(
 		);
 		const form = await getFormOrThrow(formId);
 		return c.json({ form });
-	}
-);
-
-// ─────────────────────────────────────────
-// PATCH /committee/project-registration-forms/reorder
-// 有効なフォームの表示順を一括更新（DnD並び替え用）
-// ─────────────────────────────────────────
-committeeProjectRegistrationFormRoute.patch(
-	"/reorder",
-	requireAuth,
-	requireCommitteeMember,
-	async c => {
-		const cm = c.get("committeeMember");
-		await requireCreatePermission(cm.id);
-
-		const body = await c.req.json().catch(() => ({}));
-		const { orderedIds } =
-			reorderProjectRegistrationFormsRequestSchema.parse(body);
-
-		// 指定された全IDが有効な（isActive=true, 未削除）フォームか確認
-		const forms = await prisma.projectRegistrationForm.findMany({
-			where: { id: { in: orderedIds }, isActive: true, deletedAt: null },
-			select: { id: true },
-		});
-		if (forms.length !== orderedIds.length) {
-			throw Errors.invalidRequest(
-				"指定されたフォームの中に無効なものが含まれています"
-			);
-		}
-
-		await prisma.$transaction(
-			orderedIds.map((id, index) =>
-				prisma.projectRegistrationForm.update({
-					where: { id },
-					data: { sortOrder: index },
-				})
-			)
-		);
-
-		return c.json({ success: true as const });
 	}
 );
 

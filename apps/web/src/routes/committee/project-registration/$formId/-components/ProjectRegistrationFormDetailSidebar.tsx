@@ -132,7 +132,7 @@ export function ProjectRegistrationFormDetailSidebar({
 						)}
 					</div>
 
-					{(canEdit || isOwner) && (
+					{(canEdit || (isOwner && !form.isActive)) && (
 						<>
 							<Separator size="4" />
 							<div className={styles.actions}>
@@ -141,7 +141,7 @@ export function ProjectRegistrationFormDetailSidebar({
 										編集
 									</Button>
 								)}
-								{isOwner && (
+								{isOwner && !form.isActive && (
 									<Button intent="ghost" size="2" onClick={onDelete}>
 										<IconTrash size={14} />
 										削除

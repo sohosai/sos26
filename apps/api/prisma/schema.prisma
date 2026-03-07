@@ -960,7 +960,7 @@ model ProjectRegistrationForm {
   // 有効フラグ（承認されたら true になり、企画登録時に表示される）
   isActive Boolean @default(false)
 
-  // 表示順序（企画登録ウィザードのページ順）
+  // 表示順序（企画登録のページ順）
   sortOrder Int @default(0)
 
   // フィルタ: 対象企画区分（空配列=全区分対象）

@@ -400,7 +400,7 @@ projectRoute.post(
 // ─────────────────────────────────────────────────────────────
 // GET /project/registration-forms
 // 有効な企画登録フォーム一覧を取得（type / location でフィルタ）
-// 企画登録ウィザードのページ2以降に使用
+// 企画登録のページ2以降に使用
 // ─────────────────────────────────────────────────────────────
 projectRoute.get("/registration-forms", requireAuth, async c => {
 	const query = getActiveProjectRegistrationFormsQuerySchema.parse(
