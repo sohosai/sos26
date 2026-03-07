@@ -106,13 +106,13 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 	}),
 	columnHelper.accessor(row => row.project.owner.name, {
 		id: "ownerName",
-		header: "担当者",
+		header: "責任者",
 		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
 		meta: { filterVariant: "text" },
 	}),
 	columnHelper.accessor(row => row.project.subOwner?.name ?? "", {
 		id: "subOwnerName",
-		header: "副担当者",
+		header: "副責任者",
 		cell: ctx => {
 			const name = ctx.getValue() as string;
 			if (!name)

@@ -63,8 +63,8 @@ const FIXED_COLUMNS = [
 	{ id: "name", name: "企画名" },
 	{ id: "type", name: "種別" },
 	{ id: "organizationName", name: "団体名" },
-	{ id: "ownerName", name: "担当者" },
-	{ id: "subOwnerName", name: "副担当者" },
+	{ id: "ownerName", name: "責任者" },
+	{ id: "subOwnerName", name: "副責任者" },
 ];
 
 // ─────────────────────────────────────────────────────────────
