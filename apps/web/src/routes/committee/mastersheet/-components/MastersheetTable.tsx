@@ -229,7 +229,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 					) : (
 						<EditableCell {...props} />
 					),
-				meta: { editable: true, type: "text" },
+				meta: { editable: true, type: "text", filterVariant: "text" },
 			}
 		);
 	}
@@ -293,7 +293,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 			id: col.id,
 			header: () => <ColHeader col={col} />,
 			cell: EditableCell,
-			meta: { editable: true, type: "text" },
+			meta: { editable: true, type: "text", filterVariant: "text" },
 		}
 	);
 }
