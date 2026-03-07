@@ -581,4 +581,65 @@ committeeProjectRegistrationFormRoute.delete(
 	}
 );
 
+// ─────────────────────────────────────────────────────────────
+// GET /committee/project-registration-forms/:formId/responses
+// 回答一覧（実委人全員が閲覧可）
+// ─────────────────────────────────────────────────────────────
+committeeProjectRegistrationFormRoute.get(
+	"/:formId/responses",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const { formId } = projectRegistrationFormIdPathParamsSchema.parse(
+			c.req.param()
+		);
+
+		const form = await prisma.projectRegistrationForm.findFirst({
+			where: { id: formId, deletedAt: null },
+		});
+		if (!form) throw Errors.notFound("企画登録フォームが見つかりません");
+
+		const responses = await prisma.projectRegistrationFormResponse.findMany({
+			where: { formId },
+			include: {
+				project: {
+					select: { id: true, name: true, organizationName: true },
+				},
+				answers: {
+					include: {
+						selectedOptions: {
+							include: {
+								formItemOption: { select: { id: true, label: true } },
+							},
+						},
+					},
+				},
+			},
+			orderBy: { submittedAt: "desc" },
+		});
+
+		return c.json({
+			responses: responses.map(r => ({
+				id: r.id,
+				project: {
+					id: r.project.id,
+					name: r.project.name,
+					organizationName: r.project.organizationName,
+				},
+				submittedAt: r.submittedAt,
+				answers: r.answers.map(a => ({
+					formItemId: a.formItemId,
+					textValue: a.textValue,
+					numberValue: a.numberValue,
+					fileUrl: a.fileUrl,
+					selectedOptions: a.selectedOptions.map(s => ({
+						id: s.formItemOption.id,
+						label: s.formItemOption.label,
+					})),
+				})),
+			})),
+		});
+	}
+);
+
 export { committeeProjectRegistrationFormRoute };

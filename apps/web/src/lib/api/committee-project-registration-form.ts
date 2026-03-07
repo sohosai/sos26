@@ -9,7 +9,9 @@ import {
 	deleteProjectRegistrationFormEndpoint,
 	type GetProjectRegistrationFormDetailResponse,
 	getProjectRegistrationFormDetailEndpoint,
+	type ListProjectRegistrationFormResponsesResponse,
 	type ListProjectRegistrationFormsResponse,
+	listProjectRegistrationFormResponsesEndpoint,
 	listProjectRegistrationFormsEndpoint,
 	type RemoveProjectRegistrationFormCollaboratorResponse,
 	type RequestProjectRegistrationFormAuthorizationRequest,
@@ -133,5 +135,17 @@ export async function removeProjectRegistrationFormCollaborator(
 ): Promise<RemoveProjectRegistrationFormCollaboratorResponse> {
 	return callNoBodyApi(removeProjectRegistrationFormCollaboratorEndpoint, {
 		pathParams: { formId, userId },
+	});
+}
+
+/**
+ * GET /committee/project-registration-forms/:formId/responses
+ * 企画登録フォームへの回答一覧
+ */
+export async function listProjectRegistrationFormResponses(
+	formId: string
+): Promise<ListProjectRegistrationFormResponsesResponse> {
+	return callGetApi(listProjectRegistrationFormResponsesEndpoint, {
+		pathParams: { formId },
 	});
 }

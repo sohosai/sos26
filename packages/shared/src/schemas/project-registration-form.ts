@@ -337,3 +337,39 @@ export const registrationFormAnswersInputSchema = z.object({
 export type RegistrationFormAnswersInput = z.infer<
 	typeof registrationFormAnswersInputSchema
 >;
+
+// ─────────────────────────────────────────────────────────────
+// GET /committee/project-registration-forms/:formId/responses
+// 企画登録フォームへの回答一覧
+// ─────────────────────────────────────────────────────────────
+
+export const projectRegistrationFormResponseAnswerSchema = z.object({
+	formItemId: z.string(),
+	textValue: z.string().nullable(),
+	numberValue: z.number().nullable(),
+	fileUrl: z.string().nullable(),
+	selectedOptions: z.array(
+		z.object({
+			id: z.string(),
+			label: z.string(),
+		})
+	),
+});
+
+export const projectRegistrationFormResponseSummarySchema = z.object({
+	id: z.string(),
+	project: z.object({
+		id: z.string(),
+		name: z.string(),
+		organizationName: z.string(),
+	}),
+	submittedAt: z.coerce.date(),
+	answers: z.array(projectRegistrationFormResponseAnswerSchema),
+});
+
+export const listProjectRegistrationFormResponsesResponseSchema = z.object({
+	responses: z.array(projectRegistrationFormResponseSummarySchema),
+});
+export type ListProjectRegistrationFormResponsesResponse = z.infer<
+	typeof listProjectRegistrationFormResponsesResponseSchema
+>;

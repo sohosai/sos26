@@ -284,6 +284,7 @@ PENDING（承認待機中）
 | PATCH | `/committee/project-registration-forms/:formId/authorizations/:authorizationId` | 承認 / 却下 | `DELIVER` 権限 + `requestedTo` 本人 |
 | POST | `/committee/project-registration-forms/:formId/collaborators/:userId` | 共同編集者追加 | `CREATE` 権限 + オーナー |
 | DELETE | `/committee/project-registration-forms/:formId/collaborators/:userId` | 共同編集者削除 | オーナー |
+| GET | `/committee/project-registration-forms/:formId/responses` | 回答一覧 | 実委人全員 |
 
 ### 8.2 企画登録側
 

@@ -5,6 +5,7 @@ import {
 	createProjectRegistrationFormResponseSchema,
 	deleteProjectRegistrationFormResponseSchema,
 	getProjectRegistrationFormDetailResponseSchema,
+	listProjectRegistrationFormResponsesResponseSchema,
 	listProjectRegistrationFormsResponseSchema,
 	projectRegistrationFormAuthorizationPathParamsSchema,
 	projectRegistrationFormCollaboratorPathParamsSchema,
@@ -198,4 +199,22 @@ export const removeProjectRegistrationFormCollaboratorEndpoint: NoBodyEndpoint<
 	query: undefined,
 	request: undefined,
 	response: removeProjectRegistrationFormCollaboratorResponseSchema,
+} as const;
+
+/**
+ * GET /committee/project-registration-forms/:formId/responses
+ * 企画登録フォームへの回答一覧（実委人全員が閲覧可）
+ */
+export const listProjectRegistrationFormResponsesEndpoint: GetEndpoint<
+	"/committee/project-registration-forms/:formId/responses",
+	typeof projectRegistrationFormIdPathParamsSchema,
+	undefined,
+	typeof listProjectRegistrationFormResponsesResponseSchema
+> = {
+	method: "GET",
+	path: "/committee/project-registration-forms/:formId/responses",
+	pathParams: projectRegistrationFormIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: listProjectRegistrationFormResponsesResponseSchema,
 } as const;
