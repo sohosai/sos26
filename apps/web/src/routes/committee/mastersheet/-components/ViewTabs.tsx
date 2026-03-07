@@ -118,12 +118,6 @@ export function ViewTabs({
 		return () => clearTimeout(timer);
 	}, [currentStateStr, activeViewId]);
 
-	const activeView =
-		activeViewId !== null ? views.find(v => v.id === activeViewId) : undefined;
-
-	const isDirty =
-		activeView !== undefined && currentStateStr !== activeView.state;
-
 	async function handleAddView() {
 		const name = nextViewName(viewsRef.current);
 		try {
@@ -197,7 +191,6 @@ export function ViewTabs({
 		<div className={styles.viewTabs}>
 			{views.map(view => {
 				const isActive = view.id === activeViewId;
-				const isThisDirty = isActive && isDirty;
 				const isEditing = editingId === view.id;
 				return (
 					<div
@@ -227,11 +220,6 @@ export function ViewTabs({
 								onClick={() => handleSelectView(view)}
 							>
 								{view.name}
-								{isThisDirty && (
-									<span className={styles.dirtyMark} title="自動保存待ち">
-										*
-									</span>
-								)}
 							</button>
 						)}
 
