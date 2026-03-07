@@ -3,6 +3,7 @@ import {
 	getActiveProjectRegistrationFormsQuerySchema,
 	joinProjectRequestSchema,
 	type ProjectMemberRole,
+	type RegistrationFormAnswersInput,
 	updateProjectDetailRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
@@ -16,6 +17,24 @@ const projectRoute = new Hono<AuthEnv>();
 // 招待コード生成
 const generateInviteCode = () =>
 	Math.random().toString(36).substring(2, 8).toUpperCase();
+
+// 企画登録フォーム回答をPrisma用データに変換
+const buildPrismaAnswerData = (
+	answer: RegistrationFormAnswersInput["answers"][number]
+) => ({
+	formItemId: answer.formItemId,
+	textValue: "textValue" in answer ? answer.textValue : undefined,
+	numberValue: "numberValue" in answer ? answer.numberValue : undefined,
+	fileUrl: "fileUrl" in answer ? answer.fileUrl : undefined,
+	selectedOptions:
+		"selectedOptionIds" in answer && answer.selectedOptionIds?.length
+			? {
+					create: answer.selectedOptionIds.map(formItemOptionId => ({
+						formItemOptionId,
+					})),
+				}
+			: undefined,
+});
 
 // ─────────────────────────────────────────
 // POST /project/create
@@ -50,6 +69,39 @@ projectRoute.post("/create", requireAuth, async c => {
 	while (await prisma.project.findUnique({ where: { inviteCode } })) {
 		inviteCode = generateInviteCode();
 	}
+	// ── 対象フォームの過不足チェック ──
+	const applicableForms = await prisma.projectRegistrationForm.findMany({
+		where: {
+			isActive: true,
+			deletedAt: null,
+			OR: [
+				{ filterTypes: { isEmpty: true } },
+				{ filterTypes: { has: data.type } },
+			],
+		},
+		select: { id: true, filterLocations: true },
+	});
+	const locationFilteredForms = applicableForms.filter(
+		f =>
+			f.filterLocations.length === 0 ||
+			f.filterLocations.includes(data.location)
+	);
+	const applicableFormIds = new Set(locationFilteredForms.map(f => f.id));
+	const submittedFormIds = new Set(
+		(registrationFormAnswers ?? []).map(a => a.formId)
+	);
+	const missingFormIds = [...applicableFormIds].filter(
+		id => !submittedFormIds.has(id)
+	);
+	if (missingFormIds.length > 0) {
+		throw Errors.invalidRequest("必要な申請フォームへの回答が不足しています");
+	}
+	const extraFormIds = [...submittedFormIds].filter(
+		id => !applicableFormIds.has(id)
+	);
+	if (extraFormIds.length > 0) {
+		throw Errors.invalidRequest("対象外の申請フォームへの回答が含まれています");
+	}
 
 	const project = await prisma.$transaction(async tx => {
 		const created = await tx.project.create({
@@ -74,20 +126,7 @@ projectRoute.post("/create", requireAuth, async c => {
 						formId,
 						projectId: created.id,
 						answers: {
-							create: answers.map(answer => ({
-								...answer,
-								selectedOptions:
-									"selectedOptionIds" in answer &&
-									answer.selectedOptionIds?.length
-										? {
-												create: answer.selectedOptionIds.map(
-													formItemOptionId => ({
-														formItemOptionId,
-													})
-												),
-											}
-										: undefined,
-							})),
+							create: answers.map(buildPrismaAnswerData),
 						},
 					},
 				});
