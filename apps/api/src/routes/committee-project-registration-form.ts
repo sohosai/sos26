@@ -100,42 +100,53 @@ committeeProjectRegistrationFormRoute.post(
 			createProjectRegistrationFormRequestSchema.parse(body);
 		const userId = c.get("user").id;
 
-		const form = await prisma.$transaction(async tx => {
-			const { sortOrder } = formData;
+		const form = await prisma.$transaction(
+			async tx => {
+				// sortOrder を有効範囲 [0, 総数] に丸める
+				const totalCount = await tx.projectRegistrationForm.count({
+					where: { deletedAt: null },
+				});
+				const clampedSortOrder = Math.min(
+					Math.max(formData.sortOrder, 0),
+					totalCount
+				);
 
-			// 指定位置以降のフォームを +1 シフトして挿入スペースを確保
-			await tx.projectRegistrationForm.updateMany({
-				where: { sortOrder: { gte: sortOrder }, deletedAt: null },
-				data: { sortOrder: { increment: 1 } },
-			});
+				// 指定位置以降のフォームを +1 シフトして挿入スペースを確保
+				await tx.projectRegistrationForm.updateMany({
+					where: { sortOrder: { gte: clampedSortOrder }, deletedAt: null },
+					data: { sortOrder: { increment: 1 } },
+				});
 
-			return tx.projectRegistrationForm.create({
-				data: {
-					...formData,
-					ownerId: userId,
-					items: {
-						create: items.map(({ options, ...item }) => ({
-							...item,
-							options: options?.length ? { create: options } : undefined,
-						})),
+				return tx.projectRegistrationForm.create({
+					data: {
+						...formData,
+						sortOrder: clampedSortOrder,
+						ownerId: userId,
+						items: {
+							create: items.map(({ options, ...item }) => ({
+								...item,
+								options: options?.length ? { create: options } : undefined,
+							})),
+						},
 					},
-				},
-				include: {
-					owner: { select: { id: true, name: true } },
-					items: {
-						include: { options: { orderBy: { sortOrder: "asc" } } },
-						orderBy: { sortOrder: "asc" },
+					include: {
+						owner: { select: { id: true, name: true } },
+						items: {
+							include: { options: { orderBy: { sortOrder: "asc" } } },
+							orderBy: { sortOrder: "asc" },
+						},
+						authorizations: {
+							include: { requestedBy: true, requestedTo: true },
+						},
+						collaborators: {
+							where: { deletedAt: null },
+							include: { user: { select: { id: true, name: true } } },
+						},
 					},
-					authorizations: {
-						include: { requestedBy: true, requestedTo: true },
-					},
-					collaborators: {
-						where: { deletedAt: null },
-						include: { user: { select: { id: true, name: true } } },
-					},
-				},
-			});
-		});
+				});
+			},
+			{ isolationLevel: "Serializable" }
+		);
 
 		return c.json({ form });
 	}
@@ -208,8 +219,9 @@ committeeProjectRegistrationFormRoute.patch(
 		await requireWriteAccess(formId, userId);
 
 		const body = await c.req.json().catch(() => ({}));
-		const { items, ...formData } =
+		const { items, ...formDataParsed } =
 			updateProjectRegistrationFormRequestSchema.parse(body);
+		let formData = formDataParsed;
 
 		const form = await prisma.$transaction(
 			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: フォーム更新のトランザクション処理
@@ -228,7 +240,15 @@ committeeProjectRegistrationFormRoute.patch(
 					formData.sortOrder !== existing.sortOrder
 				) {
 					const oldOrder = existing.sortOrder;
-					const newOrder = formData.sortOrder;
+					// sortOrder を有効範囲 [0, 総数-1] に丸める
+					const totalCount = await tx.projectRegistrationForm.count({
+						where: { deletedAt: null },
+					});
+					const newOrder = Math.min(
+						Math.max(formData.sortOrder, 0),
+						totalCount - 1
+					);
+					formData = { ...formData, sortOrder: newOrder };
 					if (newOrder < oldOrder) {
 						// 上に移動: [newOrder, oldOrder) の範囲を +1
 						await tx.projectRegistrationForm.updateMany({
@@ -331,7 +351,7 @@ committeeProjectRegistrationFormRoute.delete(
 			async tx => {
 				const current = await tx.projectRegistrationForm.findFirst({
 					where: { id: formId, deletedAt: null },
-					select: { isActive: true },
+					select: { isActive: true, sortOrder: true },
 				});
 				if (!current) throw Errors.notFound("企画登録フォームが見つかりません");
 				if (current.isActive)
@@ -344,6 +364,11 @@ committeeProjectRegistrationFormRoute.delete(
 				await tx.projectRegistrationFormAuthorization.updateMany({
 					where: { formId, status: "PENDING" },
 					data: { status: "REJECTED", decidedAt: now },
+				});
+				// 削除後の空き番を詰める
+				await tx.projectRegistrationForm.updateMany({
+					where: { sortOrder: { gt: current.sortOrder }, deletedAt: null },
+					data: { sortOrder: { decrement: 1 } },
 				});
 			},
 			{ isolationLevel: "Serializable" }
