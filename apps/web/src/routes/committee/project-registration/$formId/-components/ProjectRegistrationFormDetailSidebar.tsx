@@ -309,8 +309,8 @@ function AuthDetailSection({
 function AuthStatusBadge({ status }: { status: string }) {
 	if (status === "PENDING")
 		return (
-			<Badge variant="soft" color="yellow">
-				承認待ち
+			<Badge variant="soft" color="orange">
+				承認待機中
 			</Badge>
 		);
 	if (status === "APPROVED")

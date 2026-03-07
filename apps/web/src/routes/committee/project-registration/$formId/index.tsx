@@ -329,8 +329,8 @@ function FormStatusBadge({ form }: { form: ProjectRegistrationFormDetail }) {
 	const latestAuth = form.authorizations[0];
 	if (latestAuth?.status === "PENDING")
 		return (
-			<Badge variant="soft" color="yellow">
-				承認待ち
+			<Badge variant="soft" color="orange">
+				承認待機中
 			</Badge>
 		);
 	if (latestAuth?.status === "REJECTED")

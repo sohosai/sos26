@@ -26,7 +26,7 @@ type FormRow = {
 	filterTypes: string[];
 	filterLocations: string[];
 	updatedAt: Date;
-	statusInfo: { label: string; color: "green" | "yellow" | "gray" | "red" };
+	statusInfo: { label: string; color: "green" | "orange" | "gray" | "red" };
 };
 
 const PROJECT_TYPE_LABELS: Record<string, string> = {
@@ -47,7 +47,7 @@ function getStatusInfo(
 ): FormRow["statusInfo"] {
 	if (isActive) return { label: "有効", color: "green" };
 	if (latestAuthStatus === "PENDING")
-		return { label: "承認待ち", color: "yellow" };
+		return { label: "承認待機中", color: "orange" };
 	if (latestAuthStatus === "REJECTED") return { label: "却下", color: "red" };
 	return { label: "下書き", color: "gray" };
 }
