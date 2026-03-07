@@ -21,7 +21,7 @@
 
 ---
 
-## 2. 承認ステータス
+## 3. 承認ステータス
 
 | ステータス | Enum 値 | 説明 |
 |-----------|---------|------|
@@ -45,16 +45,16 @@ PENDING → REJECTED（自動）
 
 ---
 
-## 3. ロールと権限
+## 4. ロールと権限
 
-### 3.1 委員会権限
+### 4.1 委員会権限
 
 | 権限 | Enum 値 | 説明 |
 |------|---------|------|
 | 作成・編集権限 | `PROJECT_REGISTRATION_FORM_CREATE` | フォームの作成・編集・削除・承認申請が可能 |
 | 承認権限 | `PROJECT_REGISTRATION_FORM_DELIVER` | 承認申請の承認・却下が可能 |
 
-### 3.2 権限マトリクス
+### 4.2 権限マトリクス
 
 | 操作 | オーナー | 共同編集者 | DELIVER 権限保持者 | その他の実委人 |
 |------|:-------:|:---------:|:----------------:|:-------------:|
@@ -65,17 +65,16 @@ PENDING → REJECTED（自動）
 | 共同編集者管理 | o | x | x | x |
 | 承認申請の送信 | o | x | x | x |
 | 承認・却下 | — | — | o（requestedTo 本人のみ） | x |
-| 表示順の一括更新（並び替え） | — | — | — | CREATE 権限保持者のみ |
 
 > フォームの編集・削除・承認申請には加えて `PROJECT_REGISTRATION_FORM_CREATE` 権限も必要。
 
 ---
 
-## 4. データモデル
+## 5. データモデル
 
 > カラムの完全な定義は `apps/api/prisma/schema.prisma` を参照。
 
-### 4.1 ER 概要
+### 5.1 ER 概要
 
 ```
 ProjectRegistrationForm ─┬─ ProjectRegistrationFormItem ── ProjectRegistrationFormItemOption
@@ -85,7 +84,7 @@ ProjectRegistrationForm ─┬─ ProjectRegistrationFormItem ── ProjectRegi
                                                                  └── ProjectRegistrationFormAnswerSelectedOption
 ```
 
-### 4.2 モデル解説
+### 5.2 モデル解説
 
 #### ProjectRegistrationForm
 
@@ -134,9 +133,9 @@ ProjectRegistrationForm ─┬─ ProjectRegistrationFormItem ── ProjectRegi
 
 ---
 
-## 5. フォームのライフサイクル（実委人視点）
+## 6. フォームのライフサイクル（実委人視点）
 
-### 5.1 フォーム作成
+### 6.1 フォーム作成
 
 `PROJECT_REGISTRATION_FORM_CREATE` 権限を持つ実委人が作成できる。
 
@@ -144,7 +143,7 @@ ProjectRegistrationForm ─┬─ ProjectRegistrationFormItem ── ProjectRegi
 - 作成時、指定 `sortOrder` 以降の既存フォームは自動的に +1 シフトされる
 - 作成直後は `isActive: false`（下書き状態）
 
-### 5.2 フォーム編集
+### 6.2 フォーム編集
 
 #### 誰が編集できるか
 
@@ -160,7 +159,7 @@ ProjectRegistrationForm ─┬─ ProjectRegistrationFormItem ── ProjectRegi
 - タイトル・説明文・表示順・フィルタ
 - 設問の追加・更新・削除（設問更新時、選択肢は全削除→再作成）
 
-### 5.3 共同編集者の管理
+### 6.3 共同編集者の管理
 
 `PROJECT_REGISTRATION_FORM_CREATE` 権限を持つオーナーのみが管理可能。
 
@@ -174,7 +173,7 @@ ProjectRegistrationForm ─┬─ ProjectRegistrationFormItem ── ProjectRegi
 - オーナー自身を共同編集者に追加することはできない
 - 追加対象は `PROJECT_REGISTRATION_FORM_CREATE` 権限を持つアクティブな実委人であること
 
-### 5.4 承認ワークフロー
+### 6.4 承認ワークフロー
 
 #### 状態遷移
 
@@ -205,7 +204,7 @@ PENDING（承認待機中）
 - **却下（REJECTED）**: 申請者は内容を修正して再申請可能
 - PENDING 状態でなければ操作不可
 
-### 5.5 フォームの削除
+### 6.5 フォームの削除
 
 - オーナー（+ `CREATE` 権限）のみが論理削除可能
 - 削除時に PENDING の承認申請は自動的に REJECTED になる
@@ -213,16 +212,16 @@ PENDING（承認待機中）
 
 ---
 
-## 6. 表示順の管理
+## 7. 表示順の管理
 
 - `sortOrder` が企画登録でのステップ表示順を決定する
 - フォーム作成・更新時に `sortOrder` を指定すると、前後の既存フォームが自動シフトされる
 
 ---
 
-## 7. 企画登録時の利用（ユーザー視点）
+## 8. 企画登録時の利用（ユーザー視点）
 
-### 7.1 登録のフロー
+### 8.1 登録のフロー
 
 企画登録は `ProjectCreateDialog` が担い、以下のステップで進む。
 
@@ -236,16 +235,16 @@ PENDING（承認待機中）
   │     ▼
   │   ステップ 1〜N: 各フォームへの回答入力
   │     │
-  │     └─ ステップ N+1: 同意事項（→ 7.2）
+  │     └─ ステップ N+1: 同意事項（→ 8.2）
   │
   └─ フォームが存在しない場合
         ▼
-      ステップ 1: 同意事項（→ 7.2）
+      ステップ 1: 同意事項（→ 8.2）
 ```
 
 フォームの取得には `GET /project/registration-forms?type=&location=` を使用し、`sortOrder` 順に表示される。
 
-### 7.2 同意事項ステップ
+### 8.2 同意事項ステップ
 
 最終ステップとして、以下の2項目への同意チェックボックスが表示される。どちらも **必須**。
 
@@ -258,7 +257,7 @@ PENDING（承認待機中）
 - 同意状態はフロントエンドで検証した上で、`agreedToRegistrationConstraints: true` / `agreedToInfoImmutability: true` として `POST /project/create` のリクエスト JSON に含めて送信する
 - バックエンド（Zod スキーマ）でも `z.literal(true)` により両フィールドが `true` であることを検証する（DB には保存しない）
 
-### 7.3 企画作成時の回答保存
+### 8.3 企画作成時の回答保存
 
 `POST /project/create` がトランザクション内で以下を同時に実行する。
 
@@ -267,9 +266,9 @@ PENDING（承認待機中）
 
 ---
 
-## 8. API エンドポイント
+## 9. API エンドポイント
 
-### 8.1 実委側
+### 9.1 実委側
 
 ミドルウェア: `requireAuth` → `requireCommitteeMember`
 
@@ -286,7 +285,7 @@ PENDING（承認待機中）
 | DELETE | `/committee/project-registration-forms/:formId/collaborators/:userId` | 共同編集者削除 | オーナー |
 | GET | `/committee/project-registration-forms/:formId/responses` | 回答一覧 | 実委人全員 |
 
-### 8.2 企画登録側
+### 9.2 企画登録側
 
 ミドルウェア: `requireAuth`
 
@@ -298,16 +297,16 @@ PENDING（承認待機中）
 
 ---
 
-## 9. UI 仕様
+## 10. UI 仕様
 
-### 9.1 実委側一覧画面（`/committee/project-registration`）
+### 10.1 実委側一覧画面（`/committee/project-registration`）
 
 - 全フォームを `sortOrder` 昇順 → 作成日時降順で一覧表示
 - 各フォームに最新の承認ステータスをバッジ表示
   - 下書き（gray）/ 承認待機中（orange）/ 却下（red）/ 有効（green）
 - `CREATE` 権限保持者には作成ボタンを表示
 
-### 9.2 実委側詳細画面（`/committee/project-registration/:formId`）
+### 10.2 実委側詳細画面（`/committee/project-registration/:formId`）
 
 - メイン: フォームのタイトル・説明文・設問プレビュー
 - サイドバー:
@@ -317,7 +316,7 @@ PENDING（承認待機中）
   - 承認申請ボタン（オーナー + `CREATE` 権限に表示）
   - 承認・却下ボタン（`requestedTo` 本人に表示）
 
-### 9.3 企画登録（`ProjectCreateDialog`）
+### 10.3 企画登録（`ProjectCreateDialog`）
 
 - ステップ 0（基本情報）→ ステップ 1〜N（登録フォーム回答）→ 最終ステップ（同意事項）の順で進む
 - 「戻る」で前のステップに戻れる
