@@ -6,7 +6,12 @@ import {
 	Table,
 	TextField,
 } from "@radix-ui/themes";
-import { IconDownload, IconSearch, IconSettings } from "@tabler/icons-react";
+import {
+	IconDownload,
+	IconFilterOff,
+	IconSearch,
+	IconSettings,
+} from "@tabler/icons-react";
 import {
 	type ColumnDef,
 	type ColumnFiltersState,
@@ -367,6 +372,11 @@ export function DataTable<T extends RowData>({
 								</Flex>
 							</Popover.Content>
 						</Popover.Root>
+					)}
+					{f.columnFilter && columnFilters.length > 0 && (
+						<Button intent="secondary" onClick={() => setColumnFilters([])}>
+							<IconFilterOff size={16} /> フィルター解除
+						</Button>
 					)}
 					{f.csvExport && (
 						<Button intent="secondary" onClick={() => downloadCsv(table)}>
