@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import {
 	DataTable,
 	EditableCell,
+	FileCell,
 	MultiSelectEditCell,
 	SelectCell,
 } from "@/components/patterns";
@@ -26,7 +27,6 @@ import {
 	upsertMastersheetCell,
 } from "@/lib/api/committee-mastersheet";
 import { isClientError } from "@/lib/http/error";
-import { FormItemCell } from "./FormItemCell";
 import styles from "./MastersheetTable.module.scss";
 
 type MastersheetRow = {
@@ -129,97 +129,109 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 	}),
 ];
 
+/** FORM_ITEM セルが編集不可かどうか（未配信・未回答） */
+function isFormItemInactive(row: MastersheetRow, colId: string): boolean {
+	const status = row.cells[colId]?.status;
+	return !status || status === "NOT_DELIVERED" || status === "NOT_ANSWERED";
+}
+
+const INACTIVE_PLACEHOLDER = (
+	<Text color="gray" size="2">
+		─
+	</Text>
+);
+
 // biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
 function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 	if (col.type === "FORM_ITEM") {
-		// SELECT 型: SelectCell で選択UI（NOT_DELIVERED は編集不可）
+		const selectOptions = col.options.map(o => ({
+			value: o.id,
+			label: o.label,
+		}));
+
 		if (col.formItemType === "SELECT") {
-			const selectOptions = col.options.map(o => ({
-				value: o.id,
-				label: o.label,
-			}));
 			return columnHelper.accessor(
-				row => {
-					const cell = row.cells[col.id];
-					const effective = cell?.formValue ?? null;
-					return effective?.selectedOptionIds?.[0] ?? "";
-				},
+				row => row.cells[col.id]?.formValue?.selectedOptionIds?.[0] ?? "",
 				{
 					id: col.id,
 					header: () => <ColHeader col={col} />,
-					cell: props => {
-						const cell = props.row.original.cells[col.id];
-						if (
-							!cell?.status ||
-							cell.status === "NOT_DELIVERED" ||
-							cell.status === "NOT_ANSWERED"
-						) {
-							return (
-								<Text color="gray" size="2">
-									─
-								</Text>
-							);
-						}
-						return <SelectCell {...props} />;
-					},
-					meta: {
-						editable: true,
-						selectOptions,
-						filterVariant: "select",
-					},
+					cell: props =>
+						isFormItemInactive(props.row.original, col.id) ? (
+							INACTIVE_PLACEHOLDER
+						) : (
+							<SelectCell {...props} />
+						),
+					meta: { editable: true, selectOptions, filterVariant: "select" },
 				}
 			);
 		}
 
-		// CHECKBOX 型: MultiSelectEditCell で複数選択UI（NOT_DELIVERED は編集不可）
 		if (col.formItemType === "CHECKBOX") {
-			const selectOptions = col.options.map(o => ({
-				value: o.id,
-				label: o.label,
-			}));
 			return columnHelper.accessor(
-				row => {
-					const cell = row.cells[col.id];
-					const effective = cell?.formValue ?? null;
-					return effective?.selectedOptionIds ?? [];
-				},
+				row => row.cells[col.id]?.formValue?.selectedOptionIds ?? [],
 				{
 					id: col.id,
 					header: () => <ColHeader col={col} />,
-					cell: props => {
-						const cell = props.row.original.cells[col.id];
-						if (
-							!cell?.status ||
-							cell.status === "NOT_DELIVERED" ||
-							cell.status === "NOT_ANSWERED"
-						) {
-							return (
-								<Text color="gray" size="2">
-									─
-								</Text>
-							);
-						}
-						return <MultiSelectEditCell {...props} />;
-					},
-					meta: {
-						editable: true,
-						selectOptions,
-						filterVariant: "select",
-					},
+					cell: props =>
+						isFormItemInactive(props.row.original, col.id) ? (
+							INACTIVE_PLACEHOLDER
+						) : (
+							<MultiSelectEditCell {...props} />
+						),
+					meta: { editable: true, selectOptions, filterVariant: "select" },
 				}
 			);
 		}
 
-		// TEXT / TEXTAREA / NUMBER / FILE: FormItemCell
-		return columnHelper.accessor(row => row.cells[col.id] ?? null, {
-			id: col.id,
-			header: () => <ColHeader col={col} />,
-			cell: FormItemCell,
-			meta: {
-				formItemType: col.formItemType ?? undefined,
-				filterVariant: "text",
-			},
-		});
+		if (col.formItemType === "NUMBER") {
+			return columnHelper.accessor(
+				row => row.cells[col.id]?.formValue?.numberValue ?? null,
+				{
+					id: col.id,
+					header: () => <ColHeader col={col} />,
+					cell: props =>
+						isFormItemInactive(props.row.original, col.id) ? (
+							INACTIVE_PLACEHOLDER
+						) : (
+							<EditableCell {...props} />
+						),
+					meta: { editable: true, type: "number", filterVariant: "number" },
+				}
+			);
+		}
+
+		if (col.formItemType === "FILE") {
+			return columnHelper.accessor(
+				row => row.cells[col.id]?.formValue?.fileUrl ?? null,
+				{
+					id: col.id,
+					header: () => <ColHeader col={col} />,
+					cell: props =>
+						isFormItemInactive(props.row.original, col.id) ? (
+							INACTIVE_PLACEHOLDER
+						) : (
+							<FileCell {...props} />
+						),
+					meta: { filterVariant: "text" },
+				}
+			);
+		}
+
+		// TEXT / TEXTAREA
+		return columnHelper.accessor(
+			row => row.cells[col.id]?.formValue?.textValue ?? "",
+			{
+				id: col.id,
+				header: () => <ColHeader col={col} />,
+				cell: props =>
+					isFormItemInactive(props.row.original, col.id) ? (
+						INACTIVE_PLACEHOLDER
+					) : (
+						<EditableCell {...props} />
+					),
+				meta: { editable: true, type: "text" },
+			}
+		);
 	}
 
 	if (col.dataType === "SELECT") {
