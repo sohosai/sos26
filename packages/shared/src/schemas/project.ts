@@ -1,7 +1,11 @@
 import { z } from "zod";
+import { formAnswerInputSchema } from "./form";
 
 export const projectTypeSchema = z.enum(["STAGE", "FOOD", "NORMAL"]);
 export type ProjectType = z.infer<typeof projectTypeSchema>;
+
+export const projectLocationSchema = z.enum(["INDOOR", "OUTDOOR", "STAGE"]);
+export type ProjectLocation = z.infer<typeof projectLocationSchema>;
 
 export const projectSchema = z.object({
 	id: z.cuid(),
@@ -11,6 +15,7 @@ export const projectSchema = z.object({
 	organizationName: z.string().min(1),
 	organizationNamePhonetic: z.string().min(1),
 	type: projectTypeSchema,
+	location: projectLocationSchema,
 	ownerId: z.string().min(1),
 	subOwnerId: z.string().nullable(),
 	inviteCode: z.string().length(6),
@@ -43,13 +48,41 @@ export type ProjectMember = z.infer<typeof projectMemberSchema>;
 // POST /project/create
 // ─────────────────────────────────────────────────────────────
 
-export const createProjectRequestSchema = z.object({
-	name: z.string().min(1),
-	namePhonetic: z.string().min(1),
-	organizationName: z.string().min(1),
-	organizationNamePhonetic: z.string().min(1),
-	type: projectTypeSchema,
-});
+export const createProjectRequestSchema = z
+	.object({
+		name: z.string().min(1),
+		namePhonetic: z.string().min(1),
+		organizationName: z.string().min(1),
+		organizationNamePhonetic: z.string().min(1),
+		type: projectTypeSchema,
+		location: projectLocationSchema,
+		registrationFormAnswers: z
+			.array(
+				z.object({
+					formId: z.string().min(1),
+					answers: z.array(formAnswerInputSchema),
+				})
+			)
+			.optional(),
+		agreedToRegistrationConstraints: z.literal(true),
+		agreedToInfoImmutability: z.literal(true),
+	})
+	.superRefine((data, ctx) => {
+		if (data.type === "STAGE" && data.location !== "STAGE") {
+			ctx.addIssue({
+				code: "custom",
+				message: "ステージ企画の実施場所はステージのみ指定できます",
+				path: ["location"],
+			});
+		}
+		if (data.type !== "STAGE" && data.location === "STAGE") {
+			ctx.addIssue({
+				code: "custom",
+				message: "ステージ以外の企画の実施場所にステージは指定できません",
+				path: ["location"],
+			});
+		}
+	});
 
 export type CreateProjectRequest = z.infer<typeof createProjectRequestSchema>;
 
@@ -121,6 +154,7 @@ export const updateProjectDetailRequestSchema = z.object({
 	organizationName: z.string().min(1).optional(),
 	organizationNamePhonetic: z.string().min(1).optional(),
 	type: projectTypeSchema.optional(),
+	location: projectLocationSchema.optional(),
 });
 
 export type UpdateProjectDetailRequest = z.infer<

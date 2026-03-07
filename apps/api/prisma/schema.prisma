@@ -92,6 +92,12 @@ model User {
   inquiryActivitiesAsActor  InquiryActivity[] @relation("InquiryActivityActor")
   inquiryActivitiesAsTarget InquiryActivity[] @relation("InquiryActivityTarget")
 
+  //Project ProjectRegistration Form関連
+  requestedProjectRegistrationFormAuthorizations ProjectRegistrationFormAuthorization[] @relation("ProjectRegFormRequestedBy")
+  receivedProjectRegistrationFormAuthorizations  ProjectRegistrationFormAuthorization[] @relation("ProjectRegFormRequestedTo")
+  projectRegistrationForms                       ProjectRegistrationForm[]
+  projectRegistrationFormCollaborators           ProjectRegistrationFormCollaborator[]
+
   @@unique([firebaseUid, deletedAt])
   @@unique([email, deletedAt])
 }
@@ -105,6 +111,17 @@ enum ProjectType {
 
   //普通企画
   NORMAL
+}
+
+enum ProjectLocation {
+  //屋内
+  INDOOR
+
+  //屋外
+  OUTDOOR
+
+  //ステージ
+  STAGE
 }
 
 model Project {
@@ -124,6 +141,9 @@ model Project {
   //企画区分
   type ProjectType
 
+  //企画実施場所
+  location ProjectLocation
+
   //責任者
   ownerId String
   owner   User   @relation("ProjectOwner", fields: [ownerId], references: [id])
@@ -139,10 +159,11 @@ model Project {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  projectMembers   ProjectMember[]
-  noticeDeliveries NoticeDelivery[]
-  formDeliveries   FormDelivery[]
-  inquiries        Inquiry[]
+  projectMembers                   ProjectMember[]
+  noticeDeliveries                 NoticeDelivery[]
+  formDeliveries                   FormDelivery[]
+  inquiries                        Inquiry[]
+  projectRegistrationFormResponses ProjectRegistrationFormResponse[]
 
   @@index([ownerId])
   @@index([subOwnerId])
@@ -202,6 +223,8 @@ enum CommitteePermission {
   NOTICE_DELIVER // お知らせ配信・承認
   FORM_DELIVER // フォーム配信
   INQUIRY_ADMIN // お問い合わせ管理
+  PROJECT_REGISTRATION_FORM_CREATE // 企画登録フォーム作成・編集・公開申請
+  PROJECT_REGISTRATION_FORM_DELIVER // 企画登録フォーム承認
 }
 
 //実委人の権限管理Table
@@ -517,6 +540,25 @@ model FormCollaborator {
   user User @relation(fields: [userId], references: [id])
 
   //編集権限を持つのか
+  isWrite Boolean @default(false)
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([formId, userId])
+}
+
+model ProjectRegistrationFormCollaborator {
+  id String @id @default(cuid())
+
+  formId String
+  userId String
+
+  form ProjectRegistrationForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  user User                    @relation(fields: [userId], references: [id])
+
+  // 編集権限を持つのか
   isWrite Boolean @default(false)
 
   deletedAt DateTime?
@@ -889,4 +931,202 @@ model InquiryAttachment {
   @@index([fileId])
   @@index([commentId])
   @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 企画登録フォーム関連
+// ─────────────────────────────────────────────────────────────
+
+enum ProjectRegistrationFormAuthorizationStatus {
+  PENDING // 承認待ち
+  APPROVED // 承認済み
+  REJECTED // 却下
+}
+
+// 実委人が作成する企画登録フォーム
+model ProjectRegistrationForm {
+  id String @id @default(cuid())
+
+  // 作成者
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  // タイトル
+  title String @default("無題の企画登録フォーム")
+
+  // 説明
+  description String?
+
+  // 有効フラグ（承認されたら true になり、企画登録時に表示される）
+  isActive Boolean @default(false)
+
+  // 表示順序（企画登録のページ順）
+  sortOrder Int @default(0)
+
+  // フィルタ: 対象企画区分（空配列=全区分対象）
+  filterTypes ProjectType[]
+
+  // フィルタ: 対象実施場所（空配列=全場所対象）
+  filterLocations ProjectLocation[]
+
+  // フォーム項目
+  items ProjectRegistrationFormItem[]
+
+  // 承認フロー
+  authorizations ProjectRegistrationFormAuthorization[]
+
+  // 企画登録時の回答
+  // 企画登録時の回答
+  responses ProjectRegistrationFormResponse[]
+
+  // 共同編集者
+  collaborators ProjectRegistrationFormCollaborator[]
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([ownerId])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+// 企画登録フォームの質問項目
+model ProjectRegistrationFormItem {
+  id     String                  @id @default(cuid())
+  formId String
+  form   ProjectRegistrationForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  // 質問文
+  label String
+
+  // 説明
+  description String?
+
+  // 回答タイプ
+  type FormItemType
+
+  // 必須かどうか
+  required Boolean @default(false)
+
+  // 表示順
+  sortOrder Int
+
+  // 選択肢（SELECT/CHECKBOX用）
+  options ProjectRegistrationFormItemOption[]
+
+  // 回答
+  answers ProjectRegistrationFormAnswer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([formId])
+}
+
+// 企画登録フォーム項目の選択肢
+model ProjectRegistrationFormItemOption {
+  id         String                      @id @default(cuid())
+  formItemId String
+  formItem   ProjectRegistrationFormItem @relation(fields: [formItemId], references: [id], onDelete: Cascade)
+
+  // 選択肢ラベル
+  label String
+
+  // 表示順
+  sortOrder Int
+
+  // 回答での選択
+  selectedIn ProjectRegistrationFormAnswerSelectedOption[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([formItemId])
+}
+
+// 企画登録フォームの承認
+model ProjectRegistrationFormAuthorization {
+  id     String                  @id @default(cuid())
+  formId String
+  form   ProjectRegistrationForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  // 承認を求めた人
+  requestedById String
+  requestedBy   User   @relation("ProjectRegFormRequestedBy", fields: [requestedById], references: [id])
+
+  // 承認を求められた人
+  requestedToId String
+  requestedTo   User   @relation("ProjectRegFormRequestedTo", fields: [requestedToId], references: [id])
+
+  // 審査ステータス
+  status ProjectRegistrationFormAuthorizationStatus @default(PENDING)
+
+  // 審査を行った日付
+  decidedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([formId, status])
+}
+
+// 企画登録時の回答（1企画1フォームにつき1件）
+model ProjectRegistrationFormResponse {
+  id        String                  @id @default(cuid())
+  formId    String
+  form      ProjectRegistrationForm @relation(fields: [formId], references: [id])
+  projectId String
+  project   Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // 各項目への回答
+  answers ProjectRegistrationFormAnswer[]
+
+  submittedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([formId, projectId])
+  @@index([projectId])
+}
+
+// 企画登録フォーム各項目への回答
+model ProjectRegistrationFormAnswer {
+  id         String                          @id @default(cuid())
+  responseId String
+  response   ProjectRegistrationFormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  formItemId String
+  formItem   ProjectRegistrationFormItem     @relation(fields: [formItemId], references: [id])
+
+  // テキスト回答（TEXT/TEXTAREA用）
+  textValue String?
+
+  // 数値回答（NUMBER用）
+  numberValue Float?
+
+  // ファイルURL（FILE用）
+  fileUrl String?
+
+  // 選択肢回答（SELECT/CHECKBOX用）
+  selectedOptions ProjectRegistrationFormAnswerSelectedOption[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([responseId, formItemId])
+  @@index([responseId])
+}
+
+// 選択肢回答の中間テーブル
+model ProjectRegistrationFormAnswerSelectedOption {
+  id               String @id @default(cuid())
+  answerId         String
+  formItemOptionId String
+
+  answer         ProjectRegistrationFormAnswer     @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  formItemOption ProjectRegistrationFormItemOption @relation(fields: [formItemOptionId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([answerId, formItemOptionId])
 }

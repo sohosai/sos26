@@ -10,6 +10,7 @@ import { committeeInquiryRoute } from "./routes/committee-inquiry";
 import { committeeMemberRoute } from "./routes/committee-member";
 import { committeeNoticeRoute } from "./routes/committee-notice";
 import { committeeProjectRoute } from "./routes/committee-project";
+import { committeeProjectRegistrationFormRoute } from "./routes/committee-project-registration-form";
 import { fileRoute } from "./routes/files";
 import { projectRoute } from "./routes/project";
 import { projectFormRoute } from "./routes/project-form";
@@ -54,6 +55,10 @@ app.route("/committee/projects", committeeProjectRoute);
 app.route("/committee/notices", committeeNoticeRoute);
 app.route("/committee/forms", committeeFormRoute);
 app.route("/committee/inquiries", committeeInquiryRoute);
+app.route(
+	"/committee/project-registration-forms",
+	committeeProjectRegistrationFormRoute
+);
 app.route("/project/:projectId/forms", projectFormRoute);
 app.route("/project", projectRoute);
 app.route("/project", projectNoticeRoute);

@@ -35,6 +35,7 @@
 - 機能仕様書
   - お知らせ機能: `docs/notice-spec.md`
   - お問い合わせ機能: `docs/support-spec.md`
+  - 企画登録フォーム機能: `docs/project-registration-form-spec.md`
 - 共有仕様
   - Shared パッケージ: `packages/shared/README.md`
 - テスト全般: `docs/testing.md`

@@ -1,0 +1,32 @@
+.form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-5);
+}
+
+.header {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	padding-bottom: var(--space-4);
+	border-bottom: 1px solid var(--gray-6);
+}
+
+.fields {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-3);
+	padding-top: var(--space-2);
+}

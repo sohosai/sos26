@@ -1,0 +1,105 @@
+.dialogContent {
+	max-width: 500px;
+	max-height: 90dvh;
+	overflow: hidden;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.dialogHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--space-4) var(--space-5);
+	border-bottom: 1px solid var(--gray-4);
+	flex-shrink: 0;
+}
+
+.dialogInner {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding: var(--space-4) var(--space-5);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.card {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-3);
+	border: 1px solid var(--gray-4);
+	border-radius: var(--radius-3);
+	background: var(--color-background);
+	user-select: none;
+}
+
+.card.dragging {
+	box-shadow: var(--shadow-4);
+	border-color: var(--accent-8);
+}
+
+.dragHandle {
+	cursor: grab;
+	color: var(--gray-9);
+	display: flex;
+	align-items: center;
+	flex-shrink: 0;
+}
+
+.dragHandle:active {
+	cursor: grabbing;
+}
+
+.cardOrder {
+	font-size: var(--font-size-1);
+	color: var(--gray-9);
+	font-weight: 500;
+	min-width: 1.5rem;
+	text-align: center;
+	flex-shrink: 0;
+}
+
+.cardTitle {
+	font-size: var(--font-size-2);
+	font-weight: 500;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cardTags {
+	display: flex;
+	gap: var(--space-1);
+	flex-wrap: wrap;
+	flex-shrink: 0;
+}
+
+.card.placeholder {
+	border-style: dashed;
+	border-color: var(--orange-8);
+	background: var(--orange-2);
+}
+
+.dialogFooter {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-2);
+	padding: var(--space-4) var(--space-5);
+	border-top: 1px solid var(--gray-4);
+	flex-shrink: 0;
+}
