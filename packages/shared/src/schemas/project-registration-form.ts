@@ -208,7 +208,7 @@ export const createProjectRegistrationFormRequestSchema = z
 		);
 		if (!result.valid) {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message: result.message,
 				path: ["filterLocations"],
 			});
@@ -281,7 +281,7 @@ export const updateProjectRegistrationFormRequestSchema = z
 		);
 		if (!result.valid) {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message: result.message,
 				path: ["filterLocations"],
 			});

@@ -228,11 +228,40 @@ committeeProjectRegistrationFormRoute.patch(
 			async tx => {
 				const existing = await tx.projectRegistrationForm.findFirstOrThrow({
 					where: { id: formId, deletedAt: null },
-					select: { sortOrder: true, isActive: true },
+					select: {
+						sortOrder: true,
+						isActive: true,
+						filterTypes: true,
+						filterLocations: true,
+					},
 				});
 
 				if (existing.isActive)
 					throw Errors.invalidRequest("有効化されたフォームは変更できません");
+
+				// filterTypes/filterLocations 整合性チェック
+				{
+					const mergedTypes =
+						formData.filterTypes ?? (existing.filterTypes as string[]);
+					const mergedLocations =
+						formData.filterLocations ?? (existing.filterLocations as string[]);
+					const hasStage = mergedTypes.includes("STAGE");
+					const hasNonStage = mergedTypes.some(t => t !== "STAGE");
+					if (
+						hasStage &&
+						!hasNonStage &&
+						!mergedLocations.every(l => l === "STAGE")
+					) {
+						throw Errors.invalidRequest(
+							"ステージ企画区分の場合、実施場所はステージのみ指定できます"
+						);
+					}
+					if (!hasStage && hasNonStage && mergedLocations.includes("STAGE")) {
+						throw Errors.invalidRequest(
+							"ステージ以外の企画区分の場合、実施場所にステージは指定できません"
+						);
+					}
+				}
 
 				// sortOrder が変更される場合は既存フォームをシフト
 				if (

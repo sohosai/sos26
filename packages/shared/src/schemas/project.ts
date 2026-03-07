@@ -48,24 +48,41 @@ export type ProjectMember = z.infer<typeof projectMemberSchema>;
 // POST /project/create
 // ─────────────────────────────────────────────────────────────
 
-export const createProjectRequestSchema = z.object({
-	name: z.string().min(1),
-	namePhonetic: z.string().min(1),
-	organizationName: z.string().min(1),
-	organizationNamePhonetic: z.string().min(1),
-	type: projectTypeSchema,
-	location: projectLocationSchema,
-	registrationFormAnswers: z
-		.array(
-			z.object({
-				formId: z.string().min(1),
-				answers: z.array(formAnswerInputSchema),
-			})
-		)
-		.optional(),
-	agreedToRegistrationConstraints: z.literal(true),
-	agreedToInfoImmutability: z.literal(true),
-});
+export const createProjectRequestSchema = z
+	.object({
+		name: z.string().min(1),
+		namePhonetic: z.string().min(1),
+		organizationName: z.string().min(1),
+		organizationNamePhonetic: z.string().min(1),
+		type: projectTypeSchema,
+		location: projectLocationSchema,
+		registrationFormAnswers: z
+			.array(
+				z.object({
+					formId: z.string().min(1),
+					answers: z.array(formAnswerInputSchema),
+				})
+			)
+			.optional(),
+		agreedToRegistrationConstraints: z.literal(true),
+		agreedToInfoImmutability: z.literal(true),
+	})
+	.superRefine((data, ctx) => {
+		if (data.type === "STAGE" && data.location !== "STAGE") {
+			ctx.addIssue({
+				code: "custom",
+				message: "ステージ企画の実施場所はステージのみ指定できます",
+				path: ["location"],
+			});
+		}
+		if (data.type !== "STAGE" && data.location === "STAGE") {
+			ctx.addIssue({
+				code: "custom",
+				message: "ステージ以外の企画の実施場所にステージは指定できません",
+				path: ["location"],
+			});
+		}
+	});
 
 export type CreateProjectRequest = z.infer<typeof createProjectRequestSchema>;
 
