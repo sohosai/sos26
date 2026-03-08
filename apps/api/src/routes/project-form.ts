@@ -89,6 +89,7 @@ const upsertAnswers = async (
 	// 既存回答を全削除して再作成（シンプルな全置き換え）
 	await tx.formAnswer.deleteMany({ where: { formResponseId: responseId } });
 
+	// 型チェック
 	for (const answer of answers) {
 		const type = itemTypeMap.get(answer.formItemId);
 		if (!type) {
@@ -97,54 +98,44 @@ const upsertAnswers = async (
 		if (type !== answer.type) {
 			throw Errors.invalidRequest("設問タイプと回答タイプが一致しません");
 		}
+	}
 
-		switch (answer.type) {
-			case "TEXT":
-			case "TEXTAREA":
-				await tx.formAnswer.create({
-					data: {
-						formResponseId: responseId,
-						formItemId: answer.formItemId,
-						textValue: answer.textValue ?? null,
-					},
-				});
-				break;
+	// SELECT/CHECKBOX 以外はバッチ作成
+	const simpleAnswers = answers.filter(
+		a => a.type !== "SELECT" && a.type !== "CHECKBOX"
+	);
+	if (simpleAnswers.length > 0) {
+		await tx.formAnswer.createMany({
+			data: simpleAnswers.map(answer => ({
+				formResponseId: responseId,
+				formItemId: answer.formItemId,
+				textValue:
+					answer.type === "TEXT" || answer.type === "TEXTAREA"
+						? (answer.textValue ?? null)
+						: null,
+				numberValue:
+					answer.type === "NUMBER" ? (answer.numberValue ?? null) : null,
+				fileUrl: answer.type === "FILE" ? (answer.fileUrl ?? null) : null,
+			})),
+		});
+	}
 
-			case "NUMBER":
-				await tx.formAnswer.create({
-					data: {
-						formResponseId: responseId,
-						formItemId: answer.formItemId,
-						numberValue: answer.numberValue ?? null,
-					},
-				});
-				break;
-
-			case "FILE":
-				await tx.formAnswer.create({
-					data: {
-						formResponseId: responseId,
-						formItemId: answer.formItemId,
-						fileUrl: answer.fileUrl ?? null,
-					},
-				});
-				break;
-
-			case "SELECT":
-			case "CHECKBOX":
-				await tx.formAnswer.create({
-					data: {
-						formResponseId: responseId,
-						formItemId: answer.formItemId,
-						selectedOptions: {
-							create: (answer.selectedOptionIds ?? []).map(id => ({
-								formItemOptionId: id,
-							})),
-						},
-					},
-				});
-				break;
-		}
+	// SELECT/CHECKBOX はネストされたリレーションがあるため個別作成
+	const selectAnswers = answers.filter(
+		a => a.type === "SELECT" || a.type === "CHECKBOX"
+	);
+	for (const answer of selectAnswers) {
+		await tx.formAnswer.create({
+			data: {
+				formResponseId: responseId,
+				formItemId: answer.formItemId,
+				selectedOptions: {
+					create: (answer.selectedOptionIds ?? []).map(id => ({
+						formItemOptionId: id,
+					})),
+				},
+			},
+		});
 	}
 };
 
@@ -293,7 +284,35 @@ const appendEditHistory = async (
 	actorId: string,
 	trigger: "PROJECT_SUBMIT" | "PROJECT_RESUBMIT"
 ) => {
-	for (const answer of answers) {
+	// オプション無しの回答はバッチ作成
+	const withoutOptions = answers.filter(a => {
+		const { optionIds } = extractAnswerValues(a);
+		return optionIds.length === 0;
+	});
+	const withOptions = answers.filter(a => {
+		const { optionIds } = extractAnswerValues(a);
+		return optionIds.length > 0;
+	});
+
+	if (withoutOptions.length > 0) {
+		await tx.formItemEditHistory.createMany({
+			data: withoutOptions.map(answer => {
+				const { textValue, numberValue, fileUrl } = extractAnswerValues(answer);
+				return {
+					formItemId: answer.formItemId,
+					projectId,
+					textValue,
+					numberValue,
+					fileUrl,
+					actorId,
+					trigger,
+				};
+			}),
+		});
+	}
+
+	// オプション有りの回答は個別作成（IDが必要なため）
+	for (const answer of withOptions) {
 		const { textValue, numberValue, fileUrl, optionIds } =
 			extractAnswerValues(answer);
 
@@ -308,14 +327,12 @@ const appendEditHistory = async (
 				trigger,
 			},
 		});
-		if (optionIds.length > 0) {
-			await tx.formItemEditHistorySelectedOption.createMany({
-				data: optionIds.map(optionId => ({
-					editHistoryId: history.id,
-					formItemOptionId: optionId,
-				})),
-			});
-		}
+		await tx.formItemEditHistorySelectedOption.createMany({
+			data: optionIds.map(optionId => ({
+				editHistoryId: history.id,
+				formItemOptionId: optionId,
+			})),
+		});
 	}
 };
 

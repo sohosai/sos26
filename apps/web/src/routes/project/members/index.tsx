@@ -93,6 +93,9 @@ const memberColumnHelper = createColumnHelper<MemberRow>();
 
 export const Route = createFileRoute("/project/members/")({
 	component: RouteComponent,
+	head: () => ({
+		meta: [{ title: "メンバー一覧 | 雙峰祭オンラインシステム" }],
+	}),
 	loader: async () => {
 		const { selectedProjectId } = useProjectStore.getState();
 		if (!selectedProjectId) {

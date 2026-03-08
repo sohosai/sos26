@@ -1,8 +1,8 @@
-import { Dialog, Popover, Text } from "@radix-ui/themes";
+import { AlertDialog, Dialog, Popover, Text } from "@radix-ui/themes";
 import { IconCopy, IconRefresh, IconX } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { IconButton } from "@/components/primitives";
+import { Button, IconButton } from "@/components/primitives";
 import { regenerateInviteCode } from "@/lib/api/project";
 import { useAuthStore } from "@/lib/auth";
 import { useProject } from "@/lib/project/store";
@@ -19,18 +19,15 @@ export function InviteMemberDialog({ open, onOpenChange }: Props) {
 	const [copied, setCopied] = useState(false);
 	const [inviteCode, setInviteCode] = useState(project.inviteCode ?? "");
 	const timerRef = useRef<number | null>(null);
+	const [regenerateConfirmOpen, setRegenerateConfirmOpen] = useState(false);
 
 	const isOwner = project.ownerId === user?.id;
 
 	const handleRegenerate = async () => {
-		if (
-			!confirm("招待コードを再生成しますか？現在のコードは無効になります。")
-		) {
-			return;
-		}
 		try {
 			const res = await regenerateInviteCode(project.id);
 			setInviteCode(res.inviteCode);
+			setRegenerateConfirmOpen(false);
 		} catch {
 			toast.error("招待コードの再生成に失敗しました");
 		}
@@ -78,11 +75,40 @@ export function InviteMemberDialog({ open, onOpenChange }: Props) {
 						</Popover.Content>
 					</Popover.Root>
 					{isOwner && (
-						<IconButton onClick={handleRegenerate}>
+						<IconButton onClick={() => setRegenerateConfirmOpen(true)}>
 							<IconRefresh size={24} />
 						</IconButton>
 					)}
 				</div>
+
+				<AlertDialog.Root
+					open={regenerateConfirmOpen}
+					onOpenChange={setRegenerateConfirmOpen}
+				>
+					<AlertDialog.Content maxWidth="400px">
+						<AlertDialog.Title>招待コードの再生成</AlertDialog.Title>
+						<AlertDialog.Description size="2">
+							招待コードを再生成しますか？現在のコードは無効になります。
+						</AlertDialog.Description>
+						<div
+							style={{
+								display: "flex",
+								gap: "8px",
+								justifyContent: "flex-end",
+								marginTop: "16px",
+							}}
+						>
+							<AlertDialog.Cancel>
+								<Button intent="secondary" size="2">
+									キャンセル
+								</Button>
+							</AlertDialog.Cancel>
+							<Button intent="primary" size="2" onClick={handleRegenerate}>
+								再生成する
+							</Button>
+						</div>
+					</AlertDialog.Content>
+				</AlertDialog.Root>
 			</Dialog.Content>
 		</Dialog.Root>
 	);

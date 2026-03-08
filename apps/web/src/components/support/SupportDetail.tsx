@@ -1,6 +1,7 @@
-import { Badge, Heading, Separator, Text } from "@radix-ui/themes";
+import { AlertDialog, Badge, Heading, Separator, Text } from "@radix-ui/themes";
 import { IconArrowLeft, IconCheck } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
 import { formatDate } from "@/lib/format";
@@ -54,6 +55,10 @@ export function SupportDetail({
 	isAssigneeOrAdmin = false,
 }: SupportDetailProps) {
 	const navigate = useNavigate();
+	const [selfRemoveConfirmOpen, setSelfRemoveConfirmOpen] = useState(false);
+	const [pendingRemoveAssigneeId, setPendingRemoveAssigneeId] = useState<
+		string | null
+	>(null);
 
 	const config = statusConfig[inquiry.status];
 	const StatusIcon = config.icon;
@@ -65,20 +70,24 @@ export function SupportDetail({
 
 	const handleRemoveAssignee = async (assigneeId: string, userId: string) => {
 		if (userId === currentUserId) {
-			const confirmed = window.confirm(
-				"自分自身を担当者から外すと、このお問い合わせにアクセスできなくなる可能性があります。よろしいですか？"
-			);
-			if (!confirmed) return;
-			try {
-				await onRemoveAssignee(assigneeId);
-				navigate({ to: basePath as string });
-			} catch {
-				toast.error("担当者の削除に失敗しました");
-			}
+			setPendingRemoveAssigneeId(assigneeId);
+			setSelfRemoveConfirmOpen(true);
 			return;
 		}
 		try {
 			await onRemoveAssignee(assigneeId);
+		} catch {
+			toast.error("担当者の削除に失敗しました");
+		}
+	};
+
+	const handleConfirmSelfRemove = async () => {
+		if (!pendingRemoveAssigneeId) return;
+		try {
+			await onRemoveAssignee(pendingRemoveAssigneeId);
+			setSelfRemoveConfirmOpen(false);
+			setPendingRemoveAssigneeId(null);
+			navigate({ to: basePath as string });
 		} catch {
 			toast.error("担当者の削除に失敗しました");
 		}
@@ -302,6 +311,35 @@ export function SupportDetail({
 					</>
 				)}
 			</aside>
+
+			<AlertDialog.Root
+				open={selfRemoveConfirmOpen}
+				onOpenChange={setSelfRemoveConfirmOpen}
+			>
+				<AlertDialog.Content maxWidth="400px">
+					<AlertDialog.Title>担当者から外す</AlertDialog.Title>
+					<AlertDialog.Description size="2">
+						自分自身を担当者から外すと、このお問い合わせにアクセスできなくなる可能性があります。よろしいですか？
+					</AlertDialog.Description>
+					<div
+						style={{
+							display: "flex",
+							gap: "8px",
+							justifyContent: "flex-end",
+							marginTop: "16px",
+						}}
+					>
+						<AlertDialog.Cancel>
+							<Button intent="secondary" size="2">
+								キャンセル
+							</Button>
+						</AlertDialog.Cancel>
+						<Button intent="danger" size="2" onClick={handleConfirmSelfRemove}>
+							外す
+						</Button>
+					</div>
+				</AlertDialog.Content>
+			</AlertDialog.Root>
 		</div>
 	);
 }
