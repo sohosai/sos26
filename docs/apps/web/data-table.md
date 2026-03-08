@@ -19,6 +19,9 @@
 		- [AvatarGroupCell](#avatargroupcell)
 		- [DateCell](#datecell)
 		- [EditableCell](#editablecell)
+		- [FileCell](#filecell)
+		- [MultiSelectCell](#multiselectcell)
+		- [MultiSelectEditCell](#multiselecteditcell)
 		- [NameCell](#namecell)
 		- [SelectCell](#selectcell)
 		- [TagCell](#tagcell)
@@ -30,10 +33,12 @@
 	- [機能詳細](#機能詳細)
 		- [ソート](#ソート)
 		- [グローバル検索](#グローバル検索)
+		- [カラムフィルター](#カラムフィルター)
 		- [カラム表示切替](#カラム表示切替)
 		- [セル選択](#セル選択)
 		- [コピー（Ctrl+C / Cmd+C）](#コピーctrlc--cmdc)
 		- [CSV出力](#csv出力)
+		- [行チェックボックス選択](#行チェックボックス選択)
 		- [インライン編集](#インライン編集)
 		- [バリデーション](#バリデーション)
 	- [アクションカラム（display カラム）](#アクションカラムdisplay-カラム)
@@ -48,6 +53,9 @@ import {
 	DataTable,
 	DateCell,
 	EditableCell,
+	FileCell,
+	MultiSelectCell,
+	MultiSelectEditCell,
 	NameCell,
 	SelectCell,
 	TagCell,
@@ -94,11 +102,18 @@ function UserTable() {
 |------|-----|-----------|------|
 | `data` | `T[]` | (必須) | テーブルに表示するデータ配列 |
 | `columns` | `ColumnDef<T, any>[]` | (必須) | TanStack Table のカラム定義 |
-| `features` | `DataTableFeatures` | 全て `true` | 有効にする機能のフラグ |
+| `features` | `DataTableFeatures` | 下記参照 | 有効にする機能のフラグ |
 | `initialSorting` | `SortingState` | `[]` | 初期ソート状態 |
 | `initialGlobalFilter` | `string` | `""` | 初期検索文字列 |
+| `initialColumnVisibility` | `VisibilityState` | `{}` | 初期カラム表示状態 |
+| `initialColumnFilters` | `ColumnFiltersState` | `[]` | 初期カラムフィルター状態 |
 | `onCellEdit` | `(row: T, columnId: string, value: unknown) => void` | - | セル編集時のコールバック。`row` は編集された行の元データオブジェクト |
 | `toolbarExtra` | `ReactNode` | - | ツールバーに追加する任意の要素（ボタンなど） |
+| `onSortingChange` | `(sorting: SortingState) => void` | - | ソート変化の通知コールバック |
+| `onColumnVisibilityChange` | `(visibility: VisibilityState) => void` | - | カラム表示変化の通知コールバック |
+| `onColumnFiltersChange` | `(filters: ColumnFiltersState) => void` | - | カラムフィルター変化の通知コールバック |
+| `onRowSelectionChange` | `(rows: T[]) => void` | - | 行選択変化の通知コールバック（`rowSelection: true` 時） |
+| `getRowId` | `(row: T, index: number) => string` | - | 行IDを返す関数（`rowSelection: true` 時） |
 
 ### DataTableFeatures
 
@@ -112,6 +127,8 @@ function UserTable() {
 | `selection` | `true` | セルのクリック/ドラッグ選択 |
 | `copy` | `true` | 選択セルの Ctrl+C コピー（TSV形式） |
 | `csvExport` | `true` | CSV出力ボタン |
+| `columnFilter` | `false` | カラムごとのフィルター（`meta.filterVariant` で種別指定） |
+| `rowSelection` | `false` | 行チェックボックス選択（`selection` を自動無効化） |
 
 ## カラム定義
 
@@ -152,10 +169,12 @@ TanStack Table の `meta` フィールドでセルの振る舞いを制御する
 |-----------|-----|------|
 | `editable` | `boolean` | セルを編集可能にするか |
 | `type` | `"text" \| "number"` | 入力の型（デフォルト: `"text"`） |
-| `options` | `string[]` | SelectCell で使う選択肢リスト |
+| `options` | `string[]` | SelectCell で使う選択肢リスト（単純文字列） |
+| `selectOptions` | `{ value: string; label: string }[]` | SelectCell / MultiSelectEditCell / MultiSelectCell 用の構造化オプション（value=ID, label=表示名） |
 | `schema` | `ZodType` | EditableCell でのバリデーションスキーマ |
 | `dateFormat` | `"date" \| "datetime"` | DateCell の表示形式（デフォルト: `"date"`） |
 | `tagColors` | `Record<string, string>` | TagCell のタグ→Radix カラー名マッピング |
+| `filterVariant` | `"text" \| "number" \| "select"` | カラムフィルターの種別（`columnFilter: true` 時に表示） |
 
 ## セルコンポーネント
 
@@ -226,6 +245,52 @@ columnHelper.accessor("email", {
 	meta: {
 		editable: true,
 		schema: z.email(),
+	},
+}),
+```
+
+### FileCell
+
+ファイルリンク表示セル。URL を受け取り、ファイルアイコン付きのリンクとして表示する。読み取り専用。値が null/undefined の場合は `─` を表示。
+
+```tsx
+columnHelper.accessor("fileUrl", {
+	header: "添付ファイル",
+	cell: FileCell,
+}),
+```
+
+### MultiSelectCell
+
+複数選択値の表示セル。`string[]`（選択肢ID配列）を受け取り、`meta.selectOptions` のラベルを Badge で表示する。読み取り専用。
+
+```tsx
+columnHelper.accessor("tags", {
+	header: "タグ",
+	cell: MultiSelectCell,
+	meta: {
+		selectOptions: [
+			{ value: "a", label: "承認済み" },
+			{ value: "b", label: "未定" },
+		],
+	},
+}),
+```
+
+### MultiSelectEditCell
+
+複数選択値の編集セル。クリックで Popover を開き、チェックボックスで選択肢を複数選択できる。閉じたときに確定、Escape でキャンセル。
+
+```tsx
+columnHelper.accessor("selectedOptionIds", {
+	header: "ステータス",
+	cell: MultiSelectEditCell,
+	meta: {
+		editable: true,
+		selectOptions: [
+			{ value: "opt1", label: "承認済み" },
+			{ value: "opt2", label: "保留" },
+		],
 	},
 }),
 ```
@@ -381,6 +446,37 @@ columnHelper.display({
 
 テーブル上部の検索ボックスに入力すると、全カラムを対象にフィルタリングされる。
 
+### カラムフィルター
+
+`columnFilter: true` で有効。各カラムのヘッダーにフィルターアイコンが表示され、クリックで Popover が開く。フィルター種別は `meta.filterVariant` で指定する。
+
+| `filterVariant` | UI | フィルター動作 |
+|-----------------|-----|---------------|
+| `"text"` | テキスト入力 | 部分一致 |
+| `"number"` | 最小値・最大値入力 | 範囲フィルター |
+| `"select"` | チェックボックスリスト | 選択した値のいずれかに一致 |
+
+フィルターが適用中のカラムはアイコンがハイライトされる。ツールバーに「フィルター解除」ボタンが表示され、全フィルターを一括解除できる。
+
+```tsx
+columnHelper.accessor("price", {
+	header: "価格",
+	meta: { filterVariant: "number" },
+}),
+
+columnHelper.accessor("status", {
+	header: "ステータス",
+	cell: SelectCell,
+	meta: {
+		filterVariant: "select",
+		selectOptions: [
+			{ value: "active", label: "有効" },
+			{ value: "inactive", label: "無効" },
+		],
+	},
+}),
+```
+
 ### カラム表示切替
 
 「表示カラム」ボタンのポップオーバーから、各カラムの表示/非表示を切り替えられる。
@@ -403,6 +499,22 @@ columnHelper.display({
 ### CSV出力
 
 「CSV出力」ボタンで、現在表示中のデータを `table.csv` としてダウンロードする。BOM 付き UTF-8 で出力されるため、Excel で直接開いても文字化けしない。
+
+### 行チェックボックス選択
+
+`rowSelection: true` で有効。各行の先頭にチェックボックスが表示され、行単位で選択できる。ヘッダーのチェックボックスで全選択/全解除。`selection` は自動的に無効化される。
+
+```tsx
+<DataTable
+	data={projects}
+	columns={projectColumns}
+	features={{ rowSelection: true }}
+	getRowId={(row) => row.id}
+	onRowSelectionChange={(selectedRows) => {
+		setSelectedIds(selectedRows.map(r => r.id));
+	}}
+/>
+```
 
 ### インライン編集
 
