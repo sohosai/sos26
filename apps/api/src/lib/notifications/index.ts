@@ -1,3 +1,5 @@
+export { notifyAccessRequestDecided } from "./notifyAccessRequestDecided";
+export { notifyAccessRequestReceived } from "./notifyAccessRequestReceived";
 export { notifyFormAuthorizationDecided } from "./notifyFormAuthorizationDecided";
 export { notifyFormAuthorizationRequested } from "./notifyFormAuthorizationRequested";
 export { notifyInquiryAssigneeAdded } from "./notifyInquiryAssigneeAdded";

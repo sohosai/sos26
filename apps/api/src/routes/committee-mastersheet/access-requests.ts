@@ -5,6 +5,10 @@ import {
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../../lib/error";
+import {
+	notifyAccessRequestDecided,
+	notifyAccessRequestReceived,
+} from "../../lib/notifications";
 import { prisma } from "../../lib/prisma";
 import { requireAuth, requireCommitteeMember } from "../../middlewares/auth";
 import type { AuthEnv } from "../../types/auth-env";
@@ -76,7 +80,8 @@ accessRequestsRoute.post(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const userId = c.get("user").id;
+		const user = c.get("user");
+		const userId = user.id;
 		const { columnId } = mastersheetColumnIdPathParamsSchema.parse(
 			c.req.param()
 		);
@@ -89,6 +94,11 @@ accessRequestsRoute.post(
 		} else {
 			await createCustomAccessRequest(col, columnId, userId);
 		}
+
+		void notifyAccessRequestReceived({
+			columnId,
+			requesterName: user.name,
+		});
 
 		return c.json({ success: true as const }, 201);
 	}
@@ -112,7 +122,7 @@ accessRequestsRoute.patch(
 		const body = await c.req.json().catch(() => ({}));
 		const { status } = updateMastersheetAccessRequestRequestSchema.parse(body);
 
-		await prisma.$transaction(
+		const result = await prisma.$transaction(
 			async tx => {
 				const request = await tx.mastersheetAccessRequest.findUnique({
 					where: { id: requestId },
@@ -172,9 +182,20 @@ accessRequestsRoute.patch(
 						});
 					}
 				}
+
+				return {
+					requesterId: request.requesterId,
+					columnName: request.column.name,
+				};
 			},
 			{ isolationLevel: "Serializable" }
 		);
+
+		void notifyAccessRequestDecided({
+			requesterId: result.requesterId,
+			columnName: result.columnName,
+			status,
+		});
 
 		return c.json({ success: true as const });
 	}

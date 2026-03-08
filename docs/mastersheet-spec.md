@@ -432,9 +432,23 @@ type ViewState = {
 - 対象: お知らせ配信申請フロー、フォーム配信申請フロー
 - DataTable の `rowSelection` 機能は実装済み
 
-### 13.3 アクセス申請関連のメール通知
+### 13.3 アクセス申請関連のメール通知 ✅
 
 - アクセス申請が届いたとき → カラム作成者（CUSTOM）/ フォームオーナー（FORM_ITEM）へ通知
 - アクセス申請が承認・却下されたとき → 申請者へ通知
-- 送信タイミング・文面などの詳細は未定
+
+#### 送信タイミング
+
+| イベント | 送信先 | トリガー |
+|---------|--------|---------|
+| アクセス申請の作成 | カラム管理者（CUSTOM: 作成者 / FORM_ITEM: フォームオーナー） | `POST /committee/mastersheet/columns/:columnId/access-request` |
+| アクセス申請の承認 | 申請者 | `PATCH /committee/mastersheet/access-requests/:requestId` (status=APPROVED) |
+| アクセス申請の却下 | 申請者 | `PATCH /committee/mastersheet/access-requests/:requestId` (status=REJECTED) |
+
+#### 実装ファイル
+
+- テンプレート: `apps/api/src/lib/emails/templates/accessRequest{Received,Approved,Rejected}.ts`
+- usecase: `apps/api/src/lib/emails/usecases/sendAccessRequest{Received,Decided}Email.ts`
+- 通知関数: `apps/api/src/lib/notifications/notifyAccessRequest{Received,Decided}.ts`
+- 呼び出し元: `apps/api/src/routes/committee-mastersheet/access-requests.ts`（fire-and-forget）
 
