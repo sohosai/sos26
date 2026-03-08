@@ -2,7 +2,6 @@ export { AvatarGroupCell, type AvatarGroupItem } from "./cells/AvatarGroupCell";
 export { DateCell } from "./cells/DateCell";
 export { EditableCell } from "./cells/EditableCell";
 export { FileCell } from "./cells/FileCell";
-export { FormCellStatusBadge } from "./cells/FormCellStatusBadge";
 export { MultiSelectCell } from "./cells/MultiSelectCell";
 export { MultiSelectEditCell } from "./cells/MultiSelectEditCell";
 export { NameCell } from "./cells/NameCell";

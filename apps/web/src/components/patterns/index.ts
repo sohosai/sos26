@@ -7,7 +7,6 @@ export {
 	DateCell,
 	EditableCell,
 	FileCell,
-	FormCellStatusBadge,
 	MultiSelectCell,
 	MultiSelectEditCell,
 	NameCell,
