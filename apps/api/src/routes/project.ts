@@ -237,6 +237,20 @@ projectRoute.patch(
 		const data = updateProjectDetailRequestSchema.parse(body);
 		const project = c.get("project");
 
+		// type/location 整合性チェック
+		const mergedType = data.type ?? project.type;
+		const mergedLocation = data.location ?? project.location;
+		if (mergedType === "STAGE" && mergedLocation !== "STAGE") {
+			throw Errors.invalidRequest(
+				"ステージ企画の実施場所はステージのみ指定できます"
+			);
+		}
+		if (mergedType !== "STAGE" && mergedLocation === "STAGE") {
+			throw Errors.invalidRequest(
+				"ステージ以外の企画の実施場所にステージは指定できません"
+			);
+		}
+
 		const updated = await prisma.project.update({
 			where: { id: project.id },
 			data,

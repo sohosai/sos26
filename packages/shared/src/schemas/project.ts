@@ -148,14 +148,32 @@ export type GetProjectDetailResponse = z.infer<
 // PATCH /project/:projectId/detail
 // ─────────────────────────────────────────────
 
-export const updateProjectDetailRequestSchema = z.object({
-	name: z.string().min(1).optional(),
-	namePhonetic: z.string().min(1).optional(),
-	organizationName: z.string().min(1).optional(),
-	organizationNamePhonetic: z.string().min(1).optional(),
-	type: projectTypeSchema.optional(),
-	location: projectLocationSchema.optional(),
-});
+export const updateProjectDetailRequestSchema = z
+	.object({
+		name: z.string().min(1).optional(),
+		namePhonetic: z.string().min(1).optional(),
+		organizationName: z.string().min(1).optional(),
+		organizationNamePhonetic: z.string().min(1).optional(),
+		type: projectTypeSchema.optional(),
+		location: projectLocationSchema.optional(),
+	})
+	.superRefine((data, ctx) => {
+		if (data.type === undefined || data.location === undefined) return;
+		if (data.type === "STAGE" && data.location !== "STAGE") {
+			ctx.addIssue({
+				code: "custom",
+				message: "ステージ企画の実施場所はステージのみ指定できます",
+				path: ["location"],
+			});
+		}
+		if (data.type !== "STAGE" && data.location === "STAGE") {
+			ctx.addIssue({
+				code: "custom",
+				message: "ステージ以外の企画の実施場所にステージは指定できません",
+				path: ["location"],
+			});
+		}
+	});
 
 export type UpdateProjectDetailRequest = z.infer<
 	typeof updateProjectDetailRequestSchema

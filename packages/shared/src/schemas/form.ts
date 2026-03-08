@@ -531,6 +531,14 @@ export const formAnswerInputSchema = z.discriminatedUnion("type", [
 	checkboxAnswerSchema,
 ]);
 
+export const registrationFormAnswersInputSchema = z.object({
+	formId: z.string().min(1),
+	answers: z.array(formAnswerInputSchema),
+});
+export type RegistrationFormAnswersInput = z.infer<
+	typeof registrationFormAnswersInputSchema
+>;
+
 export const createFormResponseRequestSchema = z.object({
 	answers: z.array(formAnswerInputSchema),
 	submit: z.boolean().default(false), // false=下書き, true=提出

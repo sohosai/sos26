@@ -164,7 +164,7 @@ committeeProjectRegistrationFormRoute.get(
 		const forms = await prisma.projectRegistrationForm.findMany({
 			where: { deletedAt: null },
 			include: {
-				owner: true,
+				owner: { select: { id: true, name: true } },
 				authorizations: {
 					orderBy: { createdAt: "desc" },
 					take: 1,

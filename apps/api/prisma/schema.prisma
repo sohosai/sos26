@@ -976,7 +976,6 @@ model ProjectRegistrationForm {
   authorizations ProjectRegistrationFormAuthorization[]
 
   // 企画登録時の回答
-  // 企画登録時の回答
   responses ProjectRegistrationFormResponse[]
 
   // 共同編集者

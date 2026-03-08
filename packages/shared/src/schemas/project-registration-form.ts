@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-	formAnswerInputSchema,
 	formItemOptionSchema,
 	formItemSchema,
 	formItemTypeSchema,
@@ -232,7 +231,7 @@ export type CreateProjectRegistrationFormResponse = z.infer<
 export const listProjectRegistrationFormsResponseSchema = z.object({
 	forms: z.array(
 		projectRegistrationFormSchema.extend({
-			owner: userSchema,
+			owner: userSchema.pick({ id: true, name: true }),
 			latestAuthorization: projectRegistrationFormAuthorizationSchema
 				.pick({
 					id: true,
@@ -380,17 +379,8 @@ export type GetActiveProjectRegistrationFormsResponse = z.infer<
 
 // ─────────────────────────────────────────────────────────────
 // 企画登録時の回答入力スキーマ  (POST /project/create に埋め込む)
+// form.ts の registrationFormAnswersInputSchema / RegistrationFormAnswersInput を参照
 // ─────────────────────────────────────────────────────────────
-
-export const registrationFormAnswerItemInputSchema = formAnswerInputSchema;
-
-export const registrationFormAnswersInputSchema = z.object({
-	formId: z.string().min(1),
-	answers: z.array(registrationFormAnswerItemInputSchema),
-});
-export type RegistrationFormAnswersInput = z.infer<
-	typeof registrationFormAnswersInputSchema
->;
 
 // ─────────────────────────────────────────────────────────────
 // GET /committee/project-registration-forms/:formId/responses
