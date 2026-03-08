@@ -689,7 +689,7 @@ export function ColumnPanel({
 		if (!open) return;
 		listMastersheetAccessRequests()
 			.then(res => setAccessRequests(res.requests))
-			.catch(() => {});
+			.catch(() => toast.error("アクセス申請一覧の取得に失敗しました"));
 	}, [open]);
 
 	function handleRequestHandled(id: string) {

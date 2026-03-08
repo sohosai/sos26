@@ -73,6 +73,15 @@ cellsRoute.put(
 
 				// SELECT/MULTI_SELECT の選択肢を全置き換え
 				if (data.selectedOptionIds !== undefined) {
+					if (data.selectedOptionIds.length > 0) {
+						const validIds = new Set(col.options.map(o => o.id));
+						const invalid = data.selectedOptionIds.filter(
+							id => !validIds.has(id)
+						);
+						if (invalid.length > 0)
+							throw Errors.invalidRequest("無効な選択肢が含まれています");
+					}
+
 					await tx.mastersheetCellSelectedOption.deleteMany({
 						where: { cellId },
 					});
@@ -183,6 +192,13 @@ cellsRoute.put(
 				});
 
 				if (data.selectedOptionIds?.length) {
+					const validIds = new Set(col.formItem?.options.map(o => o.id) ?? []);
+					const invalid = data.selectedOptionIds.filter(
+						id => !validIds.has(id)
+					);
+					if (invalid.length > 0)
+						throw Errors.invalidRequest("無効な選択肢が含まれています");
+
 					await tx.formItemEditHistorySelectedOption.createMany({
 						data: data.selectedOptionIds.map(optionId => ({
 							editHistoryId: created.id,
