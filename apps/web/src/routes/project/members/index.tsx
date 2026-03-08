@@ -22,6 +22,7 @@ import {
 import { useAuthStore } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { useProject, useProjectStore } from "@/lib/project/store";
+import styles from "./index.module.scss";
 
 export type MemberRow = {
 	userId: string;
@@ -335,10 +336,8 @@ function RouteComponent() {
 
 			<InviteMemberDialog open={dialogOpen} onOpenChange={setDialogOpen} />
 
-			<AlertDialog.Root
-				open={subOwnerRequestDialogOpen}
-				// onOpenChange={setSubOwnerRequestDialogOpen}
-			>
+			{/* ユーザーに承認/辞退を明示的に選択させるため、ESC・オーバーレイクリックでは閉じない */}
+			<AlertDialog.Root open={subOwnerRequestDialogOpen}>
 				<AlertDialog.Content maxWidth="420px">
 					<AlertDialog.Title>副責任者リクエストの確認</AlertDialog.Title>
 					<AlertDialog.Description size="2">
@@ -346,14 +345,7 @@ function RouteComponent() {
 							? `${pendingRequestedByName} さんから副責任者リクエストが届いています。承認または辞退を選択してください。`
 							: "副責任者リクエストが届いています。承認または辞退を選択してください。"}
 					</AlertDialog.Description>
-					<div
-						style={{
-							display: "flex",
-							justifyContent: "flex-end",
-							gap: "8px",
-							marginTop: "16px",
-						}}
-					>
+					<div className={styles.dialogActions}>
 						<Button
 							intent="secondary"
 							size="2"
