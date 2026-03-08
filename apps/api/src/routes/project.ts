@@ -5,6 +5,13 @@ import {
 	updateProjectDetailRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
+import {
+	sendSubOwnerRequestApprovedEmail,
+	sendSubOwnerRequestCancelledEmail,
+	sendSubOwnerRequestRejectedEmail,
+	sendSubOwnerRequestSentEmail,
+} from "../lib/emails";
+import { env } from "../lib/env";
 import { Errors } from "../lib/error";
 import { handlePrismaError, prisma } from "../lib/prisma";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
@@ -255,7 +262,7 @@ projectRoute.get(
 
 		return c.json({
 			members: result,
-			pendingSubOwnerRequestUserId: pendingRequest?.userId || null,
+			pendingSubOwnerRequestUserId: pendingRequest?.userId ?? null,
 		});
 	}
 );
@@ -387,16 +394,33 @@ projectRoute.post(
 			throw Errors.invalidRequest("既に副責任者リクエストが送信されています");
 		}
 
-		const request = await prisma.projectSubOwnerRequest
-			.create({
-				data: {
-					projectId: project.id,
-					userId,
-					status: "PENDING",
-					pendingProjectId: project.id,
-				},
-			})
-			.catch(handlePrismaError);
+		const [request, targetUser, owner] = await Promise.all([
+			prisma.projectSubOwnerRequest
+				.create({
+					data: {
+						projectId: project.id,
+						userId,
+						status: "PENDING",
+						pendingProjectId: project.id,
+					},
+				})
+				.catch(handlePrismaError),
+			prisma.user.findUniqueOrThrow({
+				where: { id: userId },
+				select: { email: true },
+			}),
+			prisma.user.findUniqueOrThrow({
+				where: { id: project.ownerId },
+				select: { name: true },
+			}),
+		]);
+
+		await sendSubOwnerRequestSentEmail({
+			email: targetUser.email,
+			ownerName: owner.name,
+			projectName: project.name,
+			url: `${env.APP_URL}/project/members`,
+		});
 
 		return c.json({
 			success: true,
@@ -417,6 +441,19 @@ projectRoute.post(
 	async c => {
 		const userId = c.get("user").id;
 		const project = c.get("project");
+
+		// リクエスト対象ユーザー本人かを先に確認
+		const pendingRequest = await prisma.projectSubOwnerRequest.findFirst({
+			where: {
+				projectId: project.id,
+				userId,
+				status: "PENDING",
+			},
+		});
+
+		if (!pendingRequest) {
+			throw Errors.notFound("自分宛ての副責任者リクエストが見つかりません");
+		}
 
 		await prisma.$transaction(async tx => {
 			const currentProject = await tx.project.findFirst({
@@ -500,6 +537,23 @@ projectRoute.post(
 			}
 		});
 
+		const [approvedUser, owner] = await Promise.all([
+			prisma.user.findUniqueOrThrow({
+				where: { id: userId },
+				select: { name: true },
+			}),
+			prisma.user.findUniqueOrThrow({
+				where: { id: project.ownerId },
+				select: { email: true },
+			}),
+		]);
+
+		await sendSubOwnerRequestApprovedEmail({
+			email: owner.email,
+			userName: approvedUser.name,
+			projectName: project.name,
+		});
+
 		return c.json({
 			success: true,
 		});
@@ -524,7 +578,20 @@ projectRoute.post(
 			);
 		}
 
-		const cancelResult = await prisma.projectSubOwnerRequest.updateMany({
+		// 取り消し前にリクエスト対象ユーザーを取得（メール送信用）
+		const pendingRequest = await prisma.projectSubOwnerRequest.findFirst({
+			where: {
+				projectId: project.id,
+				status: "PENDING",
+			},
+			select: { userId: true },
+		});
+
+		if (!pendingRequest) {
+			throw Errors.notFound("取り消し対象の副責任者リクエストが見つかりません");
+		}
+
+		await prisma.projectSubOwnerRequest.updateMany({
 			where: {
 				projectId: project.id,
 				status: "PENDING",
@@ -536,9 +603,22 @@ projectRoute.post(
 			},
 		});
 
-		if (cancelResult.count < 1) {
-			throw Errors.notFound("取り消し対象の副責任者リクエストが見つかりません");
-		}
+		const [targetUser, owner] = await Promise.all([
+			prisma.user.findUniqueOrThrow({
+				where: { id: pendingRequest.userId },
+				select: { email: true },
+			}),
+			prisma.user.findUniqueOrThrow({
+				where: { id: project.ownerId },
+				select: { name: true },
+			}),
+		]);
+
+		await sendSubOwnerRequestCancelledEmail({
+			email: targetUser.email,
+			ownerName: owner.name,
+			projectName: project.name,
+		});
 
 		return c.json({
 			success: true,
@@ -558,6 +638,19 @@ projectRoute.post(
 		const userId = c.get("user").id;
 		const project = c.get("project");
 
+		// リクエスト対象ユーザー本人かを先に確認
+		const pendingRequest = await prisma.projectSubOwnerRequest.findFirst({
+			where: {
+				projectId: project.id,
+				userId,
+				status: "PENDING",
+			},
+		});
+
+		if (!pendingRequest) {
+			throw Errors.notFound("自分宛ての副責任者リクエストが見つかりません");
+		}
+
 		const rejectResult = await prisma.projectSubOwnerRequest.updateMany({
 			where: {
 				projectId: project.id,
@@ -574,6 +667,23 @@ projectRoute.post(
 		if (rejectResult.count < 1) {
 			throw Errors.notFound("副責任者リクエストの辞退対象が見つかりません");
 		}
+
+		const [rejectedUser, owner] = await Promise.all([
+			prisma.user.findUniqueOrThrow({
+				where: { id: userId },
+				select: { name: true },
+			}),
+			prisma.user.findUniqueOrThrow({
+				where: { id: project.ownerId },
+				select: { email: true },
+			}),
+		]);
+
+		await sendSubOwnerRequestRejectedEmail({
+			email: owner.email,
+			userName: rejectedUser.name,
+			projectName: project.name,
+		});
 
 		return c.json({
 			success: true,
