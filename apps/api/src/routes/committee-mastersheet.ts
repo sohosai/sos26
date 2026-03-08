@@ -31,7 +31,7 @@ const committeeMastersheetRoute = new Hono<AuthEnv>();
 
 /** カラムをリレーション込みで取得（存在しない場合は 404） */
 const getColumnFull = async (columnId: string) => {
-	const col = await prisma.mastersheetColumn.findFirst({
+	const col = await prisma.mastersheetColumn.findUnique({
 		where: { id: columnId },
 		include: {
 			formItem: {
@@ -89,7 +89,11 @@ function canViewColumn(
 	if (col.visibility !== "PUBLIC") return false;
 	for (const v of col.viewers) {
 		if (v.scope === "ALL") return true;
-		if (v.scope === "BUREAU" && v.bureauValue === committeeMember.Bureau)
+		if (
+			v.scope === "BUREAU" &&
+			v.bureauValue != null &&
+			v.bureauValue === committeeMember.Bureau
+		)
 			return true;
 		if (v.scope === "INDIVIDUAL" && v.userId === userId) return true;
 	}
@@ -98,7 +102,11 @@ function canViewColumn(
 
 /** カラム管理者（作成者）チェック */
 const requireColumnOwner = async (columnId: string, userId: string) => {
-	const col = await getColumnFull(columnId);
+	const col = await prisma.mastersheetColumn.findUnique({
+		where: { id: columnId },
+		select: { id: true, createdById: true },
+	});
+	if (!col) throw Errors.notFound("カラムが見つかりません");
 	if (col.createdById !== userId)
 		throw Errors.forbidden("この操作は作成者のみ行えます");
 	return col;
@@ -166,6 +174,29 @@ type HistoryWithOptions = Prisma.FormItemEditHistoryGetPayload<{
 		selectedOptions: { select: { formItemOptionId: true } };
 	};
 }>;
+
+/** formItemId × projectId ごとに最新1件の編集履歴を取得 */
+async function fetchLatestHistoryByCell(
+	formItemIds: string[]
+): Promise<Map<string, HistoryWithOptions>> {
+	const result = new Map<string, HistoryWithOptions>();
+	if (formItemIds.length === 0) return result;
+
+	const allHistory = await prisma.formItemEditHistory.findMany({
+		where: { formItemId: { in: formItemIds } },
+		orderBy: { createdAt: "desc" },
+		include: {
+			selectedOptions: { select: { formItemOptionId: true } },
+		},
+	});
+
+	for (const h of allHistory) {
+		const key = `${h.formItemId}:${h.projectId}`;
+		if (!result.has(key)) result.set(key, h);
+	}
+
+	return result;
+}
 
 function buildFormItemCell(
 	colId: string,
@@ -334,25 +365,13 @@ committeeMastersheetRoute.get(
 			);
 		}
 
-		// FormItemEditHistory: 最新の履歴を取得
-		const formItemIds = formItemCols
-			.flatMap(c => (c.formItem ? [c.formItem.id] : []))
-			.filter((id, i, arr) => arr.indexOf(id) === i);
-		const allHistory = formItemIds.length
-			? await prisma.formItemEditHistory.findMany({
-					where: { formItemId: { in: formItemIds } },
-					orderBy: { createdAt: "desc" },
-					include: {
-						selectedOptions: { select: { formItemOptionId: true } },
-					},
-				})
-			: [];
-
-		const latestHistoryByCell = new Map<string, (typeof allHistory)[0]>();
-		for (const h of allHistory) {
-			const key = `${h.formItemId}:${h.projectId}`;
-			if (!latestHistoryByCell.has(key)) latestHistoryByCell.set(key, h);
-		}
+		// FormItemEditHistory: formItemId × projectId ごとに最新1件のみ取得
+		const formItemIds = [
+			...new Set(
+				formItemCols.flatMap(c => (c.formItem ? [c.formItem.id] : []))
+			),
+		];
+		const latestHistoryByCell = await fetchLatestHistoryByCell(formItemIds);
 
 		// 4. CUSTOM: セル値をバッチ取得
 		const customColIds = customCols.map(c => c.id);
@@ -440,7 +459,7 @@ committeeMastersheetRoute.post(
 
 		if (data.type === "FORM_ITEM") {
 			// フォームへのアクセス権チェック
-			const formItem = await prisma.formItem.findFirst({
+			const formItem = await prisma.formItem.findUnique({
 				where: { id: data.formItemId },
 				include: {
 					form: {
@@ -457,7 +476,7 @@ committeeMastersheetRoute.post(
 			if (!hasAccess)
 				throw Errors.forbidden("このフォームへのアクセス権がありません");
 
-			const existing = await prisma.mastersheetColumn.findFirst({
+			const existing = await prisma.mastersheetColumn.findUnique({
 				where: { formItemId: data.formItemId },
 			});
 			if (existing)
@@ -1114,7 +1133,7 @@ committeeMastersheetRoute.patch(
 
 		await prisma.$transaction(
 			async tx => {
-				const request = await tx.mastersheetAccessRequest.findFirst({
+				const request = await tx.mastersheetAccessRequest.findUnique({
 					where: { id: requestId },
 					include: {
 						column: {
@@ -1273,7 +1292,7 @@ committeeMastersheetRoute.patch(
 		const body = await c.req.json().catch(() => ({}));
 		const data = updateMastersheetViewRequestSchema.parse(body);
 
-		const view = await prisma.mastersheetView.findFirst({
+		const view = await prisma.mastersheetView.findUnique({
 			where: { id: viewId },
 		});
 		if (!view) throw Errors.notFound("ビューが見つかりません");
@@ -1304,7 +1323,7 @@ committeeMastersheetRoute.delete(
 		const userId = c.get("user").id;
 		const { viewId } = mastersheetViewIdPathParamsSchema.parse(c.req.param());
 
-		const view = await prisma.mastersheetView.findFirst({
+		const view = await prisma.mastersheetView.findUnique({
 			where: { id: viewId },
 		});
 		if (!view) throw Errors.notFound("ビューが見つかりません");
