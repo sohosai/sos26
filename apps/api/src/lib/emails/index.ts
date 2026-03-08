@@ -7,4 +7,8 @@ export { sendInquiryCreatedEmail } from "./usecases/sendInquiryCreatedEmail";
 export { sendNoticeAuthorizationDecidedEmail } from "./usecases/sendNoticeAuthorizationDecidedEmail";
 export { sendNoticeAuthorizationRequestedEmail } from "./usecases/sendNoticeAuthorizationRequestedEmail";
 export { sendNoticeDeliveredEmail } from "./usecases/sendNoticeDeliveredEmail";
+export { sendSubOwnerRequestApprovedEmail } from "./usecases/sendSubOwnerRequestApprovedEmail";
+export { sendSubOwnerRequestCancelledEmail } from "./usecases/sendSubOwnerRequestCancelledEmail";
+export { sendSubOwnerRequestRejectedEmail } from "./usecases/sendSubOwnerRequestRejectedEmail";
+export { sendSubOwnerRequestSentEmail } from "./usecases/sendSubOwnerRequestSentEmail";
 export { sendVerificationEmail } from "./usecases/sendVerificationEmail";
