@@ -384,3 +384,30 @@ FormItemEditHistory:
 - 新しいカラムが追加された場合、既存ビューではデフォルト非表示（`knownColumnIds` に含まれないため）
 - ビュー名はユーザー内で一意
 
+---
+
+## 13. 未実装機能
+
+### 13.1 編集履歴パネル
+
+セルの編集履歴（誰がいつ何を変えたか）を確認できる UI。
+
+- FORM_ITEM セルのホバー時に履歴アイコンを表示
+- アイコンクリックで Popover を開き、`GET /committee/mastersheet/columns/:columnId/history/:projectId` を fetch
+- `trigger` に応じたラベル: `PROJECT_SUBMIT` → 「提出」、`PROJECT_RESUBMIT` → 「再提出」、`COMMITTEE_EDIT` → 「実委編集」
+- API は実装済み
+
+### 13.2 配信設定モーダル統合
+
+お知らせ・フォームの配信先選択 UI をマスターシートで実現する。
+
+- 既存の企画選択 UI を `rowSelection: true` のマスターシート UI に置き換える
+- 対象: お知らせ配信申請フロー、フォーム配信申請フロー
+- DataTable の `rowSelection` 機能は実装済み
+
+### 13.3 アクセス申請関連のメール通知
+
+- アクセス申請が届いたとき → カラム作成者（CUSTOM）/ フォームオーナー（FORM_ITEM）へ通知
+- アクセス申請が承認・却下されたとき → 申請者へ通知
+- 送信タイミング・文面などの詳細は未定
+
