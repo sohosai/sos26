@@ -9,3 +9,7 @@ export { notifyInquiryCreatedByProject } from "./notifyInquiryCreatedByProject";
 export { notifyNoticeAuthorizationDecided } from "./notifyNoticeAuthorizationDecided";
 export { notifyNoticeAuthorizationRequested } from "./notifyNoticeAuthorizationRequested";
 export { notifyNoticeDelivered } from "./notifyNoticeDelivered";
+export { notifySubOwnerRequestApproved } from "./notifySubOwnerRequestApproved";
+export { notifySubOwnerRequestCancelled } from "./notifySubOwnerRequestCancelled";
+export { notifySubOwnerRequestRejected } from "./notifySubOwnerRequestRejected";
+export { notifySubOwnerRequestSent } from "./notifySubOwnerRequestSent";

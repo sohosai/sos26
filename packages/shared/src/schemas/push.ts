@@ -34,11 +34,48 @@ export const pushSubscribeResponseSchema = z.object({
 });
 
 /**
+ * Push通知解除リクエスト
+ */
+export const pushUnsubscribeRequestSchema = z.object({
+	endpoint: z.url(),
+});
+
+export type PushUnsubscribeRequest = z.infer<
+	typeof pushUnsubscribeRequestSchema
+>;
+
+export const pushUnsubscribeResponseSchema = z.object({
+	ok: z.boolean(),
+});
+
+/**
  * Push通知で送信する payload
  */
+
+const pushActionSchema = z.object({
+	action: z.string().min(1),
+	title: z.string().min(1),
+	icon: z.url().optional(),
+});
+
+const pushDataSchema = z.record(z.string(), z.unknown());
+
 export const pushPayloadSchema = z.object({
 	title: z.string().min(1),
 	body: z.string().optional(),
+	icon: z.url().optional(),
+	badge: z.url().optional(),
+	image: z.url().optional(),
+	lang: z.string().optional(),
+	tag: z.string().optional(),
+	renotify: z.boolean().optional(),
+	requireInteraction: z.boolean().optional(),
+	silent: z.boolean().optional(),
+	timestamp: z.number().int().optional(),
+	vibrate: z.array(z.number().int().nonnegative()).optional(),
+	actions: z.array(pushActionSchema).max(2).optional(),
+	data: pushDataSchema.optional(),
+	dir: z.enum(["auto", "ltr", "rtl"]).optional(),
 });
 
 /**

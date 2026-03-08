@@ -12,3 +12,15 @@
 .actions {
 	margin-top: var(--space-4);
 }
+
+.dialogContent {
+	width: 90%;
+	max-width: 400px;
+}
+
+.dialogActions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-3);
+	margin-top: var(--space-5);
+}

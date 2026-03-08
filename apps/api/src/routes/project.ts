@@ -5,14 +5,13 @@ import {
 	updateProjectDetailRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
-import {
-	sendSubOwnerRequestApprovedEmail,
-	sendSubOwnerRequestCancelledEmail,
-	sendSubOwnerRequestRejectedEmail,
-	sendSubOwnerRequestSentEmail,
-} from "../lib/emails";
-import { env } from "../lib/env";
 import { Errors } from "../lib/error";
+import {
+	notifySubOwnerRequestApproved,
+	notifySubOwnerRequestCancelled,
+	notifySubOwnerRequestRejected,
+	notifySubOwnerRequestSent,
+} from "../lib/notifications";
 import { handlePrismaError, prisma } from "../lib/prisma";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -394,7 +393,7 @@ projectRoute.post(
 			throw Errors.invalidRequest("既に副責任者リクエストが送信されています");
 		}
 
-		const [request, targetUser, owner] = await Promise.all([
+		const [request, owner] = await Promise.all([
 			prisma.projectSubOwnerRequest
 				.create({
 					data: {
@@ -406,20 +405,15 @@ projectRoute.post(
 				})
 				.catch(handlePrismaError),
 			prisma.user.findUniqueOrThrow({
-				where: { id: userId },
-				select: { email: true },
-			}),
-			prisma.user.findUniqueOrThrow({
 				where: { id: project.ownerId },
 				select: { name: true },
 			}),
 		]);
 
-		await sendSubOwnerRequestSentEmail({
-			email: targetUser.email,
+		await notifySubOwnerRequestSent({
+			targetUserId: userId,
 			ownerName: owner.name,
 			projectName: project.name,
-			url: `${env.APP_URL}/project/members`,
 		});
 
 		return c.json({
@@ -537,20 +531,14 @@ projectRoute.post(
 			}
 		});
 
-		const [approvedUser, owner] = await Promise.all([
-			prisma.user.findUniqueOrThrow({
-				where: { id: userId },
-				select: { name: true },
-			}),
-			prisma.user.findUniqueOrThrow({
-				where: { id: project.ownerId },
-				select: { email: true },
-			}),
-		]);
+		const approvedUser = await prisma.user.findUniqueOrThrow({
+			where: { id: userId },
+			select: { name: true },
+		});
 
-		await sendSubOwnerRequestApprovedEmail({
-			email: owner.email,
-			userName: approvedUser.name,
+		await notifySubOwnerRequestApproved({
+			ownerUserId: project.ownerId,
+			approvedUserName: approvedUser.name,
 			projectName: project.name,
 		});
 
@@ -603,19 +591,13 @@ projectRoute.post(
 			},
 		});
 
-		const [targetUser, owner] = await Promise.all([
-			prisma.user.findUniqueOrThrow({
-				where: { id: pendingRequest.userId },
-				select: { email: true },
-			}),
-			prisma.user.findUniqueOrThrow({
-				where: { id: project.ownerId },
-				select: { name: true },
-			}),
-		]);
+		const owner = await prisma.user.findUniqueOrThrow({
+			where: { id: project.ownerId },
+			select: { name: true },
+		});
 
-		await sendSubOwnerRequestCancelledEmail({
-			email: targetUser.email,
+		await notifySubOwnerRequestCancelled({
+			targetUserId: pendingRequest.userId,
 			ownerName: owner.name,
 			projectName: project.name,
 		});
@@ -668,20 +650,14 @@ projectRoute.post(
 			throw Errors.notFound("副責任者リクエストの辞退対象が見つかりません");
 		}
 
-		const [rejectedUser, owner] = await Promise.all([
-			prisma.user.findUniqueOrThrow({
-				where: { id: userId },
-				select: { name: true },
-			}),
-			prisma.user.findUniqueOrThrow({
-				where: { id: project.ownerId },
-				select: { email: true },
-			}),
-		]);
+		const rejectedUser = await prisma.user.findUniqueOrThrow({
+			where: { id: userId },
+			select: { name: true },
+		});
 
-		await sendSubOwnerRequestRejectedEmail({
-			email: owner.email,
-			userName: rejectedUser.name,
+		await notifySubOwnerRequestRejected({
+			ownerUserId: project.ownerId,
+			rejectedUserName: rejectedUser.name,
 			projectName: project.name,
 		});
 

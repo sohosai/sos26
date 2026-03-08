@@ -1,6 +1,7 @@
 import { sendAccessRequestReceivedEmail } from "../emails";
 import { env } from "../env";
 import { prisma } from "../prisma";
+import { sendAccessRequestReceivedPush } from "../push";
 
 /**
  * アクセス申請が作成されたとき、カラム管理者（CUSTOM: 作成者 / FORM_ITEM: フォームオーナー）に通知
@@ -35,11 +36,17 @@ export async function notifyAccessRequestReceived(input: {
 		});
 		if (!user) return;
 
+		const url = `${env.APP_URL}/committee/mastersheet/`;
 		await sendAccessRequestReceivedEmail({
 			email: user.email,
 			requesterName: input.requesterName,
 			columnName: column.name,
-			url: `${env.APP_URL}/committee/mastersheet/`,
+			url,
+		});
+		await sendAccessRequestReceivedPush({
+			userId: recipientUserId,
+			columnName: column.name,
+			url,
 		});
 	} catch (err) {
 		console.error("[Notification] notifyAccessRequestReceived failed", err);
