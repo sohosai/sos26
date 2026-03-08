@@ -171,7 +171,7 @@ export function AddCustomColumnDialog({
 					</div>
 					<div className={styles.field}>
 						<Text size="2" weight="medium">
-							閲覧権限
+							アクセス権
 						</Text>
 						<ViewerSelector
 							viewers={viewers}

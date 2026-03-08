@@ -65,7 +65,7 @@ export const mastersheetViewIdPathParamsSchema = z.object({
 });
 
 // ─────────────────────────────────────────────────────────────
-// 閲覧者設定
+// アクセス権設定
 // ─────────────────────────────────────────────────────────────
 
 export const mastersheetViewerInputSchema = z

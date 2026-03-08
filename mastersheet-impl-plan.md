@@ -7,7 +7,7 @@
 - [x] Phase 5-A — コアテーブル表示 + CUSTOM セル編集
 - [x] Phase 5-B — FORM_ITEM セルインライン編集（FormItemCell）
 - [x] Phase 5-C — ColumnManagerDialog（カラム追加 / 編集 / 削除）
-- [x] Phase 5-D — ColumnDiscoverDialog（カラムを探す・閲覧申請）
+- [x] Phase 5-D — ColumnDiscoverDialog（カラムを探す・アクセス申請）
 - [x] Phase 5-F — ViewSwitcher + URL ソート / 表示状態同期
 
 ## 未着手

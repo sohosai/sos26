@@ -186,7 +186,7 @@ export const getMastersheetHistoryEndpoint: GetEndpoint<
 } as const;
 
 // ─────────────────────────────────────────────────────────────
-// カラム発見・閲覧申請
+// カラム発見・アクセス申請
 // ─────────────────────────────────────────────────────────────
 
 /**
@@ -210,7 +210,7 @@ export const discoverMastersheetColumnsEndpoint: GetEndpoint<
 
 /**
  * POST /committee/mastersheet/columns/:columnId/access-request
- * 閲覧申請を送信
+ * アクセス申請を送信
  * PENDING 重複時は 409
  */
 export const createMastersheetAccessRequestEndpoint: NoBodyEndpoint<
@@ -252,7 +252,7 @@ export const listMastersheetAccessRequestsEndpoint: GetEndpoint<
 
 /**
  * PATCH /committee/mastersheet/access-requests/:requestId
- * 閲覧申請を承認・却下
+ * アクセス申請を承認・却下
  *
  * - CUSTOM: カラム作成者のみ
  * - FORM_ITEM: フォームオーナーのみ

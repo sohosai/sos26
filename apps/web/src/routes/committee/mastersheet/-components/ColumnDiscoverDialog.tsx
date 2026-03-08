@@ -60,7 +60,7 @@ function DiscoverColumnItem({
 						loading={requesting}
 						onClick={onRequest}
 					>
-						閲覧申請
+						アクセス申請
 					</Button>
 				)}
 			</div>
@@ -95,7 +95,7 @@ export function ColumnDiscoverDialog({ open, onOpenChange }: Props) {
 		setRequesting(prev => new Set(prev).add(columnId));
 		try {
 			await createMastersheetAccessRequest(columnId);
-			toast.success("閲覧申請を送信しました");
+			toast.success("アクセス申請を送信しました");
 			setColumns(prev =>
 				prev.map(c => (c.id === columnId ? { ...c, pendingRequest: true } : c))
 			);
@@ -147,7 +147,7 @@ export function ColumnDiscoverDialog({ open, onOpenChange }: Props) {
 					</IconButton>
 				</div>
 				<Dialog.Description size="2" mb="3">
-					他のユーザーが公開しているカラムに閲覧申請を送ることができます。
+					他のユーザーが公開しているカラムにアクセス申請を送ることができます。
 				</Dialog.Description>
 				{renderContent()}
 			</Dialog.Content>

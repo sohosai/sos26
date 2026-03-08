@@ -1036,7 +1036,7 @@ model MastersheetColumnViewer {
   @@index([userId])
 }
 
-// ─── 閲覧申請 ───
+// ─── アクセス申請 ───
 
 model MastersheetAccessRequest {
   id          String            @id @default(cuid())

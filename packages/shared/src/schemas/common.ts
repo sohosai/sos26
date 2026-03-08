@@ -8,6 +8,6 @@ import { z } from "zod";
 export const viewerScopeSchema = z.enum(["ALL", "BUREAU", "INDIVIDUAL"]);
 export type ViewerScope = z.infer<typeof viewerScopeSchema>;
 
-/** フォーム承認・マスターシート閲覧申請で共用する承認ステータス */
+/** フォーム承認・マスターシートアクセス申請で共用する承認ステータス */
 export const approvalStatusSchema = z.enum(["PENDING", "APPROVED", "REJECTED"]);
 export type ApprovalStatus = z.infer<typeof approvalStatusSchema>;

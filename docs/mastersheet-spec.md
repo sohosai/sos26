@@ -22,7 +22,7 @@
 | `MastersheetColumn` | カラムの定義（型・名前・ソート順・作成者）。FORM_ITEM と CUSTOM の共通テーブル |
 | `MastersheetColumnOption` | CUSTOM カラムの SELECT/MULTI_SELECT 用選択肢 |
 | `MastersheetColumnViewer` | CUSTOM カラムの公開範囲設定（scope: ALL / BUREAU / INDIVIDUAL） |
-| `MastersheetAccessRequest` | カラムへの閲覧申請（PENDING → APPROVED / REJECTED） |
+| `MastersheetAccessRequest` | カラムへのアクセス申請（PENDING → APPROVED / REJECTED） |
 
 #### CUSTOM カラムのセル値
 
@@ -123,7 +123,7 @@ FormItemEditHistorySelectedOption
 | 作成者 | 任意の実委人 |
 | 公開範囲 | PRIVATE（作成者のみ）/ PUBLIC（viewer 設定に従う） |
 | セル値の保存先 | `MastersheetCellValue` |
-| 編集権限 | カラムを閲覧できる全員 |
+| 編集権限 | カラムにアクセスできる全員 |
 
 ### 3.2 FORM_ITEM カラム
 
@@ -143,7 +143,7 @@ FormItemEditHistorySelectedOption
 
 ### 4.1 CUSTOM カラム
 
-| viewer 設定 | visibility | 閲覧可能者 |
+| viewer 設定 | visibility | アクセス可能者 |
 |-------------|------------|------------|
 | なし | PRIVATE | 作成者のみ |
 | scope=ALL | PUBLIC | 全実委人 |
@@ -152,17 +152,17 @@ FormItemEditHistorySelectedOption
 | 複数 viewer の組合せ | PUBLIC | いずれかの条件に合致する実委人 |
 
 - viewer の追加・削除で PRIVATE ↔ PUBLIC が自動切替される
-- 閲覧申請（`MastersheetAccessRequest`）の承認で `scope=INDIVIDUAL` の viewer が追加される
+- アクセス申請（`MastersheetAccessRequest`）の承認で `scope=INDIVIDUAL` の viewer が追加される
 
 ### 4.2 FORM_ITEM カラム
 
-| 条件 | 閲覧可否 |
+| 条件 | アクセス可否 |
 |------|----------|
-| フォームの owner | 閲覧可 |
-| フォームの collaborator（isWrite 不問） | 閲覧可 |
-| 上記以外 | 閲覧不可 |
+| フォームの owner | アクセス可 |
+| フォームの collaborator（isWrite 不問） | アクセス可 |
+| 上記以外 | アクセス不可 |
 
-- 閲覧申請の承認で `FormCollaborator(isWrite=true)` が作成され、閲覧可能になる
+- アクセス申請の承認で `FormCollaborator(isWrite=true)` が作成され、アクセス可能になる
 
 ---
 
@@ -231,7 +231,7 @@ function computeCellStatus(deliveryId, response, latestHistory) {
 
 | 操作 | 保存先 | 条件 |
 |------|--------|------|
-| セル値の入力・変更 | `MastersheetCellValue` | カラムを閲覧できる全員 |
+| セル値の入力・変更 | `MastersheetCellValue` | カラムにアクセスできる全員 |
 
 - 全データ型（TEXT, NUMBER, SELECT, MULTI_SELECT）が編集可能
 - 同時編集は後勝ち（最後の PUT が反映）
@@ -242,7 +242,7 @@ function computeCellStatus(deliveryId, response, latestHistory) {
 
 | 操作 | 内部動作 | 条件 |
 |------|---------|------|
-| セル値の編集 | `FormItemEditHistory` に `COMMITTEE_EDIT` を追加 | カラムを閲覧できる全員 |
+| セル値の編集 | `FormItemEditHistory` に `COMMITTEE_EDIT` を追加 | カラムにアクセスできる全員 |
 
 #### 編集可否（データ型別）
 
@@ -336,7 +336,7 @@ FormItemEditHistory:
 
 ---
 
-## 10. 閲覧申請フロー
+## 10. アクセス申請フロー
 
 ### 10.1 CUSTOM カラム
 
@@ -345,7 +345,7 @@ FormItemEditHistory:
                                                        ↓
                                               MastersheetColumnViewer(INDIVIDUAL) 作成
                                                        ↓
-                                                   閲覧可能に
+                                                   アクセス可能に
 ```
 
 ### 10.2 FORM_ITEM カラム
@@ -355,7 +355,7 @@ FormItemEditHistory:
                                                        ↓
                                               FormCollaborator(isWrite=true) 作成
                                                        ↓
-                                           フォーム回答 + 全関連カラムが閲覧可能に
+                                           フォーム回答 + 全関連カラムにアクセス可能に
 ```
 
 - 重複申請は不可（PENDING の申請が既にある場合は 409）
@@ -370,10 +370,10 @@ FormItemEditHistory:
 | カラム作成 | 全実委人 | フォーム owner / collaborator |
 | カラム編集（名前等） | 作成者のみ | 作成者のみ |
 | カラム削除 | 作成者のみ | 作成者のみ |
-| カラム閲覧 | 作成者 + viewer 設定に合致する実委人 | フォーム owner / collaborator |
-| セル編集 | カラム閲覧者全員 | カラム閲覧者全員 |
-| 閲覧申請の承認 | カラム作成者 | フォーム owner |
-| 変更履歴の閲覧 | — | カラム閲覧者全員 |
+| カラムへのアクセス | 作成者 + viewer 設定に合致する実委人 | フォーム owner / collaborator |
+| セル編集 | カラムにアクセスできる全員 | カラムにアクセスできる全員 |
+| アクセス申請の承認 | カラム作成者 | フォーム owner |
+| 変更履歴の閲覧 | — | カラムにアクセスできる全員 |
 
 ---
 

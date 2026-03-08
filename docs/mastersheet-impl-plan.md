@@ -17,8 +17,8 @@
 | Phase 4 | DataTable 拡張 (columnFilter, rowSelection, MultiSelectCell 等) | ✅ |
 | Phase 5-A | コアテーブル表示 + CUSTOM セル編集 | ✅ |
 | Phase 5-B | FORM_ITEM SELECT/CHECKBOX 型の編集 | ✅ |
-| Phase 5-C | 閲覧申請の承認 UI | ⬜ |
-| Phase 5-D | ColumnDiscoverDialog（カラム発見・閲覧申請） | ✅ |
+| Phase 5-C | アクセス申請の承認 UI | ⬜ |
+| Phase 5-D | ColumnDiscoverDialog（カラム発見・アクセス申請） | ✅ |
 | Phase 5-E | CellHistoryPanel（編集履歴パネル） | ⬜ |
 | Phase 5-F | ビュー保存 | ✅ |
 | Phase 6 | 配信設定モーダル統合 | ⬜ |
@@ -27,9 +27,9 @@
 
 ## 残タスク
 
-### 1. 閲覧申請の承認 UI（Phase 5-C）
+### 1. アクセス申請の承認 UI（Phase 5-C）
 
-**目的**: 自分が作成したカラム / 自分がオーナーのフォームに届いた閲覧申請を確認・承認/却下できるようにする。
+**目的**: 自分が作成したカラム / 自分がオーナーのフォームに届いたアクセス申請を確認・承認/却下できるようにする。
 
 **対象ファイル**:
 - `apps/web/src/routes/committee/mastersheet/-components/ColumnPanel.tsx`

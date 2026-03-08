@@ -252,7 +252,7 @@ function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 			{col.type === "CUSTOM" && (
 				<div className={styles.field}>
 					<Text size="2" weight="medium">
-						閲覧権限
+						アクセス権
 					</Text>
 					<ViewerSelector
 						viewers={viewers}
@@ -519,7 +519,7 @@ function AccessibleColumnRow({
 }
 
 // ─────────────────────────────────────────────────────────────
-// 閲覧申請カラムカード（他のカラムセクション）
+// アクセス申請カラムカード（他のカラムセクション）
 // ─────────────────────────────────────────────────────────────
 
 type RequestableColumnRowProps = {
@@ -559,7 +559,7 @@ function RequestableColumnRow({
 									loading={requesting}
 									onClick={onRequest}
 								>
-									閲覧申請
+									アクセス申請
 								</Button>
 							)}
 						</div>
@@ -700,7 +700,7 @@ export function ColumnPanel({
 		setRequesting(prev => new Set(prev).add(columnId));
 		try {
 			await createMastersheetAccessRequest(columnId);
-			toast.success("閲覧申請を送信しました");
+			toast.success("アクセス申請を送信しました");
 			setDiscoverColumns(prev =>
 				prev.map(c => (c.id === columnId ? { ...c, pendingRequest: true } : c))
 			);

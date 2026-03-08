@@ -74,7 +74,7 @@ const getAccessibleFormIds = async (userId: string) => {
 	return new Set(forms.map(f => f.id));
 };
 
-/** カラム閲覧権チェック（accessibleFormIds はバッチ取得済みのものを渡す） */
+/** カラムアクセス権チェック（accessibleFormIds はバッチ取得済みのものを渡す） */
 function canViewColumn(
 	col: ColumnFull,
 	userId: string,
@@ -1039,7 +1039,7 @@ committeeMastersheetRoute.get(
 // POST /committee/mastersheet/columns/:columnId/access-request
 // ─────────────────────────────────────────────────────────────
 
-/** FORM_ITEM カラムへの閲覧申請（PENDING）を作成 */
+/** FORM_ITEM カラムへのアクセス申請（PENDING）を作成 */
 async function createFormItemAccessRequest(
 	columnId: string,
 	formId: string,
@@ -1066,7 +1066,7 @@ async function createFormItemAccessRequest(
 	});
 }
 
-/** CUSTOM カラムへの閲覧申請（PENDING）を作成 */
+/** CUSTOM カラムへのアクセス申請（PENDING）を作成 */
 async function createCustomAccessRequest(
 	col: ColumnFull,
 	columnId: string,
@@ -1115,7 +1115,7 @@ committeeMastersheetRoute.post(
 
 // ─────────────────────────────────────────────────────────────
 // PATCH /committee/mastersheet/access-requests/:requestId
-// カラム管理者が閲覧申請を承認・却下
+// カラム管理者がアクセス申請を承認・却下
 // ─────────────────────────────────────────────────────────────
 
 committeeMastersheetRoute.patch(

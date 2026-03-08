@@ -118,7 +118,7 @@ export async function discoverMastersheetColumns(): Promise<DiscoverMastersheetC
 
 /**
  * POST /committee/mastersheet/columns/:columnId/access-request
- * 閲覧申請を送信
+ * アクセス申請を送信
  */
 export async function createMastersheetAccessRequest(
 	columnId: string
@@ -138,7 +138,7 @@ export async function listMastersheetAccessRequests(): Promise<ListMastersheetAc
 
 /**
  * PATCH /committee/mastersheet/access-requests/:requestId
- * 閲覧申請を承認・却下
+ * アクセス申請を承認・却下
  */
 export async function updateMastersheetAccessRequest(
 	requestId: string,
