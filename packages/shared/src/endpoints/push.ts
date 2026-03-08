@@ -3,6 +3,8 @@ import {
 	pushSendResponseSchema,
 	pushSubscribeRequestSchema,
 	pushSubscribeResponseSchema,
+	pushUnsubscribeRequestSchema,
+	pushUnsubscribeResponseSchema,
 } from "../schemas/push";
 import type { BodyEndpoint } from "./types";
 
@@ -23,6 +25,25 @@ export const pushSubscribeEndpoint: BodyEndpoint<
 	query: undefined,
 	request: pushSubscribeRequestSchema,
 	response: pushSubscribeResponseSchema,
+} as const;
+
+/**
+ * POST /push/unsubscribe
+ */
+export const pushUnsubscribeEndpoint: BodyEndpoint<
+	"POST",
+	"/push/unsubscribe",
+	undefined,
+	undefined,
+	typeof pushUnsubscribeRequestSchema,
+	typeof pushUnsubscribeResponseSchema
+> = {
+	method: "POST",
+	path: "/push/unsubscribe",
+	pathParams: undefined,
+	query: undefined,
+	request: pushUnsubscribeRequestSchema,
+	response: pushUnsubscribeResponseSchema,
 } as const;
 
 /**

@@ -1,6 +1,7 @@
 import {
 	pushSendRequestSchema,
 	pushSubscribeRequestSchema,
+	pushUnsubscribeRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { env } from "../lib/env";
@@ -61,6 +62,48 @@ pushRoute.post("/subscribe", requireAuth, async c => {
 	} catch (e) {
 		console.error("PushSubscription の保存に失敗しました:", e);
 		throw Errors.internal("PushSubscription の保存に失敗しました");
+	}
+
+	return c.json({ ok: true });
+});
+
+pushRoute.post("/unsubscribe", requireAuth, async c => {
+	const body = await c.req.json().catch(() => {
+		throw Errors.invalidRequest("JSON の形式が不正です");
+	});
+	const parsedBody = pushUnsubscribeRequestSchema.parse(body);
+	const userId = c.get("user").id;
+
+	try {
+		await prisma.$transaction(async tx => {
+			const pushSub = await tx.pushSubscription.findUnique({
+				where: { endpoint: parsedBody.endpoint },
+				select: { id: true },
+			});
+
+			if (!pushSub) return;
+
+			await tx.userPushSubscription.deleteMany({
+				where: {
+					userId,
+					pushSubscriptionId: pushSub.id,
+				},
+			});
+
+			const relationCount = await tx.userPushSubscription.count({
+				where: { pushSubscriptionId: pushSub.id },
+			});
+
+			if (relationCount === 0) {
+				await tx.pushSubscription.update({
+					where: { id: pushSub.id },
+					data: { deletedAt: new Date() },
+				});
+			}
+		});
+	} catch (e) {
+		console.error("PushSubscription の解除に失敗しました:", e);
+		throw Errors.internal("PushSubscription の解除に失敗しました");
 	}
 
 	return c.json({ ok: true });

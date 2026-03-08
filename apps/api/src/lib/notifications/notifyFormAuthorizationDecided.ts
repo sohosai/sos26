@@ -1,6 +1,7 @@
 import { sendFormAuthorizationDecidedEmail } from "../emails";
 import { env } from "../env";
 import { prisma } from "../prisma";
+import { sendFormAuthorizationDecidedPush } from "../push";
 
 export async function notifyFormAuthorizationDecided(input: {
 	requestedByUserId: string;
@@ -23,6 +24,12 @@ export async function notifyFormAuthorizationDecided(input: {
 			scheduledSendAt: input.scheduledSendAt.toLocaleString("ja-JP", {
 				timeZone: "Asia/Tokyo",
 			}),
+			url: `${env.APP_URL}/committee/forms/${input.formId}/`,
+		});
+		await sendFormAuthorizationDecidedPush({
+			userId: input.requestedByUserId,
+			formTitle: input.formTitle,
+			status: input.status,
 			url: `${env.APP_URL}/committee/forms/${input.formId}/`,
 		});
 	} catch (err) {

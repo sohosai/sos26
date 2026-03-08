@@ -137,6 +137,9 @@ const memberColumnHelper = createColumnHelper<CommitteeMemberRow>();
 
 export const Route = createFileRoute("/committee/members/")({
 	component: RouteComponent,
+	head: () => ({
+		meta: [{ title: "メンバー管理 | 雙峰祭オンラインシステム" }],
+	}),
 	loader: async () => {
 		const { user } = useAuthStore.getState();
 		const data = await listCommitteeMembers();
