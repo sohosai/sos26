@@ -92,6 +92,16 @@ model User {
   inquiryActivitiesAsActor  InquiryActivity[] @relation("InquiryActivityActor")
   inquiryActivitiesAsTarget InquiryActivity[] @relation("InquiryActivityTarget")
 
+  // Mastersheet関連
+  mastersheetColumns              MastersheetColumn[]        @relation("MastersheetColumnCreatedBy")
+  mastersheetColumnViewers        MastersheetColumnViewer[]
+  mastersheetAccessRequestsMade   MastersheetAccessRequest[] @relation("MastersheetAccessRequester")
+  mastersheetAccessRequestsJudged MastersheetAccessRequest[] @relation("MastersheetAccessDecider")
+  mastersheetViews                MastersheetView[]
+
+  // FormItemEditHistory関連
+  formItemEditHistory FormItemEditHistory[] @relation("FormItemEditHistoryActor")
+
   @@unique([firebaseUid, deletedAt])
   @@unique([email, deletedAt])
 }
@@ -143,6 +153,9 @@ model Project {
   noticeDeliveries NoticeDelivery[]
   formDeliveries   FormDelivery[]
   inquiries        Inquiry[]
+
+  mastersheetCellValues MastersheetCellValue[]
+  formItemEditHistory   FormItemEditHistory[]
 
   @@index([ownerId])
   @@index([subOwnerId])
@@ -478,6 +491,9 @@ model FormItem {
   //回答
   answers FormAnswer[]
 
+  mastersheetColumns MastersheetColumn[]
+  editHistory        FormItemEditHistory[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -499,6 +515,8 @@ model FormItemOption {
 
   //回答での選択
   selectedIn FormAnswerSelectedOption[]
+
+  editHistorySelections FormItemEditHistorySelectedOption[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -527,7 +545,7 @@ model FormCollaborator {
 }
 
 //Formに関する承認待ちの状態Enum
-enum FormAuthorizationStatus {
+enum ApprovalStatus {
   //承認待ち
   PENDING
   //承認済み（時間になれば配信される）
@@ -552,7 +570,7 @@ model FormAuthorization {
   requestedTo   User   @relation("FormRequestedTo", fields: [requestedToId], references: [id])
 
   //審査のステータス
-  status FormAuthorizationStatus @default(PENDING)
+  status ApprovalStatus @default(PENDING)
 
   //審査を行った日付
   decidedAt DateTime?
@@ -717,7 +735,7 @@ enum InquiryAssigneeSide {
   COMMITTEE // 実委側
 }
 
-enum InquiryViewerScope {
+enum ViewerScope {
   ALL // 全員
   BUREAU // 特定局
   INDIVIDUAL // 個人
@@ -802,7 +820,7 @@ model InquiryViewer {
   inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
 
   // 閲覧者スコープ
-  scope InquiryViewerScope
+  scope ViewerScope
 
   // scope = BUREAU の場合の局
   bureauValue Bureau?
@@ -866,6 +884,189 @@ model InquiryActivity {
 
   @@index([inquiryId])
   @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// マスターシート関連
+// ─────────────────────────────────────────────────────────────
+
+enum MastersheetColumnType {
+  FORM_ITEM // フォーム由来
+  CUSTOM // 自由追加
+}
+
+enum MastersheetDataType {
+  TEXT
+  NUMBER
+  SELECT
+  MULTI_SELECT
+}
+
+enum MastersheetColumnVisibility {
+  PRIVATE
+  PUBLIC
+}
+
+// ─── カラム定義 ───
+
+model MastersheetColumn {
+  id          String                @id @default(cuid())
+  type        MastersheetColumnType
+  name        String
+  description String?
+  sortOrder   Int
+  createdById String
+  createdBy   User                  @relation("MastersheetColumnCreatedBy", fields: [createdById], references: [id])
+
+  // フォーム由来カラムの場合（同一フォーム項目のカラムは1つのみ）
+  formItemId String?   @unique
+  formItem   FormItem? @relation(fields: [formItemId], references: [id])
+
+  // 自由追加カラムの場合
+  dataType   MastersheetDataType?
+  visibility MastersheetColumnVisibility?
+
+  viewers        MastersheetColumnViewer[]
+  options        MastersheetColumnOption[]
+  cellValues     MastersheetCellValue[]
+  accessRequests MastersheetAccessRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdById])
+}
+
+// ─── 自由追加カラムの選択肢 ───
+
+model MastersheetColumnOption {
+  id        String            @id @default(cuid())
+  columnId  String
+  column    MastersheetColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  label     String
+  sortOrder Int
+
+  cellSelections MastersheetCellSelectedOption[]
+
+  @@index([columnId])
+}
+
+// ─── 自由追加カラムのセル値 ───
+
+model MastersheetCellValue {
+  id          String            @id @default(cuid())
+  columnId    String
+  column      MastersheetColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project           @relation(fields: [projectId], references: [id])
+  textValue   String?
+  numberValue Float?
+
+  selectedOptions MastersheetCellSelectedOption[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([columnId, projectId])
+  @@index([projectId])
+}
+
+// ─── SELECT/MULTI_SELECT のセル値（中間テーブル）───
+
+model MastersheetCellSelectedOption {
+  id       String                  @id @default(cuid())
+  cellId   String
+  cell     MastersheetCellValue    @relation(fields: [cellId], references: [id], onDelete: Cascade)
+  optionId String
+  option   MastersheetColumnOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([cellId, optionId])
+}
+
+// ─── フォーム設問の編集履歴（append-only）───
+
+enum FormItemEditHistoryTrigger {
+  PROJECT_SUBMIT
+  PROJECT_RESUBMIT
+  COMMITTEE_EDIT
+}
+
+model FormItemEditHistory {
+  id          String                     @id @default(cuid())
+  formItemId  String
+  formItem    FormItem                   @relation(fields: [formItemId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project                    @relation(fields: [projectId], references: [id])
+  textValue   String?
+  numberValue Float?
+  fileUrl     String?
+  actorId     String
+  actor       User                       @relation("FormItemEditHistoryActor", fields: [actorId], references: [id])
+  trigger     FormItemEditHistoryTrigger
+  createdAt   DateTime                   @default(now())
+
+  selectedOptions FormItemEditHistorySelectedOption[]
+
+  @@index([formItemId, projectId, createdAt(sort: Desc)])
+  @@index([actorId])
+}
+
+model FormItemEditHistorySelectedOption {
+  id               String              @id @default(cuid())
+  editHistoryId    String
+  editHistory      FormItemEditHistory @relation(fields: [editHistoryId], references: [id], onDelete: Cascade)
+  formItemOptionId String
+  formItemOption   FormItemOption      @relation(fields: [formItemOptionId], references: [id])
+
+  @@unique([editHistoryId, formItemOptionId])
+}
+
+// ─── カラムの公開範囲（自由追加カラム用）───
+
+model MastersheetColumnViewer {
+  id          String            @id @default(cuid())
+  columnId    String
+  column      MastersheetColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  scope       ViewerScope
+  bureauValue Bureau?
+  userId      String?
+  user        User?             @relation(fields: [userId], references: [id])
+
+  @@index([columnId])
+  @@index([userId])
+}
+
+// ─── アクセス申請 ───
+
+model MastersheetAccessRequest {
+  id          String            @id @default(cuid())
+  columnId    String
+  column      MastersheetColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  requesterId String
+  requester   User              @relation("MastersheetAccessRequester", fields: [requesterId], references: [id])
+  decidedById String?
+  decidedBy   User?             @relation("MastersheetAccessDecider", fields: [decidedById], references: [id])
+  status      ApprovalStatus
+  decidedAt   DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([columnId])
+  @@index([requesterId])
+}
+
+// ─── 保存済みビュー ───
+
+model MastersheetView {
+  id          String   @id @default(cuid())
+  name        String
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  state       String // JSON: { sorting?: SortingState, knownColumnIds?: string[], columnFilters?: ColumnFiltersState }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdById])
 }
 
 //お問い合わせの添付ファイル

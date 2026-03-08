@@ -5,7 +5,7 @@ import {
 	TextField as RadixTextField,
 	Text,
 } from "@radix-ui/themes";
-import type { Bureau, InquiryViewerScope } from "@sos26/shared";
+import type { Bureau, ViewerScope } from "@sos26/shared";
 import { bureauLabelMap } from "@sos26/shared";
 import { IconCheck, IconPlus, IconSearch, IconX } from "@tabler/icons-react";
 import Avatar from "boring-avatars";
@@ -97,9 +97,7 @@ export function ViewerSettings({
 		return "不明";
 	};
 
-	const getScopeColor = (
-		scope: InquiryViewerScope
-	): "blue" | "orange" | "green" => {
+	const getScopeColor = (scope: ViewerScope): "blue" | "orange" | "green" => {
 		if (scope === "ALL") return "blue";
 		if (scope === "BUREAU") return "orange";
 		return "green";
