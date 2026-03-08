@@ -122,6 +122,22 @@
 	}
 }
 
+.desktopOnly {
+	display: contents;
+
+	@media (max-width: 768px) {
+		display: none;
+	}
+}
+
+.mobileOnly {
+	display: none;
+
+	@media (max-width: 768px) {
+		display: contents;
+	}
+}
+
 .backdrop {
 	display: none;
 

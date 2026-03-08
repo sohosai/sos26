@@ -7,6 +7,7 @@ import {
 	IconLogout,
 	IconMenu2,
 	IconSettings,
+	IconX,
 } from "@tabler/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -84,6 +85,9 @@ export function Sidebar({
 		? [...commonItems, roleSwitchItem]
 		: commonItems;
 
+	// モバイルではcollapsed状態でも常にラベルを表示する
+	const hideLabel = collapsed && !mobileOpen;
+
 	const renderItem = (item: MenuItem) => {
 		const active = location.pathname.startsWith(item.to);
 		const external = item.to.startsWith("http");
@@ -91,7 +95,7 @@ export function Sidebar({
 		const inner = (
 			<div className={`${styles.item} ${active ? styles.active : ""}`}>
 				<span className={styles.icon}>{item.icon}</span>
-				{!collapsed && <Text size="2">{item.label}</Text>}
+				{!hideLabel && <Text size="2">{item.label}</Text>}
 			</div>
 		);
 
@@ -113,7 +117,7 @@ export function Sidebar({
 
 		return (
 			<div key={item.to}>
-				{collapsed ? (
+				{hideLabel ? (
 					<Tooltip content={item.label} side="right">
 						{content}
 					</Tooltip>
@@ -130,7 +134,7 @@ export function Sidebar({
 				<span className={styles.icon}>
 					<IconLogout size={18} />
 				</span>
-				{!collapsed && <Text size="2">ログアウト</Text>}
+				{!hideLabel && <Text size="2">ログアウト</Text>}
 			</div>
 		</button>
 	);
@@ -167,13 +171,21 @@ export function Sidebar({
 				className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""} ${mobileOpen ? styles.mobileOpen : ""}`}
 			>
 				<div className={styles.header}>
-					<IconButton
-						onClick={onToggle}
-						aria-label={collapsed ? "メニューを展開" : "メニューを折りたたむ"}
-					>
-						<IconLayoutSidebar size={18} />
-					</IconButton>
-					{!collapsed && (
+					{/* デスクトップ: 折りたたみトグル / モバイル: 閉じるボタン */}
+					<span className={styles.desktopOnly}>
+						<IconButton
+							onClick={onToggle}
+							aria-label={collapsed ? "メニューを展開" : "メニューを折りたたむ"}
+						>
+							<IconLayoutSidebar size={18} />
+						</IconButton>
+					</span>
+					<span className={styles.mobileOnly}>
+						<IconButton onClick={onMobileToggle} aria-label="メニューを閉じる">
+							<IconX size={20} />
+						</IconButton>
+					</span>
+					{!hideLabel && (
 						<Link to="/">
 							<img src="/sos.svg" alt="雙峰祭オンラインシステム" height={42} />
 						</Link>
@@ -192,7 +204,7 @@ export function Sidebar({
 
 				<div className={styles.footer}>
 					{footerItems.map(renderItem)}
-					{collapsed ? (
+					{hideLabel ? (
 						<Tooltip content="ログアウト" side="right">
 							{logoutButton}
 						</Tooltip>
