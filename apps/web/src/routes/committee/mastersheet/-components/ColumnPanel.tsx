@@ -470,6 +470,11 @@ function AccessibleColumnRow({
 					)}
 					{showRequests && colRequests.length > 0 && (
 						<div className={styles.requestList}>
+							{col.type === "FORM_ITEM" && (
+								<Text size="1" color="gray">
+									承認すると申請の共同編集者に追加されます
+								</Text>
+							)}
 							{colRequests.map(req => (
 								<div key={req.id} className={styles.requestRow}>
 									<Text size="2">{req.requester.name}</Text>
