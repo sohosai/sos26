@@ -26,10 +26,6 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button, IconButton, TextField } from "@/components/primitives";
 import {
-	getScopeColor,
-	ViewerSelector,
-} from "@/components/support/ViewerSelector";
-import {
 	createMastersheetAccessRequest,
 	deleteMastersheetColumn,
 	discoverMastersheetColumns,
@@ -42,6 +38,7 @@ import { isClientError } from "@/lib/http/error";
 import { AddCustomColumnDialog } from "./AddCustomColumnDialog";
 import { AddFormItemColumnsDialog } from "./AddFormItemColumnsDialog";
 import styles from "./ColumnPanel.module.scss";
+import { getScopeColor, ViewerSelector } from "./ViewerSelector";
 
 // ─────────────────────────────────────────────────────────────
 // 型定義・定数

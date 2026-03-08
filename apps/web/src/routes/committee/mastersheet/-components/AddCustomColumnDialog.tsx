@@ -8,11 +8,11 @@ import { IconX } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button, IconButton, Select, TextField } from "@/components/primitives";
-import { ViewerSelector } from "@/components/support/ViewerSelector";
 import { createMastersheetColumn } from "@/lib/api/committee-mastersheet";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { isClientError } from "@/lib/http/error";
 import styles from "./AddCustomColumnDialog.module.scss";
+import { ViewerSelector } from "./ViewerSelector";
 
 type ApiColumn = GetMastersheetDataResponse["columns"][number];
 
