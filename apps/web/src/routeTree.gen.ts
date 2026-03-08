@@ -33,6 +33,7 @@ import { Route as DevCommitteeMemberIndexRouteImport } from './routes/dev/commit
 import { Route as CommitteeSupportIndexRouteImport } from './routes/committee/support/index'
 import { Route as CommitteeNoticeIndexRouteImport } from './routes/committee/notice/index'
 import { Route as CommitteeMembersIndexRouteImport } from './routes/committee/members/index'
+import { Route as CommitteeMastersheetIndexRouteImport } from './routes/committee/mastersheet/index'
 import { Route as CommitteeFormsIndexRouteImport } from './routes/committee/forms/index'
 import { Route as AuthResetPasswordIndexRouteImport } from './routes/auth/reset-password/index'
 import { Route as AuthRegisterIndexRouteImport } from './routes/auth/register/index'
@@ -168,6 +169,12 @@ const CommitteeMembersIndexRoute = CommitteeMembersIndexRouteImport.update({
   path: '/members/',
   getParentRoute: () => CommitteeRouteRoute,
 } as any)
+const CommitteeMastersheetIndexRoute =
+  CommitteeMastersheetIndexRouteImport.update({
+    id: '/mastersheet/',
+    path: '/mastersheet/',
+    getParentRoute: () => CommitteeRouteRoute,
+  } as any)
 const CommitteeFormsIndexRoute = CommitteeFormsIndexRouteImport.update({
   id: '/forms/',
   path: '/forms/',
@@ -257,6 +264,7 @@ export interface FileRoutesByFullPath {
   '/auth/register/': typeof AuthRegisterIndexRoute
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
   '/committee/forms/': typeof CommitteeFormsIndexRoute
+  '/committee/mastersheet/': typeof CommitteeMastersheetIndexRoute
   '/committee/members/': typeof CommitteeMembersIndexRoute
   '/committee/notice/': typeof CommitteeNoticeIndexRoute
   '/committee/support/': typeof CommitteeSupportIndexRoute
@@ -293,6 +301,7 @@ export interface FileRoutesByTo {
   '/auth/register': typeof AuthRegisterIndexRoute
   '/auth/reset-password': typeof AuthResetPasswordIndexRoute
   '/committee/forms': typeof CommitteeFormsIndexRoute
+  '/committee/mastersheet': typeof CommitteeMastersheetIndexRoute
   '/committee/members': typeof CommitteeMembersIndexRoute
   '/committee/notice': typeof CommitteeNoticeIndexRoute
   '/committee/support': typeof CommitteeSupportIndexRoute
@@ -333,6 +342,7 @@ export interface FileRoutesById {
   '/auth/register/': typeof AuthRegisterIndexRoute
   '/auth/reset-password/': typeof AuthResetPasswordIndexRoute
   '/committee/forms/': typeof CommitteeFormsIndexRoute
+  '/committee/mastersheet/': typeof CommitteeMastersheetIndexRoute
   '/committee/members/': typeof CommitteeMembersIndexRoute
   '/committee/notice/': typeof CommitteeNoticeIndexRoute
   '/committee/support/': typeof CommitteeSupportIndexRoute
@@ -374,6 +384,7 @@ export interface FileRouteTypes {
     | '/auth/register/'
     | '/auth/reset-password/'
     | '/committee/forms/'
+    | '/committee/mastersheet/'
     | '/committee/members/'
     | '/committee/notice/'
     | '/committee/support/'
@@ -410,6 +421,7 @@ export interface FileRouteTypes {
     | '/auth/register'
     | '/auth/reset-password'
     | '/committee/forms'
+    | '/committee/mastersheet'
     | '/committee/members'
     | '/committee/notice'
     | '/committee/support'
@@ -449,6 +461,7 @@ export interface FileRouteTypes {
     | '/auth/register/'
     | '/auth/reset-password/'
     | '/committee/forms/'
+    | '/committee/mastersheet/'
     | '/committee/members/'
     | '/committee/notice/'
     | '/committee/support/'
@@ -651,6 +664,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CommitteeMembersIndexRouteImport
       parentRoute: typeof CommitteeRouteRoute
     }
+    '/committee/mastersheet/': {
+      id: '/committee/mastersheet/'
+      path: '/mastersheet'
+      fullPath: '/committee/mastersheet/'
+      preLoaderRoute: typeof CommitteeMastersheetIndexRouteImport
+      parentRoute: typeof CommitteeRouteRoute
+    }
     '/committee/forms/': {
       id: '/committee/forms/'
       path: '/forms'
@@ -769,6 +789,7 @@ interface CommitteeRouteRouteChildren {
   CommitteeIndexRoute: typeof CommitteeIndexRoute
   CommitteeSupportInquiryIdRoute: typeof CommitteeSupportInquiryIdRoute
   CommitteeFormsIndexRoute: typeof CommitteeFormsIndexRoute
+  CommitteeMastersheetIndexRoute: typeof CommitteeMastersheetIndexRoute
   CommitteeMembersIndexRoute: typeof CommitteeMembersIndexRoute
   CommitteeNoticeIndexRoute: typeof CommitteeNoticeIndexRoute
   CommitteeSupportIndexRoute: typeof CommitteeSupportIndexRoute
@@ -782,6 +803,7 @@ const CommitteeRouteRouteChildren: CommitteeRouteRouteChildren = {
   CommitteeIndexRoute: CommitteeIndexRoute,
   CommitteeSupportInquiryIdRoute: CommitteeSupportInquiryIdRoute,
   CommitteeFormsIndexRoute: CommitteeFormsIndexRoute,
+  CommitteeMastersheetIndexRoute: CommitteeMastersheetIndexRoute,
   CommitteeMembersIndexRoute: CommitteeMembersIndexRoute,
   CommitteeNoticeIndexRoute: CommitteeNoticeIndexRoute,
   CommitteeSupportIndexRoute: CommitteeSupportIndexRoute,

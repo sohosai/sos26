@@ -186,7 +186,7 @@ erDiagram
   String formId FK
   String requestedById FK
   String requestedToId FK
-  FormAuthorizationStatus status
+  ApprovalStatus status
   DateTime decidedAt "nullable"
   DateTime scheduledSendAt
   DateTime deadlineAt "nullable"
@@ -264,7 +264,7 @@ erDiagram
 "InquiryViewer" {
   String id PK
   String inquiryId FK
-  InquiryViewerScope scope
+  ViewerScope scope
   Bureau bureauValue "nullable"
   String userId FK "nullable"
   DateTime deletedAt "nullable"
@@ -287,6 +287,80 @@ erDiagram
   String targetId FK "nullable"
   DateTime deletedAt "nullable"
   DateTime createdAt
+}
+"MastersheetColumn" {
+  String id PK
+  MastersheetColumnType type
+  String name
+  String description "nullable"
+  Int sortOrder
+  String createdById FK
+  String formItemId FK,UK "nullable"
+  MastersheetDataType dataType "nullable"
+  MastersheetColumnVisibility visibility "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"MastersheetColumnOption" {
+  String id PK
+  String columnId FK
+  String label
+  Int sortOrder
+}
+"MastersheetCellValue" {
+  String id PK
+  String columnId FK
+  String projectId FK
+  String textValue "nullable"
+  Float numberValue "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"MastersheetCellSelectedOption" {
+  String id PK
+  String cellId FK
+  String optionId FK
+}
+"FormItemEditHistory" {
+  String id PK
+  String formItemId FK
+  String projectId FK
+  String textValue "nullable"
+  Float numberValue "nullable"
+  String fileUrl "nullable"
+  String actorId FK
+  FormItemEditHistoryTrigger trigger
+  DateTime createdAt
+}
+"FormItemEditHistorySelectedOption" {
+  String id PK
+  String editHistoryId FK
+  String formItemOptionId FK
+}
+"MastersheetColumnViewer" {
+  String id PK
+  String columnId FK
+  ViewerScope scope
+  Bureau bureauValue "nullable"
+  String userId FK "nullable"
+}
+"MastersheetAccessRequest" {
+  String id PK
+  String columnId FK
+  String requesterId FK
+  String decidedById FK "nullable"
+  ApprovalStatus status
+  DateTime decidedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"MastersheetView" {
+  String id PK
+  String name
+  String createdById FK
+  String state
+  DateTime createdAt
+  DateTime updatedAt
 }
 "InquiryAttachment" {
   String id PK
@@ -348,6 +422,24 @@ erDiagram
 "InquiryActivity" }o--|| "Inquiry" : inquiry
 "InquiryActivity" }o--|| "User" : actor
 "InquiryActivity" }o--o| "User" : target
+"MastersheetColumn" }o--|| "User" : createdBy
+"MastersheetColumn" |o--o| "FormItem" : formItem
+"MastersheetColumnOption" }o--|| "MastersheetColumn" : column
+"MastersheetCellValue" }o--|| "MastersheetColumn" : column
+"MastersheetCellValue" }o--|| "Project" : project
+"MastersheetCellSelectedOption" }o--|| "MastersheetCellValue" : cell
+"MastersheetCellSelectedOption" }o--|| "MastersheetColumnOption" : option
+"FormItemEditHistory" }o--|| "FormItem" : formItem
+"FormItemEditHistory" }o--|| "Project" : project
+"FormItemEditHistory" }o--|| "User" : actor
+"FormItemEditHistorySelectedOption" }o--|| "FormItemEditHistory" : editHistory
+"FormItemEditHistorySelectedOption" }o--|| "FormItemOption" : formItemOption
+"MastersheetColumnViewer" }o--|| "MastersheetColumn" : column
+"MastersheetColumnViewer" }o--o| "User" : user
+"MastersheetAccessRequest" }o--|| "MastersheetColumn" : column
+"MastersheetAccessRequest" }o--|| "User" : requester
+"MastersheetAccessRequest" }o--o| "User" : decidedBy
+"MastersheetView" }o--|| "User" : createdBy
 "InquiryAttachment" }o--|| "Inquiry" : inquiry
 "InquiryAttachment" }o--o| "InquiryComment" : comment
 "InquiryAttachment" }o--|| "File" : file
@@ -725,6 +817,107 @@ Properties as follows:
 - `targetId`:
 - `deletedAt`:
 - `createdAt`:
+
+### `MastersheetColumn`
+
+Properties as follows:
+
+- `id`:
+- `type`:
+- `name`:
+- `description`:
+- `sortOrder`:
+- `createdById`:
+- `formItemId`:
+- `dataType`:
+- `visibility`:
+- `createdAt`:
+- `updatedAt`:
+
+### `MastersheetColumnOption`
+
+Properties as follows:
+
+- `id`:
+- `columnId`:
+- `label`:
+- `sortOrder`:
+
+### `MastersheetCellValue`
+
+Properties as follows:
+
+- `id`:
+- `columnId`:
+- `projectId`:
+- `textValue`:
+- `numberValue`:
+- `createdAt`:
+- `updatedAt`:
+
+### `MastersheetCellSelectedOption`
+
+Properties as follows:
+
+- `id`:
+- `cellId`:
+- `optionId`:
+
+### `FormItemEditHistory`
+
+Properties as follows:
+
+- `id`:
+- `formItemId`:
+- `projectId`:
+- `textValue`:
+- `numberValue`:
+- `fileUrl`:
+- `actorId`:
+- `trigger`:
+- `createdAt`:
+
+### `FormItemEditHistorySelectedOption`
+
+Properties as follows:
+
+- `id`:
+- `editHistoryId`:
+- `formItemOptionId`:
+
+### `MastersheetColumnViewer`
+
+Properties as follows:
+
+- `id`:
+- `columnId`:
+- `scope`:
+- `bureauValue`:
+- `userId`:
+
+### `MastersheetAccessRequest`
+
+Properties as follows:
+
+- `id`:
+- `columnId`:
+- `requesterId`:
+- `decidedById`:
+- `status`:
+- `decidedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `MastersheetView`
+
+Properties as follows:
+
+- `id`:
+- `name`:
+- `createdById`:
+- `state`:
+- `createdAt`:
+- `updatedAt`:
 
 ### `InquiryAttachment`
 

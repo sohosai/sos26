@@ -1,0 +1,98 @@
+.container {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.viewers {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-1);
+}
+
+.viewerChip {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+}
+
+.removeButton {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--gray-10);
+	padding: 2px;
+	border-radius: var(--radius-1);
+
+	&:hover {
+		color: var(--gray-12);
+		background: var(--gray-3);
+	}
+}
+
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-1);
+}
+
+.addButton {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	background: none;
+	border: 1px solid var(--gray-6);
+	border-radius: var(--radius-2);
+	padding: var(--space-1) var(--space-2);
+	cursor: pointer;
+	font-size: var(--font-size-1);
+	color: var(--gray-11);
+	transition: background 0.1s;
+
+	&:hover {
+		background: var(--gray-2);
+	}
+}
+
+.popoverList {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	max-height: 200px;
+	overflow-y: auto;
+	min-width: 160px;
+}
+
+.popoverOption {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	width: 100%;
+	background: none;
+	border: none;
+	border-radius: var(--radius-1);
+	padding: var(--space-2) var(--space-2);
+	cursor: pointer;
+	text-align: left;
+	transition: background 0.1s;
+
+	&:hover:not(:disabled) {
+		background: var(--gray-2);
+	}
+
+	&:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+}
+
+.popoverSearch {
+	margin-bottom: var(--space-2);
+}
+
+.emptyText {
+	padding: var(--space-2) 0;
+}

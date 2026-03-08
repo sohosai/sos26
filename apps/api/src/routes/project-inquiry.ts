@@ -26,7 +26,7 @@ async function requireProjectAssignee(inquiryId: string, userId: string) {
 		where: { inquiryId, userId, side: "PROJECT", deletedAt: null },
 	});
 	if (!assignee) {
-		throw Errors.forbidden("この問い合わせの担当者ではありません");
+		throw Errors.forbidden("このお問い合わせの担当者ではありません");
 	}
 	return assignee;
 }
