@@ -4,6 +4,7 @@ import type {
 	GetMastersheetDataResponse,
 	UpsertMastersheetCellRequest,
 } from "@sos26/shared";
+import { type ProjectType, projectTypeSchema } from "@sos26/shared";
 import { IconFileText, IconPencil } from "@tabler/icons-react";
 import { useRouter } from "@tanstack/react-router";
 import type { ColumnFiltersState } from "@tanstack/react-table";
@@ -51,6 +52,12 @@ type Props = {
 	onColumnFiltersChange?: (filters: ColumnFiltersState) => void;
 };
 
+const PROJECT_TYPE_LABEL = {
+	STAGE: "ステージ企画",
+	FOOD: "食品企画",
+	NORMAL: "通常企画",
+} satisfies Record<ProjectType, string>;
+
 const columnHelper = createColumnHelper<MastersheetRow>();
 
 function ColHeader({ col }: { col: ApiColumn }) {
@@ -96,9 +103,17 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 	}),
 	columnHelper.accessor(row => row.project.type, {
 		id: "type",
-		header: "種別",
-		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
-		meta: { filterVariant: "text" },
+		header: "企画区分",
+		cell: ctx => (
+			<Text size="2">{PROJECT_TYPE_LABEL[ctx.getValue() as ProjectType]}</Text>
+		),
+		meta: {
+			filterVariant: "select",
+			selectOptions: projectTypeSchema.options.map(v => ({
+				value: v,
+				label: PROJECT_TYPE_LABEL[v],
+			})),
+		},
 	}),
 	columnHelper.accessor(row => row.project.organizationName, {
 		id: "organizationName",
