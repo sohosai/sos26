@@ -98,11 +98,11 @@ model User {
   projectRegistrationForms                       ProjectRegistrationForm[]
   projectRegistrationFormCollaborators           ProjectRegistrationFormCollaborator[]
   // Mastersheet関連
-  mastersheetColumns              MastersheetColumn[]        @relation("MastersheetColumnCreatedBy")
-  mastersheetColumnViewers        MastersheetColumnViewer[]
-  mastersheetAccessRequestsMade   MastersheetAccessRequest[] @relation("MastersheetAccessRequester")
-  mastersheetAccessRequestsJudged MastersheetAccessRequest[] @relation("MastersheetAccessDecider")
-  mastersheetViews                MastersheetView[]
+  mastersheetColumns                             MastersheetColumn[]                    @relation("MastersheetColumnCreatedBy")
+  mastersheetColumnViewers                       MastersheetColumnViewer[]
+  mastersheetAccessRequestsMade                  MastersheetAccessRequest[]             @relation("MastersheetAccessRequester")
+  mastersheetAccessRequestsJudged                MastersheetAccessRequest[]             @relation("MastersheetAccessDecider")
+  mastersheetViews                               MastersheetView[]
 
   // FormItemEditHistory関連
   formItemEditHistory FormItemEditHistory[] @relation("FormItemEditHistoryActor")
