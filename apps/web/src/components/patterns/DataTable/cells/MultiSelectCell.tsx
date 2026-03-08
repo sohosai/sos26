@@ -1,5 +1,6 @@
-import { Badge, Flex, Text } from "@radix-ui/themes";
+import { Badge, Text } from "@radix-ui/themes";
 import type { CellContext, RowData } from "@tanstack/react-table";
+import styles from "./MultiSelectCell.module.scss";
 
 export function MultiSelectCell<TData extends RowData>({
 	getValue,
@@ -19,12 +20,12 @@ export function MultiSelectCell<TData extends RowData>({
 	}
 
 	return (
-		<Flex gap="1" wrap="wrap">
+		<div className={styles.badges}>
 			{ids.map(id => (
 				<Badge key={id} variant="soft" color="blue" size="1">
 					{optionMap.get(id) ?? id}
 				</Badge>
 			))}
-		</Flex>
+		</div>
 	);
 }

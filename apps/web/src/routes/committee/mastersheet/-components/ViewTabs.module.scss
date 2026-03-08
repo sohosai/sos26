@@ -11,7 +11,7 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-1);
-	padding: 10px var(--space-4);
+	padding: var(--space-3) var(--space-4);
 	background: none;
 	border: none;
 	cursor: pointer;
@@ -86,7 +86,7 @@
 
 // インラインリネーム用 input
 .renameInput {
-	padding: 10px var(--space-4);
+	padding: var(--space-3) var(--space-4);
 	font-size: var(--font-size-2);
 	font-weight: 500;
 	color: var(--gray-12);
