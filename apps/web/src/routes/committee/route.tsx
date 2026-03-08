@@ -14,12 +14,15 @@ export const Route = createFileRoute("/committee")({
 
 function CommitteeLayout() {
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+	const [mobileOpen, setMobileOpen] = useState(false);
 
 	return (
 		<div className={styles.layout}>
 			<Sidebar
 				collapsed={sidebarCollapsed}
 				onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+				mobileOpen={mobileOpen}
+				onMobileToggle={() => setMobileOpen(!mobileOpen)}
 				menuItems={committeeMenuItems}
 			/>
 			<main

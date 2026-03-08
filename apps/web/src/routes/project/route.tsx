@@ -40,6 +40,7 @@ function ProjectLayout() {
 	const { projects, selectedProjectId, setSelectedProjectId, setProjects } =
 		useProjectStore();
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+	const [mobileOpen, setMobileOpen] = useState(false);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const { user } = useAuthStore();
 
@@ -72,6 +73,8 @@ function ProjectLayout() {
 			<Sidebar
 				collapsed={sidebarCollapsed}
 				onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+				mobileOpen={mobileOpen}
+				onMobileToggle={() => setMobileOpen(!mobileOpen)}
 				menuItems={projectMenuItems}
 				projectId={selectedProjectId}
 				projectSelector={

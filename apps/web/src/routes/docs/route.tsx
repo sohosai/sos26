@@ -1,11 +1,13 @@
 import { Text } from "@radix-ui/themes";
-import { IconFileText } from "@tabler/icons-react";
+import { IconFileText, IconMenu2 } from "@tabler/icons-react";
 import {
 	createFileRoute,
 	Link,
 	Outlet,
 	useRouterState,
 } from "@tanstack/react-router";
+import { useState } from "react";
+import { IconButton } from "@/components/primitives";
 import {
 	categoryLabels,
 	categoryOrder,
@@ -19,16 +21,44 @@ export const Route = createFileRoute("/docs")({
 
 function DocsLayout() {
 	const { location } = useRouterState();
+	const [mobileOpen, setMobileOpen] = useState(false);
 
 	return (
 		<div className={styles.layout}>
-			<aside className={styles.sidebar}>
+			{/* モバイルヘッダー */}
+			<div className={styles.mobileHeader}>
+				<IconButton
+					onClick={() => setMobileOpen(true)}
+					aria-label="メニューを開く"
+				>
+					<IconMenu2 size={20} />
+				</IconButton>
+				<Link to="/">
+					<img src="/sos.svg" alt="雙峰祭オンラインシステム" height={36} />
+				</Link>
+			</div>
+
+			{/* モバイル背景オーバーレイ */}
+			{mobileOpen && (
+				<button
+					type="button"
+					className={styles.backdrop}
+					onClick={() => setMobileOpen(false)}
+					aria-label="メニューを閉じる"
+				/>
+			)}
+
+			<aside
+				className={`${styles.sidebar} ${mobileOpen ? styles.mobileOpen : ""}`}
+			>
 				<div className={styles.header}>
 					<Link to="/">
 						<img src="/sos.svg" alt="雙峰祭オンラインシステム" height={42} />
 					</Link>
 				</div>
-				<nav className={styles.nav}>
+				{/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: ナビゲーション時にモバイルメニューを閉じる */}
+				{/* biome-ignore lint/a11y/useKeyWithClickEvents: nav内のリンクがキーボード操作を担う */}
+				<nav className={styles.nav} onClick={() => setMobileOpen(false)}>
 					{categoryOrder.map(category => {
 						const categoryArticles = getArticlesByCategory(category);
 						if (categoryArticles.length === 0) return null;

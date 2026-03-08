@@ -4,6 +4,10 @@
 	align-items: center;
 	padding: var(--space-3) var(--space-5);
 	border-bottom: 1px solid var(--gray-a5);
+
+	@media (max-width: 768px) {
+		padding: var(--space-3) var(--space-4);
+	}
 }
 
 .logo {
@@ -19,5 +23,9 @@
 		display: inline-flex;
 		align-items: center;
 		gap: var(--space-1);
+	}
+
+	@media (max-width: 768px) {
+		gap: var(--space-3);
 	}
 }

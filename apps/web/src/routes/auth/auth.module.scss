@@ -4,6 +4,10 @@
 	max-width: 400px;
 	margin: 0 auto;
 	padding: var(--space-9) var(--space-4);
+
+	@media (max-width: 768px) {
+		padding: var(--space-6) var(--space-4);
+	}
 }
 
 .header {

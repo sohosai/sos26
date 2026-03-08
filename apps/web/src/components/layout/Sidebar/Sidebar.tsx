@@ -5,6 +5,7 @@ import {
 	IconHelp,
 	IconLayoutSidebar,
 	IconLogout,
+	IconMenu2,
 	IconSettings,
 } from "@tabler/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
@@ -25,6 +26,8 @@ type SidebarProps = {
 	menuItems: MenuItem[];
 	projectSelector?: ReactNode;
 	projectId?: string | null;
+	mobileOpen?: boolean;
+	onMobileToggle?: () => void;
 };
 
 const commonItems: MenuItem[] = [
@@ -64,6 +67,8 @@ export function Sidebar({
 	onToggle,
 	menuItems,
 	projectSelector,
+	mobileOpen = false,
+	onMobileToggle,
 }: SidebarProps) {
 	const { location } = useRouterState();
 	const navigate = useNavigate();
@@ -130,38 +135,72 @@ export function Sidebar({
 		</button>
 	);
 
+	const handleMobileNavClick = () => {
+		if (mobileOpen && onMobileToggle) {
+			onMobileToggle();
+		}
+	};
+
 	return (
-		<aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""}`}>
-			<div className={styles.header}>
-				<IconButton
-					onClick={onToggle}
-					aria-label={collapsed ? "メニューを展開" : "メニューを折りたたむ"}
-				>
-					<IconLayoutSidebar size={18} />
+		<>
+			{/* モバイルヘッダー */}
+			<div className={styles.mobileHeader}>
+				<IconButton onClick={onMobileToggle} aria-label="メニューを開く">
+					<IconMenu2 size={20} />
 				</IconButton>
-				{!collapsed && (
-					<Link to="/">
-						<img src="/sos.svg" alt="雙峰祭オンラインシステム" height={42} />
-					</Link>
-				)}
+				<Link to="/">
+					<img src="/sos.svg" alt="雙峰祭オンラインシステム" height={36} />
+				</Link>
 			</div>
 
-			{projectSelector && (
-				<div className={styles.projectSelector}>{projectSelector}</div>
+			{/* モバイル背景オーバーレイ */}
+			{mobileOpen && (
+				<button
+					type="button"
+					className={styles.backdrop}
+					onClick={onMobileToggle}
+					aria-label="メニューを閉じる"
+				/>
 			)}
 
-			<nav className={styles.nav}>{menuItems.map(renderItem)}</nav>
+			<aside
+				className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""} ${mobileOpen ? styles.mobileOpen : ""}`}
+			>
+				<div className={styles.header}>
+					<IconButton
+						onClick={onToggle}
+						aria-label={collapsed ? "メニューを展開" : "メニューを折りたたむ"}
+					>
+						<IconLayoutSidebar size={18} />
+					</IconButton>
+					{!collapsed && (
+						<Link to="/">
+							<img src="/sos.svg" alt="雙峰祭オンラインシステム" height={42} />
+						</Link>
+					)}
+				</div>
 
-			<div className={styles.footer}>
-				{footerItems.map(renderItem)}
-				{collapsed ? (
-					<Tooltip content="ログアウト" side="right">
-						{logoutButton}
-					</Tooltip>
-				) : (
-					logoutButton
+				{projectSelector && (
+					<div className={styles.projectSelector}>{projectSelector}</div>
 				)}
-			</div>
-		</aside>
+
+				{/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: ナビゲーション時にモバイルメニューを閉じる */}
+				{/* biome-ignore lint/a11y/useKeyWithClickEvents: nav内のリンクがキーボード操作を担う */}
+				<nav className={styles.nav} onClick={handleMobileNavClick}>
+					{menuItems.map(renderItem)}
+				</nav>
+
+				<div className={styles.footer}>
+					{footerItems.map(renderItem)}
+					{collapsed ? (
+						<Tooltip content="ログアウト" side="right">
+							{logoutButton}
+						</Tooltip>
+					) : (
+						logoutButton
+					)}
+				</div>
+			</aside>
+		</>
 	);
 }

@@ -13,4 +13,15 @@
 	&.collapsed {
 		margin-left: 64px;
 	}
+
+	@media (max-width: 768px) {
+		margin-left: 0;
+		padding: var(--space-4);
+		height: auto;
+		min-height: 100vh;
+
+		&.collapsed {
+			margin-left: 0;
+		}
+	}
 }

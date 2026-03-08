@@ -4,6 +4,8 @@
 	border-bottom: 1px solid var(--gray-5);
 	margin-bottom: var(--space-3);
 	gap: 0;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
 }
 
 .tab {

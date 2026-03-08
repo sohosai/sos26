@@ -1,4 +1,7 @@
 .root {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+
 	:global(.rt-TableRootTable) {
 		width: max-content;
 		min-width: 100%;
