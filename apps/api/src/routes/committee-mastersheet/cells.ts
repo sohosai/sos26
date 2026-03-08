@@ -207,7 +207,12 @@ cellsRoute.put(
 					});
 				}
 
-				return created;
+				return tx.formItemEditHistory.findUniqueOrThrow({
+					where: { id: created.id },
+					include: {
+						selectedOptions: { select: { formItemOptionId: true } },
+					},
+				});
 			},
 			{ isolationLevel: "Serializable" }
 		);
@@ -220,7 +225,9 @@ cellsRoute.put(
 					textValue: history.textValue,
 					numberValue: history.numberValue,
 					fileUrl: history.fileUrl,
-					selectedOptionIds: data.selectedOptionIds ?? [],
+					selectedOptionIds: history.selectedOptions.map(
+						s => s.formItemOptionId
+					),
 				},
 			},
 		});
