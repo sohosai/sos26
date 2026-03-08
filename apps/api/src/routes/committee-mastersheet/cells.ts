@@ -261,12 +261,12 @@ cellsRoute.get(
 		return c.json({
 			history: history.map(h => ({
 				id: h.id,
-				value: JSON.stringify({
+				value: {
 					textValue: h.textValue,
 					numberValue: h.numberValue,
 					fileUrl: h.fileUrl,
 					selectedOptionIds: h.selectedOptions.map(s => s.formItemOptionId),
-				}),
+				},
 				actor: h.actor,
 				trigger: h.trigger,
 				createdAt: h.createdAt,

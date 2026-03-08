@@ -299,7 +299,12 @@ export type EditFormItemCellResponse = z.infer<
 
 export const formItemEditHistorySchema = z.object({
 	id: z.string(),
-	value: z.string().nullable(),
+	value: z.object({
+		textValue: z.string().nullable(),
+		numberValue: z.number().nullable(),
+		fileUrl: z.string().nullable(),
+		selectedOptionIds: z.array(z.string()),
+	}),
 	actor: userSummarySchema,
 	trigger: formItemEditHistoryTriggerSchema,
 	createdAt: z.coerce.date(),
