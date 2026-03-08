@@ -67,22 +67,15 @@ function MastersheetPage() {
 		setActiveViewId(viewId);
 		setSorting(viewState.sorting);
 
-		// knownColumnIds が空（旧形式 or 初期ビュー）なら全カラムを表示
-		// それ以外は未収録カラムをデフォルト非表示にして、ビュー間の独立性を保つ
-		const savedVisibility = viewState.columnVisibility ?? {};
 		const knownIds = new Set(viewState.knownColumnIds ?? []);
 		const completeVisibility: VisibilityState = {};
-		// 固定カラム：knownColumnIds 未収録でもデフォルト表示
+		// 固定カラム：常に表示
 		for (const id of FIXED_COLUMN_IDS) {
-			completeVisibility[id] = knownIds.has(id)
-				? (savedVisibility[id] ?? true)
-				: true;
+			completeVisibility[id] = true;
 		}
-		// 動的カラム：knownColumnIds 未収録はビュー作成後に追加されたものなので非表示
+		// 動的カラム：knownColumnIds に含まれていれば表示、なければ非表示
 		for (const col of columns) {
-			completeVisibility[col.id] = knownIds.has(col.id)
-				? (savedVisibility[col.id] ?? true)
-				: false;
+			completeVisibility[col.id] = knownIds.has(col.id);
 		}
 		setColumnVisibility(completeVisibility);
 		setColumnFilters(viewState.columnFilters ?? []);
@@ -111,9 +104,13 @@ function MastersheetPage() {
 				activeViewId={activeViewId}
 				currentState={{
 					sorting,
-					columnVisibility,
 					columnFilters,
-					knownColumnIds: [...FIXED_COLUMN_IDS, ...columns.map(c => c.id)],
+					knownColumnIds: [
+						...FIXED_COLUMN_IDS,
+						...columns
+							.filter(c => columnVisibility[c.id] !== false)
+							.map(c => c.id),
+					],
 				}}
 				onSelectView={handleSelectView}
 				onActiveViewIdChange={handleActiveViewIdChange}

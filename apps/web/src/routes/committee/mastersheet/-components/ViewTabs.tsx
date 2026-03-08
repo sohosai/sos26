@@ -1,11 +1,7 @@
 import { DropdownMenu } from "@radix-ui/themes";
 import type { ListMastersheetViewsResponse } from "@sos26/shared";
 import { IconDotsVertical, IconPlus } from "@tabler/icons-react";
-import type {
-	ColumnFiltersState,
-	SortingState,
-	VisibilityState,
-} from "@tanstack/react-table";
+import type { ColumnFiltersState, SortingState } from "@tanstack/react-table";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -18,9 +14,7 @@ import styles from "./ViewTabs.module.scss";
 
 export type ViewState = {
 	sorting?: SortingState;
-	/** カラムごとの表示/非表示（明示的に設定されたもののみ） */
-	columnVisibility?: VisibilityState;
-	/** このビューを保存した時点で存在していたカラムID一覧。未収録のカラムは非表示扱い */
+	/** このビューで表示するカラム ID 一覧。未収録のカラムは非表示扱い */
 	knownColumnIds?: string[];
 	columnFilters?: ColumnFiltersState;
 };

@@ -1062,7 +1062,7 @@ model MastersheetView {
   name        String
   createdById String
   createdBy   User     @relation(fields: [createdById], references: [id])
-  state       String // JSON: { sorting?: SortingState, columnVisibility?: Record<columnId, boolean>, knownColumnIds?: string[] }
+  state       String // JSON: { sorting?: SortingState, knownColumnIds?: string[], columnFilters?: ColumnFiltersState }
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
