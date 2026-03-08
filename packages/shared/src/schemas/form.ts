@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { approvalStatusSchema } from "./common";
 import { userSchema } from "./user";
 
 // ─────────────────────────────────────────────────────────────
@@ -14,15 +15,6 @@ export const formItemTypeSchema = z.enum([
 	"FILE",
 ]);
 export type FormItemType = z.infer<typeof formItemTypeSchema>;
-
-export const formAuthorizationStatusSchema = z.enum([
-	"PENDING",
-	"APPROVED",
-	"REJECTED",
-]);
-export type FormAuthorizationStatus = z.infer<
-	typeof formAuthorizationStatusSchema
->;
 
 // ─────────────────────────────────────────────────────────────
 // 基本モデルスキーマ
@@ -80,7 +72,7 @@ export const formAuthorizationSchema = z.object({
 	formId: z.string(),
 	requestedById: z.string(),
 	requestedToId: z.string(),
-	status: formAuthorizationStatusSchema,
+	status: approvalStatusSchema,
 	decidedAt: z.coerce.date().nullable(),
 	scheduledSendAt: z.coerce.date(),
 	deadlineAt: z.coerce.date().nullable(),

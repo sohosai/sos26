@@ -40,7 +40,8 @@
     "sass-embedded": "^1.97.2",
     "turbo": "^2.8.9",
     "typescript": "~5.9.3",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.16",
+    "wrangler": "^4.70.0"
   },
   "dependencies": {
     "zod": "^4.3.5"

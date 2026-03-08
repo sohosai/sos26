@@ -270,6 +270,56 @@ function assertRequiredAnswered(
 	}
 }
 // ─────────────────────────────────────────────────────────────
+// ヘルパー: FormItemEditHistory にレコードを追加
+// ─────────────────────────────────────────────────────────────
+
+type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+function extractAnswerValues(answer: CreateFormResponseRequest["answers"][0]) {
+	const isText = answer.type === "TEXT" || answer.type === "TEXTAREA";
+	const isSelect = answer.type === "SELECT" || answer.type === "CHECKBOX";
+	return {
+		textValue: isText ? (answer.textValue ?? null) : null,
+		numberValue: answer.type === "NUMBER" ? (answer.numberValue ?? null) : null,
+		fileUrl: answer.type === "FILE" ? (answer.fileUrl ?? null) : null,
+		optionIds: isSelect ? (answer.selectedOptionIds ?? []) : [],
+	};
+}
+
+const appendEditHistory = async (
+	tx: PrismaTx,
+	answers: CreateFormResponseRequest["answers"],
+	projectId: string,
+	actorId: string,
+	trigger: "PROJECT_SUBMIT" | "PROJECT_RESUBMIT"
+) => {
+	for (const answer of answers) {
+		const { textValue, numberValue, fileUrl, optionIds } =
+			extractAnswerValues(answer);
+
+		const history = await tx.formItemEditHistory.create({
+			data: {
+				formItemId: answer.formItemId,
+				projectId,
+				textValue,
+				numberValue,
+				fileUrl,
+				actorId,
+				trigger,
+			},
+		});
+		if (optionIds.length > 0) {
+			await tx.formItemEditHistorySelectedOption.createMany({
+				data: optionIds.map(optionId => ({
+					editHistoryId: history.id,
+					formItemOptionId: optionId,
+				})),
+			});
+		}
+	}
+};
+
+// ─────────────────────────────────────────────────────────────
 // GET /project/:projectId/forms
 // ─────────────────────────────────────────────────────────────
 
@@ -358,6 +408,18 @@ projectFormRoute.get(
 			},
 		});
 
+		// FormItemEditHistory の最新値を取得して表示値をオーバーレイ
+		const formItemIds = form.items.map(item => item.id);
+		const allHistory = await prisma.formItemEditHistory.findMany({
+			where: { formItemId: { in: formItemIds }, projectId },
+			orderBy: { createdAt: "desc" },
+			include: { selectedOptions: true },
+		});
+		const latestByItem = new Map<string, (typeof allHistory)[number]>();
+		for (const h of allHistory) {
+			if (!latestByItem.has(h.formItemId)) latestByItem.set(h.formItemId, h);
+		}
+
 		return c.json({
 			form: {
 				formDeliveryId: delivery.id,
@@ -387,15 +449,29 @@ projectFormRoute.get(
 					? {
 							id: existingResponse.id,
 							submittedAt: existingResponse.submittedAt,
-							answers: existingResponse.answers.map(a => ({
-								formItemId: a.formItemId,
-								textValue: a.textValue,
-								numberValue: a.numberValue,
-								fileUrl: a.fileUrl,
-								selectedOptionIds: a.selectedOptions.map(
-									s => s.formItemOptionId
-								),
-							})),
+							answers: existingResponse.answers.map(a => {
+								const hist = latestByItem.get(a.formItemId);
+								if (hist) {
+									return {
+										formItemId: a.formItemId,
+										textValue: hist.textValue,
+										numberValue: hist.numberValue,
+										fileUrl: hist.fileUrl,
+										selectedOptionIds: hist.selectedOptions.map(
+											s => s.formItemOptionId
+										),
+									};
+								}
+								return {
+									formItemId: a.formItemId,
+									textValue: a.textValue,
+									numberValue: a.numberValue,
+									fileUrl: a.fileUrl,
+									selectedOptionIds: a.selectedOptions.map(
+										s => s.formItemOptionId
+									),
+								};
+							}),
 						}
 					: null,
 			},
@@ -455,6 +531,17 @@ projectFormRoute.post(
 				answers,
 				delivery.formAuthorization.form.items
 			);
+
+			if (submit) {
+				await appendEditHistory(
+					tx,
+					answers,
+					projectId,
+					userId,
+					"PROJECT_SUBMIT"
+				);
+			}
+
 			return formatResponse(tx, created.id);
 		});
 
@@ -512,6 +599,17 @@ projectFormRoute.patch(
 				answers,
 				delivery.formAuthorization.form.items
 			);
+
+			if (submit || isAlreadySubmitted) {
+				await appendEditHistory(
+					tx,
+					answers,
+					projectId,
+					userId,
+					isAlreadySubmitted ? "PROJECT_RESUBMIT" : "PROJECT_SUBMIT"
+				);
+			}
+
 			return formatResponse(tx, existing.id);
 		});
 

@@ -4,7 +4,7 @@ import {
 	TextField as RadixTextField,
 	Text,
 } from "@radix-ui/themes";
-import type { Bureau, InquiryViewerScope } from "@sos26/shared";
+import type { Bureau, ViewerScope } from "@sos26/shared";
 import { IconCheck, IconChevronDown, IconSearch } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -15,7 +15,7 @@ import { MemberSelectPopover, SelectedChips } from "./MemberSelectPopover";
 import styles from "./NewInquiryForm.module.scss";
 
 type ViewerInput = {
-	scope: InquiryViewerScope;
+	scope: ViewerScope;
 	bureauValue?: Bureau;
 	userId?: string;
 };

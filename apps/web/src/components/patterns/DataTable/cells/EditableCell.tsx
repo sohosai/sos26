@@ -30,7 +30,12 @@ export function EditableCell<TData extends RowData>({
 	const [isFocused, setIsFocused] = useState(false);
 
 	const commitValue = (): boolean => {
-		const committed = inputType === "number" ? Number(value) : value;
+		const committed =
+			inputType === "number"
+				? value === "" || value == null
+					? null
+					: Number(value)
+				: value;
 
 		if (schema) {
 			const result = schema.safeParse(committed);
@@ -56,8 +61,8 @@ export function EditableCell<TData extends RowData>({
 				ref={inputRef}
 				className={styles.input}
 				inputMode={inputType === "number" ? "numeric" : undefined}
-				value={String(value)}
-				size={Math.max(String(value).length, 1)}
+				value={String(value ?? "")}
+				size={Math.max(String(value ?? "").length, 1)}
 				data-editing={isEditingRef.current}
 				data-focused={isFocused}
 				data-error={!!validationError}

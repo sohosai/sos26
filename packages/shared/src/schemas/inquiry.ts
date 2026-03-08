@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { bureauSchema } from "./committee-member";
+import { viewerScopeSchema } from "./common";
 import { userSchema } from "./user";
 
 // ─────────────────────────────────────────────────────────────
@@ -18,9 +19,6 @@ export type InquiryCreatorRole = z.infer<typeof inquiryCreatorRoleSchema>;
 
 export const inquiryAssigneeSideSchema = z.enum(["PROJECT", "COMMITTEE"]);
 export type InquiryAssigneeSide = z.infer<typeof inquiryAssigneeSideSchema>;
-
-export const inquiryViewerScopeSchema = z.enum(["ALL", "BUREAU", "INDIVIDUAL"]);
-export type InquiryViewerScope = z.infer<typeof inquiryViewerScopeSchema>;
 
 export const inquiryActivityTypeSchema = z.enum([
 	"ASSIGNEE_ADDED",
@@ -58,7 +56,7 @@ export type InquiryAssignee = z.infer<typeof inquiryAssigneeSchema>;
 export const inquiryViewerSchema = z.object({
 	id: z.cuid(),
 	inquiryId: z.cuid(),
-	scope: inquiryViewerScopeSchema,
+	scope: viewerScopeSchema,
 	bureauValue: bureauSchema.nullable(),
 	userId: z.cuid().nullable(),
 	createdAt: z.coerce.date(),
@@ -287,7 +285,7 @@ export type RemoveInquiryAssigneeResponse = z.infer<
 
 export const viewerInputSchema = z
 	.object({
-		scope: inquiryViewerScopeSchema,
+		scope: viewerScopeSchema,
 		bureauValue: bureauSchema.optional(),
 		userId: z.cuid().optional(),
 	})

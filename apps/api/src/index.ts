@@ -7,6 +7,7 @@ import { initStorage } from "./lib/storage/client";
 import { authRoute } from "./routes/auth";
 import { committeeFormRoute } from "./routes/committee-form";
 import { committeeInquiryRoute } from "./routes/committee-inquiry";
+import { committeeMastersheetRoute } from "./routes/committee-mastersheet";
 import { committeeMemberRoute } from "./routes/committee-member";
 import { committeeNoticeRoute } from "./routes/committee-notice";
 import { committeeProjectRoute } from "./routes/committee-project";
@@ -59,6 +60,7 @@ app.route(
 	"/committee/project-registration-forms",
 	committeeProjectRegistrationFormRoute
 );
+app.route("/committee/mastersheet", committeeMastersheetRoute);
 app.route("/project/:projectId/forms", projectFormRoute);
 app.route("/project", projectRoute);
 app.route("/project", projectNoticeRoute);
