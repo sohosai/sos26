@@ -48,7 +48,6 @@ export async function disablePush(): Promise<void> {
 		unsubscribeError = error;
 	}
 
-	await subscription.unsubscribe();
 	await callBodyApi(pushUnsubscribeEndpoint, {
 		endpoint,
 	} satisfies PushUnsubscribeRequest);
