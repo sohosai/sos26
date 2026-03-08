@@ -1,0 +1,29 @@
+.form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-2);
+	padding-top: var(--space-2);
+}
+
+.optionRow {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	margin-bottom: var(--space-1);
+}
+
+.optionInput {
+	flex: 1;
+}

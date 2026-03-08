@@ -1,0 +1,122 @@
+.viewTabs {
+	display: flex;
+	align-items: stretch;
+	border-bottom: 1px solid var(--gray-5);
+	margin-bottom: var(--space-3);
+	gap: 0;
+}
+
+.tab {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	padding: var(--space-3) var(--space-4);
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: var(--font-size-2);
+	color: var(--gray-10);
+	white-space: nowrap;
+	border-radius: var(--radius-2) var(--radius-2) 0 0;
+	transition:
+		color 0.1s,
+		background 0.1s;
+
+	&:hover {
+		color: var(--gray-12);
+		background: var(--gray-2);
+	}
+}
+
+// タブ + メニューボタンのラッパー
+.tabWrapper {
+	position: relative;
+	display: flex;
+	align-items: stretch;
+
+	.menuBtn {
+		opacity: 0;
+	}
+
+	&:hover .menuBtn,
+	&.activeWrapper .menuBtn {
+		opacity: 1;
+	}
+
+	// アクティブラインはラッパー全体（タブ＋メニューボタン）にかける
+	&.activeWrapper::after {
+		content: "";
+		position: absolute;
+		bottom: -1px;
+		left: 0;
+		right: 0;
+		height: 2px;
+		background-color: var(--accent-9);
+	}
+
+	// タブ自体のアクティブスタイル（activeWrapper 内）
+	&.activeWrapper .tab {
+		color: var(--gray-12);
+		font-weight: 500;
+	}
+}
+
+// 三点リーダーメニューボタン
+.menuBtn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0 var(--space-1);
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--gray-8);
+	border-radius: var(--radius-1);
+	transition:
+		opacity 0.1s,
+		color 0.1s,
+		background 0.1s;
+
+	&:hover {
+		color: var(--gray-11);
+		background: var(--gray-3);
+	}
+}
+
+// インラインリネーム用 input
+.renameInput {
+	padding: var(--space-3) var(--space-4);
+	font-size: var(--font-size-2);
+	font-weight: 500;
+	color: var(--gray-12);
+	background: var(--color-surface);
+	border: none;
+	border-bottom: 2px solid var(--accent-9);
+	outline: none;
+	width: 120px;
+	min-width: 60px;
+	border-radius: var(--radius-2) var(--radius-2) 0 0;
+}
+
+// [+] ボタン
+.addBtn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--space-2) var(--space-3);
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--gray-9);
+	border-radius: var(--radius-2) var(--radius-2) 0 0;
+	transition:
+		color 0.1s,
+		background 0.1s;
+
+	&:hover {
+		color: var(--gray-12);
+		background: var(--gray-2);
+	}
+}
+

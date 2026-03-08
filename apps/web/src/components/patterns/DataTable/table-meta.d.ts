@@ -10,8 +10,12 @@ declare module "@tanstack/react-table" {
 		editable?: boolean;
 		type?: "text" | "number";
 		options?: string[];
+		/** select/multi-select 用構造化オプション（value=ID, label=表示名） */
+		selectOptions?: { value: string; label: string }[];
 		schema?: ZodType;
 		dateFormat?: "date" | "datetime";
 		tagColors?: Record<string, string>;
+		/** カラムフィルターの種別（columnFilter=true 時に表示） */
+		filterVariant?: "text" | "number" | "select";
 	}
 }

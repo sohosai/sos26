@@ -1,3 +1,5 @@
+export { sendAccessRequestDecidedEmail } from "./usecases/sendAccessRequestDecidedEmail";
+export { sendAccessRequestReceivedEmail } from "./usecases/sendAccessRequestReceivedEmail";
 export { sendAlreadyRegisteredEmail } from "./usecases/sendAlreadyRegisteredEmail";
 export { sendFormAuthorizationDecidedEmail } from "./usecases/sendFormAuthorizationDecidedEmail";
 export { sendFormAuthorizationRequestedEmail } from "./usecases/sendFormAuthorizationRequestedEmail";

@@ -4,7 +4,7 @@ import {
 	TextField as RadixTextField,
 	Text,
 } from "@radix-ui/themes";
-import type { Bureau, InquiryViewerScope } from "@sos26/shared";
+import type { Bureau, ViewerScope } from "@sos26/shared";
 import { IconCheck, IconChevronDown, IconSearch } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -15,7 +15,7 @@ import { MemberSelectPopover, SelectedChips } from "./MemberSelectPopover";
 import styles from "./NewInquiryForm.module.scss";
 
 type ViewerInput = {
-	scope: InquiryViewerScope;
+	scope: ViewerScope;
 	bureauValue?: Bureau;
 	userId?: string;
 };
@@ -212,7 +212,7 @@ export function NewInquiryForm({
 			}}
 		>
 			<Dialog.Content maxWidth="640px">
-				<Dialog.Title>新しい問い合わせを作成</Dialog.Title>
+				<Dialog.Title>新しいお問い合わせを作成</Dialog.Title>
 				<Dialog.Description size="2" color="gray">
 					{viewerRole === "project"
 						? "実行委員会へのお問い合わせを作成します"
