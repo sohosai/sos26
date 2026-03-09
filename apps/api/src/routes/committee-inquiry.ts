@@ -22,12 +22,22 @@ import type { AuthEnv } from "../types/auth-env";
 const committeeInquiryRoute = new Hono<AuthEnv>();
 
 // ─────────────────────────────────────────────────────────────
-// ヘルパー: 関連フォームの存在チェック
+// ヘルパー: 関連フォームの検証（オーナーまたは共同編集者のみ選択可）
 // ─────────────────────────────────────────────────────────────
 
-async function validateRelatedForm(formId: string): Promise<void> {
+async function validateRelatedForm(
+	formId: string,
+	userId: string
+): Promise<void> {
 	const form = await prisma.form.findFirst({
-		where: { id: formId, deletedAt: null },
+		where: {
+			id: formId,
+			deletedAt: null,
+			OR: [
+				{ ownerId: userId },
+				{ collaborators: { some: { userId, deletedAt: null } } },
+			],
+		},
 	});
 	if (!form) {
 		throw Errors.invalidRequest("指定されたフォームが見つかりません");
@@ -263,9 +273,9 @@ committeeInquiryRoute.post(
 			}
 		}
 
-		// 関連フォームの存在チェック
+		// 関連フォームの検証（オーナーまたは共同編集者のみ）
 		if (relatedFormId) {
-			await validateRelatedForm(relatedFormId);
+			await validateRelatedForm(relatedFormId, user.id);
 		}
 
 		const inquiry = await prisma.inquiry.create({
@@ -276,7 +286,7 @@ committeeInquiryRoute.post(
 				createdById: user.id,
 				creatorRole: "COMMITTEE",
 				projectId,
-				relatedFormId: relatedFormId ?? null,
+				relatedFormId,
 				assignees: {
 					create: [
 						// 作成者（実委側）

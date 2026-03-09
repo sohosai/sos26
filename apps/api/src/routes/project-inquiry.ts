@@ -211,7 +211,7 @@ projectInquiryRoute.post(
 			project.id
 		);
 
-		// 初期ステータス: フォーム紐づけあり → IN_PROGRESS、なし → UNASSIGNED
+		// フォーム紐づけあり → オーナーが自動アサインされるため IN_PROGRESS で開始
 		const initialStatus = formOwnerId ? "IN_PROGRESS" : "UNASSIGNED";
 
 		// 実委側担当者（フォームオーナー）
@@ -234,7 +234,7 @@ projectInquiryRoute.post(
 				createdById: user.id,
 				creatorRole: "PROJECT",
 				projectId: project.id,
-				relatedFormId: relatedFormId ?? null,
+				relatedFormId,
 				assignees: {
 					create: [
 						{ userId: user.id, side: "PROJECT", isCreator: true },

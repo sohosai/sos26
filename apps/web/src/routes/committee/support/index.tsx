@@ -63,10 +63,16 @@ export const Route = createFileRoute("/committee/support/")({
 				id: m.user.id,
 				name: m.user.name,
 			})),
-			availableForms: formsRes.forms.map(f => ({
-				id: f.id,
-				title: f.title,
-			})),
+			availableForms: formsRes.forms
+				.filter(
+					f =>
+						f.owner.id === committeeMember?.userId ||
+						f.collaborators.some(c => c.id === committeeMember?.userId)
+				)
+				.map(f => ({
+					id: f.id,
+					title: f.title,
+				})),
 			isAdmin,
 		};
 	},
