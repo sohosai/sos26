@@ -5,13 +5,12 @@ import {
 	Avatar as RadixAvatar,
 	Text,
 } from "@radix-ui/themes";
-import type { SendKey } from "@sos26/shared";
 import { IconUpload } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import Avatar from "boring-avatars";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Button, Select, Switch } from "@/components/primitives";
+import { Button, Switch } from "@/components/primitives";
 import { uploadFile } from "@/lib/api/files";
 import { getUserSettings, updateUserSettings } from "@/lib/api/user";
 import { useAuthStore } from "@/lib/auth";
@@ -54,7 +53,8 @@ function SettingsPage() {
 	const { user, refreshUser } = useAuthStore();
 	const [pushEnabled, setPushEnabled] = useState(getPushEnabledPreference());
 	const [avatarFileId, setAvatarFileId] = useState<string | null>(null);
-	const [sendKey, setSendKey] = useState<SendKey>("ENTER");
+	// TODO: 送信キー機能が実装されたら有効化する
+	// const [sendKey, setSendKey] = useState<SendKey>("ENTER");
 	const [isUploading, setIsUploading] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,7 +67,8 @@ function SettingsPage() {
 			try {
 				const settings = await getUserSettings();
 				setAvatarFileId(settings.avatarFileId);
-				setSendKey(settings.sendKey);
+				// TODO: 送信キー機能が実装されたら有効化する
+				// setSendKey(settings.sendKey);
 			} catch {
 				// デフォルト値で継続
 			}
@@ -114,16 +115,17 @@ function SettingsPage() {
 		}
 	};
 
-	const handleSendKeyChange = async (value: string) => {
-		const newSendKey = value as SendKey;
-		try {
-			await updateUserSettings({ sendKey: newSendKey });
-			setSendKey(newSendKey);
-			toast.success("送信キー設定を更新しました");
-		} catch {
-			toast.error("設定の更新に失敗しました");
-		}
-	};
+	// TODO: 送信キー機能が実装されたら有効化する
+	// const handleSendKeyChange = async (value: string) => {
+	// 	const newSendKey = value as SendKey;
+	// 	try {
+	// 		await updateUserSettings({ sendKey: newSendKey });
+	// 		setSendKey(newSendKey);
+	// 		toast.success("送信キー設定を更新しました");
+	// 	} catch {
+	// 		toast.error("設定の更新に失敗しました");
+	// 	}
+	// };
 
 	return (
 		<div className={styles.container}>
@@ -164,8 +166,9 @@ function SettingsPage() {
 				</Flex>
 			</Card>
 
+			{/* TODO: 送信キー機能が実装されたら有効化する */}
 			{/* 送信キー設定 */}
-			<Card className={styles.card}>
+			{/* <Card className={styles.card}>
 				<Flex justify="between" align="center" gap="4">
 					<div className={styles.settingLabel}>
 						<Heading size="4">送信キー</Heading>
@@ -185,7 +188,7 @@ function SettingsPage() {
 						/>
 					</div>
 				</Flex>
-			</Card>
+			</Card> */}
 
 			{/* Push通知設定 */}
 			<Card className={styles.card}>
