@@ -3,12 +3,11 @@ import {
 	createFormResponseRequestSchema,
 	type FormItemType,
 	projectFormPathParamsSchema,
-	type TextConstraintPattern,
-	type TextConstraints,
 	updateFormResponseRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
+import { constraintsFromPrisma } from "../lib/form-constraints";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -265,38 +264,6 @@ function assertRequiredAnswered(
 			);
 		}
 	}
-}
-
-type PrismaConstraintFields = {
-	constraintMinLength: number | null;
-	constraintMaxLength: number | null;
-	constraintPattern: string | null;
-	constraintCustomPattern: string | null;
-};
-
-function constraintsFromPrisma({
-	constraintMinLength,
-	constraintMaxLength,
-	constraintPattern,
-	constraintCustomPattern,
-}: PrismaConstraintFields): TextConstraints | null {
-	if (
-		constraintMinLength === null &&
-		constraintMaxLength === null &&
-		constraintPattern === null
-	) {
-		return null;
-	}
-	return {
-		...(constraintMinLength !== null && { minLength: constraintMinLength }),
-		...(constraintMaxLength !== null && { maxLength: constraintMaxLength }),
-		...(constraintPattern !== null && {
-			pattern: constraintPattern as TextConstraintPattern,
-		}),
-		...(constraintCustomPattern !== null && {
-			customPattern: constraintCustomPattern,
-		}),
-	};
 }
 
 const PATTERN_REGEXES: Record<string, RegExp> = {

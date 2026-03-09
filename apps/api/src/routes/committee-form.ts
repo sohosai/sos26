@@ -5,13 +5,16 @@ import {
 	formIdPathParamsSchema,
 	formResponsePathParamsSchema,
 	requestFormAuthorizationRequestSchema,
-	type TextConstraintPattern,
 	type TextConstraints,
 	updateFormAuthorizationRequestSchema,
 	updateFormDetailRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
+import {
+	constraintsFromPrisma,
+	type PrismaConstraintFields,
+} from "../lib/form-constraints";
 import {
 	notifyFormAuthorizationDecided,
 	notifyFormAuthorizationRequested,
@@ -23,40 +26,8 @@ import type { AuthEnv } from "../types/auth-env";
 const committeeFormRoute = new Hono<AuthEnv>();
 
 // ─────────────────────────────────────────────────────────────
-// ヘルパー: 制約フィールドの変換
+// ヘルパー: TextConstraints → Prisma 変換
 // ─────────────────────────────────────────────────────────────
-
-type PrismaConstraintFields = {
-	constraintMinLength: number | null;
-	constraintMaxLength: number | null;
-	constraintPattern: string | null;
-	constraintCustomPattern: string | null;
-};
-
-function constraintsFromPrisma({
-	constraintMinLength,
-	constraintMaxLength,
-	constraintPattern,
-	constraintCustomPattern,
-}: PrismaConstraintFields): TextConstraints | null {
-	if (
-		constraintMinLength === null &&
-		constraintMaxLength === null &&
-		constraintPattern === null
-	) {
-		return null;
-	}
-	return {
-		...(constraintMinLength !== null && { minLength: constraintMinLength }),
-		...(constraintMaxLength !== null && { maxLength: constraintMaxLength }),
-		...(constraintPattern !== null && {
-			pattern: constraintPattern as TextConstraintPattern,
-		}),
-		...(constraintCustomPattern !== null && {
-			customPattern: constraintCustomPattern,
-		}),
-	};
-}
 
 function constraintsToPrisma(
 	constraints: TextConstraints | null | undefined
