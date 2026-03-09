@@ -69,6 +69,47 @@ async function resolveRelatedForm(
 }
 
 // ─────────────────────────────────────────────────────────────
+// ヘルパー: フォーム紐づけ時の初期アサイン・閲覧者を構築
+// （企画側担当者と重複するユーザーは除外）
+// ─────────────────────────────────────────────────────────────
+
+function buildFormAssignments(
+	formOwnerId: string | null,
+	formCollaboratorIds: string[],
+	projectSideUserIds: Set<string>
+) {
+	const effectiveOwnerId =
+		formOwnerId && !projectSideUserIds.has(formOwnerId) ? formOwnerId : null;
+
+	const committeeAssignees = effectiveOwnerId
+		? [
+				{
+					userId: effectiveOwnerId,
+					side: "COMMITTEE" as const,
+					isCreator: false,
+				},
+			]
+		: [];
+
+	const initialViewers = formCollaboratorIds
+		.filter(id => !projectSideUserIds.has(id))
+		.map(userId => ({
+			scope: "INDIVIDUAL" as const,
+			bureauValue: null,
+			userId,
+		}));
+
+	return {
+		effectiveOwnerId,
+		initialStatus: effectiveOwnerId
+			? ("IN_PROGRESS" as const)
+			: ("UNASSIGNED" as const),
+		committeeAssignees,
+		initialViewers,
+	};
+}
+
+// ─────────────────────────────────────────────────────────────
 // ヘルパー: 企画側担当者チェック
 // ─────────────────────────────────────────────────────────────
 
@@ -210,21 +251,16 @@ projectInquiryRoute.post(
 			relatedFormId,
 			project.id
 		);
-
-		// フォーム紐づけあり → オーナーが自動アサインされるため IN_PROGRESS で開始
-		const initialStatus = formOwnerId ? "IN_PROGRESS" : "UNASSIGNED";
-
-		// 実委側担当者（フォームオーナー）
-		const committeeAssignees = formOwnerId
-			? [{ userId: formOwnerId, side: "COMMITTEE" as const, isCreator: false }]
-			: [];
-
-		// 閲覧者（フォーム共同編集者 → INDIVIDUAL スコープ）
-		const initialViewers = formCollaboratorIds.map(userId => ({
-			scope: "INDIVIDUAL" as const,
-			bureauValue: null,
-			userId,
-		}));
+		const {
+			effectiveOwnerId,
+			initialStatus,
+			committeeAssignees,
+			initialViewers,
+		} = buildFormAssignments(
+			formOwnerId,
+			formCollaboratorIds,
+			new Set([user.id, ...uniqueCoAssigneeIds])
+		);
 
 		const inquiry = await prisma.inquiry.create({
 			data: {
@@ -263,9 +299,9 @@ projectInquiryRoute.post(
 		});
 
 		// フォーム紐づけで自動追加された実委担当者（フォームオーナー）に通知
-		if (formOwnerId) {
+		if (effectiveOwnerId) {
 			void notifyInquiryAssigneeAdded({
-				addedUserId: formOwnerId,
+				addedUserId: effectiveOwnerId,
 				inquiryId: inquiry.id,
 				inquiryTitle: title,
 				side: "COMMITTEE",
