@@ -86,3 +86,36 @@ export const getUserSettingsResponseSchema = z.object({
 export type GetUserSettingsResponse = z.infer<
 	typeof getUserSettingsResponseSchema
 >;
+
+/**
+ * ユーザー検索クエリパラメータ
+ *
+ * - search: 名前・メールアドレス・読み仮名で曖昧検索
+ * - limit: 最大取得件数（デフォルト: 10）
+ */
+export const searchUsersQuerySchema = z.object({
+	search: z.string().min(1),
+	limit: z.coerce.number().int().min(1).max(50).default(10),
+});
+export type SearchUsersQuery = z.infer<typeof searchUsersQuerySchema>;
+export type SearchUsersQueryInput = z.input<typeof searchUsersQuerySchema>;
+
+/**
+ * ユーザー検索結果のサマリー
+ * 検索結果として返すユーザー情報（機密情報は除外）
+ */
+export const userSummarySchema = userSchema.pick({
+	id: true,
+	email: true,
+	name: true,
+	namePhonetic: true,
+});
+export type UserSummary = z.infer<typeof userSummarySchema>;
+
+/**
+ * ユーザー検索レスポンス
+ */
+export const searchUsersResponseSchema = z.object({
+	users: userSummarySchema.array(),
+});
+export type SearchUsersResponse = z.infer<typeof searchUsersResponseSchema>;
