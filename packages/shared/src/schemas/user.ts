@@ -29,6 +29,14 @@ export const telephoneNumberSchema = z
 export type TelephoneNumber = z.infer<typeof telephoneNumberSchema>;
 
 /**
+ * 送信キー設定
+ * ENTER: Enterで送信、Shift+Enterで改行
+ * CTRL_ENTER: Ctrl+Enterで送信、Enterで改行
+ */
+export const sendKeySchema = z.enum(["ENTER", "CTRL_ENTER"]);
+export type SendKey = z.infer<typeof sendKeySchema>;
+
+/**
  * ユーザースキーマ
  * Firebase UIDと紐づくアプリケーションユーザー
  */
@@ -39,8 +47,42 @@ export const userSchema = z.object({
 	name: nameSchema,
 	namePhonetic: namePhoneticSchema,
 	telephoneNumber: telephoneNumberSchema,
+	avatarFileId: z.string().nullable(),
+	sendKey: sendKeySchema,
 	deletedAt: z.coerce.date().nullable(),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 });
 export type User = z.infer<typeof userSchema>;
+
+/**
+ * ユーザー設定更新リクエスト
+ */
+export const updateUserSettingsRequestSchema = z.object({
+	avatarFileId: z.string().nullable().optional(),
+	sendKey: sendKeySchema.optional(),
+});
+export type UpdateUserSettingsRequest = z.infer<
+	typeof updateUserSettingsRequestSchema
+>;
+
+/**
+ * ユーザー設定更新レスポンス
+ */
+export const updateUserSettingsResponseSchema = z.object({
+	user: userSchema,
+});
+export type UpdateUserSettingsResponse = z.infer<
+	typeof updateUserSettingsResponseSchema
+>;
+
+/**
+ * ユーザー設定取得レスポンス
+ */
+export const getUserSettingsResponseSchema = z.object({
+	avatarFileId: z.string().nullable(),
+	sendKey: sendKeySchema,
+});
+export type GetUserSettingsResponse = z.infer<
+	typeof getUserSettingsResponseSchema
+>;

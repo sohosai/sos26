@@ -10,6 +10,7 @@ export * from "./endpoints/project";
 export * from "./endpoints/project-form";
 export * from "./endpoints/push";
 export * from "./endpoints/types";
+export * from "./endpoints/user";
 export * from "./errors";
 export * from "./lib/email";
 export * from "./lib/sanitize-config";

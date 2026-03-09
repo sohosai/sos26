@@ -17,6 +17,7 @@ import { projectFormRoute } from "./routes/project-form";
 import { projectInquiryRoute } from "./routes/project-inquiry";
 import { projectNoticeRoute } from "./routes/project-notice";
 import { pushRoute } from "./routes/push";
+import { userRoute } from "./routes/user";
 
 // Push 初期化
 initPush();
@@ -61,6 +62,7 @@ app.route("/project", projectRoute);
 app.route("/project", projectNoticeRoute);
 app.route("/project", projectInquiryRoute);
 app.route("/push", pushRoute);
+app.route("/user", userRoute);
 app.route("/files", fileRoute);
 
 export { app };
