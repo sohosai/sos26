@@ -8,7 +8,7 @@ import type { Bureau, ViewerScope } from "@sos26/shared";
 import { IconCheck, IconChevronDown, IconSearch } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Button, TextArea, TextField } from "@/components/primitives";
+import { Button, Select, TextArea, TextField } from "@/components/primitives";
 import { FileAttachmentArea } from "./FileAttachmentArea";
 import { FormViewerSelector } from "./FormViewerSelector";
 import { MemberSelectPopover, SelectedChips } from "./MemberSelectPopover";
@@ -408,17 +408,17 @@ function FormSelector({
 	selectedForm: FormSummary | null;
 	onSelect: (form: FormSummary | null) => void;
 }) {
-	const [open, setOpen] = useState(false);
-	const [searchQuery, setSearchQuery] = useState("");
+	const options = [
+		{ value: "__none__", label: "なし" },
+		...forms.map(f => ({ value: f.id, label: f.title })),
+	];
 
-	const handleSelect = (form: FormSummary) => {
-		if (selectedForm?.id === form.id) {
+	const handleChange = (value: string) => {
+		if (value === "__none__") {
 			onSelect(null);
 		} else {
-			onSelect(form);
+			onSelect(forms.find(f => f.id === value) ?? null);
 		}
-		setOpen(false);
-		setSearchQuery("");
 	};
 
 	return (
@@ -426,74 +426,12 @@ function FormSelector({
 			<Text size="2" weight="medium">
 				関連フォーム（任意）
 			</Text>
-			<Text size="1" color="gray">
-				このお問い合わせに関連するフォームがあれば選択してください
-			</Text>
-			<Popover.Root
-				open={open}
-				onOpenChange={o => {
-					setOpen(o);
-					if (!o) setSearchQuery("");
-				}}
-			>
-				<Popover.Trigger>
-					<button type="button" className={styles.assignTrigger}>
-						<Text size="2" color="gray">
-							{selectedForm ? selectedForm.title : "フォームを選択..."}
-						</Text>
-						<IconChevronDown size={16} />
-					</button>
-				</Popover.Trigger>
-				<Popover.Content
-					className={styles.assignPopover}
-					side="bottom"
-					align="start"
-				>
-					<div className={styles.assignSearch}>
-						<RadixTextField.Root
-							placeholder="フォーム名で検索..."
-							size="2"
-							value={searchQuery}
-							onChange={e => setSearchQuery(e.target.value)}
-						>
-							<RadixTextField.Slot>
-								<IconSearch size={14} />
-							</RadixTextField.Slot>
-						</RadixTextField.Root>
-					</div>
-					<div className={styles.assignList}>
-						{forms
-							.filter(f => {
-								const q = searchQuery.toLowerCase();
-								if (!q) return true;
-								return f.title.toLowerCase().includes(q);
-							})
-							.map(form => {
-								const isSelected = selectedForm?.id === form.id;
-								return (
-									<button
-										key={form.id}
-										type="button"
-										className={`${styles.assignOption} ${
-											isSelected ? styles.assignOptionSelected : ""
-										}`}
-										onClick={() => handleSelect(form)}
-									>
-										<div className={styles.assignOptionText}>
-											<Text size="2">{form.title}</Text>
-										</div>
-										{isSelected && (
-											<IconCheck
-												size={14}
-												className={styles.assignOptionCheck}
-											/>
-										)}
-									</button>
-								);
-							})}
-					</div>
-				</Popover.Content>
-			</Popover.Root>
+			<Select
+				options={options}
+				value={selectedForm?.id ?? "__none__"}
+				onValueChange={handleChange}
+				placeholder="フォームを選択..."
+			/>
 		</div>
 	);
 }
