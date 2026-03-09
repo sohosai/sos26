@@ -1,4 +1,3 @@
-import type { PrismaClient } from "@prisma/client";
 import {
 	createMastersheetColumnRequestSchema,
 	type InitialValueInput,
@@ -19,6 +18,7 @@ import {
 	requireColumnOwner,
 	syncColumnOptions,
 	syncColumnViewers,
+	type TxClient,
 } from "./helpers";
 
 export const columnsRoute = new Hono<AuthEnv>();
@@ -54,7 +54,7 @@ function validateInitialValueForDataType(
 
 /** 初期値を全企画のセルに一括適用する */
 async function applyInitialValue(
-	tx: Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0],
+	tx: TxClient,
 	columnId: string,
 	initialValue: InitialValueInput
 ) {
