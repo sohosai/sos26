@@ -5,40 +5,59 @@
 	margin-bottom: var(--space-5);
 }
 
-.permissionList {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--space-1);
-}
-
-.permissionToggle {
+.permissionTrigger {
 	all: unset;
 	box-sizing: border-box;
 	display: inline-flex;
 	align-items: center;
+	gap: var(--space-2);
 	padding: var(--space-1) var(--space-2);
 	border-radius: var(--radius-2);
 	font-size: var(--font-size-1);
 	cursor: pointer;
-	transition:
-		background-color 0.15s ease,
-		color 0.15s ease;
 	border: 1px solid var(--gray-6);
-	color: var(--gray-11);
 	background-color: transparent;
+	min-width: 120px;
+	max-width: 240px;
+
+	&:hover {
+		background-color: var(--gray-a2);
+	}
+}
+
+.permissionBadges {
+	display: flex;
+	flex-wrap: nowrap;
+	gap: var(--space-1);
+	flex: 1;
+	overflow: hidden;
+	min-width: 0;
+	-webkit-mask-image: linear-gradient(to right, black calc(100% - 20px), transparent);
+	mask-image: linear-gradient(to right, black calc(100% - 20px), transparent);
+}
+
+.chevron {
+	color: var(--gray-9);
+	flex-shrink: 0;
+}
+
+.permissionDropdown {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	min-width: 180px;
+}
+
+.permissionOption {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-1) var(--space-1);
+	border-radius: var(--radius-2);
+	cursor: pointer;
 
 	&:hover {
 		background-color: var(--gray-a3);
-	}
-
-	&.active {
-		background-color: var(--accent-a3);
-		color: var(--accent-11);
-		border-color: var(--accent-7);
-
-		&:hover {
-			background-color: var(--accent-a4);
-		}
 	}
 }
 
