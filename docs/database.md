@@ -36,6 +36,7 @@ bun run db:generate
 | `bun run db:pull` | 既存の DB からスキーマを生成 |
 | `bun run db:studio` | Prisma Studio（GUI）を起動 |
 | `bun run db:format` | Prisma スキーマをフォーマット |
+| `bun run db:seed` | 開発用シードデータを投入 |
 
 ## 開発フロー
 
@@ -165,6 +166,8 @@ bun run db:migrate:reset
 ```
 
 **注意**: このコマンドは**全データが消えます**。開発環境でのみ使用してください。
+
+リセット後にデータを復元する場合は `bun run db:seed` を実行してください（`docs/how-to/seed.md` 参照）。
 
 ## データ規約
 
