@@ -9,11 +9,11 @@
 	}
 
 	:global(.rt-TableBody tr:last-child td:first-child).cellSelected {
-		border-bottom-left-radius: var(--radius-3);
+		border-bottom-left-radius: var(--radius-4);
 	}
 
 	:global(.rt-TableBody tr:last-child td:last-child).cellSelected {
-		border-bottom-right-radius: var(--radius-3);
+		border-bottom-right-radius: var(--radius-4);
 	}
 }
 
