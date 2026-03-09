@@ -50,7 +50,7 @@ function SetupPage() {
 		if (!namePhoneticResult.success) {
 			return (
 				namePhoneticResult.error.issues[0]?.message ??
-				"名前（フリガナ）を入力してください"
+				"名前（ふりがな）を入力してください"
 			);
 		}
 
@@ -155,7 +155,7 @@ function SetupPage() {
 				/>
 
 				<TextField
-					label="名前（フリガナ）"
+					label="名前（ふりがな）"
 					value={namePhonetic}
 					onChange={setNamePhonetic}
 					required

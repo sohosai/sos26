@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { tsukubaEmailSchema } from "../lib/email";
+import { toHiragana } from "../lib/phonetic";
 
 /**
  * 名前スキーマ
@@ -8,12 +9,15 @@ export const nameSchema = z.string().min(1, "名前を入力してください")
 export type Name = z.infer<typeof nameSchema>;
 
 /**
- * 名前（フリガナ）スキーマ
+ * 名前（ふりがな）スキーマ
+ *
+ * - カタカナが入力された場合はひらがなに自動変換する
  */
 export const namePhoneticSchema = z
 	.string()
-	.min(1, "名前（フリガナ）を入力してください");
-export type NamePhonetic = z.infer<typeof namePhoneticSchema>;
+	.min(1, "名前（ふりがな）を入力してください")
+	.transform(toHiragana);
+export type NamePhonetic = z.output<typeof namePhoneticSchema>;
 
 /**
  * 電話番号スキーマ

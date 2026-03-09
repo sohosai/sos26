@@ -166,6 +166,17 @@ bun run db:migrate:reset
 
 **注意**: このコマンドは**全データが消えます**。開発環境でのみ使用してください。
 
+## データ規約
+
+### ふりがな（namePhonetic）はひらがなで統一
+
+`namePhonetic`、`organizationNamePhonetic` などの読み仮名フィールドは**ひらがな**で保存します。
+
+- Zod スキーマに `.transform(toHiragana)` を適用済み
+- カタカナで入力されても自動的にひらがなに変換される
+- `toHiragana` ユーティリティは `packages/shared/src/lib/phonetic.ts` に定義
+- 新しい読み仮名フィールドを追加する場合も同様に `.transform(toHiragana)` を付与すること
+
 ## 未使用スキーマに関する注意
 
 以下のスキーマは DB・共有パッケージに定義済みですが、現時点では UI から使用されていません。
