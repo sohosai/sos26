@@ -8,17 +8,20 @@
 
 ## 目次
 
-- [共通仕様](#共通仕様)
-- [エンドポイント一覧](#エンドポイント一覧)
-- [各 API 詳細](#各-api-詳細)
-  - [GET `/committee/members`](#get-committeemembers)
-  - [POST `/committee/members`](#post-committeemembers)
-  - [PATCH `/committee/members/:id`](#patch-committeemembersid)
-  - [DELETE `/committee/members/:id`](#delete-committeemembersid)
-- [権限管理 API](#権限管理-api)
-  - [GET `/committee/members/:id/permissions`](#get-committeemembersidpermissions)
-  - [POST `/committee/members/:id/permissions`](#post-committeemembersidpermissions)
-  - [DELETE `/committee/members/:id/permissions/:permission`](#delete-committeemembersidpermissionspermission)
+- [Committee Member API 仕様（`/committee/members`）](#committee-member-api-仕様committeemembers)
+	- [目次](#目次)
+	- [共通仕様](#共通仕様)
+	- [エンドポイント一覧](#エンドポイント一覧)
+	- [各 API 詳細](#各-api-詳細)
+		- [GET `/committee/members`](#get-committeemembers)
+		- [POST `/committee/members`](#post-committeemembers)
+		- [PATCH `/committee/members/:id`](#patch-committeemembersid)
+		- [DELETE `/committee/members/:id`](#delete-committeemembersid)
+	- [権限管理 API](#権限管理-api)
+		- [権限の種類](#権限の種類)
+		- [GET `/committee/members/:id/permissions`](#get-committeemembersidpermissions)
+		- [POST `/committee/members/:id/permissions`](#post-committeemembersidpermissions)
+		- [DELETE `/committee/members/:id/permissions/:permission`](#delete-committeemembersidpermissionspermission)
 
 ---
 
@@ -90,6 +93,8 @@
 | `NOTICE_DELIVER` | お知らせ配信・承認 |
 | `FORM_DELIVER` | フォーム配信 |
 | `INQUIRY_ADMIN` | お問い合わせ管理 |
+| `PROJECT_REGISTRATION_FORM_CREATE` | 企画登録フォーム作成 |
+| `PROJECT_REGISTRATION_FORM_DELIVER` | 企画登録フォーム配信・承認 |
 
 ### GET `/committee/members/:id/permissions`
 
@@ -101,13 +106,13 @@
 
 委員メンバーに権限を付与します。
 
-- 入力: `permission`（`MEMBER_EDIT` | `NOTICE_DELIVER` | `FORM_DELIVER` | `INQUIRY_ADMIN`）
+- 入力: `permission`（`MEMBER_EDIT` | `NOTICE_DELIVER` | `FORM_DELIVER` | `INQUIRY_ADMIN` | `PROJECT_REGISTRATION_FORM_CREATE` | `PROJECT_REGISTRATION_FORM_DELIVER`）
 - 対象メンバーが存在しない場合: `NOT_FOUND`
 - 同じ権限が既に付与されている場合: `ALREADY_EXISTS`
 
 ### DELETE `/committee/members/:id/permissions/:permission`
 
-委員メンバーの権限を削除します。`:permission` には権限名（`MEMBER_EDIT` | `NOTICE_DELIVER` | `FORM_DELIVER` | `INQUIRY_ADMIN`）を指定します。
+委員メンバーの権限を削除します。`:permission` には権限名（`MEMBER_EDIT` | `NOTICE_DELIVER` | `FORM_DELIVER` | `INQUIRY_ADMIN` | `PROJECT_REGISTRATION_FORM_CREATE` | `PROJECT_REGISTRATION_FORM_DELIVER`）を指定します。
 
 - 不正な権限名の場合: `VALIDATION_ERROR`
 - 対象メンバーが存在しない場合: `NOT_FOUND`

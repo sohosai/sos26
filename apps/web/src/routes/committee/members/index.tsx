@@ -80,6 +80,8 @@ function PermissionsCell({ member, onToggle }: PermissionsCellProps) {
 		"NOTICE_DELIVER",
 		"FORM_DELIVER",
 		"INQUIRY_ADMIN",
+		"PROJECT_REGISTRATION_FORM_CREATE",
+		"PROJECT_REGISTRATION_FORM_DELIVER",
 	];
 
 	return (
