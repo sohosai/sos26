@@ -8,6 +8,7 @@ import {
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import {
+	notifyInquiryAssigneeAdded,
 	notifyInquiryCommentAdded,
 	notifyInquiryCreatedByProject,
 } from "../lib/notifications";
@@ -260,6 +261,16 @@ projectInquiryRoute.post(
 			projectName: project.name,
 			creatorName: user.name,
 		});
+
+		// フォーム紐づけで自動追加された実委担当者（フォームオーナー）に通知
+		if (formOwnerId) {
+			void notifyInquiryAssigneeAdded({
+				addedUserId: formOwnerId,
+				inquiryId: inquiry.id,
+				inquiryTitle: title,
+				side: "COMMITTEE",
+			});
+		}
 
 		return c.json({ inquiry }, 201);
 	}
