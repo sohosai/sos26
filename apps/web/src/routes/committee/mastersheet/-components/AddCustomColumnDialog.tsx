@@ -272,27 +272,39 @@ export function AddCustomColumnDialog({
 						{showOptions && (
 							<div className={styles.initialOptions}>
 								{dataType === "SELECT" ? (
-									<RadixRadioGroup.Root
-										size="1"
-										variant="surface"
-										value={
-											initialSelectedIds.length > 0
-												? String(initialSelectedIds[0])
-												: ""
-										}
-										onValueChange={v => setInitialSelectedIds([Number(v)])}
-									>
-										{options
-											.filter(o => o.label.trim())
-											.map(opt => (
-												<RadixRadioGroup.Item
-													key={opt.id}
-													value={String(opt.id)}
-												>
-													{opt.label}
-												</RadixRadioGroup.Item>
-											))}
-									</RadixRadioGroup.Root>
+									<>
+										<RadixRadioGroup.Root
+											size="2"
+											variant="surface"
+											value={
+												initialSelectedIds.length > 0
+													? String(initialSelectedIds[0])
+													: ""
+											}
+											onValueChange={v => setInitialSelectedIds([Number(v)])}
+										>
+											{options
+												.filter(o => o.label.trim())
+												.map(opt => (
+													<RadixRadioGroup.Item
+														key={opt.id}
+														value={String(opt.id)}
+													>
+														{opt.label}
+													</RadixRadioGroup.Item>
+												))}
+										</RadixRadioGroup.Root>
+										{initialSelectedIds.length > 0 && (
+											<Text
+												size="1"
+												color="gray"
+												style={{ cursor: "pointer" }}
+												onClick={() => setInitialSelectedIds([])}
+											>
+												選択を解除
+											</Text>
+										)}
+									</>
 								) : (
 									options
 										.filter(o => o.label.trim())
