@@ -1,9 +1,10 @@
 import { Dialog, Text } from "@radix-ui/themes";
-import { type Bureau, bureauLabelMap } from "@sos26/shared";
+import { type Bureau, bureauLabelMap, type UserSummary } from "@sos26/shared";
 import { IconX } from "@tabler/icons-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button, IconButton, Select, TextField } from "@/components/primitives";
+import { UserSearchSelect } from "@/components/committee/UserSearchSelect";
+import { Button, IconButton, Select } from "@/components/primitives";
 import { isClientError } from "@/lib/http/error";
 import styles from "./AddMemberDialog.module.scss";
 
@@ -29,19 +30,19 @@ export function AddMemberDialog({
 	onOpenChange,
 	onSubmit,
 }: AddMemberDialogProps) {
-	const [userId, setUserId] = useState("");
+	const [selectedUsers, setSelectedUsers] = useState<UserSummary[]>([]);
 	const [bureau, setBureau] = useState<Bureau | "">("");
 	const [loading, setLoading] = useState(false);
 
 	const handleClose = () => {
 		onOpenChange(false);
-		setUserId("");
+		setSelectedUsers([]);
 		setBureau("");
 	};
 
 	const handleSubmit = async () => {
-		if (!userId.trim()) {
-			toast.error("ユーザーIDを入力してください");
+		if (selectedUsers.length === 0) {
+			toast.error("ユーザーを選択してください");
 			return;
 		}
 		if (!bureau) {
@@ -51,8 +52,14 @@ export function AddMemberDialog({
 
 		setLoading(true);
 		try {
-			await onSubmit({ userId: userId.trim(), Bureau: bureau });
-			toast.success("メンバーを追加しました");
+			for (const user of selectedUsers) {
+				await onSubmit({ userId: user.id, Bureau: bureau });
+			}
+			toast.success(
+				selectedUsers.length === 1
+					? "メンバーを追加しました"
+					: `${selectedUsers.length}人のメンバーを追加しました`
+			);
 			handleClose();
 		} catch (error) {
 			toast.error(
@@ -75,15 +82,17 @@ export function AddMemberDialog({
 					</IconButton>
 				</div>
 				<Dialog.Description size="2" mb="4">
-					追加するユーザーのIDと所属局を入力してください。
+					ユーザーを検索して追加するメンバーと所属局を選択してください。
 				</Dialog.Description>
 
 				<div className={styles.form}>
-					<TextField
-						label="ユーザーID"
-						placeholder="ユーザーIDを入力"
-						value={userId}
-						onChange={setUserId}
+					<UserSearchSelect
+						label="ユーザー"
+						selected={selectedUsers}
+						onSelect={user => setSelectedUsers(prev => [...prev, user])}
+						onRemove={userId =>
+							setSelectedUsers(prev => prev.filter(u => u.id !== userId))
+						}
 						required
 					/>
 

@@ -1,10 +1,13 @@
 import type {
 	GetUserSettingsResponse,
+	SearchUsersQuery,
+	SearchUsersResponse,
 	UpdateUserSettingsRequest,
 	UpdateUserSettingsResponse,
 } from "@sos26/shared";
 import {
 	getUserSettingsEndpoint,
+	searchUsersEndpoint,
 	updateUserSettingsEndpoint,
 } from "@sos26/shared";
 import { callBodyApi, callGetApi } from "./core";
@@ -23,4 +26,13 @@ export async function updateUserSettings(
 	data: UpdateUserSettingsRequest
 ): Promise<UpdateUserSettingsResponse> {
 	return callBodyApi(updateUserSettingsEndpoint, data);
+}
+
+/**
+ * ユーザーを曖昧検索する
+ */
+export async function searchUsers(
+	query: SearchUsersQuery
+): Promise<SearchUsersResponse> {
+	return callGetApi(searchUsersEndpoint, { query });
 }

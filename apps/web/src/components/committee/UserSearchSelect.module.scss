@@ -1,0 +1,77 @@
+.container {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.search {
+	margin-bottom: var(--space-1);
+}
+
+.list {
+	display: flex;
+	flex-direction: column;
+	min-height: 200px;
+	max-height: 240px;
+	overflow-y: auto;
+	border: 1px solid var(--gray-6);
+	border-radius: var(--radius-2);
+	padding: var(--space-1);
+}
+
+.empty {
+	padding: var(--space-3);
+	text-align: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 1;
+}
+
+.userRow {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	padding: var(--space-2) var(--space-1);
+	border-radius: var(--radius-2);
+	cursor: pointer;
+
+	&:hover {
+		background-color: var(--gray-a3);
+	}
+
+	&.selected {
+		background-color: var(--accent-a3);
+	}
+}
+
+.userInfo {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-width: 0;
+}
+
+.selectedUsers {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-1);
+}
+
+.selectedChip {
+	all: unset;
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1);
+	padding: var(--space-1) var(--space-2);
+	border-radius: var(--radius-2);
+	font-size: var(--font-size-1);
+	background-color: var(--accent-a3);
+	color: var(--accent-11);
+	cursor: pointer;
+
+	&:hover {
+		background-color: var(--accent-a4);
+	}
+}
