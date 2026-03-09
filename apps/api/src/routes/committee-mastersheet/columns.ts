@@ -2,6 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 import {
 	createMastersheetColumnRequestSchema,
 	type InitialValueInput,
+	type MastersheetDataType,
 	mastersheetColumnIdPathParamsSchema,
 	updateMastersheetColumnRequestSchema,
 } from "@sos26/shared";
@@ -21,6 +22,35 @@ import {
 } from "./helpers";
 
 export const columnsRoute = new Hono<AuthEnv>();
+
+/** 初期値とデータ型の整合性を検証する */
+function validateInitialValueForDataType(
+	initialValue: InitialValueInput,
+	dataType: MastersheetDataType
+) {
+	if (
+		(dataType === "TEXT" || dataType === "NUMBER") &&
+		initialValue.selectedOptionIndexes?.length
+	) {
+		throw Errors.invalidRequest(
+			"テキスト・数値カラムに選択肢の初期値は指定できません"
+		);
+	}
+	if (
+		(dataType === "SELECT" || dataType === "MULTI_SELECT") &&
+		(initialValue.textValue != null || initialValue.numberValue != null)
+	) {
+		throw Errors.invalidRequest(
+			"選択カラムにテキスト・数値の初期値は指定できません"
+		);
+	}
+	if (dataType === "TEXT" && initialValue.numberValue != null) {
+		throw Errors.invalidRequest("テキストカラムに数値の初期値は指定できません");
+	}
+	if (dataType === "NUMBER" && initialValue.textValue != null) {
+		throw Errors.invalidRequest("数値カラムにテキストの初期値は指定できません");
+	}
+}
 
 /** 初期値を全企画のセルに一括適用する */
 async function applyInitialValue(
@@ -174,8 +204,8 @@ columnsRoute.post("/columns", requireAuth, requireCommitteeMember, async c => {
 
 			// 初期値が指定されている場合、全企画にセルを一括作成
 			if (data.initialValue) {
-				const initialValue = data.initialValue;
-				await applyInitialValue(tx, created.id, initialValue);
+				validateInitialValueForDataType(data.initialValue, data.dataType);
+				await applyInitialValue(tx, created.id, data.initialValue);
 			}
 
 			return tx.mastersheetColumn.findUniqueOrThrow({

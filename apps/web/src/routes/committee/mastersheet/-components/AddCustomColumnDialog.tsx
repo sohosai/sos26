@@ -1,6 +1,7 @@
 import {
 	Checkbox,
 	Dialog,
+	RadioGroup as RadixRadioGroup,
 	TextField as RadixTextField,
 	Text,
 } from "@radix-ui/themes";
@@ -84,9 +85,8 @@ export function AddCustomColumnDialog({
 	// 初期値
 	const [initialText, setInitialText] = useState("");
 	const [initialNumber, setInitialNumber] = useState("");
-	const [initialSelectedIndexes, setInitialSelectedIndexes] = useState<
-		number[]
-	>([]);
+	// OptionEntry.id で管理（フィルタ後のインデックスずれを防ぐ）
+	const [initialSelectedIds, setInitialSelectedIds] = useState<number[]>([]);
 
 	useEffect(() => {
 		if (!open) return;
@@ -107,6 +107,7 @@ export function AddCustomColumnDialog({
 
 	function removeOption(id: number) {
 		setOptions(prev => prev.filter(o => o.id !== id));
+		setInitialSelectedIds(prev => prev.filter(i => i !== id));
 	}
 
 	function updateOption(id: number, value: string) {
@@ -124,7 +125,7 @@ export function AddCustomColumnDialog({
 			setOptions([]);
 			setInitialText("");
 			setInitialNumber("");
-			setInitialSelectedIndexes([]);
+			setInitialSelectedIds([]);
 		}
 		onOpenChange(open);
 	}
@@ -137,8 +138,13 @@ export function AddCustomColumnDialog({
 			const num = Number(initialNumber);
 			if (!Number.isNaN(num)) return { numberValue: num };
 		}
-		if (showOptions && initialSelectedIndexes.length > 0) {
-			return { selectedOptionIndexes: initialSelectedIndexes };
+		if (showOptions && initialSelectedIds.length > 0) {
+			// opt.id → フィルタ後のインデックスに変換
+			const filtered = options.filter(o => o.label.trim());
+			const indexes = initialSelectedIds
+				.map(id => filtered.findIndex(o => o.id === id))
+				.filter(i => i >= 0);
+			if (indexes.length > 0) return { selectedOptionIndexes: indexes };
 		}
 		return undefined;
 	}
@@ -202,7 +208,7 @@ export function AddCustomColumnDialog({
 								setDataType(v);
 								setInitialText("");
 								setInitialNumber("");
-								setInitialSelectedIndexes([]);
+								setInitialSelectedIds([]);
 							}}
 						/>
 					</div>
@@ -265,36 +271,61 @@ export function AddCustomColumnDialog({
 						)}
 						{showOptions && (
 							<div className={styles.initialOptions}>
-								{options
-									.filter(o => o.label.trim())
-									.map((opt, idx) => {
-										const checked = initialSelectedIndexes.includes(idx);
-										return (
-											<Text
-												key={opt.id}
-												as="label"
-												size="2"
-												className={styles.optionCheck}
-											>
-												<Checkbox
-													size="1"
-													checked={checked}
-													onCheckedChange={v => {
-														if (dataType === "SELECT" && v === true) {
-															setInitialSelectedIndexes([idx]);
-														} else if (v === true) {
-															setInitialSelectedIndexes(prev => [...prev, idx]);
-														} else {
-															setInitialSelectedIndexes(prev =>
-																prev.filter(i => i !== idx)
-															);
-														}
-													}}
-												/>
-												{opt.label}
-											</Text>
-										);
-									})}
+								{dataType === "SELECT" ? (
+									<RadixRadioGroup.Root
+										size="1"
+										variant="surface"
+										value={
+											initialSelectedIds.length > 0
+												? String(initialSelectedIds[0])
+												: ""
+										}
+										onValueChange={v => setInitialSelectedIds([Number(v)])}
+									>
+										{options
+											.filter(o => o.label.trim())
+											.map(opt => (
+												<RadixRadioGroup.Item
+													key={opt.id}
+													value={String(opt.id)}
+												>
+													{opt.label}
+												</RadixRadioGroup.Item>
+											))}
+									</RadixRadioGroup.Root>
+								) : (
+									options
+										.filter(o => o.label.trim())
+										.map(opt => {
+											const checked = initialSelectedIds.includes(opt.id);
+											return (
+												<Text
+													key={opt.id}
+													as="label"
+													size="2"
+													className={styles.optionCheck}
+												>
+													<Checkbox
+														size="1"
+														checked={checked}
+														onCheckedChange={v => {
+															if (v === true) {
+																setInitialSelectedIds(prev => [
+																	...prev,
+																	opt.id,
+																]);
+															} else {
+																setInitialSelectedIds(prev =>
+																	prev.filter(i => i !== opt.id)
+																);
+															}
+														}}
+													/>
+													{opt.label}
+												</Text>
+											);
+										})
+								)}
 								{options.filter(o => o.label.trim()).length === 0 && (
 									<Text size="1" color="gray">
 										選択肢を追加すると選べるようになります

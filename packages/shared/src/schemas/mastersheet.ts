@@ -188,12 +188,20 @@ const columnOptionInputSchema = z.object({
 });
 
 /** カスタムカラム作成時の初期値（全企画に一括適用） */
-const initialValueInputSchema = z.object({
-	textValue: z.string().nullable().optional(),
-	numberValue: z.number().nullable().optional(),
-	/** options 配列のインデックス（作成前で ID が未確定のため） */
-	selectedOptionIndexes: z.array(z.number().int().min(0)).optional(),
-});
+const initialValueInputSchema = z
+	.object({
+		textValue: z.string().nullable().optional(),
+		numberValue: z.number().nullable().optional(),
+		/** options 配列のインデックス（作成前で ID が未確定のため） */
+		selectedOptionIndexes: z.array(z.number().int().min(0)).optional(),
+	})
+	.refine(
+		v =>
+			(v.textValue != null && v.textValue !== "") ||
+			v.numberValue != null ||
+			(v.selectedOptionIndexes != null && v.selectedOptionIndexes.length > 0),
+		{ message: "初期値には少なくとも1つの値を指定してください" }
+	);
 export type InitialValueInput = z.infer<typeof initialValueInputSchema>;
 
 export const createMastersheetColumnRequestSchema = z.discriminatedUnion(
