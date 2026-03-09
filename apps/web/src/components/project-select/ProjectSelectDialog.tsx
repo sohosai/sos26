@@ -18,7 +18,7 @@ import {
 	type SortingState,
 	type VisibilityState,
 } from "@tanstack/react-table";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DataTable } from "@/components/patterns/DataTable";
 import { Button, IconButton } from "@/components/primitives";
 import {
@@ -400,8 +400,13 @@ export function ProjectSelectDialog({
 		}
 	}, [open, selectedIds]);
 
-	function applyView(view: SavedView, cols: ApiColumn[]) {
-		const state = JSON.parse(view.state) as ViewState;
+	const applyView = useCallback((view: SavedView, cols: ApiColumn[]) => {
+		let state: ViewState;
+		try {
+			state = JSON.parse(view.state) as ViewState;
+		} catch {
+			return;
+		}
 		setActiveViewId(view.id);
 		setSorting(state.sorting ?? []);
 		setColumnFilters(state.columnFilters ?? []);
@@ -416,10 +421,9 @@ export function ProjectSelectDialog({
 		}
 		setColumnVisibility(vis);
 		setTableKey(k => k + 1);
-	}
+	}, []);
 
 	// マスターシートデータ + ビューを取得
-	// biome-ignore lint/correctness/useExhaustiveDependencies: applyView は setter のみ使用するため依存不要。open 変更時のみ実行
 	useEffect(() => {
 		if (!open) return;
 		let cancelled = false;
@@ -448,7 +452,7 @@ export function ProjectSelectDialog({
 		return () => {
 			cancelled = true;
 		};
-	}, [open]);
+	}, [open, applyView]);
 
 	// テーブルデータ
 	const tableData = useMemo(
