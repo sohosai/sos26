@@ -4,6 +4,7 @@ import type { TextConstraints } from "@sos26/shared";
 import { IconPlus, IconX } from "@tabler/icons-react";
 import { Button, IconButton, Select, TextField } from "@/components/primitives";
 import { FileUploadField } from "../EachField/FileUploadField";
+import { NumberField } from "../EachField/NumberField";
 import type { FormItem } from "../type";
 import styles from "./AnswerFieldEditor.module.scss";
 
@@ -40,32 +41,16 @@ function TextConstraintEditor({
 				入力制約
 			</Text>
 			<div className={styles.constraintRow}>
-				<TextField
+				<NumberField
 					label="最小文字数"
-					type="number"
-					value={
-						constraints?.minLength !== undefined
-							? String(constraints.minLength)
-							: ""
-					}
-					onChange={v => {
-						const n = v === "" ? undefined : Math.max(0, Math.floor(Number(v)));
-						update({ minLength: n });
-					}}
+					value={constraints?.minLength ?? null}
+					onChange={n => update({ minLength: n ?? undefined })}
 					placeholder="例: 10"
 				/>
-				<TextField
+				<NumberField
 					label="最大文字数"
-					type="number"
-					value={
-						constraints?.maxLength !== undefined
-							? String(constraints.maxLength)
-							: ""
-					}
-					onChange={v => {
-						const n = v === "" ? undefined : Math.max(1, Math.floor(Number(v)));
-						update({ maxLength: n });
-					}}
+					value={constraints?.maxLength ?? null}
+					onChange={n => update({ maxLength: n ?? undefined })}
 					placeholder="例: 200"
 				/>
 			</div>
