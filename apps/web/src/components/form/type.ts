@@ -1,4 +1,4 @@
-import type { FormItemType } from "@sos26/shared";
+import type { FormItemType, TextConstraints } from "@sos26/shared";
 
 export type FormAnswerValue = string | number | string[] | File | null;
 
@@ -9,19 +9,6 @@ export type FormAnswers = {
 export type FormItemOption = {
 	id: string;
 	label: string;
-};
-
-export type TextConstraintPattern =
-	| "katakana"
-	| "hiragana"
-	| "alphanumeric"
-	| "custom";
-
-export type TextConstraints = {
-	minLength?: number;
-	maxLength?: number;
-	pattern?: TextConstraintPattern;
-	customPattern?: string;
 };
 
 export type FormItem = {

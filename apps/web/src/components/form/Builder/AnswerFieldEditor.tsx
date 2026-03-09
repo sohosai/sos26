@@ -1,9 +1,10 @@
 // Radio/Checkbox: Editor の装飾表示用（disabled 固定）のため直接 import
 import { Checkbox, Radio, Text } from "@radix-ui/themes";
+import type { TextConstraints } from "@sos26/shared";
 import { IconPlus, IconX } from "@tabler/icons-react";
 import { Button, IconButton, Select, TextField } from "@/components/primitives";
 import { FileUploadField } from "../EachField/FileUploadField";
-import type { FormItem, TextConstraints } from "../type";
+import type { FormItem } from "../type";
 import styles from "./AnswerFieldEditor.module.scss";
 
 const PATTERN_OPTIONS = [
