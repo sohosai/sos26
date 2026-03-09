@@ -17,6 +17,26 @@ export const formItemTypeSchema = z.enum([
 export type FormItemType = z.infer<typeof formItemTypeSchema>;
 
 // ─────────────────────────────────────────────────────────────
+// テキスト制約スキーマ
+// ─────────────────────────────────────────────────────────────
+
+export const textConstraintPatternSchema = z.enum([
+	"katakana",
+	"hiragana",
+	"alphanumeric",
+	"custom",
+]);
+export type TextConstraintPattern = z.infer<typeof textConstraintPatternSchema>;
+
+export const textConstraintsSchema = z.object({
+	minLength: z.number().int().nonnegative().optional(),
+	maxLength: z.number().int().positive().optional(),
+	pattern: textConstraintPatternSchema.optional(),
+	customPattern: z.string().optional(),
+});
+export type TextConstraints = z.infer<typeof textConstraintsSchema>;
+
+// ─────────────────────────────────────────────────────────────
 // 基本モデルスキーマ
 // ─────────────────────────────────────────────────────────────
 
@@ -39,6 +59,7 @@ export const formItemSchema = z.object({
 	required: z.boolean().default(false),
 	sortOrder: z.number().int(),
 	options: z.array(formItemOptionSchema),
+	constraints: textConstraintsSchema.nullable(),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 });
@@ -205,7 +226,10 @@ export const createFormItemInputSchema = formItemSchema
 		required: true,
 		sortOrder: true,
 	})
-	.extend({ options: z.array(createFormItemOptionInputSchema).optional() });
+	.extend({
+		options: z.array(createFormItemOptionInputSchema).optional(),
+		constraints: textConstraintsSchema.nullable().optional(),
+	});
 
 export const createFormRequestSchema = z.object({
 	title: z.string().min(1).default("無題のフォーム"),
@@ -473,6 +497,7 @@ const projectFormItemSchema = z.object({
 	required: z.boolean(),
 	sortOrder: z.number().int(),
 	options: z.array(projectFormItemOptionSchema),
+	constraints: textConstraintsSchema.nullable(),
 });
 
 // 回答値スキーマ
