@@ -1,6 +1,13 @@
-import { Dialog, TextField as RadixTextField, Text } from "@radix-ui/themes";
+import {
+	Checkbox,
+	Dialog,
+	RadioGroup as RadixRadioGroup,
+	TextField as RadixTextField,
+	Text,
+} from "@radix-ui/themes";
 import type {
 	GetMastersheetDataResponse,
+	InitialValueInput,
 	MastersheetDataType,
 	MastersheetViewerInput,
 } from "@sos26/shared";
@@ -75,6 +82,12 @@ export function AddCustomColumnDialog({
 	const [loading, setLoading] = useState(false);
 	const nextId = useRef(0);
 
+	// 初期値
+	const [initialText, setInitialText] = useState("");
+	const [initialNumber, setInitialNumber] = useState("");
+	// OptionEntry.id で管理（フィルタ後のインデックスずれを防ぐ）
+	const [initialSelectedIds, setInitialSelectedIds] = useState<number[]>([]);
+
 	useEffect(() => {
 		if (!open) return;
 		listCommitteeMembers()
@@ -94,6 +107,7 @@ export function AddCustomColumnDialog({
 
 	function removeOption(id: number) {
 		setOptions(prev => prev.filter(o => o.id !== id));
+		setInitialSelectedIds(prev => prev.filter(i => i !== id));
 	}
 
 	function updateOption(id: number, value: string) {
@@ -109,17 +123,49 @@ export function AddCustomColumnDialog({
 			setDataType("TEXT");
 			setViewers([]);
 			setOptions([]);
+			setInitialText("");
+			setInitialNumber("");
+			setInitialSelectedIds([]);
 		}
 		onOpenChange(open);
 	}
 
-	async function handleSubmit() {
-		if (!name.trim()) {
-			toast.error("カラム名を入力してください");
-			return;
+	function buildInitialValue(): InitialValueInput | undefined {
+		if (dataType === "TEXT" && initialText.trim()) {
+			return { textValue: initialText };
 		}
-		if (showOptions && options.filter(o => o.label.trim()).length === 0) {
-			toast.error("選択肢を1つ以上追加してください");
+		if (dataType === "NUMBER" && initialNumber.trim()) {
+			const num = Number(initialNumber);
+			if (!Number.isNaN(num)) return { numberValue: num };
+		}
+		if (showOptions && initialSelectedIds.length > 0) {
+			// opt.id → フィルタ後のインデックスに変換
+			const filtered = options.filter(o => o.label.trim());
+			const indexes = initialSelectedIds
+				.map(id => filtered.findIndex(o => o.id === id))
+				.filter(i => i >= 0);
+			if (indexes.length > 0) return { selectedOptionIndexes: indexes };
+		}
+		return undefined;
+	}
+
+	function validate(): string | null {
+		if (!name.trim()) return "カラム名を入力してください";
+		if (showOptions && options.filter(o => o.label.trim()).length === 0)
+			return "選択肢を1つ以上追加してください";
+		if (
+			dataType === "NUMBER" &&
+			initialNumber.trim() &&
+			Number.isNaN(Number(initialNumber))
+		)
+			return "初期値に有効な数値を入力してください";
+		return null;
+	}
+
+	async function handleSubmit() {
+		const error = validate();
+		if (error) {
+			toast.error(error);
 			return;
 		}
 		setLoading(true);
@@ -129,6 +175,7 @@ export function AddCustomColumnDialog({
 						.filter(o => o.label.trim())
 						.map((o, i) => ({ label: o.label, sortOrder: i }))
 				: undefined;
+
 			await createMastersheetColumn({
 				type: "CUSTOM",
 				name: name.trim(),
@@ -137,6 +184,7 @@ export function AddCustomColumnDialog({
 				dataType: dataType as MastersheetDataType,
 				viewers,
 				options: optionsInput,
+				initialValue: buildInitialValue(),
 			});
 			toast.success("カラムを追加しました");
 			onSuccess();
@@ -166,7 +214,12 @@ export function AddCustomColumnDialog({
 						<Select
 							options={DATA_TYPE_OPTIONS}
 							value={dataType}
-							onValueChange={setDataType}
+							onValueChange={v => {
+								setDataType(v);
+								setInitialText("");
+								setInitialNumber("");
+								setInitialSelectedIds([]);
+							}}
 						/>
 					</div>
 					<div className={styles.field}>
@@ -202,6 +255,107 @@ export function AddCustomColumnDialog({
 							</Button>
 						</div>
 					)}
+					<div className={styles.field}>
+						<Text size="2" weight="medium">
+							初期値
+						</Text>
+						<Text size="1" color="gray">
+							全企画のセルに一括で設定されます
+						</Text>
+						{dataType === "TEXT" && (
+							<RadixTextField.Root
+								size="2"
+								value={initialText}
+								placeholder="初期テキスト"
+								onChange={e => setInitialText(e.target.value)}
+							/>
+						)}
+						{dataType === "NUMBER" && (
+							<RadixTextField.Root
+								size="2"
+								type="number"
+								value={initialNumber}
+								placeholder="初期数値"
+								onChange={e => setInitialNumber(e.target.value)}
+							/>
+						)}
+						{showOptions && (
+							<div className={styles.initialOptions}>
+								{dataType === "SELECT" ? (
+									<>
+										<RadixRadioGroup.Root
+											size="2"
+											variant="surface"
+											value={
+												initialSelectedIds.length > 0
+													? String(initialSelectedIds[0])
+													: ""
+											}
+											onValueChange={v => setInitialSelectedIds([Number(v)])}
+										>
+											{options
+												.filter(o => o.label.trim())
+												.map(opt => (
+													<RadixRadioGroup.Item
+														key={opt.id}
+														value={String(opt.id)}
+													>
+														{opt.label}
+													</RadixRadioGroup.Item>
+												))}
+										</RadixRadioGroup.Root>
+										{initialSelectedIds.length > 0 && (
+											<Text
+												size="1"
+												color="gray"
+												style={{ cursor: "pointer" }}
+												onClick={() => setInitialSelectedIds([])}
+											>
+												選択を解除
+											</Text>
+										)}
+									</>
+								) : (
+									options
+										.filter(o => o.label.trim())
+										.map(opt => {
+											const checked = initialSelectedIds.includes(opt.id);
+											return (
+												<Text
+													key={opt.id}
+													as="label"
+													size="2"
+													className={styles.optionCheck}
+												>
+													<Checkbox
+														size="1"
+														checked={checked}
+														onCheckedChange={v => {
+															if (v === true) {
+																setInitialSelectedIds(prev => [
+																	...prev,
+																	opt.id,
+																]);
+															} else {
+																setInitialSelectedIds(prev =>
+																	prev.filter(i => i !== opt.id)
+																);
+															}
+														}}
+													/>
+													{opt.label}
+												</Text>
+											);
+										})
+								)}
+								{options.filter(o => o.label.trim()).length === 0 && (
+									<Text size="1" color="gray">
+										選択肢を追加すると選べるようになります
+									</Text>
+								)}
+							</div>
+						)}
+					</div>
 					<div className={styles.actions}>
 						<Button
 							intent="secondary"
