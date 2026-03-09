@@ -1,0 +1,23 @@
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: var(--space-2);
+}
+
+.tableWrapper {
+	max-height: 60vh;
+	overflow-y: auto;
+}
+
+.footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-top: var(--space-4);
+}
+
+.footerActions {
+	display: flex;
+	gap: var(--space-2);
+}
