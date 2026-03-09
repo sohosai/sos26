@@ -32,7 +32,17 @@ export const textConstraintsSchema = z.object({
 	minLength: z.number().int().nonnegative().optional(),
 	maxLength: z.number().int().positive().optional(),
 	pattern: textConstraintPatternSchema.optional(),
-	customPattern: z.string().optional(),
+	customPattern: z
+		.string()
+		.refine(val => {
+			try {
+				new RegExp(val);
+				return true;
+			} catch {
+				return false;
+			}
+		}, "正規表現の形式が不正です")
+		.optional(),
 });
 export type TextConstraints = z.infer<typeof textConstraintsSchema>;
 
