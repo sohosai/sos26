@@ -22,6 +22,11 @@ SEED_FIREBASE_UIDS=uid-aaa,uid-bbb,uid-ccc
 bun run db:seed
 ```
 
+### 想定する使い方
+- 一度、通常通りにユーザーを登録する。
+- firebaseから、firebaseUIDをコピーし、envにカンマ区切りで貼り付ける。
+- resetした時にseed
+
 ### 作成されるユーザー
 
 `SEED_FIREBASE_UIDS=uid-aaa,uid-bbb,uid-ccc` の場合の例：
