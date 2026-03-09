@@ -22,6 +22,19 @@ import type { AuthEnv } from "../types/auth-env";
 const committeeInquiryRoute = new Hono<AuthEnv>();
 
 // ─────────────────────────────────────────────────────────────
+// ヘルパー: 関連フォームの存在チェック
+// ─────────────────────────────────────────────────────────────
+
+async function validateRelatedForm(formId: string): Promise<void> {
+	const form = await prisma.form.findFirst({
+		where: { id: formId, deletedAt: null },
+	});
+	if (!form) {
+		throw Errors.invalidRequest("指定されたフォームが見つかりません");
+	}
+}
+
+// ─────────────────────────────────────────────────────────────
 // 権限チェックヘルパー
 // ─────────────────────────────────────────────────────────────
 
@@ -173,6 +186,7 @@ committeeInquiryRoute.post(
 		const {
 			title,
 			body: inquiryBody,
+			relatedFormId,
 			projectId,
 			projectAssigneeUserIds,
 			committeeAssigneeUserIds,
@@ -249,6 +263,11 @@ committeeInquiryRoute.post(
 			}
 		}
 
+		// 関連フォームの存在チェック
+		if (relatedFormId) {
+			await validateRelatedForm(relatedFormId);
+		}
+
 		const inquiry = await prisma.inquiry.create({
 			data: {
 				title,
@@ -257,6 +276,7 @@ committeeInquiryRoute.post(
 				createdById: user.id,
 				creatorRole: "COMMITTEE",
 				projectId,
+				relatedFormId: relatedFormId ?? null,
 				assignees: {
 					create: [
 						// 作成者（実委側）
@@ -416,6 +436,7 @@ committeeInquiryRoute.get(
 			include: {
 				createdBy: { select: userSelect },
 				project: { select: { id: true, name: true } },
+				relatedForm: { select: { id: true, title: true } },
 				assignees: {
 					where: { deletedAt: null },
 					include: assigneeInclude,
@@ -467,6 +488,7 @@ committeeInquiryRoute.get(
 			updatedAt: inquiry.updatedAt,
 			createdBy: inquiry.createdBy,
 			project: inquiry.project,
+			relatedForm: inquiry.relatedForm,
 			projectAssignees: inquiry.assignees
 				.filter(a => a.side === "PROJECT")
 				.map(formatAssignee),

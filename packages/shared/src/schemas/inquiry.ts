@@ -177,6 +177,7 @@ const inquirySummarySchema = z.object({
 export const createProjectInquiryRequestSchema = z.object({
 	title: z.string().min(1, "件名を入力してください"),
 	body: z.string().min(1, "内容を入力してください"),
+	relatedFormId: z.cuid().optional(),
 	coAssigneeUserIds: z.array(z.cuid()).optional(),
 	fileIds: z.array(z.string()).optional(),
 });
@@ -206,10 +207,19 @@ export type ListProjectInquiriesResponse = z.infer<
 // 企画側: GET /project/:projectId/inquiries/:inquiryId
 // ─────────────────────────────────────────────────────────────
 
+/** 関連フォーム情報 */
+const relatedFormSummarySchema = z
+	.object({
+		id: z.string(),
+		title: z.string(),
+	})
+	.nullable();
+
 export const getProjectInquiryResponseSchema = z.object({
 	inquiry: inquirySchema.extend({
 		createdBy: userSummarySchema,
 		project: z.object({ id: z.cuid(), name: z.string() }),
+		relatedForm: relatedFormSummarySchema,
 		projectAssignees: z.array(assigneeWithUserSchema),
 		committeeAssignees: z.array(assigneeWithUserSchema),
 		comments: z.array(commentWithUserSchema),
@@ -314,6 +324,7 @@ export type ViewerInput = z.infer<typeof viewerInputSchema>;
 export const createCommitteeInquiryRequestSchema = z.object({
 	title: z.string().min(1, "件名を入力してください"),
 	body: z.string().min(1, "内容を入力してください"),
+	relatedFormId: z.cuid().optional(),
 	projectId: z.cuid(),
 	projectAssigneeUserIds: z
 		.array(z.cuid())
@@ -352,6 +363,7 @@ export const getCommitteeInquiryResponseSchema = z.object({
 	inquiry: inquirySchema.extend({
 		createdBy: userSummarySchema,
 		project: z.object({ id: z.cuid(), name: z.string() }),
+		relatedForm: relatedFormSummarySchema,
 		projectAssignees: z.array(assigneeWithUserSchema),
 		committeeAssignees: z.array(assigneeWithUserSchema),
 		viewers: z.array(viewerDetailSchema),

@@ -18,6 +18,56 @@ import type { AuthEnv } from "../types/auth-env";
 const projectInquiryRoute = new Hono<AuthEnv>();
 
 // ─────────────────────────────────────────────────────────────
+// ヘルパー: 関連フォームの検証と初期対応ルール
+// ─────────────────────────────────────────────────────────────
+
+type FormInitialAssignment = {
+	formOwnerId: string | null;
+	formCollaboratorIds: string[];
+};
+
+async function resolveRelatedForm(
+	relatedFormId: string | undefined,
+	projectId: string
+): Promise<FormInitialAssignment> {
+	if (!relatedFormId) {
+		return { formOwnerId: null, formCollaboratorIds: [] };
+	}
+	const delivery = await prisma.formDelivery.findFirst({
+		where: {
+			projectId,
+			formAuthorization: {
+				form: { id: relatedFormId, deletedAt: null },
+			},
+		},
+		include: {
+			formAuthorization: {
+				include: {
+					form: {
+						include: {
+							collaborators: {
+								where: { deletedAt: null },
+								select: { userId: true },
+							},
+						},
+					},
+				},
+			},
+		},
+	});
+	if (!delivery) {
+		throw Errors.invalidRequest(
+			"指定されたフォームはこの企画に配信されていません"
+		);
+	}
+	const formOwnerId = delivery.formAuthorization.form.ownerId;
+	const formCollaboratorIds = delivery.formAuthorization.form.collaborators
+		.map(c => c.userId)
+		.filter(id => id !== formOwnerId);
+	return { formOwnerId, formCollaboratorIds };
+}
+
+// ─────────────────────────────────────────────────────────────
 // ヘルパー: 企画側担当者チェック
 // ─────────────────────────────────────────────────────────────
 
@@ -106,6 +156,7 @@ projectInquiryRoute.post(
 		const {
 			title,
 			body: inquiryBody,
+			relatedFormId,
 			coAssigneeUserIds,
 			fileIds,
 		} = createProjectInquiryRequestSchema.parse(body);
@@ -153,14 +204,36 @@ projectInquiryRoute.post(
 			}
 		}
 
+		// 関連フォームの検証と初期対応ルール
+		const { formOwnerId, formCollaboratorIds } = await resolveRelatedForm(
+			relatedFormId,
+			project.id
+		);
+
+		// 初期ステータス: フォーム紐づけあり → IN_PROGRESS、なし → UNASSIGNED
+		const initialStatus = formOwnerId ? "IN_PROGRESS" : "UNASSIGNED";
+
+		// 実委側担当者（フォームオーナー）
+		const committeeAssignees = formOwnerId
+			? [{ userId: formOwnerId, side: "COMMITTEE" as const, isCreator: false }]
+			: [];
+
+		// 閲覧者（フォーム共同編集者 → INDIVIDUAL スコープ）
+		const initialViewers = formCollaboratorIds.map(userId => ({
+			scope: "INDIVIDUAL" as const,
+			bureauValue: null,
+			userId,
+		}));
+
 		const inquiry = await prisma.inquiry.create({
 			data: {
 				title,
 				body: inquiryBody,
-				status: "UNASSIGNED",
+				status: initialStatus,
 				createdById: user.id,
 				creatorRole: "PROJECT",
 				projectId: project.id,
+				relatedFormId: relatedFormId ?? null,
 				assignees: {
 					create: [
 						{ userId: user.id, side: "PROJECT", isCreator: true },
@@ -169,10 +242,14 @@ projectInquiryRoute.post(
 							side: "PROJECT" as const,
 							isCreator: false,
 						})),
+						...committeeAssignees,
 					],
 				},
 				attachments: {
 					create: uniqueFileIds.map(fileId => ({ fileId })),
+				},
+				viewers: {
+					create: initialViewers,
 				},
 			},
 		});
@@ -270,6 +347,7 @@ projectInquiryRoute.get(
 			include: {
 				createdBy: { select: userSelect },
 				project: { select: { id: true, name: true } },
+				relatedForm: { select: { id: true, title: true } },
 				assignees: {
 					where: { deletedAt: null },
 					include: assigneeInclude,
@@ -317,6 +395,7 @@ projectInquiryRoute.get(
 			updatedAt: inquiry.updatedAt,
 			createdBy: inquiry.createdBy,
 			project: inquiry.project,
+			relatedForm: inquiry.relatedForm,
 			projectAssignees: inquiry.assignees
 				.filter(a => a.side === "PROJECT")
 				.map(formatAssignee),
