@@ -7,6 +7,14 @@
 	:global(.rt-TableHeader) {
 		--table-row-background-color: var(--gray-a1);
 	}
+
+	:global(.rt-TableBody tr:last-child td:first-child).cellSelected {
+		border-bottom-left-radius: var(--radius-3);
+	}
+
+	:global(.rt-TableBody tr:last-child td:last-child).cellSelected {
+		border-bottom-right-radius: var(--radius-3);
+	}
 }
 
 :global(.rt-TableCell) {
