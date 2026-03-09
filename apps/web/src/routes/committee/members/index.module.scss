@@ -30,10 +30,8 @@
 	flex-wrap: nowrap;
 	gap: var(--space-1);
 	flex: 1;
-	overflow: hidden;
+	align-items: center;
 	min-width: 0;
-	-webkit-mask-image: linear-gradient(to right, black calc(100% - 20px), transparent);
-	mask-image: linear-gradient(to right, black calc(100% - 20px), transparent);
 }
 
 .chevron {
@@ -49,12 +47,16 @@
 }
 
 .permissionOption {
+	all: unset;
+	box-sizing: border-box;
 	display: flex;
 	align-items: center;
 	gap: var(--space-2);
 	padding: var(--space-1) var(--space-1);
 	border-radius: var(--radius-2);
 	cursor: pointer;
+	width: 100%;
+	font: inherit;
 
 	&:hover {
 		background-color: var(--gray-a3);
