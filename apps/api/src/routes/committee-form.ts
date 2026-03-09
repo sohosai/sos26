@@ -5,6 +5,8 @@ import {
 	formIdPathParamsSchema,
 	formResponsePathParamsSchema,
 	requestFormAuthorizationRequestSchema,
+	type TextConstraintPattern,
+	type TextConstraints,
 	updateFormAuthorizationRequestSchema,
 	updateFormDetailRequestSchema,
 } from "@sos26/shared";
@@ -21,8 +23,78 @@ import type { AuthEnv } from "../types/auth-env";
 const committeeFormRoute = new Hono<AuthEnv>();
 
 // ─────────────────────────────────────────────────────────────
-// ヘルパー: フォームの存在確認 編集権限チェック
+// ヘルパー: 制約フィールドの変換
 // ─────────────────────────────────────────────────────────────
+
+type PrismaConstraintFields = {
+	constraintMinLength: number | null;
+	constraintMaxLength: number | null;
+	constraintPattern: string | null;
+	constraintCustomPattern: string | null;
+};
+
+function constraintsFromPrisma({
+	constraintMinLength,
+	constraintMaxLength,
+	constraintPattern,
+	constraintCustomPattern,
+}: PrismaConstraintFields): TextConstraints | null {
+	if (
+		constraintMinLength === null &&
+		constraintMaxLength === null &&
+		constraintPattern === null
+	) {
+		return null;
+	}
+	return {
+		...(constraintMinLength !== null && { minLength: constraintMinLength }),
+		...(constraintMaxLength !== null && { maxLength: constraintMaxLength }),
+		...(constraintPattern !== null && {
+			pattern: constraintPattern as TextConstraintPattern,
+		}),
+		...(constraintCustomPattern !== null && {
+			customPattern: constraintCustomPattern,
+		}),
+	};
+}
+
+function constraintsToPrisma(
+	constraints: TextConstraints | null | undefined
+): PrismaConstraintFields {
+	return {
+		constraintMinLength: constraints?.minLength ?? null,
+		constraintMaxLength: constraints?.maxLength ?? null,
+		constraintPattern: constraints?.pattern ?? null,
+		constraintCustomPattern: constraints?.customPattern ?? null,
+	};
+}
+
+function mapItemToApiShape<T extends PrismaConstraintFields>(item: T) {
+	const {
+		constraintMinLength,
+		constraintMaxLength,
+		constraintPattern,
+		constraintCustomPattern,
+		...rest
+	} = item;
+	return {
+		...rest,
+		constraints: constraintsFromPrisma({
+			constraintMinLength,
+			constraintMaxLength,
+			constraintPattern,
+			constraintCustomPattern,
+		}),
+	};
+}
+
+function mapFormToApiShape<T extends { items: PrismaConstraintFields[] }>(
+	form: T
+) {
+	return { ...form, items: form.items.map(mapItemToApiShape) };
+}
+
+// フォームの存在確認 編集権限チェック
 
 const getFormOrThrow = async (formId: string) => {
 	const form = await prisma.form.findFirst({
@@ -75,8 +147,9 @@ committeeFormRoute.post(
 				...formData,
 				ownerId: userId,
 				items: {
-					create: items.map(({ options, ...item }) => ({
+					create: items.map(({ options, constraints, ...item }) => ({
 						...item,
+						...constraintsToPrisma(constraints),
 						options: options?.length ? { create: options } : undefined,
 					})),
 				},
@@ -86,7 +159,7 @@ committeeFormRoute.post(
 			},
 		});
 
-		return c.json({ form });
+		return c.json({ form: mapFormToApiShape(form) });
 	}
 );
 
@@ -194,6 +267,7 @@ committeeFormRoute.get(
 		return c.json({
 			form: {
 				...form,
+				items: form.items.map(mapItemToApiShape),
 				authorizationDetail: form.authorizations[0] ?? null,
 				authorizations: undefined,
 			},
@@ -265,7 +339,10 @@ committeeFormRoute.patch(
 					}
 
 					// 既存itemを更新 / 新規itemを作成
-					for (const [index, { id, options, ...item }] of items.entries()) {
+					for (const [
+						index,
+						{ id, options, constraints, ...item },
+					] of items.entries()) {
 						if (id && existingIds.has(id)) {
 							if (options && answeredItemIds.has(id)) {
 								throw Errors.invalidRequest(
@@ -277,6 +354,7 @@ committeeFormRoute.patch(
 								where: { id },
 								data: {
 									...item,
+									...constraintsToPrisma(constraints),
 									sortOrder: index,
 									options: answeredItemIds.has(id)
 										? undefined
@@ -293,6 +371,7 @@ committeeFormRoute.patch(
 							await tx.formItem.create({
 								data: {
 									...item,
+									...constraintsToPrisma(constraints),
 									formId,
 									sortOrder: index,
 									options: options?.length
@@ -322,7 +401,7 @@ committeeFormRoute.patch(
 			{ isolationLevel: "Serializable" }
 		);
 
-		return c.json({ form });
+		return c.json({ form: mapFormToApiShape(form) });
 	}
 );
 

@@ -11,6 +11,19 @@ export type FormItemOption = {
 	label: string;
 };
 
+export type TextConstraintPattern =
+	| "katakana"
+	| "hiragana"
+	| "alphanumeric"
+	| "custom";
+
+export type TextConstraints = {
+	minLength?: number;
+	maxLength?: number;
+	pattern?: TextConstraintPattern;
+	customPattern?: string;
+};
+
 export type FormItem = {
 	id: string;
 	label: string;
@@ -18,6 +31,7 @@ export type FormItem = {
 	type: FormItemType;
 	required: boolean;
 	options?: FormItemOption[];
+	constraints?: TextConstraints | null;
 };
 
 export type Form = {
