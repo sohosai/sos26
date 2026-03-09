@@ -210,7 +210,7 @@ export type ListProjectInquiriesResponse = z.infer<
 /** 関連フォーム情報 */
 const relatedFormSummarySchema = z
 	.object({
-		id: z.string(),
+		id: z.cuid(),
 		title: z.string(),
 	})
 	.nullable();
