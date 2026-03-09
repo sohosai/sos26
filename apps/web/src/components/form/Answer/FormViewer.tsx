@@ -39,6 +39,18 @@ function buildInitialAnswers(
 	return merged;
 }
 
+const PATTERN_REGEXES: Record<string, RegExp> = {
+	katakana: /^[\u30A0-\u30FF\u30FCー]+$/,
+	hiragana: /^[\u3040-\u309F]+$/,
+	alphanumeric: /^[a-zA-Z0-9]+$/,
+};
+
+const PATTERN_LABELS: Record<string, string> = {
+	katakana: "全角カタカナ",
+	hiragana: "ひらがな",
+	alphanumeric: "半角英数字",
+};
+
 export function FormViewer({
 	form,
 	onSubmit,
@@ -47,7 +59,6 @@ export function FormViewer({
 	disableSubmit = false,
 	disableSaveDraft = false,
 }: Props) {
-	// const [answers, setAnswers] = useState<FormAnswers>(initialAnswers);
 	const [answers, setAnswers] = useState<FormAnswers>(() =>
 		buildInitialAnswers(form, initialAnswers)
 	);
@@ -71,15 +82,64 @@ export function FormViewer({
 		}
 	};
 
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: validates all items with nested branching per item type and constraint
 	const validate = (): boolean => {
 		const newErrors: Record<string, string> = {};
 		for (const item of form.items) {
-			if (!item.required) continue;
 			const value = answers[item.id];
-			if (value === undefined || value === null || value === "") {
-				newErrors[item.id] = "この項目は必須です";
-			} else if (Array.isArray(value) && value.length === 0) {
-				newErrors[item.id] = "この項目は必須です";
+
+			if (item.required) {
+				if (value === undefined || value === null || value === "") {
+					newErrors[item.id] = "この項目は必須です";
+					continue;
+				}
+				if (Array.isArray(value) && value.length === 0) {
+					newErrors[item.id] = "この項目は必須です";
+					continue;
+				}
+			}
+
+			if (
+				(item.type === "TEXT" || item.type === "TEXTAREA") &&
+				item.constraints &&
+				typeof value === "string" &&
+				value !== ""
+			) {
+				const { minLength, maxLength, pattern, customPattern } =
+					item.constraints;
+
+				if (minLength !== undefined && value.length < minLength) {
+					newErrors[item.id] = `${minLength}文字以上で入力してください`;
+					continue;
+				}
+
+				if (maxLength !== undefined && value.length > maxLength) {
+					newErrors[item.id] = `${maxLength}文字以内で入力してください`;
+					continue;
+				}
+
+				if (pattern) {
+					let regex: RegExp | null = null;
+					if (pattern === "custom") {
+						if (customPattern) {
+							try {
+								regex = new RegExp(customPattern);
+							} catch {
+								// invalid regex - skip
+							}
+						}
+					} else {
+						regex = PATTERN_REGEXES[pattern] ?? null;
+					}
+
+					if (regex && !regex.test(value)) {
+						const label =
+							pattern === "custom"
+								? `パターン（${customPattern}）`
+								: (PATTERN_LABELS[pattern] ?? pattern);
+						newErrors[item.id] = `${label}のみで入力してください`;
+					}
+				}
 			}
 		}
 		setErrors(newErrors);

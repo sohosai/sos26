@@ -3,6 +3,8 @@ import {
 	createFormResponseRequestSchema,
 	type FormItemType,
 	projectFormPathParamsSchema,
+	type TextConstraintPattern,
+	type TextConstraints,
 	updateFormResponseRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
@@ -48,6 +50,10 @@ const getDeliveryOrThrow = async (
 									required: true,
 									sortOrder: true,
 									options: true,
+									constraintMinLength: true,
+									constraintMaxLength: true,
+									constraintPattern: true,
+									constraintCustomPattern: true,
 								},
 								orderBy: { sortOrder: "asc" },
 							},
@@ -260,6 +266,141 @@ function assertRequiredAnswered(
 		}
 	}
 }
+
+type PrismaConstraintFields = {
+	constraintMinLength: number | null;
+	constraintMaxLength: number | null;
+	constraintPattern: string | null;
+	constraintCustomPattern: string | null;
+};
+
+function constraintsFromPrisma({
+	constraintMinLength,
+	constraintMaxLength,
+	constraintPattern,
+	constraintCustomPattern,
+}: PrismaConstraintFields): TextConstraints | null {
+	if (
+		constraintMinLength === null &&
+		constraintMaxLength === null &&
+		constraintPattern === null
+	) {
+		return null;
+	}
+	return {
+		...(constraintMinLength !== null && { minLength: constraintMinLength }),
+		...(constraintMaxLength !== null && { maxLength: constraintMaxLength }),
+		...(constraintPattern !== null && {
+			pattern: constraintPattern as TextConstraintPattern,
+		}),
+		...(constraintCustomPattern !== null && {
+			customPattern: constraintCustomPattern,
+		}),
+	};
+}
+
+const PATTERN_REGEXES: Record<string, RegExp> = {
+	katakana: /^[\u30A0-\u30FF\u30FCー]+$/,
+	hiragana: /^[\u3040-\u309F]+$/,
+	alphanumeric: /^[a-zA-Z0-9]+$/,
+};
+
+const PATTERN_LABELS: Record<string, string> = {
+	katakana: "全角カタカナ",
+	hiragana: "ひらがな",
+	alphanumeric: "半角英数字",
+};
+
+function resolveConstraintRegex(
+	pattern: string,
+	customPattern: string | null
+): RegExp | null {
+	if (pattern === "custom") {
+		if (!customPattern) return null;
+		try {
+			return new RegExp(customPattern);
+		} catch {
+			return null;
+		}
+	}
+	return PATTERN_REGEXES[pattern] ?? null;
+}
+
+function assertItemTextConstraints(
+	item: {
+		constraintMinLength: number | null;
+		constraintMaxLength: number | null;
+		constraintPattern: string | null;
+		constraintCustomPattern: string | null;
+	},
+	value: string
+) {
+	const {
+		constraintMinLength,
+		constraintMaxLength,
+		constraintPattern,
+		constraintCustomPattern,
+	} = item;
+
+	if (constraintMinLength !== null && value.length < constraintMinLength) {
+		throw Errors.invalidRequest(
+			`${constraintMinLength}文字以上で入力してください`
+		);
+	}
+
+	if (constraintMaxLength !== null && value.length > constraintMaxLength) {
+		throw Errors.invalidRequest(
+			`${constraintMaxLength}文字以内で入力してください`
+		);
+	}
+
+	if (constraintPattern !== null) {
+		const regex = resolveConstraintRegex(
+			constraintPattern,
+			constraintCustomPattern
+		);
+		if (regex && !regex.test(value)) {
+			const label =
+				constraintPattern === "custom"
+					? `パターン（${constraintCustomPattern}）`
+					: (PATTERN_LABELS[constraintPattern] ?? constraintPattern);
+			throw Errors.invalidRequest(`${label}のみで入力してください`);
+		}
+	}
+}
+
+function assertTextConstraints(
+	formItems: {
+		id: string;
+		type: FormItemType;
+		constraintMinLength: number | null;
+		constraintMaxLength: number | null;
+		constraintPattern: string | null;
+		constraintCustomPattern: string | null;
+	}[],
+	answers: CreateFormResponseRequest["answers"]
+) {
+	const answerMap = new Map(answers.map(a => [a.formItemId, a]));
+
+	for (const item of formItems) {
+		if (item.type !== "TEXT" && item.type !== "TEXTAREA") continue;
+		if (
+			item.constraintMinLength === null &&
+			item.constraintMaxLength === null &&
+			item.constraintPattern === null
+		)
+			continue;
+
+		const answer = answerMap.get(item.id);
+		if (!answer) continue;
+		if (answer.type !== "TEXT" && answer.type !== "TEXTAREA") continue;
+
+		const value = answer.textValue;
+		if (!value) continue;
+
+		assertItemTextConstraints(item, value);
+	}
+}
 // ─────────────────────────────────────────────────────────────
 // ヘルパー: FormItemEditHistory にレコードを追加
 // ─────────────────────────────────────────────────────────────
@@ -461,6 +602,7 @@ projectFormRoute.get(
 							label: opt.label,
 							sortOrder: opt.sortOrder,
 						})),
+					constraints: constraintsFromPrisma(item),
 				})),
 				response: existingResponse
 					? {
@@ -522,6 +664,7 @@ projectFormRoute.post(
 
 		if (submit) {
 			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
+			assertTextConstraints(delivery.formAuthorization.form.items, answers);
 		}
 
 		const response = await prisma.$transaction(async tx => {
@@ -599,6 +742,7 @@ projectFormRoute.patch(
 
 		if (submit || isAlreadySubmitted) {
 			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
+			assertTextConstraints(delivery.formAuthorization.form.items, answers);
 		}
 
 		const response = await prisma.$transaction(async tx => {
