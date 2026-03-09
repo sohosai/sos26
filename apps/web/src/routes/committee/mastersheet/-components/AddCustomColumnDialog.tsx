@@ -149,13 +149,23 @@ export function AddCustomColumnDialog({
 		return undefined;
 	}
 
+	function validate(): string | null {
+		if (!name.trim()) return "カラム名を入力してください";
+		if (showOptions && options.filter(o => o.label.trim()).length === 0)
+			return "選択肢を1つ以上追加してください";
+		if (
+			dataType === "NUMBER" &&
+			initialNumber.trim() &&
+			Number.isNaN(Number(initialNumber))
+		)
+			return "初期値に有効な数値を入力してください";
+		return null;
+	}
+
 	async function handleSubmit() {
-		if (!name.trim()) {
-			toast.error("カラム名を入力してください");
-			return;
-		}
-		if (showOptions && options.filter(o => o.label.trim()).length === 0) {
-			toast.error("選択肢を1つ以上追加してください");
+		const error = validate();
+		if (error) {
+			toast.error(error);
 			return;
 		}
 		setLoading(true);
