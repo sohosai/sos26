@@ -1,6 +1,10 @@
 import { AlertDialog, Badge, Heading, Separator, Text } from "@radix-ui/themes";
-import { IconArrowLeft, IconCheck } from "@tabler/icons-react";
-import { useNavigate } from "@tanstack/react-router";
+import {
+	IconArrowLeft,
+	IconCheck,
+	IconFileDescription,
+} from "@tabler/icons-react";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
@@ -271,9 +275,27 @@ export function SupportDetail({
 					<Text size="2" weight="medium" color="gray">
 						関連フォーム
 					</Text>
-					<Text size="1" color="gray">
-						なし
-					</Text>
+					{inquiry.relatedForm ? (
+						viewerRole === "committee" ? (
+							<Link
+								to="/committee/forms/$formId"
+								params={{ formId: inquiry.relatedForm.id }}
+								className={styles.formLink}
+							>
+								<IconFileDescription size={16} />
+								<Text size="2">{inquiry.relatedForm.title}</Text>
+							</Link>
+						) : (
+							<div className={styles.formLink}>
+								<IconFileDescription size={16} />
+								<Text size="2">{inquiry.relatedForm.title}</Text>
+							</div>
+						)
+					) : (
+						<Text size="1" color="gray">
+							なし
+						</Text>
+					)}
 				</div>
 
 				{viewerRole === "committee" && viewers && (

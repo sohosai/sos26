@@ -208,9 +208,22 @@
 	align-items: center;
 	gap: var(--space-2);
 	padding: var(--space-2) var(--space-3);
-	background-color: var(--gray-3);
+	background-color: var(--gray-2);
+	border: 1px solid var(--gray-5);
 	border-radius: var(--radius-2);
 	color: var(--gray-12);
+	text-decoration: none;
+	transition: background-color 0.15s, border-color 0.15s;
+
+	svg {
+		flex-shrink: 0;
+		color: var(--gray-9);
+	}
+
+	&:is(a):hover {
+		background-color: var(--accent-3);
+		border-color: var(--accent-7);
+	}
 }
 
 /* ─── Assign Popover ─── */

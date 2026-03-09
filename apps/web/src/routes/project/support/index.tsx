@@ -7,6 +7,7 @@ import { useState } from "react";
 import { NewInquiryForm } from "@/components/support/NewInquiryForm";
 import { SupportList } from "@/components/support/SupportList";
 import { listProjectMembers } from "@/lib/api/project";
+import { listProjectForms } from "@/lib/api/project-form";
 import {
 	createProjectInquiry,
 	listProjectInquiries,
@@ -25,10 +26,15 @@ export const Route = createFileRoute("/project/support/")({
 	loader: async () => {
 		const { selectedProjectId } = useProjectStore.getState();
 		if (!selectedProjectId)
-			return { inquiries: [] as never[], projectMembers: [] as never[] };
-		const [inquiriesRes, membersRes] = await Promise.all([
+			return {
+				inquiries: [] as never[],
+				projectMembers: [] as never[],
+				availableForms: [] as never[],
+			};
+		const [inquiriesRes, membersRes, formsRes] = await Promise.all([
 			listProjectInquiries(selectedProjectId),
 			listProjectMembers(selectedProjectId),
+			listProjectForms(selectedProjectId),
 		]);
 		return {
 			inquiries: inquiriesRes.inquiries,
@@ -36,12 +42,16 @@ export const Route = createFileRoute("/project/support/")({
 				id: m.userId,
 				name: m.name,
 			})),
+			availableForms: formsRes.forms.map(f => ({
+				id: f.formId,
+				title: f.title,
+			})),
 		};
 	},
 });
 
 function ProjectSupportListPage() {
-	const { inquiries, projectMembers } = Route.useLoaderData();
+	const { inquiries, projectMembers, availableForms } = Route.useLoaderData();
 	const [formOpen, setFormOpen] = useState(false);
 	const navigate = useNavigate();
 	const router = useRouter();
@@ -67,10 +77,12 @@ function ProjectSupportListPage() {
 				viewerRole="project"
 				currentUser={currentUser}
 				projectMembers={projectMembers}
+				availableForms={availableForms}
 				onSubmit={async params => {
 					const { inquiry } = await createProjectInquiry(selectedProjectId, {
 						title: params.title,
 						body: params.body,
+						relatedFormId: params.relatedFormId,
 						coAssigneeUserIds: params.coAssigneeUserIds,
 						fileIds: params.fileIds,
 					});

@@ -8,6 +8,7 @@ import {
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import {
+	notifyInquiryAssigneeAdded,
 	notifyInquiryCommentAdded,
 	notifyInquiryCreatedByProject,
 } from "../lib/notifications";
@@ -16,6 +17,97 @@ import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
 const projectInquiryRoute = new Hono<AuthEnv>();
+
+// ─────────────────────────────────────────────────────────────
+// ヘルパー: 関連フォームの検証と初期対応ルール
+// ─────────────────────────────────────────────────────────────
+
+type FormInitialAssignment = {
+	formOwnerId: string | null;
+	formCollaboratorIds: string[];
+};
+
+async function resolveRelatedForm(
+	relatedFormId: string | undefined,
+	projectId: string
+): Promise<FormInitialAssignment> {
+	if (!relatedFormId) {
+		return { formOwnerId: null, formCollaboratorIds: [] };
+	}
+	const delivery = await prisma.formDelivery.findFirst({
+		where: {
+			projectId,
+			formAuthorization: {
+				form: { id: relatedFormId, deletedAt: null },
+			},
+		},
+		include: {
+			formAuthorization: {
+				include: {
+					form: {
+						include: {
+							collaborators: {
+								where: { deletedAt: null },
+								select: { userId: true },
+							},
+						},
+					},
+				},
+			},
+		},
+	});
+	if (!delivery) {
+		throw Errors.invalidRequest(
+			"指定されたフォームはこの企画に配信されていません"
+		);
+	}
+	const formOwnerId = delivery.formAuthorization.form.ownerId;
+	const formCollaboratorIds = delivery.formAuthorization.form.collaborators
+		.map(c => c.userId)
+		.filter(id => id !== formOwnerId);
+	return { formOwnerId, formCollaboratorIds };
+}
+
+// ─────────────────────────────────────────────────────────────
+// ヘルパー: フォーム紐づけ時の初期アサイン・閲覧者を構築
+// （企画側担当者と重複するユーザーは除外）
+// ─────────────────────────────────────────────────────────────
+
+function buildFormAssignments(
+	formOwnerId: string | null,
+	formCollaboratorIds: string[],
+	projectSideUserIds: Set<string>
+) {
+	const effectiveOwnerId =
+		formOwnerId && !projectSideUserIds.has(formOwnerId) ? formOwnerId : null;
+
+	const committeeAssignees = effectiveOwnerId
+		? [
+				{
+					userId: effectiveOwnerId,
+					side: "COMMITTEE" as const,
+					isCreator: false,
+				},
+			]
+		: [];
+
+	const initialViewers = formCollaboratorIds
+		.filter(id => !projectSideUserIds.has(id))
+		.map(userId => ({
+			scope: "INDIVIDUAL" as const,
+			bureauValue: null,
+			userId,
+		}));
+
+	return {
+		effectiveOwnerId,
+		initialStatus: effectiveOwnerId
+			? ("IN_PROGRESS" as const)
+			: ("UNASSIGNED" as const),
+		committeeAssignees,
+		initialViewers,
+	};
+}
 
 // ─────────────────────────────────────────────────────────────
 // ヘルパー: 企画側担当者チェック
@@ -106,6 +198,7 @@ projectInquiryRoute.post(
 		const {
 			title,
 			body: inquiryBody,
+			relatedFormId,
 			coAssigneeUserIds,
 			fileIds,
 		} = createProjectInquiryRequestSchema.parse(body);
@@ -153,14 +246,31 @@ projectInquiryRoute.post(
 			}
 		}
 
+		// 関連フォームの検証と初期対応ルール
+		const { formOwnerId, formCollaboratorIds } = await resolveRelatedForm(
+			relatedFormId,
+			project.id
+		);
+		const {
+			effectiveOwnerId,
+			initialStatus,
+			committeeAssignees,
+			initialViewers,
+		} = buildFormAssignments(
+			formOwnerId,
+			formCollaboratorIds,
+			new Set([user.id, ...uniqueCoAssigneeIds])
+		);
+
 		const inquiry = await prisma.inquiry.create({
 			data: {
 				title,
 				body: inquiryBody,
-				status: "UNASSIGNED",
+				status: initialStatus,
 				createdById: user.id,
 				creatorRole: "PROJECT",
 				projectId: project.id,
+				relatedFormId,
 				assignees: {
 					create: [
 						{ userId: user.id, side: "PROJECT", isCreator: true },
@@ -169,10 +279,14 @@ projectInquiryRoute.post(
 							side: "PROJECT" as const,
 							isCreator: false,
 						})),
+						...committeeAssignees,
 					],
 				},
 				attachments: {
 					create: uniqueFileIds.map(fileId => ({ fileId })),
+				},
+				viewers: {
+					create: initialViewers,
 				},
 			},
 		});
@@ -183,6 +297,16 @@ projectInquiryRoute.post(
 			projectName: project.name,
 			creatorName: user.name,
 		});
+
+		// フォーム紐づけで自動追加された実委担当者（フォームオーナー）に通知
+		if (effectiveOwnerId) {
+			void notifyInquiryAssigneeAdded({
+				addedUserId: effectiveOwnerId,
+				inquiryId: inquiry.id,
+				inquiryTitle: title,
+				side: "COMMITTEE",
+			});
+		}
 
 		return c.json({ inquiry }, 201);
 	}
@@ -270,6 +394,7 @@ projectInquiryRoute.get(
 			include: {
 				createdBy: { select: userSelect },
 				project: { select: { id: true, name: true } },
+				relatedForm: { select: { id: true, title: true } },
 				assignees: {
 					where: { deletedAt: null },
 					include: assigneeInclude,
@@ -317,6 +442,7 @@ projectInquiryRoute.get(
 			updatedAt: inquiry.updatedAt,
 			createdBy: inquiry.createdBy,
 			project: inquiry.project,
+			relatedForm: inquiry.relatedForm,
 			projectAssignees: inquiry.assignees
 				.filter(a => a.side === "PROJECT")
 				.map(formatAssignee),
