@@ -7,7 +7,7 @@
 
 .tableWrapper {
 	max-height: 60vh;
-	overflow-y: auto;
+	overflow: auto;
 }
 
 .footer {
@@ -20,4 +20,57 @@
 .footerActions {
 	display: flex;
 	gap: var(--space-2);
+}
+
+// ビュータブ（読み取り専用）
+.viewTabs {
+	display: flex;
+	align-items: stretch;
+	border-bottom: 1px solid var(--gray-5);
+	margin-bottom: var(--space-3);
+	gap: 0;
+}
+
+.viewTab {
+	position: relative;
+	display: flex;
+	align-items: center;
+	padding: var(--space-2) var(--space-4);
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: var(--font-size-2);
+	color: var(--gray-10);
+	white-space: nowrap;
+	border-radius: var(--radius-2) var(--radius-2) 0 0;
+	transition:
+		color 0.1s,
+		background 0.1s;
+
+	&:hover {
+		color: var(--gray-12);
+		background: var(--gray-2);
+	}
+
+	&.viewTabActive {
+		color: var(--gray-12);
+		font-weight: 500;
+
+		&::after {
+			content: "";
+			position: absolute;
+			bottom: -1px;
+			left: 0;
+			right: 0;
+			height: 2px;
+			background-color: var(--accent-9);
+		}
+	}
+}
+
+// カラムヘッダーのアイコン + テキスト
+.colHeader {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
 }
