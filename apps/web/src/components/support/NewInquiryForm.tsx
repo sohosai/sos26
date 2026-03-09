@@ -408,13 +408,14 @@ function FormSelector({
 	selectedForm: FormSummary | null;
 	onSelect: (form: FormSummary | null) => void;
 }) {
+	const NONE = "__none__";
 	const options = [
-		{ value: "", label: "なし" },
+		{ value: NONE, label: "なし" },
 		...forms.map(f => ({ value: f.id, label: f.title })),
 	];
 
 	const handleChange = (value: string) => {
-		if (value === "") {
+		if (value === NONE) {
 			onSelect(null);
 		} else {
 			onSelect(forms.find(f => f.id === value) ?? null);
@@ -428,7 +429,7 @@ function FormSelector({
 			</Text>
 			<Select
 				options={options}
-				value={selectedForm?.id ?? ""}
+				value={selectedForm?.id ?? NONE}
 				onValueChange={handleChange}
 				placeholder="フォームを選択..."
 			/>
