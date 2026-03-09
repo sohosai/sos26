@@ -21,6 +21,7 @@ type ViewerInput = {
 };
 
 type UserSummary = { id: string; name: string };
+type FormSummary = { id: string; title: string };
 
 type NewInquiryFormProps = {
 	open: boolean;
@@ -33,9 +34,11 @@ type NewInquiryFormProps = {
 		projectId: string
 	) => Promise<{ id: string; name: string }[]>;
 	committeeMembers?: UserSummary[];
+	availableForms?: FormSummary[];
 	onSubmit: (params: {
 		title: string;
 		body: string;
+		relatedFormId?: string;
 		coAssigneeUserIds?: string[];
 		projectId?: string;
 		projectAssigneeUserIds?: string[];
@@ -54,10 +57,12 @@ export function NewInquiryForm({
 	projects,
 	onLoadProjectMembers,
 	committeeMembers,
+	availableForms,
 	onSubmit,
 }: NewInquiryFormProps) {
 	const [title, setTitle] = useState("");
 	const [body, setBody] = useState("");
+	const [selectedForm, setSelectedForm] = useState<FormSummary | null>(null);
 	const [selectedProject, setSelectedProject] = useState<{
 		id: string;
 		name: string;
@@ -83,6 +88,7 @@ export function NewInquiryForm({
 	const reset = () => {
 		setTitle("");
 		setBody("");
+		setSelectedForm(null);
 		setSelectedProject(null);
 		setLoadedProjectMembers([]);
 		setSelectedProjectAssignees([]);
@@ -114,12 +120,14 @@ export function NewInquiryForm({
 	};
 
 	const buildParams = (fileIds?: string[]) => {
+		const formId = selectedForm?.id;
 		if (viewerRole === "committee") {
 			if (!selectedProject || selectedProjectAssignees.length === 0)
 				return null;
 			return {
 				title: title.trim(),
 				body: body.trim(),
+				relatedFormId: formId,
 				projectId: selectedProject.id,
 				projectAssigneeUserIds: selectedProjectAssignees.map(p => p.id),
 				committeeAssigneeUserIds:
@@ -133,6 +141,7 @@ export function NewInquiryForm({
 		return {
 			title: title.trim(),
 			body: body.trim(),
+			relatedFormId: formId,
 			coAssigneeUserIds:
 				selectedCoAssignees.length > 0
 					? selectedCoAssignees.map(p => p.id)
@@ -236,6 +245,15 @@ export function NewInquiryForm({
 						rows={5}
 						required
 					/>
+
+					{/* 関連フォーム選択（任意） */}
+					{availableForms && availableForms.length > 0 && (
+						<FormSelector
+							forms={availableForms}
+							selectedForm={selectedForm}
+							onSelect={setSelectedForm}
+						/>
+					)}
 
 					{/* 実委作成の場合: 対象企画を選択 */}
 					{viewerRole === "committee" && projects && (
@@ -376,6 +394,107 @@ export function NewInquiryForm({
 				</div>
 			</Dialog.Content>
 		</Dialog.Root>
+	);
+}
+
+/* ─── 関連フォーム選択 ─── */
+
+function FormSelector({
+	forms,
+	selectedForm,
+	onSelect,
+}: {
+	forms: FormSummary[];
+	selectedForm: FormSummary | null;
+	onSelect: (form: FormSummary | null) => void;
+}) {
+	const [open, setOpen] = useState(false);
+	const [searchQuery, setSearchQuery] = useState("");
+
+	const handleSelect = (form: FormSummary) => {
+		if (selectedForm?.id === form.id) {
+			onSelect(null);
+		} else {
+			onSelect(form);
+		}
+		setOpen(false);
+		setSearchQuery("");
+	};
+
+	return (
+		<div className={styles.assignSection}>
+			<Text size="2" weight="medium">
+				関連フォーム（任意）
+			</Text>
+			<Text size="1" color="gray">
+				このお問い合わせに関連するフォームがあれば選択してください
+			</Text>
+			<Popover.Root
+				open={open}
+				onOpenChange={o => {
+					setOpen(o);
+					if (!o) setSearchQuery("");
+				}}
+			>
+				<Popover.Trigger>
+					<button type="button" className={styles.assignTrigger}>
+						<Text size="2" color="gray">
+							{selectedForm ? selectedForm.title : "フォームを選択..."}
+						</Text>
+						<IconChevronDown size={16} />
+					</button>
+				</Popover.Trigger>
+				<Popover.Content
+					className={styles.assignPopover}
+					side="bottom"
+					align="start"
+				>
+					<div className={styles.assignSearch}>
+						<RadixTextField.Root
+							placeholder="フォーム名で検索..."
+							size="2"
+							value={searchQuery}
+							onChange={e => setSearchQuery(e.target.value)}
+						>
+							<RadixTextField.Slot>
+								<IconSearch size={14} />
+							</RadixTextField.Slot>
+						</RadixTextField.Root>
+					</div>
+					<div className={styles.assignList}>
+						{forms
+							.filter(f => {
+								const q = searchQuery.toLowerCase();
+								if (!q) return true;
+								return f.title.toLowerCase().includes(q);
+							})
+							.map(form => {
+								const isSelected = selectedForm?.id === form.id;
+								return (
+									<button
+										key={form.id}
+										type="button"
+										className={`${styles.assignOption} ${
+											isSelected ? styles.assignOptionSelected : ""
+										}`}
+										onClick={() => handleSelect(form)}
+									>
+										<div className={styles.assignOptionText}>
+											<Text size="2">{form.title}</Text>
+										</div>
+										{isSelected && (
+											<IconCheck
+												size={14}
+												className={styles.assignOptionCheck}
+											/>
+										)}
+									</button>
+								);
+							})}
+					</div>
+				</Popover.Content>
+			</Popover.Root>
+		</div>
 	);
 }
 

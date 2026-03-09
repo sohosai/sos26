@@ -6,6 +6,7 @@ import {
 import { useState } from "react";
 import { NewInquiryForm } from "@/components/support/NewInquiryForm";
 import { SupportList } from "@/components/support/SupportList";
+import { listMyForms } from "@/lib/api/committee-form";
 import {
 	createCommitteeInquiry,
 	listCommitteeInquiries,
@@ -31,11 +32,14 @@ export const Route = createFileRoute("/committee/support/")({
 	loader: async () => {
 		const { committeeMember } = useAuthStore.getState();
 
-		const [inquiriesRes, projectsRes, membersRes] = await Promise.all([
-			listCommitteeInquiries(),
-			listCommitteeProjects(),
-			listCommitteeMembers(),
-		]);
+		const [inquiriesRes, projectsRes, membersRes, formsRes] = await Promise.all(
+			[
+				listCommitteeInquiries(),
+				listCommitteeProjects(),
+				listCommitteeMembers(),
+				listMyForms(),
+			]
+		);
 
 		// INQUIRY_ADMIN 権限チェック
 		let isAdmin = false;
@@ -59,13 +63,17 @@ export const Route = createFileRoute("/committee/support/")({
 				id: m.user.id,
 				name: m.user.name,
 			})),
+			availableForms: formsRes.forms.map(f => ({
+				id: f.id,
+				title: f.title,
+			})),
 			isAdmin,
 		};
 	},
 });
 
 function CommitteeSupportListPage() {
-	const { inquiries, projects, committeeMembers, isAdmin } =
+	const { inquiries, projects, committeeMembers, availableForms, isAdmin } =
 		Route.useLoaderData();
 	const [formOpen, setFormOpen] = useState(false);
 	const navigate = useNavigate();
@@ -99,11 +107,13 @@ function CommitteeSupportListPage() {
 				projects={projects}
 				onLoadProjectMembers={handleLoadProjectMembers}
 				committeeMembers={committeeMembers}
+				availableForms={availableForms}
 				onSubmit={async params => {
 					if (!params.projectId || !params.projectAssigneeUserIds) return;
 					const { inquiry } = await createCommitteeInquiry({
 						title: params.title,
 						body: params.body,
+						relatedFormId: params.relatedFormId,
 						projectId: params.projectId,
 						projectAssigneeUserIds: params.projectAssigneeUserIds,
 						committeeAssigneeUserIds: params.committeeAssigneeUserIds,

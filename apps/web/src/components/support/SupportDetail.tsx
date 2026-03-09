@@ -271,9 +271,13 @@ export function SupportDetail({
 					<Text size="2" weight="medium" color="gray">
 						関連フォーム
 					</Text>
-					<Text size="1" color="gray">
-						なし
-					</Text>
+					{inquiry.relatedForm ? (
+						<Text size="2">{inquiry.relatedForm.title}</Text>
+					) : (
+						<Text size="1" color="gray">
+							なし
+						</Text>
+					)}
 				</div>
 
 				{viewerRole === "committee" && viewers && (
