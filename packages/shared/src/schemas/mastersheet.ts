@@ -187,6 +187,15 @@ const columnOptionInputSchema = z.object({
 	sortOrder: z.number().int(),
 });
 
+/** カスタムカラム作成時の初期値（全企画に一括適用） */
+const initialValueInputSchema = z.object({
+	textValue: z.string().nullable().optional(),
+	numberValue: z.number().nullable().optional(),
+	/** options 配列のインデックス（作成前で ID が未確定のため） */
+	selectedOptionIndexes: z.array(z.number().int().min(0)).optional(),
+});
+export type InitialValueInput = z.infer<typeof initialValueInputSchema>;
+
 export const createMastersheetColumnRequestSchema = z.discriminatedUnion(
 	"type",
 	[
@@ -205,6 +214,7 @@ export const createMastersheetColumnRequestSchema = z.discriminatedUnion(
 			dataType: mastersheetDataTypeSchema,
 			viewers: z.array(mastersheetViewerInputSchema),
 			options: z.array(columnOptionInputSchema).optional(),
+			initialValue: initialValueInputSchema.optional(),
 		}),
 	]
 );

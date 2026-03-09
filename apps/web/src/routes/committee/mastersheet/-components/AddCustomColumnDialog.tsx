@@ -1,6 +1,12 @@
-import { Dialog, TextField as RadixTextField, Text } from "@radix-ui/themes";
+import {
+	Checkbox,
+	Dialog,
+	TextField as RadixTextField,
+	Text,
+} from "@radix-ui/themes";
 import type {
 	GetMastersheetDataResponse,
+	InitialValueInput,
 	MastersheetDataType,
 	MastersheetViewerInput,
 } from "@sos26/shared";
@@ -75,6 +81,13 @@ export function AddCustomColumnDialog({
 	const [loading, setLoading] = useState(false);
 	const nextId = useRef(0);
 
+	// 初期値
+	const [initialText, setInitialText] = useState("");
+	const [initialNumber, setInitialNumber] = useState("");
+	const [initialSelectedIndexes, setInitialSelectedIndexes] = useState<
+		number[]
+	>([]);
+
 	useEffect(() => {
 		if (!open) return;
 		listCommitteeMembers()
@@ -109,8 +122,25 @@ export function AddCustomColumnDialog({
 			setDataType("TEXT");
 			setViewers([]);
 			setOptions([]);
+			setInitialText("");
+			setInitialNumber("");
+			setInitialSelectedIndexes([]);
 		}
 		onOpenChange(open);
+	}
+
+	function buildInitialValue(): InitialValueInput | undefined {
+		if (dataType === "TEXT" && initialText.trim()) {
+			return { textValue: initialText };
+		}
+		if (dataType === "NUMBER" && initialNumber.trim()) {
+			const num = Number(initialNumber);
+			if (!Number.isNaN(num)) return { numberValue: num };
+		}
+		if (showOptions && initialSelectedIndexes.length > 0) {
+			return { selectedOptionIndexes: initialSelectedIndexes };
+		}
+		return undefined;
 	}
 
 	async function handleSubmit() {
@@ -129,6 +159,7 @@ export function AddCustomColumnDialog({
 						.filter(o => o.label.trim())
 						.map((o, i) => ({ label: o.label, sortOrder: i }))
 				: undefined;
+
 			await createMastersheetColumn({
 				type: "CUSTOM",
 				name: name.trim(),
@@ -137,6 +168,7 @@ export function AddCustomColumnDialog({
 				dataType: dataType as MastersheetDataType,
 				viewers,
 				options: optionsInput,
+				initialValue: buildInitialValue(),
 			});
 			toast.success("カラムを追加しました");
 			onSuccess();
@@ -166,7 +198,12 @@ export function AddCustomColumnDialog({
 						<Select
 							options={DATA_TYPE_OPTIONS}
 							value={dataType}
-							onValueChange={setDataType}
+							onValueChange={v => {
+								setDataType(v);
+								setInitialText("");
+								setInitialNumber("");
+								setInitialSelectedIndexes([]);
+							}}
 						/>
 					</div>
 					<div className={styles.field}>
@@ -202,6 +239,70 @@ export function AddCustomColumnDialog({
 							</Button>
 						</div>
 					)}
+					<div className={styles.field}>
+						<Text size="2" weight="medium">
+							初期値
+						</Text>
+						<Text size="1" color="gray">
+							全企画のセルに一括で設定されます
+						</Text>
+						{dataType === "TEXT" && (
+							<RadixTextField.Root
+								size="2"
+								value={initialText}
+								placeholder="初期テキスト"
+								onChange={e => setInitialText(e.target.value)}
+							/>
+						)}
+						{dataType === "NUMBER" && (
+							<RadixTextField.Root
+								size="2"
+								type="number"
+								value={initialNumber}
+								placeholder="初期数値"
+								onChange={e => setInitialNumber(e.target.value)}
+							/>
+						)}
+						{showOptions && (
+							<div className={styles.initialOptions}>
+								{options
+									.filter(o => o.label.trim())
+									.map((opt, idx) => {
+										const checked = initialSelectedIndexes.includes(idx);
+										return (
+											<Text
+												key={opt.id}
+												as="label"
+												size="2"
+												className={styles.optionCheck}
+											>
+												<Checkbox
+													size="1"
+													checked={checked}
+													onCheckedChange={v => {
+														if (dataType === "SELECT" && v === true) {
+															setInitialSelectedIndexes([idx]);
+														} else if (v === true) {
+															setInitialSelectedIndexes(prev => [...prev, idx]);
+														} else {
+															setInitialSelectedIndexes(prev =>
+																prev.filter(i => i !== idx)
+															);
+														}
+													}}
+												/>
+												{opt.label}
+											</Text>
+										);
+									})}
+								{options.filter(o => o.label.trim()).length === 0 && (
+									<Text size="1" color="gray">
+										選択肢を追加すると選べるようになります
+									</Text>
+								)}
+							</div>
+						)}
+					</div>
 					<div className={styles.actions}>
 						<Button
 							intent="secondary"
