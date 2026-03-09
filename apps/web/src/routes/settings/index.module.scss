@@ -8,3 +8,24 @@
 .card {
 	max-width: 720px;
 }
+
+.settingLabel {
+	flex: 1;
+	min-width: 0;
+}
+
+.settingControl {
+	flex-shrink: 0;
+}
+
+.avatarContainer {
+	flex-shrink: 0;
+	border-radius: 50%;
+	overflow: hidden;
+	width: 96px;
+	height: 96px;
+}
+
+.fileInput {
+	display: none;
+}

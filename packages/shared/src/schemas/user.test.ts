@@ -13,6 +13,8 @@ describe("userSchema", () => {
 		name: "筑波太郎",
 		namePhonetic: "ツクバタロウ",
 		telephoneNumber: "090-1234-5678",
+		avatarFileId: null,
+		sendKey: "ENTER",
 		deletedAt: null,
 		createdAt: now,
 		updatedAt: now,

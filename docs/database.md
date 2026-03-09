@@ -166,6 +166,16 @@ bun run db:migrate:reset
 
 **注意**: このコマンドは**全データが消えます**。開発環境でのみ使用してください。
 
+## 未使用スキーマに関する注意
+
+以下のスキーマは DB・共有パッケージに定義済みですが、現時点では UI から使用されていません。
+
+| スキーマ | 場所 | 備考 |
+|---------|------|------|
+| `SendKey` enum (`ENTER`, `CTRL_ENTER`) | `schema.prisma` / `packages/shared` | 送信キー切替機能が実装されるまで UI ではコメントアウト。`User.sendKey` カラムはデフォルト値 `ENTER` で運用。 |
+
+対応する UI を有効化する際は `apps/web/src/routes/settings/index.tsx` 内のコメントアウトを解除してください。
+
 ## 参考リンク
 
 - [Prisma 公式ドキュメント](https://www.prisma.io/docs)

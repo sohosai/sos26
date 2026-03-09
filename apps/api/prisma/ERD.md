@@ -30,6 +30,8 @@ erDiagram
   String name
   String namePhonetic
   String telephoneNumber
+  String avatarFileId "nullable"
+  SendKey sendKey
   DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
@@ -476,6 +478,8 @@ Properties as follows:
 - `name`:
 - `namePhonetic`:
 - `telephoneNumber`:
+- `avatarFileId`:
+- `sendKey`:
 - `deletedAt`:
 - `createdAt`:
 - `updatedAt`:

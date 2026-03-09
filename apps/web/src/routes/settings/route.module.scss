@@ -1,0 +1,16 @@
+.layout {
+	min-height: 100vh;
+	background-color: var(--gray-2);
+}
+
+.main {
+	margin-left: 240px;
+	padding: var(--space-6);
+	height: 100vh;
+	overflow-y: auto;
+	transition: margin-left 0.3s ease;
+
+	&.collapsed {
+		margin-left: 64px;
+	}
+}
