@@ -4,7 +4,7 @@ const branch = execSync("git rev-parse --abbrev-ref HEAD", {
 	encoding: "utf8",
 }).trim();
 
-if (branch !== "chore/main-protect-lefthook") {
+if (branch !== "main") {
 	process.exit(0);
 }
 
