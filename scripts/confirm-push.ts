@@ -8,12 +8,10 @@ if (branch !== "main") {
 	process.exit(0);
 }
 
-// 警告メッセージを表示
 console.warn(
 	"\x1b[33m⚠ mainブランチに直接Pushしようとしています。続行しますか？ (y/N): \x1b[0m"
 );
 
-// 標準入力から1行取得（Bun 1.0+ の高速な書き方）
 const input = await prompt("");
 
 if (input?.trim().toLowerCase() === "y") {
