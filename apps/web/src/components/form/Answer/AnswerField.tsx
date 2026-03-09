@@ -28,6 +28,22 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 		</Text>
 	) : null;
 
+	const constraints = item.constraints;
+	const textValue = typeof value === "string" ? value : "";
+	const charCount = textValue.length;
+	const maxLength = constraints?.maxLength;
+
+	const charCounter =
+		(item.type === "TEXT" || item.type === "TEXTAREA") && maxLength ? (
+			<Text
+				size="1"
+				color={charCount > maxLength ? "red" : "gray"}
+				style={{ textAlign: "right" }}
+			>
+				{charCount} / {maxLength}
+			</Text>
+		) : null;
+
 	const field = (() => {
 		switch (item.type) {
 			case "TEXT":
@@ -125,6 +141,7 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 			{label}
 			{description}
 			{field}
+			{charCounter}
 		</Flex>
 	);
 }
