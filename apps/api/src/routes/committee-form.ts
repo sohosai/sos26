@@ -168,6 +168,7 @@ committeeFormRoute.get(
 						scheduledSendAt: true,
 						allowLateResponse: true,
 						deadlineAt: true,
+						ownerOnly: true,
 						requestedTo: {
 							select: { id: true, name: true },
 						},

@@ -1,5 +1,5 @@
 import { Badge, Heading, Text } from "@radix-ui/themes";
-import { IconEdit } from "@tabler/icons-react";
+import { IconEdit, IconLock } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useCallback, useEffect, useState } from "react";
@@ -18,6 +18,7 @@ type FormRow = {
 	deadlineAt: Date | null;
 	allowLateResponse: boolean;
 	required: boolean;
+	ownerOnly: boolean;
 	responseId: string | null;
 	submittedAt: Date | null;
 };
@@ -42,6 +43,7 @@ export const Route = createFileRoute("/project/forms/")({
 				deadlineAt: f.deadlineAt,
 				allowLateResponse: f.allowLateResponse,
 				required: f.required,
+				ownerOnly: f.ownerOnly,
 				responseId: f.response?.id ?? null,
 				submittedAt: f.response?.submittedAt ?? null,
 			})),
@@ -120,7 +122,19 @@ function RouteComponent() {
 			header: "回答状況",
 			cell: ctx => {
 				const submittedAt = ctx.getValue();
-				const { allowLateResponse, deadlineAt, responseId } = ctx.row.original;
+				const { allowLateResponse, deadlineAt, responseId, ownerOnly } =
+					ctx.row.original;
+
+				// ownerOnly で response が null の場合（一般メンバーには閲覧制限）
+				if (ownerOnly && responseId === null && submittedAt === null) {
+					return (
+						<Badge variant="soft" color="orange">
+							<IconLock size={12} />
+							閲覧制限
+						</Badge>
+					);
+				}
+
 				const isExpired =
 					deadlineAt && !allowLateResponse && new Date() > deadlineAt;
 
@@ -157,15 +171,18 @@ function RouteComponent() {
 			header: "操作",
 			cell: ({ row }) => {
 				const {
-					// submittedAt,
 					allowLateResponse,
 					deadlineAt,
 					formDeliveryId,
 					responseId,
+					ownerOnly,
 				} = row.original;
 				const isExpired =
 					deadlineAt && !allowLateResponse && new Date() > deadlineAt;
-				const isDisabled = !!isExpired;
+				// ownerOnly で response が null → 一般メンバーには閲覧制限
+				const isRestricted =
+					ownerOnly && responseId === null && !row.original.submittedAt;
+				const isDisabled = !!isExpired || isRestricted;
 
 				return (
 					<Button
@@ -174,8 +191,17 @@ function RouteComponent() {
 						onClick={() => setAnsweringDeliveryId(formDeliveryId)}
 						disabled={isDisabled}
 					>
-						<IconEdit size={16} />
-						{responseId ? "回答を編集" : "回答する"}
+						{isRestricted ? (
+							<>
+								<IconLock size={16} />
+								閲覧制限
+							</>
+						) : (
+							<>
+								<IconEdit size={16} />
+								{responseId ? "回答を編集" : "回答する"}
+							</>
+						)}
 					</Button>
 				);
 			},

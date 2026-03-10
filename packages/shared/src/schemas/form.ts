@@ -117,6 +117,7 @@ export const formAuthorizationSchema = z.object({
 	deadlineAt: z.coerce.date().nullable(),
 	allowLateResponse: z.boolean(),
 	required: z.boolean(),
+	ownerOnly: z.boolean(),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 });
@@ -170,6 +171,7 @@ const authorizationSummarySchema = formAuthorizationSchema
 		scheduledSendAt: true,
 		deadlineAt: true,
 		allowLateResponse: true,
+		ownerOnly: true,
 	})
 	.extend({
 		requestedTo: userSummarySchema,
@@ -367,6 +369,7 @@ export const requestFormAuthorizationRequestSchema = z.object({
 	deadlineAt: z.coerce.date().nullable().optional(),
 	allowLateResponse: z.boolean().default(false),
 	required: z.boolean().default(true),
+	ownerOnly: z.boolean().default(false),
 	projectIds: z.array(z.string().min(1)).min(1),
 });
 export type RequestFormAuthorizationRequest = z.infer<
@@ -481,6 +484,7 @@ export const listProjectFormsResponseSchema = z.object({
 			deadlineAt: z.coerce.date().nullable(),
 			required: z.boolean(),
 			allowLateResponse: z.boolean(),
+			ownerOnly: z.boolean(),
 			// 自分の回答状況
 			response: z
 				.object({
@@ -537,6 +541,7 @@ export const getProjectFormResponseSchema = z.object({
 		deadlineAt: z.coerce.date().nullable(),
 		allowLateResponse: z.boolean(),
 		required: z.boolean(),
+		ownerOnly: z.boolean(),
 		items: z.array(projectFormItemSchema),
 		// 既存の回答（下書き含む）
 		response: z

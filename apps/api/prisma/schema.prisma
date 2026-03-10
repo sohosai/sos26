@@ -636,6 +636,9 @@ model FormAuthorization {
   //フォーム自体を回答必須にするか
   required Boolean @default(true)
 
+  //回答の閲覧制限（trueの場合、責任者・副責任者のみ閲覧・回答可能）
+  ownerOnly Boolean @default(false)
+
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
   deliveries FormDelivery[]
