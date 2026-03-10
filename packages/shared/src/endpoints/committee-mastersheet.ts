@@ -170,7 +170,7 @@ export const editFormItemCellEndpoint: BodyEndpoint<
 
 /**
  * POST /committee/mastersheet/history
- * 編集履歴をバッチ取得（cells が空なら権限のある全セル）
+ * 編集履歴をバッチ取得（cells が空なら空レスポンス）
  */
 export const batchMastersheetHistoryEndpoint: BodyEndpoint<
 	"POST",

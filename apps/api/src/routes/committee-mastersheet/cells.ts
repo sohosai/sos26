@@ -237,7 +237,7 @@ cellsRoute.put(
 
 // ─────────────────────────────────────────────────────────────
 // POST /committee/mastersheet/history
-// 編集履歴をバッチ取得（cells が空なら権限のある全 FORM_ITEM セル）
+// 編集履歴をバッチ取得（cells が空なら空レスポンス）
 // ─────────────────────────────────────────────────────────────
 
 cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
@@ -247,15 +247,19 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 	const body = await c.req.json().catch(() => ({}));
 	const { cells } = batchMastersheetHistoryRequestSchema.parse(body);
 
+	// セル指定がなければ空レスポンス
+	if (cells.length === 0) {
+		return c.json({ groups: [] });
+	}
+
 	const accessibleFormIds = await getAccessibleFormIds(userId);
 
 	// 対象カラムを特定
-	const targetColumnIds =
-		cells.length > 0 ? [...new Set(cells.map(c => c.columnId))] : undefined;
+	const targetColumnIds = [...new Set(cells.map(c => c.columnId))];
 
 	const columns = await prisma.mastersheetColumn.findMany({
 		where: {
-			...(targetColumnIds ? { id: { in: targetColumnIds } } : {}),
+			id: { in: targetColumnIds },
 			formItemId: { not: null },
 		},
 		include: {
@@ -292,15 +296,13 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 	);
 	const formItemIds = [...formItemToColumn.keys()];
 
-	// 対象の projectId を絞り込む（指定があれば）
-	const targetProjectIds =
-		cells.length > 0 ? [...new Set(cells.map(c => c.projectId))] : undefined;
+	const targetProjectIds = [...new Set(cells.map(c => c.projectId))];
 
 	// バッチクエリ
 	const allHistory = await prisma.formItemEditHistory.findMany({
 		where: {
 			formItemId: { in: formItemIds },
-			...(targetProjectIds ? { projectId: { in: targetProjectIds } } : {}),
+			projectId: { in: targetProjectIds },
 		},
 		include: {
 			actor: { select: { id: true, name: true } },
@@ -319,13 +321,11 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 		const columnId = formItemToColumn.get(h.formItemId);
 		if (!columnId) continue;
 
-		// セル指定がある場合、対象セルのみに絞り込む
-		if (cells.length > 0) {
-			const match = cells.some(
-				c => c.columnId === columnId && c.projectId === h.projectId
-			);
-			if (!match) continue;
-		}
+		// 対象セルのみに絞り込む
+		const match = cells.some(
+			c => c.columnId === columnId && c.projectId === h.projectId
+		);
+		if (!match) continue;
 
 		const key = `${columnId}:${h.projectId}`;
 		let group = groupMap.get(key);

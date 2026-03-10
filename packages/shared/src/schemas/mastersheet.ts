@@ -315,7 +315,7 @@ export const formItemEditHistorySchema = z.object({
 // ─────────────────────────────────────────────────────────────
 
 export const batchMastersheetHistoryRequestSchema = z.object({
-	/** 空配列の場合は権限のある全セルの履歴を返す */
+	/** 取得対象のセル（空配列の場合は空レスポンス） */
 	cells: z.array(
 		z.object({
 			columnId: z.cuid(),

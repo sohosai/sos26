@@ -130,13 +130,11 @@ export function HistoryPanel({
 	useEffect(() => {
 		if (!open) return;
 
-		// セル指定がある場合は FORM_ITEM に絞り込む、なければ空配列（=全件）
-		const cellsToFetch = hasSelection
-			? getFormItemCells(selectedCells, columns)
-			: [];
+		// FORM_ITEM セルに絞り込む
+		const cellsToFetch = getFormItemCells(selectedCells, columns);
 
-		// セル選択ありで FORM_ITEM が 0 件なら空表示
-		if (hasSelection && cellsToFetch.length === 0) {
+		// セル未選択 or FORM_ITEM が 0 件なら空表示
+		if (cellsToFetch.length === 0) {
 			setGroups([]);
 			setLoading(false);
 			setError(null);
@@ -180,7 +178,7 @@ export function HistoryPanel({
 			});
 
 		return () => controller.abort();
-	}, [open, selectedCells, columns, hasSelection, columnMap, projectMap]);
+	}, [open, selectedCells, columns, columnMap, projectMap]);
 
 	if (!open) return null;
 
@@ -246,7 +244,7 @@ export function HistoryPanel({
 						<Text size="2" color="gray">
 							{hasSelection
 								? "選択中のフォーム由来セルに履歴がありません"
-								: "フォーム由来カラムの履歴がありません"}
+								: "セルを選択すると履歴が表示されます"}
 						</Text>
 					</div>
 				)}
