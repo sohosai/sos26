@@ -71,7 +71,7 @@ export function ProjectFormAnswerDialog({
 			.catch(() => {
 				if (controller.signal.aborted) return;
 				setFetchState({ status: "error" });
-				toast.error("フォームの取得に失敗しました");
+				toast.error("申請の取得に失敗しました");
 			});
 
 		return () => controller.abort();

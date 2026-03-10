@@ -182,12 +182,12 @@ function RouteComponent() {
 				className={styles.backLink}
 			>
 				<IconArrowLeft size={16} />
-				<Text size="2">フォーム詳細に戻る</Text>
+				<Text size="2">申請詳細に戻る</Text>
 			</Link>
 			<div style={{ marginBottom: 16 }}>
 				<Heading size="5">回答一覧</Heading>
 				<Text size="2" color="gray">
-					フォームに送信された回答の一覧です。
+					申請に送信された回答の一覧です。
 				</Text>
 			</div>
 
