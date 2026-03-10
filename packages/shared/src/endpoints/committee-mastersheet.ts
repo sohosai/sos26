@@ -1,4 +1,6 @@
 import {
+	batchMastersheetHistoryRequestSchema,
+	batchMastersheetHistoryResponseSchema,
 	createMastersheetAccessRequestResponseSchema,
 	createMastersheetColumnRequestSchema,
 	createMastersheetColumnResponseSchema,
@@ -10,7 +12,6 @@ import {
 	editFormItemCellRequestSchema,
 	editFormItemCellResponseSchema,
 	getMastersheetDataResponseSchema,
-	getMastersheetHistoryResponseSchema,
 	listMastersheetAccessRequestsResponseSchema,
 	listMastersheetViewsResponseSchema,
 	mastersheetAccessRequestIdPathParamsSchema,
@@ -168,21 +169,23 @@ export const editFormItemCellEndpoint: BodyEndpoint<
 // ─────────────────────────────────────────────────────────────
 
 /**
- * GET /committee/mastersheet/columns/:columnId/history/:projectId
- * 編集履歴を降順で取得
+ * POST /committee/mastersheet/history
+ * 編集履歴をバッチ取得（cells が空なら権限のある全セル）
  */
-export const getMastersheetHistoryEndpoint: GetEndpoint<
-	"/committee/mastersheet/columns/:columnId/history/:projectId",
-	typeof mastersheetColumnProjectPathParamsSchema,
+export const batchMastersheetHistoryEndpoint: BodyEndpoint<
+	"POST",
+	"/committee/mastersheet/history",
 	undefined,
-	typeof getMastersheetHistoryResponseSchema
+	undefined,
+	typeof batchMastersheetHistoryRequestSchema,
+	typeof batchMastersheetHistoryResponseSchema
 > = {
-	method: "GET",
-	path: "/committee/mastersheet/columns/:columnId/history/:projectId",
-	pathParams: mastersheetColumnProjectPathParamsSchema,
+	method: "POST",
+	path: "/committee/mastersheet/history",
+	pathParams: undefined,
 	query: undefined,
-	request: undefined,
-	response: getMastersheetHistoryResponseSchema,
+	request: batchMastersheetHistoryRequestSchema,
+	response: batchMastersheetHistoryResponseSchema,
 } as const;
 
 // ─────────────────────────────────────────────────────────────

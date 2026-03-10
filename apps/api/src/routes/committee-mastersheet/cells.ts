@@ -1,4 +1,5 @@
 import {
+	batchMastersheetHistoryRequestSchema,
 	editFormItemCellRequestSchema,
 	mastersheetColumnProjectPathParamsSchema,
 	upsertMastersheetCellRequestSchema,
@@ -235,38 +236,111 @@ cellsRoute.put(
 );
 
 // ─────────────────────────────────────────────────────────────
-// GET /committee/mastersheet/columns/:columnId/history/:projectId
+// POST /committee/mastersheet/history
+// 編集履歴をバッチ取得（cells が空なら権限のある全 FORM_ITEM セル）
 // ─────────────────────────────────────────────────────────────
 
-cellsRoute.get(
-	"/columns/:columnId/history/:projectId",
-	requireAuth,
-	requireCommitteeMember,
-	async c => {
-		const userId = c.get("user").id;
-		const committeeMember = c.get("committeeMember");
-		const { columnId, projectId } =
-			mastersheetColumnProjectPathParamsSchema.parse(c.req.param());
+cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
+	const userId = c.get("user").id;
+	const committeeMember = c.get("committeeMember");
 
-		const col = await getColumnFull(columnId);
-		if (!col.formItemId)
-			throw Errors.invalidRequest("フォーム項目が紐づいていません");
+	const body = await c.req.json().catch(() => ({}));
+	const { cells } = batchMastersheetHistoryRequestSchema.parse(body);
 
-		const accessibleFormIds = await getAccessibleFormIds(userId);
-		if (!canViewColumn(col, userId, committeeMember, accessibleFormIds))
-			throw Errors.forbidden("このカラムへのアクセス権がありません");
+	const accessibleFormIds = await getAccessibleFormIds(userId);
 
-		const history = await prisma.formItemEditHistory.findMany({
-			where: { formItemId: col.formItemId, projectId },
-			include: {
-				actor: { select: { id: true, name: true } },
-				selectedOptions: { select: { formItemOptionId: true } },
-			},
-			orderBy: { createdAt: "desc" },
-		});
+	// 対象カラムを特定
+	const targetColumnIds =
+		cells.length > 0 ? [...new Set(cells.map(c => c.columnId))] : undefined;
 
-		return c.json({
-			history: history.map(h => ({
+	const columns = await prisma.mastersheetColumn.findMany({
+		where: {
+			...(targetColumnIds ? { id: { in: targetColumnIds } } : {}),
+			formItemId: { not: null },
+		},
+		include: {
+			formItem: { select: { id: true, formId: true } },
+			createdBy: { select: { name: true } },
+			viewers: { include: { user: { select: { name: true } } } },
+		},
+	});
+
+	// 権限フィルタ
+	const accessibleColumns = columns.filter(col =>
+		canViewColumn(
+			col as Parameters<typeof canViewColumn>[0],
+			userId,
+			committeeMember,
+			accessibleFormIds
+		)
+	);
+
+	if (accessibleColumns.length === 0) {
+		return c.json({ groups: [] });
+	}
+
+	// formItemId → columnId のマップ
+	const formItemToColumn = new Map(
+		accessibleColumns
+			.filter(
+				(
+					col
+				): col is typeof col & { formItem: NonNullable<typeof col.formItem> } =>
+					col.formItem != null
+			)
+			.map(col => [col.formItem.id, col.id] as const)
+	);
+	const formItemIds = [...formItemToColumn.keys()];
+
+	// 対象の projectId を絞り込む（指定があれば）
+	const targetProjectIds =
+		cells.length > 0 ? [...new Set(cells.map(c => c.projectId))] : undefined;
+
+	// バッチクエリ
+	const allHistory = await prisma.formItemEditHistory.findMany({
+		where: {
+			formItemId: { in: formItemIds },
+			...(targetProjectIds ? { projectId: { in: targetProjectIds } } : {}),
+		},
+		include: {
+			actor: { select: { id: true, name: true } },
+			selectedOptions: { select: { formItemOptionId: true } },
+		},
+		orderBy: { createdAt: "desc" },
+	});
+
+	// (columnId, projectId) でグルーピング
+	const groupMap = new Map<
+		string,
+		{ columnId: string; projectId: string; history: typeof allHistory }
+	>();
+
+	for (const h of allHistory) {
+		const columnId = formItemToColumn.get(h.formItemId);
+		if (!columnId) continue;
+
+		// セル指定がある場合、対象セルのみに絞り込む
+		if (cells.length > 0) {
+			const match = cells.some(
+				c => c.columnId === columnId && c.projectId === h.projectId
+			);
+			if (!match) continue;
+		}
+
+		const key = `${columnId}:${h.projectId}`;
+		let group = groupMap.get(key);
+		if (!group) {
+			group = { columnId, projectId: h.projectId, history: [] };
+			groupMap.set(key, group);
+		}
+		group.history.push(h);
+	}
+
+	return c.json({
+		groups: [...groupMap.values()].map(g => ({
+			columnId: g.columnId,
+			projectId: g.projectId,
+			history: g.history.map(h => ({
 				id: h.id,
 				value: {
 					textValue: h.textValue,
@@ -278,6 +352,6 @@ cellsRoute.get(
 				trigger: h.trigger,
 				createdAt: h.createdAt,
 			})),
-		});
-	}
-);
+		})),
+	});
+});

@@ -1,13 +1,13 @@
 import { Badge, Spinner, Text } from "@radix-ui/themes";
 import type {
+	BatchMastersheetHistoryResponse,
 	FormItemEditHistoryTrigger,
 	GetMastersheetDataResponse,
-	GetMastersheetHistoryResponse,
 } from "@sos26/shared";
 import { IconFileText, IconHistory, IconX } from "@tabler/icons-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { IconButton } from "@/components/primitives";
-import { getMastersheetHistory } from "@/lib/api/committee-mastersheet";
+import { batchMastersheetHistory } from "@/lib/api/committee-mastersheet";
 import styles from "./HistoryPanel.module.scss";
 import type { SelectedCell } from "./MastersheetTable";
 
@@ -16,7 +16,8 @@ import type { SelectedCell } from "./MastersheetTable";
 // ─────────────────────────────────────────────────────────────
 
 type ApiColumn = GetMastersheetDataResponse["columns"][number];
-type HistoryEntry = GetMastersheetHistoryResponse["history"][number];
+type HistoryEntry =
+	BatchMastersheetHistoryResponse["groups"][number]["history"][number];
 
 type CellHistoryGroup = {
 	columnId: string;
@@ -54,7 +55,7 @@ const TRIGGER_COLOR: Record<
 	COMMITTEE_EDIT: "blue",
 };
 
-function formatDateTime(date: Date): string {
+function formatDateTime(date: Date | string): string {
 	const d = new Date(date);
 	const month = d.getMonth() + 1;
 	const day = d.getDate();
@@ -98,21 +99,6 @@ function getFormItemCells(
 	return result;
 }
 
-/** 全 FORM_ITEM カラム × 全企画の組み合わせを生成 */
-function getAllFormItemCells(
-	columns: ApiColumn[],
-	rows: GetMastersheetDataResponse["rows"]
-): { columnId: string; projectId: string }[] {
-	const formItemColumns = columns.filter(c => c.type === "FORM_ITEM");
-	const result: { columnId: string; projectId: string }[] = [];
-	for (const col of formItemColumns) {
-		for (const row of rows) {
-			result.push({ columnId: col.id, projectId: row.project.id });
-		}
-	}
-	return result;
-}
-
 // ─────────────────────────────────────────────────────────────
 // コンポーネント
 // ─────────────────────────────────────────────────────────────
@@ -144,11 +130,13 @@ export function HistoryPanel({
 	useEffect(() => {
 		if (!open) return;
 
+		// セル指定がある場合は FORM_ITEM に絞り込む、なければ空配列（=全件）
 		const cellsToFetch = hasSelection
 			? getFormItemCells(selectedCells, columns)
-			: getAllFormItemCells(columns, rows);
+			: [];
 
-		if (cellsToFetch.length === 0) {
+		// セル選択ありで FORM_ITEM が 0 件なら空表示
+		if (hasSelection && cellsToFetch.length === 0) {
 			setGroups([]);
 			setLoading(false);
 			setError(null);
@@ -162,33 +150,24 @@ export function HistoryPanel({
 		setLoading(true);
 		setError(null);
 
-		Promise.all(
-			cellsToFetch.map(async cell => {
-				const res = await getMastersheetHistory(cell.columnId, cell.projectId);
-				return { ...cell, history: res.history };
-			})
-		)
-			.then(results => {
+		batchMastersheetHistory(cellsToFetch)
+			.then(res => {
 				if (controller.signal.aborted) return;
 
-				const newGroups: CellHistoryGroup[] = results
-					.filter(r => r.history.length > 0)
-					.map(r => ({
-						columnId: r.columnId,
-						projectId: r.projectId,
-						columnName: columnMap.get(r.columnId)?.name ?? r.columnId,
-						projectLabel: projectMap.get(r.projectId)?.name ?? r.projectId,
-						history: r.history,
-					}));
+				const newGroups: CellHistoryGroup[] = res.groups.map(g => ({
+					columnId: g.columnId,
+					projectId: g.projectId,
+					columnName: columnMap.get(g.columnId)?.name ?? g.columnId,
+					projectLabel: projectMap.get(g.projectId)?.name ?? g.projectId,
+					history: g.history,
+				}));
 
-				// 全履歴表示時は最新順にソート
-				if (!hasSelection) {
-					newGroups.sort((a, b) => {
-						const aDate = a.history[0]?.createdAt ?? new Date(0);
-						const bDate = b.history[0]?.createdAt ?? new Date(0);
-						return new Date(bDate).getTime() - new Date(aDate).getTime();
-					});
-				}
+				// 最新順にソート
+				newGroups.sort((a, b) => {
+					const aDate = a.history[0]?.createdAt ?? new Date(0);
+					const bDate = b.history[0]?.createdAt ?? new Date(0);
+					return new Date(bDate).getTime() - new Date(aDate).getTime();
+				});
 
 				setGroups(newGroups);
 				setLoading(false);
@@ -201,7 +180,7 @@ export function HistoryPanel({
 			});
 
 		return () => controller.abort();
-	}, [open, selectedCells, columns, rows, hasSelection, columnMap, projectMap]);
+	}, [open, selectedCells, columns, hasSelection, columnMap, projectMap]);
 
 	if (!open) return null;
 

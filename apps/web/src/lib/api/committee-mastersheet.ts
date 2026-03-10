@@ -1,4 +1,7 @@
 import {
+	type BatchMastersheetHistoryRequest,
+	type BatchMastersheetHistoryResponse,
+	batchMastersheetHistoryEndpoint,
 	type CreateMastersheetAccessRequestResponse,
 	type CreateMastersheetColumnRequest,
 	type CreateMastersheetColumnResponse,
@@ -17,9 +20,7 @@ import {
 	type EditFormItemCellResponse,
 	editFormItemCellEndpoint,
 	type GetMastersheetDataResponse,
-	type GetMastersheetHistoryResponse,
 	getMastersheetDataEndpoint,
-	getMastersheetHistoryEndpoint,
 	type ListMastersheetAccessRequestsResponse,
 	type ListMastersheetViewsResponse,
 	listMastersheetAccessRequestsEndpoint,
@@ -111,16 +112,13 @@ export async function editFormItemCell(
 }
 
 /**
- * GET /committee/mastersheet/columns/:columnId/history/:projectId
- * セルの編集履歴を取得
+ * POST /committee/mastersheet/history
+ * 編集履歴をバッチ取得
  */
-export async function getMastersheetHistory(
-	columnId: string,
-	projectId: string
-): Promise<GetMastersheetHistoryResponse> {
-	return callGetApi(getMastersheetHistoryEndpoint, {
-		pathParams: { columnId, projectId },
-	});
+export async function batchMastersheetHistory(
+	cells: BatchMastersheetHistoryRequest["cells"]
+): Promise<BatchMastersheetHistoryResponse> {
+	return callBodyApi(batchMastersheetHistoryEndpoint, { cells });
 }
 
 /**
