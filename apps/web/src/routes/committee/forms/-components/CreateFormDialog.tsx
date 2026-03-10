@@ -44,6 +44,7 @@ export function CreateFormDialog({ open, onOpenChange, onSuccess }: Props) {
 						label: opt.label,
 						sortOrder: i,
 					})),
+					constraints: item.constraints ?? null,
 				})),
 			});
 

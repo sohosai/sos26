@@ -2,11 +2,14 @@ import {
 	type CreateFormResponseRequest,
 	createFormResponseRequestSchema,
 	type FormItemType,
+	PATTERN_LABELS,
+	PATTERN_REGEXES,
 	projectFormPathParamsSchema,
 	updateFormResponseRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
+import { constraintsFromPrisma } from "../lib/form-constraints";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -48,6 +51,10 @@ const getDeliveryOrThrow = async (
 									required: true,
 									sortOrder: true,
 									options: true,
+									constraintMinLength: true,
+									constraintMaxLength: true,
+									constraintPattern: true,
+									constraintCustomPattern: true,
 								},
 								orderBy: { sortOrder: "asc" },
 							},
@@ -260,6 +267,97 @@ function assertRequiredAnswered(
 		}
 	}
 }
+
+function resolveConstraintRegex(
+	pattern: string,
+	customPattern: string | null
+): RegExp | null {
+	if (pattern === "custom") {
+		if (!customPattern) return null;
+		try {
+			return new RegExp(customPattern);
+		} catch {
+			return null;
+		}
+	}
+	return PATTERN_REGEXES[pattern] ?? null;
+}
+
+function assertItemTextConstraints(
+	item: {
+		constraintMinLength: number | null;
+		constraintMaxLength: number | null;
+		constraintPattern: string | null;
+		constraintCustomPattern: string | null;
+	},
+	value: string
+) {
+	const {
+		constraintMinLength,
+		constraintMaxLength,
+		constraintPattern,
+		constraintCustomPattern,
+	} = item;
+
+	if (constraintMinLength !== null && value.length < constraintMinLength) {
+		throw Errors.invalidRequest(
+			`${constraintMinLength}文字以上で入力してください`
+		);
+	}
+
+	if (constraintMaxLength !== null && value.length > constraintMaxLength) {
+		throw Errors.invalidRequest(
+			`${constraintMaxLength}文字以内で入力してください`
+		);
+	}
+
+	if (constraintPattern !== null) {
+		const regex = resolveConstraintRegex(
+			constraintPattern,
+			constraintCustomPattern
+		);
+		if (regex && !regex.test(value)) {
+			const label =
+				constraintPattern === "custom"
+					? `パターン（${constraintCustomPattern}）`
+					: (PATTERN_LABELS[constraintPattern] ?? constraintPattern);
+			throw Errors.invalidRequest(`${label}のみで入力してください`);
+		}
+	}
+}
+
+function assertTextConstraints(
+	formItems: {
+		id: string;
+		type: FormItemType;
+		constraintMinLength: number | null;
+		constraintMaxLength: number | null;
+		constraintPattern: string | null;
+		constraintCustomPattern: string | null;
+	}[],
+	answers: CreateFormResponseRequest["answers"]
+) {
+	const answerMap = new Map(answers.map(a => [a.formItemId, a]));
+
+	for (const item of formItems) {
+		if (item.type !== "TEXT" && item.type !== "TEXTAREA") continue;
+		if (
+			item.constraintMinLength === null &&
+			item.constraintMaxLength === null &&
+			item.constraintPattern === null
+		)
+			continue;
+
+		const answer = answerMap.get(item.id);
+		if (!answer) continue;
+		if (answer.type !== "TEXT" && answer.type !== "TEXTAREA") continue;
+
+		const value = answer.textValue;
+		if (!value) continue;
+
+		assertItemTextConstraints(item, value);
+	}
+}
 // ─────────────────────────────────────────────────────────────
 // ヘルパー: FormItemEditHistory にレコードを追加
 // ─────────────────────────────────────────────────────────────
@@ -461,6 +559,7 @@ projectFormRoute.get(
 							label: opt.label,
 							sortOrder: opt.sortOrder,
 						})),
+					constraints: constraintsFromPrisma(item),
 				})),
 				response: existingResponse
 					? {
@@ -522,6 +621,7 @@ projectFormRoute.post(
 
 		if (submit) {
 			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
+			assertTextConstraints(delivery.formAuthorization.form.items, answers);
 		}
 
 		const response = await prisma.$transaction(async tx => {
@@ -599,6 +699,7 @@ projectFormRoute.patch(
 
 		if (submit || isAlreadySubmitted) {
 			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
+			assertTextConstraints(delivery.formAuthorization.form.items, answers);
 		}
 
 		const response = await prisma.$transaction(async tx => {

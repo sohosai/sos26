@@ -24,6 +24,7 @@ export function ProjectFormToForm(form: GetProjectFormResponse): Form {
 						id: opt.id,
 						label: opt.label,
 					})),
+				constraints: item.constraints ?? null,
 			})),
 	};
 }
@@ -48,6 +49,7 @@ export function formDetailToForm(formDetail: GetFormDetailResponse): Form {
 						id: opt.id,
 						label: opt.label,
 					})),
+				constraints: item.constraints ?? null,
 			})),
 	};
 }

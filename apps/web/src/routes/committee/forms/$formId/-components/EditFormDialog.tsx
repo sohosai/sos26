@@ -45,6 +45,7 @@ export function EditFormDialog({
 						label: opt.label,
 						sortOrder: i,
 					})),
+					constraints: item.constraints ?? null,
 				})),
 			});
 

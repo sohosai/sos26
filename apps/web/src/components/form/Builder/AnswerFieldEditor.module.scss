@@ -15,3 +15,23 @@
   gap: var(--space-2);
 }
 
+.constraints {
+  margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background-color: var(--gray-2);
+  border-radius: var(--radius-2);
+}
+
+.constraintRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.patternRow {
+  margin-top: var(--space-1);
+}
+

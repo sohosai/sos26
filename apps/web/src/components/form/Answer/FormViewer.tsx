@@ -1,8 +1,9 @@
 import { Text } from "@radix-ui/themes";
+import { PATTERN_LABELS, PATTERN_REGEXES } from "@sos26/shared";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
-import type { Form, FormAnswers, FormAnswerValue } from "../type";
+import type { Form, FormAnswers, FormAnswerValue, FormItem } from "../type";
 import { AnswerField } from "./AnswerField";
 import styles from "./FormViewer.module.scss";
 
@@ -39,6 +40,71 @@ function buildInitialAnswers(
 	return merged;
 }
 
+function resolvePatternRegex(
+	pattern: string,
+	customPattern?: string | null
+): RegExp | null {
+	if (pattern === "custom") {
+		if (!customPattern) return null;
+		try {
+			return new RegExp(customPattern);
+		} catch {
+			return null;
+		}
+	}
+	return PATTERN_REGEXES[pattern] ?? null;
+}
+
+function validateTextConstraints(
+	value: string,
+	constraints: NonNullable<FormItem["constraints"]>
+): string | null {
+	const { minLength, maxLength, pattern, customPattern } = constraints;
+
+	if (minLength !== undefined && value.length < minLength) {
+		return `${minLength}文字以上で入力してください`;
+	}
+	if (maxLength !== undefined && value.length > maxLength) {
+		return `${maxLength}文字以内で入力してください`;
+	}
+	if (pattern) {
+		const regex = resolvePatternRegex(pattern, customPattern);
+		if (regex && !regex.test(value)) {
+			const label =
+				pattern === "custom"
+					? `パターン（${customPattern}）`
+					: (PATTERN_LABELS[pattern] ?? pattern);
+			return `${label}のみで入力してください`;
+		}
+	}
+	return null;
+}
+
+function validateItem(
+	item: FormItem,
+	value: FormAnswerValue | undefined
+): string | null {
+	if (item.required) {
+		if (value === undefined || value === null || value === "") {
+			return "この項目は必須です";
+		}
+		if (Array.isArray(value) && value.length === 0) {
+			return "この項目は必須です";
+		}
+	}
+
+	if (
+		(item.type === "TEXT" || item.type === "TEXTAREA") &&
+		item.constraints &&
+		typeof value === "string" &&
+		value !== ""
+	) {
+		return validateTextConstraints(value, item.constraints);
+	}
+
+	return null;
+}
+
 export function FormViewer({
 	form,
 	onSubmit,
@@ -47,7 +113,6 @@ export function FormViewer({
 	disableSubmit = false,
 	disableSaveDraft = false,
 }: Props) {
-	// const [answers, setAnswers] = useState<FormAnswers>(initialAnswers);
 	const [answers, setAnswers] = useState<FormAnswers>(() =>
 		buildInitialAnswers(form, initialAnswers)
 	);
@@ -74,13 +139,8 @@ export function FormViewer({
 	const validate = (): boolean => {
 		const newErrors: Record<string, string> = {};
 		for (const item of form.items) {
-			if (!item.required) continue;
-			const value = answers[item.id];
-			if (value === undefined || value === null || value === "") {
-				newErrors[item.id] = "この項目は必須です";
-			} else if (Array.isArray(value) && value.length === 0) {
-				newErrors[item.id] = "この項目は必須です";
-			}
+			const error = validateItem(item, answers[item.id]);
+			if (error) newErrors[item.id] = error;
 		}
 		setErrors(newErrors);
 		return Object.keys(newErrors).length === 0;

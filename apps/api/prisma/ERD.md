@@ -162,6 +162,10 @@ erDiagram
   String description "nullable"
   FormItemType type
   Boolean required
+  Int constraintMinLength "nullable"
+  Int constraintMaxLength "nullable"
+  String constraintPattern "nullable"
+  String constraintCustomPattern "nullable"
   Int sortOrder
   DateTime createdAt
   DateTime updatedAt
@@ -652,6 +656,10 @@ Properties as follows:
 - `description`:
 - `type`:
 - `required`:
+- `constraintMinLength`:
+- `constraintMaxLength`:
+- `constraintPattern`:
+- `constraintCustomPattern`:
 - `sortOrder`:
 - `createdAt`:
 - `updatedAt`:
