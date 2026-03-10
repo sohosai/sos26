@@ -194,6 +194,52 @@ function assertSelectedOptionsValid(
 // ヘルパー: レスポンス整形
 // ─────────────────────────────────────────────────────────────
 
+type ProjectFormFileMetadata = {
+	id: string;
+	fileName: string;
+	mimeType: string;
+	isPublic: boolean;
+};
+
+function toProjectFormFileMetadata(
+	file: ProjectFormFileMetadata | null | undefined
+): ProjectFormFileMetadata | null {
+	return file
+		? {
+				id: file.id,
+				fileName: file.fileName,
+				mimeType: file.mimeType,
+				isPublic: file.isPublic,
+			}
+		: null;
+}
+
+async function getProjectFormFileMetadataMap(
+	db: typeof prisma | PrismaTx,
+	fileIds: Array<string | null | undefined>
+) {
+	const uniqueIds = [...new Set(fileIds.filter((id): id is string => !!id))];
+	if (uniqueIds.length === 0) {
+		return new Map<string, ProjectFormFileMetadata>();
+	}
+
+	const files = await db.file.findMany({
+		where: {
+			id: { in: uniqueIds },
+			status: "CONFIRMED",
+			deletedAt: null,
+		},
+		select: {
+			id: true,
+			fileName: true,
+			mimeType: true,
+			isPublic: true,
+		},
+	});
+
+	return new Map(files.map(file => [file.id, file]));
+}
+
 const formatResponse = async (
 	tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
 	responseId: string
@@ -206,6 +252,10 @@ const formatResponse = async (
 			},
 		},
 	});
+	const fileMap = await getProjectFormFileMetadataMap(
+		tx,
+		response.answers.map(answer => answer.fileId)
+	);
 
 	return {
 		id: response.id,
@@ -215,6 +265,9 @@ const formatResponse = async (
 			textValue: a.textValue,
 			numberValue: a.numberValue,
 			fileId: a.fileId,
+			fileMetadata: toProjectFormFileMetadata(
+				a.fileId ? fileMap.get(a.fileId) : null
+			),
 			selectedOptionIds: a.selectedOptions.map(s => s.formItemOptionId),
 		})),
 	};
@@ -550,6 +603,10 @@ projectFormRoute.get(
 		for (const h of allHistory) {
 			if (!latestByItem.has(h.formItemId)) latestByItem.set(h.formItemId, h);
 		}
+		const fileMap = await getProjectFormFileMetadataMap(prisma, [
+			...(existingResponse?.answers.map(answer => answer.fileId) ?? []),
+			...allHistory.map(history => history.fileId),
+		]);
 
 		return c.json({
 			form: {
@@ -590,6 +647,9 @@ projectFormRoute.get(
 										textValue: hist.textValue,
 										numberValue: hist.numberValue,
 										fileId: hist.fileId,
+										fileMetadata: toProjectFormFileMetadata(
+											hist.fileId ? fileMap.get(hist.fileId) : null
+										),
 										selectedOptionIds: hist.selectedOptions.map(
 											s => s.formItemOptionId
 										),
@@ -600,6 +660,9 @@ projectFormRoute.get(
 									textValue: a.textValue,
 									numberValue: a.numberValue,
 									fileId: a.fileId,
+									fileMetadata: toProjectFormFileMetadata(
+										a.fileId ? fileMap.get(a.fileId) : null
+									),
 									selectedOptionIds: a.selectedOptions.map(
 										s => s.formItemOptionId
 									),

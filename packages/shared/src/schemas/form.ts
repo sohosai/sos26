@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { approvalStatusSchema } from "./common";
+import { fileSchema } from "./file";
 import { userSchema } from "./user";
 
 // ─────────────────────────────────────────────────────────────
@@ -512,6 +513,13 @@ const projectFormItemOptionSchema = z.object({
 	sortOrder: z.number().int(),
 });
 
+const projectFormFileMetadataSchema = fileSchema.pick({
+	id: true,
+	fileName: true,
+	mimeType: true,
+	isPublic: true,
+});
+
 const projectFormItemSchema = z.object({
 	id: z.string(),
 	label: z.string(),
@@ -529,6 +537,7 @@ const formAnswerSchema = z.object({
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
 	fileId: z.string().nullable(),
+	fileMetadata: projectFormFileMetadataSchema.nullable(),
 	selectedOptionIds: z.array(z.string()),
 });
 

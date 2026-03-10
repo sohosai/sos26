@@ -1,53 +1,121 @@
 import { IconFileSearch } from "@tabler/icons-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import FilePreviewDialog from "@/components/filePreview/FilePreviewDialog";
+import type { UploadedFileValue } from "@/components/form/type";
 import { IconButton } from "@/components/primitives";
+import { fetchFile } from "@/lib/api/files";
 import { FileUploadField } from "./FileUploadField";
 import styles from "./FileUploadFieldWithPreview.module.scss";
 
 type FileUploadProps = {
 	label: string;
 	value?: File | null;
+	uploadedFile?: UploadedFileValue | null;
 	onChange: (file: File | null) => void;
 	required?: boolean;
 	disabled?: boolean;
-	uploadedFileName?: string;
 };
+
+function canPreviewUploadedFile(
+	uploadedFile?: UploadedFileValue | null
+): uploadedFile is {
+	fileId: string;
+	fileName: string;
+	mimeType: string;
+	isPublic: boolean;
+} {
+	return (
+		uploadedFile?.fileName != null &&
+		uploadedFile.mimeType != null &&
+		uploadedFile.isPublic != null
+	);
+}
 
 export function FileUploadFieldWithPreview({
 	label,
 	value,
+	uploadedFile,
 	onChange,
 	required,
 	disabled,
-	uploadedFileName,
 }: FileUploadProps) {
-	const [file, setFile] = useState<File | null>(null);
+	const [fetchedFile, setFetchedFile] = useState<File | null>(null);
 	const [open, setOpen] = useState(false);
+	const [isFetching, setIsFetching] = useState(false);
+	const uploadedFileId = uploadedFile?.fileId ?? null;
 
-	const handleChange = (file: File | null) => {
-		setFile(file);
-		onChange(file);
+	useEffect(() => {
+		if (uploadedFileId === null) {
+			setFetchedFile(null);
+			return;
+		}
+		setFetchedFile(null);
+	}, [uploadedFileId]);
+
+	const previewFile = value ?? fetchedFile;
+	const uploadedFileName =
+		uploadedFile?.fileName ?? (uploadedFile ? "アップロード済み" : undefined);
+
+	const handlePreviewOpen = async () => {
+		if (value) {
+			setOpen(true);
+			return;
+		}
+
+		if (fetchedFile) {
+			setOpen(true);
+			return;
+		}
+
+		if (!canPreviewUploadedFile(uploadedFile)) {
+			return;
+		}
+
+		setIsFetching(true);
+		try {
+			const file = await fetchFile(
+				uploadedFile.fileId,
+				uploadedFile.fileName,
+				uploadedFile.mimeType,
+				uploadedFile.isPublic
+			);
+			setFetchedFile(file);
+			setOpen(true);
+		} catch {
+			toast.error("ファイルの取得に失敗しました");
+		} finally {
+			setIsFetching(false);
+		}
 	};
+
+	const canPreview = Boolean(value) || canPreviewUploadedFile(uploadedFile);
+
 	return (
 		<div className={styles.container}>
 			<FileUploadField
 				label={label}
-				value={file ?? value}
-				onChange={handleChange}
+				value={value}
+				onChange={onChange}
 				required={required}
 				disabled={disabled}
 				uploadedFileName={uploadedFileName}
 			/>
-			{(file ?? value) instanceof File && (
+			{canPreview && (
 				<div>
-					<IconButton onClick={() => setOpen(true)}>
+					<IconButton
+						onClick={() => {
+							void handlePreviewOpen();
+						}}
+						disabled={isFetching}
+						aria-label="ファイルをプレビュー"
+					>
 						<IconFileSearch size={16} />
 					</IconButton>
 				</div>
 			)}
 			<FilePreviewDialog
-				file={file ?? (value instanceof File ? value : null)}
+				file={previewFile}
 				open={open}
 				onOpenChange={setOpen}
 			/>

@@ -7,7 +7,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/patterns/RadioGroup";
 import { TextArea, TextField } from "@/components/primitives";
 import { FileUploadFieldWithPreview } from "../EachField/FileUploadFieldWithPreview";
 import { NumberField } from "../EachField/NumberField";
-import type { FormAnswerValue, FormItem } from "../type";
+import {
+	createEmptyFileAnswerValue,
+	type FormAnswerValue,
+	type FormItem,
+	isFileAnswerValue,
+} from "../type";
 
 type FieldProps = {
 	item: FormItem;
@@ -84,19 +89,26 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 					/>
 				);
 
-			case "FILE":
+			case "FILE": {
+				const fileValue = isFileAnswerValue(value)
+					? value
+					: createEmptyFileAnswerValue();
 				return (
 					<FileUploadFieldWithPreview
 						label=""
-						value={value instanceof File ? value : null}
-						uploadedFileName={
-							typeof value === "string" ? "アップロード済み" : undefined
+						value={fileValue.pendingFile}
+						uploadedFile={fileValue.uploadedFile}
+						onChange={file =>
+							onChange({
+								pendingFile: file,
+								uploadedFile: fileValue.uploadedFile,
+							})
 						}
-						onChange={onChange}
 						disabled={disabled}
 						aria-label={item.label}
 					/>
 				);
+			}
 
 			case "SELECT":
 				return (

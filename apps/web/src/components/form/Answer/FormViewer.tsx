@@ -3,7 +3,14 @@ import { PATTERN_LABELS, PATTERN_REGEXES } from "@sos26/shared";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
-import type { Form, FormAnswers, FormAnswerValue, FormItem } from "../type";
+import {
+	createEmptyFileAnswerValue,
+	type Form,
+	type FormAnswers,
+	type FormAnswerValue,
+	type FormItem,
+	isFileAnswerValue,
+} from "../type";
 import { AnswerField } from "./AnswerField";
 import styles from "./FormViewer.module.scss";
 
@@ -23,7 +30,7 @@ function getDefaultValue(type: Form["items"][number]["type"]): FormAnswerValue {
 		case "CHECKBOX":
 			return [];
 		case "FILE":
-			return null;
+			return createEmptyFileAnswerValue();
 		case "NUMBER":
 			return null;
 		default:
@@ -87,10 +94,19 @@ function validateItem(
 	value: FormAnswerValue | undefined
 ): string | null {
 	if (item.required) {
-		if (value === undefined || value === null || value === "") {
-			return "この項目は必須です";
-		}
-		if (Array.isArray(value) && value.length === 0) {
+		if (item.type === "FILE") {
+			if (
+				!isFileAnswerValue(value) ||
+				(value.pendingFile === null && value.uploadedFile === null)
+			) {
+				return "この項目は必須です";
+			}
+		} else if (
+			value === undefined ||
+			value === null ||
+			value === "" ||
+			(Array.isArray(value) && value.length === 0)
+		) {
 			return "この項目は必須です";
 		}
 	}
