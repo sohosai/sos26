@@ -81,6 +81,8 @@ type DataTableProps<T> = {
 	onRowSelectionChange?: (rows: T[]) => void;
 	/** rowSelection=true のとき行IDを返す関数（デフォルト: 行インデックス） */
 	getRowId?: (row: T, index: number) => string;
+	/** rowSelection=true のとき初期選択状態（getRowId で返る ID をキーとする） */
+	initialRowSelection?: RowSelectionState;
 };
 
 // ─── カスタムフィルター関数 ───────────────────────────────
@@ -167,6 +169,7 @@ export function DataTable<T extends RowData>({
 	onColumnFiltersChange,
 	onRowSelectionChange,
 	getRowId,
+	initialRowSelection = {},
 }: DataTableProps<T>) {
 	const f = { ...defaultFeatures, ...featuresProp };
 	// rowSelection=true のとき cell selection を無効化
@@ -179,7 +182,8 @@ export function DataTable<T extends RowData>({
 	);
 	const [columnFilters, setColumnFilters] =
 		useState<ColumnFiltersState>(initialColumnFilters);
-	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+	const [rowSelection, setRowSelection] =
+		useState<RowSelectionState>(initialRowSelection);
 	const tableRef = useRef<HTMLDivElement>(null);
 
 	const {

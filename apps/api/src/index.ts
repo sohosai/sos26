@@ -11,12 +11,14 @@ import { committeeMastersheetRoute } from "./routes/committee-mastersheet";
 import { committeeMemberRoute } from "./routes/committee-member";
 import { committeeNoticeRoute } from "./routes/committee-notice";
 import { committeeProjectRoute } from "./routes/committee-project";
+import { committeeUserRoute } from "./routes/committee-user";
 import { fileRoute } from "./routes/files";
 import { projectRoute } from "./routes/project";
 import { projectFormRoute } from "./routes/project-form";
 import { projectInquiryRoute } from "./routes/project-inquiry";
 import { projectNoticeRoute } from "./routes/project-notice";
 import { pushRoute } from "./routes/push";
+import { userRoute } from "./routes/user";
 
 // Push 初期化
 initPush();
@@ -56,11 +58,13 @@ app.route("/committee/notices", committeeNoticeRoute);
 app.route("/committee/forms", committeeFormRoute);
 app.route("/committee/inquiries", committeeInquiryRoute);
 app.route("/committee/mastersheet", committeeMastersheetRoute);
+app.route("/committee/users", committeeUserRoute);
 app.route("/project/:projectId/forms", projectFormRoute);
 app.route("/project", projectRoute);
 app.route("/project", projectNoticeRoute);
 app.route("/project", projectInquiryRoute);
 app.route("/push", pushRoute);
+app.route("/user", userRoute);
 app.route("/files", fileRoute);
 
 export { app };

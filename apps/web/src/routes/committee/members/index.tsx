@@ -1,13 +1,22 @@
-import { AlertDialog, Heading, Text } from "@radix-ui/themes";
+import {
+	AlertDialog,
+	Badge,
+	Checkbox,
+	Heading,
+	Popover,
+	Text,
+	Tooltip,
+} from "@radix-ui/themes";
 import {
 	type Bureau,
 	bureauLabelMap,
 	type CommitteePermission,
+	committeePermissionSchema,
 } from "@sos26/shared";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconChevronDown, IconPlus, IconTrash } from "@tabler/icons-react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DataTable, NameCell, TagCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
@@ -60,8 +69,12 @@ const bureauColorMap: Record<string, string> = {
 };
 
 // ─────────────────────────────────────────────────────────────
-// 権限トグルセル
+// 権限マルチセレクトセル
 // ─────────────────────────────────────────────────────────────
+
+const allPermissions = committeePermissionSchema.options;
+
+const MAX_VISIBLE_BADGES = 2;
 
 type PermissionsCellProps = {
 	member: CommitteeMemberRow;
@@ -73,29 +86,81 @@ type PermissionsCellProps = {
 };
 
 function PermissionsCell({ member, onToggle }: PermissionsCellProps) {
-	const allPermissions: CommitteePermission[] = [
-		"MEMBER_EDIT",
-		"NOTICE_DELIVER",
-		"FORM_DELIVER",
-		"INQUIRY_ADMIN",
-	];
+	const [open, setOpen] = useState(false);
+
+	const handleToggle = useCallback(
+		(perm: CommitteePermission, has: boolean) => {
+			onToggle(member.id, perm, has);
+		},
+		[onToggle, member.id]
+	);
+
+	const visiblePerms = member.permissions.slice(0, MAX_VISIBLE_BADGES);
+	const hiddenPerms = member.permissions.slice(MAX_VISIBLE_BADGES);
+	const hiddenCount = hiddenPerms.length;
+
+	const trigger = (
+		<Popover.Trigger>
+			<button type="button" className={styles.permissionTrigger}>
+				{member.permissions.length > 0 ? (
+					<span className={styles.permissionBadges}>
+						{visiblePerms.map(perm => (
+							<Badge key={perm} size="1" variant="soft">
+								{permissionLabelMap[perm]}
+							</Badge>
+						))}
+						{hiddenCount > 0 && (
+							<Tooltip
+								content={hiddenPerms.map(p => permissionLabelMap[p]).join("、")}
+								side="top"
+							>
+								<Badge size="1" variant="soft" color="gray">
+									+{hiddenCount}
+								</Badge>
+							</Tooltip>
+						)}
+					</span>
+				) : (
+					<Text size="1" color="gray">
+						なし
+					</Text>
+				)}
+				<IconChevronDown size={14} className={styles.chevron} />
+			</button>
+		</Popover.Trigger>
+	);
 
 	return (
-		<div className={styles.permissionList}>
-			{allPermissions.map(perm => {
-				const has = member.permissions.includes(perm);
-				return (
-					<button
-						key={perm}
-						type="button"
-						className={`${styles.permissionToggle} ${has ? styles.active : ""}`}
-						onClick={() => onToggle(member.id, perm, has)}
-					>
-						{permissionLabelMap[perm]}
-					</button>
-				);
-			})}
-		</div>
+		<Popover.Root
+			open={open}
+			onOpenChange={newOpen => {
+				// トリガークリックによる開閉のみ許可し、内部操作での閉じを防ぐ
+				if (newOpen) setOpen(true);
+			}}
+		>
+			{trigger}
+			<Popover.Content
+				size="1"
+				className={styles.permissionDropdown}
+				onPointerDownOutside={() => setOpen(false)}
+				onEscapeKeyDown={() => setOpen(false)}
+			>
+				{allPermissions.map(perm => {
+					const has = member.permissions.includes(perm);
+					return (
+						<button
+							type="button"
+							key={perm}
+							className={styles.permissionOption}
+							onClick={() => handleToggle(perm, has)}
+						>
+							<Checkbox size="1" checked={has} tabIndex={-1} />
+							<Text size="2">{permissionLabelMap[perm]}</Text>
+						</button>
+					);
+				})}
+			</Popover.Content>
+		</Popover.Root>
 	);
 }
 

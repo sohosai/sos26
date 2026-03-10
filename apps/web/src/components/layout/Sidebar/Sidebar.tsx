@@ -41,15 +41,30 @@ const commonItems: MenuItem[] = [
 	},
 ];
 
-function getRoleSwitchItem(pathname: string): MenuItem | null {
-	if (pathname.startsWith("/project")) {
+function getRoleSwitchItem(
+	pathname: string,
+	menuItems: MenuItem[]
+): MenuItem | null {
+	// menuItems のパスからどのロールか判定（/settings 等でも正しく動作）
+	const hasProjectMenu = menuItems.some(item => item.to.startsWith("/project"));
+	const hasCommitteeMenu = menuItems.some(item =>
+		item.to.startsWith("/committee")
+	);
+
+	if (
+		pathname.startsWith("/project") ||
+		(!pathname.startsWith("/committee") && hasProjectMenu)
+	) {
 		return {
 			label: "実委人に切り替え",
 			icon: <IconArrowsExchange size={18} />,
 			to: "/committee",
 		};
 	}
-	if (pathname.startsWith("/committee")) {
+	if (
+		pathname.startsWith("/committee") ||
+		(!pathname.startsWith("/project") && hasCommitteeMenu)
+	) {
 		return {
 			label: "企画人に切り替え",
 			icon: <IconArrowsExchange size={18} />,
@@ -74,7 +89,7 @@ export function Sidebar({
 		navigate({ to: "/auth/login" });
 	};
 
-	const roleSwitchItem = getRoleSwitchItem(location.pathname);
+	const roleSwitchItem = getRoleSwitchItem(location.pathname, menuItems);
 	const footerItems = roleSwitchItem
 		? [...commonItems, roleSwitchItem]
 		: commonItems;

@@ -8,7 +8,7 @@ import type { Bureau, ViewerScope } from "@sos26/shared";
 import { IconCheck, IconChevronDown, IconSearch } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Button, TextArea, TextField } from "@/components/primitives";
+import { Button, Select, TextArea, TextField } from "@/components/primitives";
 import { FileAttachmentArea } from "./FileAttachmentArea";
 import { FormViewerSelector } from "./FormViewerSelector";
 import { MemberSelectPopover, SelectedChips } from "./MemberSelectPopover";
@@ -21,6 +21,7 @@ type ViewerInput = {
 };
 
 type UserSummary = { id: string; name: string };
+type FormSummary = { id: string; title: string };
 
 type NewInquiryFormProps = {
 	open: boolean;
@@ -33,9 +34,11 @@ type NewInquiryFormProps = {
 		projectId: string
 	) => Promise<{ id: string; name: string }[]>;
 	committeeMembers?: UserSummary[];
+	availableForms?: FormSummary[];
 	onSubmit: (params: {
 		title: string;
 		body: string;
+		relatedFormId?: string;
 		coAssigneeUserIds?: string[];
 		projectId?: string;
 		projectAssigneeUserIds?: string[];
@@ -54,10 +57,12 @@ export function NewInquiryForm({
 	projects,
 	onLoadProjectMembers,
 	committeeMembers,
+	availableForms,
 	onSubmit,
 }: NewInquiryFormProps) {
 	const [title, setTitle] = useState("");
 	const [body, setBody] = useState("");
+	const [selectedForm, setSelectedForm] = useState<FormSummary | null>(null);
 	const [selectedProject, setSelectedProject] = useState<{
 		id: string;
 		name: string;
@@ -83,6 +88,7 @@ export function NewInquiryForm({
 	const reset = () => {
 		setTitle("");
 		setBody("");
+		setSelectedForm(null);
 		setSelectedProject(null);
 		setLoadedProjectMembers([]);
 		setSelectedProjectAssignees([]);
@@ -114,12 +120,14 @@ export function NewInquiryForm({
 	};
 
 	const buildParams = (fileIds?: string[]) => {
+		const formId = selectedForm?.id;
 		if (viewerRole === "committee") {
 			if (!selectedProject || selectedProjectAssignees.length === 0)
 				return null;
 			return {
 				title: title.trim(),
 				body: body.trim(),
+				relatedFormId: formId,
 				projectId: selectedProject.id,
 				projectAssigneeUserIds: selectedProjectAssignees.map(p => p.id),
 				committeeAssigneeUserIds:
@@ -133,6 +141,7 @@ export function NewInquiryForm({
 		return {
 			title: title.trim(),
 			body: body.trim(),
+			relatedFormId: formId,
 			coAssigneeUserIds:
 				selectedCoAssignees.length > 0
 					? selectedCoAssignees.map(p => p.id)
@@ -236,6 +245,15 @@ export function NewInquiryForm({
 						rows={5}
 						required
 					/>
+
+					{/* 関連フォーム選択（任意） */}
+					{availableForms && availableForms.length > 0 && (
+						<FormSelector
+							forms={availableForms}
+							selectedForm={selectedForm}
+							onSelect={setSelectedForm}
+						/>
+					)}
 
 					{/* 実委作成の場合: 対象企画を選択 */}
 					{viewerRole === "committee" && projects && (
@@ -376,6 +394,46 @@ export function NewInquiryForm({
 				</div>
 			</Dialog.Content>
 		</Dialog.Root>
+	);
+}
+
+/* ─── 関連フォーム選択 ─── */
+
+function FormSelector({
+	forms,
+	selectedForm,
+	onSelect,
+}: {
+	forms: FormSummary[];
+	selectedForm: FormSummary | null;
+	onSelect: (form: FormSummary | null) => void;
+}) {
+	const NONE = "__none__";
+	const options = [
+		{ value: NONE, label: "なし" },
+		...forms.map(f => ({ value: f.id, label: f.title })),
+	];
+
+	const handleChange = (value: string) => {
+		if (value === NONE) {
+			onSelect(null);
+		} else {
+			onSelect(forms.find(f => f.id === value) ?? null);
+		}
+	};
+
+	return (
+		<div className={styles.assignSection}>
+			<Text size="2" weight="medium">
+				関連フォーム（任意）
+			</Text>
+			<Select
+				options={options}
+				value={selectedForm?.id ?? NONE}
+				onValueChange={handleChange}
+				placeholder="フォームを選択..."
+			/>
+		</div>
 	);
 }
 

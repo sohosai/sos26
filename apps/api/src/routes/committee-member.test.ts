@@ -59,7 +59,7 @@ const mockUser: User = {
 	firebaseUid: "firebase-uid-123",
 	email: "s1234567@u.tsukuba.ac.jp",
 	name: "筑波太郎",
-	namePhonetic: "ツクバタロウ",
+	namePhonetic: "つくばたろう",
 	telephoneNumber: "090-1234-5678",
 	deletedAt: null,
 	createdAt: new Date(),

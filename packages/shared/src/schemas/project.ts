@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { toHiragana } from "../lib/phonetic";
 
 export const projectTypeSchema = z.enum(["STAGE", "FOOD", "NORMAL"]);
 export type ProjectType = z.infer<typeof projectTypeSchema>;
@@ -7,9 +8,9 @@ export const projectSchema = z.object({
 	id: z.cuid(),
 	number: z.number().int().positive(),
 	name: z.string().min(1),
-	namePhonetic: z.string().min(1),
+	namePhonetic: z.string().min(1).transform(toHiragana),
 	organizationName: z.string().min(1),
-	organizationNamePhonetic: z.string().min(1),
+	organizationNamePhonetic: z.string().min(1).transform(toHiragana),
 	type: projectTypeSchema,
 	ownerId: z.string().min(1),
 	subOwnerId: z.string().nullable(),
@@ -45,9 +46,9 @@ export type ProjectMember = z.infer<typeof projectMemberSchema>;
 
 export const createProjectRequestSchema = z.object({
 	name: z.string().min(1),
-	namePhonetic: z.string().min(1),
+	namePhonetic: z.string().min(1).transform(toHiragana),
 	organizationName: z.string().min(1),
-	organizationNamePhonetic: z.string().min(1),
+	organizationNamePhonetic: z.string().min(1).transform(toHiragana),
 	type: projectTypeSchema,
 });
 
@@ -118,9 +119,9 @@ export type GetProjectDetailResponse = z.infer<
 
 export const updateProjectDetailRequestSchema = z.object({
 	name: z.string().min(1).optional(),
-	namePhonetic: z.string().min(1).optional(),
+	namePhonetic: z.string().min(1).transform(toHiragana).optional(),
 	organizationName: z.string().min(1).optional(),
-	organizationNamePhonetic: z.string().min(1).optional(),
+	organizationNamePhonetic: z.string().min(1).transform(toHiragana).optional(),
 	type: projectTypeSchema.optional(),
 });
 

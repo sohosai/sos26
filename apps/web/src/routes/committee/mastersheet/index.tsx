@@ -69,9 +69,9 @@ function MastersheetPage() {
 
 		const knownIds = new Set(viewState.knownColumnIds ?? []);
 		const completeVisibility: VisibilityState = {};
-		// 固定カラム：常に表示
+		// 固定カラム：knownColumnIds に従う
 		for (const id of FIXED_COLUMN_IDS) {
-			completeVisibility[id] = true;
+			completeVisibility[id] = knownIds.has(id);
 		}
 		// 動的カラム：knownColumnIds に含まれていれば表示、なければ非表示
 		for (const col of columns) {
@@ -106,7 +106,7 @@ function MastersheetPage() {
 					sorting,
 					columnFilters,
 					knownColumnIds: [
-						...FIXED_COLUMN_IDS,
+						...FIXED_COLUMN_IDS.filter(id => columnVisibility[id] !== false),
 						...columns
 							.filter(c => columnVisibility[c.id] !== false)
 							.map(c => c.id),
