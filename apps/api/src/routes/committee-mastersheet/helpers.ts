@@ -206,7 +206,7 @@ export function buildFormItemCell(
 			formValue: {
 				textValue: latestHistory.textValue,
 				numberValue: latestHistory.numberValue,
-				fileUrl: latestHistory.fileUrl,
+				fileId: latestHistory.fileId,
 				selectedOptionIds: latestHistory.selectedOptions.map(
 					s => s.formItemOptionId
 				),
@@ -221,7 +221,7 @@ export function buildFormItemCell(
 		? {
 				textValue: answer.textValue,
 				numberValue: answer.numberValue,
-				fileUrl: answer.fileUrl,
+				fileId: answer.fileId,
 				selectedOptionIds: answer.selectedOptions.map(s => s.formItemOptionId),
 			}
 		: null;

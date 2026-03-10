@@ -214,7 +214,7 @@ const numberAnswerSchema = z.object({
 const fileAnswerSchema = z.object({
 	...baseAnswerSchema,
 	type: z.literal("FILE"),
-	fileUrl: z.string().nullable(),
+	fileId: z.string().nullable(),
 });
 
 const selectAnswerSchema = z.object({
@@ -410,7 +410,7 @@ export const formResponseAnswerSchema = z.object({
 	formItemId: z.string(),
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileUrl: z.string().nullable(),
+	fileId: z.string().nullable(),
 	selectedOptions: z.array(
 		z.object({
 			id: z.string(),
@@ -528,7 +528,7 @@ const formAnswerSchema = z.object({
 	formItemId: z.string(),
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileUrl: z.string().nullable(),
+	fileId: z.string().nullable(),
 	selectedOptionIds: z.array(z.string()),
 });
 

@@ -9,6 +9,7 @@ type FileUploadProps = {
 	onChange: (file: File | null) => void;
 	required?: boolean;
 	disabled?: boolean;
+	uploadedFileName?: string;
 };
 
 export function FileUploadField({
@@ -17,6 +18,7 @@ export function FileUploadField({
 	onChange,
 	required,
 	disabled,
+	uploadedFileName,
 }: FileUploadProps) {
 	const id = useId();
 	const inputRef = useRef<HTMLInputElement>(null);
@@ -58,7 +60,9 @@ export function FileUploadField({
 				>
 					ファイルを選択
 				</Button>
-				<Text size="2">{value?.name ?? "選択されていません"}</Text>
+				<Text size="2">
+					{value?.name ?? uploadedFileName ?? "選択されていません"}
+				</Text>
 			</div>
 		</div>
 	);

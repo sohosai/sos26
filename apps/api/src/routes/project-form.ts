@@ -122,7 +122,7 @@ const upsertAnswers = async (
 						: null,
 				numberValue:
 					answer.type === "NUMBER" ? (answer.numberValue ?? null) : null,
-				fileUrl: answer.type === "FILE" ? (answer.fileUrl ?? null) : null,
+				fileId: answer.type === "FILE" ? (answer.fileId ?? null) : null,
 			})),
 		});
 	}
@@ -214,7 +214,7 @@ const formatResponse = async (
 			formItemId: a.formItemId,
 			textValue: a.textValue,
 			numberValue: a.numberValue,
-			fileUrl: a.fileUrl,
+			fileId: a.fileId,
 			selectedOptionIds: a.selectedOptions.map(s => s.formItemOptionId),
 		})),
 	};
@@ -247,7 +247,7 @@ function assertRequiredAnswered(
 					return answer.numberValue == null;
 
 				case "FILE":
-					return !answer.fileUrl;
+					return !answer.fileId;
 
 				case "SELECT":
 				case "CHECKBOX":
@@ -370,7 +370,7 @@ function extractAnswerValues(answer: CreateFormResponseRequest["answers"][0]) {
 	return {
 		textValue: isText ? (answer.textValue ?? null) : null,
 		numberValue: answer.type === "NUMBER" ? (answer.numberValue ?? null) : null,
-		fileUrl: answer.type === "FILE" ? (answer.fileUrl ?? null) : null,
+		fileId: answer.type === "FILE" ? (answer.fileId ?? null) : null,
 		optionIds: isSelect ? (answer.selectedOptionIds ?? []) : [],
 	};
 }
@@ -395,13 +395,13 @@ const appendEditHistory = async (
 	if (withoutOptions.length > 0) {
 		await tx.formItemEditHistory.createMany({
 			data: withoutOptions.map(answer => {
-				const { textValue, numberValue, fileUrl } = extractAnswerValues(answer);
+				const { textValue, numberValue, fileId } = extractAnswerValues(answer);
 				return {
 					formItemId: answer.formItemId,
 					projectId,
 					textValue,
 					numberValue,
-					fileUrl,
+					fileId,
 					actorId,
 					trigger,
 				};
@@ -411,7 +411,7 @@ const appendEditHistory = async (
 
 	// オプション有りの回答は個別作成（IDが必要なため）
 	for (const answer of withOptions) {
-		const { textValue, numberValue, fileUrl, optionIds } =
+		const { textValue, numberValue, fileId, optionIds } =
 			extractAnswerValues(answer);
 
 		const history = await tx.formItemEditHistory.create({
@@ -420,7 +420,7 @@ const appendEditHistory = async (
 				projectId,
 				textValue,
 				numberValue,
-				fileUrl,
+				fileId,
 				actorId,
 				trigger,
 			},
@@ -589,7 +589,7 @@ projectFormRoute.get(
 										formItemId: a.formItemId,
 										textValue: hist.textValue,
 										numberValue: hist.numberValue,
-										fileUrl: hist.fileUrl,
+										fileId: hist.fileId,
 										selectedOptionIds: hist.selectedOptions.map(
 											s => s.formItemOptionId
 										),
@@ -599,7 +599,7 @@ projectFormRoute.get(
 									formItemId: a.formItemId,
 									textValue: a.textValue,
 									numberValue: a.numberValue,
-									fileUrl: a.fileUrl,
+									fileId: a.fileId,
 									selectedOptionIds: a.selectedOptions.map(
 										s => s.formItemOptionId
 									),

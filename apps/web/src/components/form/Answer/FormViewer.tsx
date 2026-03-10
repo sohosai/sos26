@@ -22,6 +22,8 @@ function getDefaultValue(type: Form["items"][number]["type"]): FormAnswerValue {
 	switch (type) {
 		case "CHECKBOX":
 			return [];
+		case "FILE":
+			return null;
 		case "NUMBER":
 			return null;
 		default:

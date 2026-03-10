@@ -11,6 +11,7 @@ type FileUploadProps = {
 	onChange: (file: File | null) => void;
 	required?: boolean;
 	disabled?: boolean;
+	uploadedFileName?: string;
 };
 
 export function FileUploadFieldWithPreview({
@@ -19,6 +20,7 @@ export function FileUploadFieldWithPreview({
 	onChange,
 	required,
 	disabled,
+	uploadedFileName,
 }: FileUploadProps) {
 	const [file, setFile] = useState<File | null>(null);
 	const [open, setOpen] = useState(false);
@@ -35,8 +37,9 @@ export function FileUploadFieldWithPreview({
 				onChange={handleChange}
 				required={required}
 				disabled={disabled}
+				uploadedFileName={uploadedFileName}
 			/>
-			{(file ?? value) && (
+			{(file ?? value) instanceof File && (
 				<div>
 					<IconButton onClick={() => setOpen(true)}>
 						<IconFileSearch size={16} />
@@ -44,7 +47,7 @@ export function FileUploadFieldWithPreview({
 				</div>
 			)}
 			<FilePreviewDialog
-				file={file ?? value ?? null}
+				file={file ?? (value instanceof File ? value : null)}
 				open={open}
 				onOpenChange={setOpen}
 			/>

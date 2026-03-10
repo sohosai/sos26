@@ -88,7 +88,10 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 				return (
 					<FileUploadFieldWithPreview
 						label=""
-						value={value as File | null}
+						value={value instanceof File ? value : null}
+						uploadedFileName={
+							typeof value === "string" ? "アップロード済み" : undefined
+						}
 						onChange={onChange}
 						disabled={disabled}
 						aria-label={item.label}

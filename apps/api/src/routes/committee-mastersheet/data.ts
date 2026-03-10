@@ -164,7 +164,7 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 					? {
 							textValue: cv.textValue,
 							numberValue: cv.numberValue,
-							fileUrl: null,
+							fileId: null,
 							selectedOptionIds: cv.selectedOptions.map(s => s.optionId),
 						}
 					: null,

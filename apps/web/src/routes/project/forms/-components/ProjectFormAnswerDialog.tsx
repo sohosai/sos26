@@ -9,7 +9,11 @@ import {
 	updateFormResponse,
 } from "@/lib/api/project-form";
 import { ProjectFormToForm } from "@/lib/form/convert";
-import { buildAnswerBody, responseToAnswers } from "@/lib/form/utils";
+import {
+	buildAnswerBody,
+	prepareAnswersForSubmit,
+	responseToAnswers,
+} from "@/lib/form/utils";
 
 type Props = {
 	open: boolean;
@@ -101,7 +105,8 @@ export function ProjectFormAnswerDialog({
 
 	const handleSaveDraft = async (answers: FormAnswers) => {
 		if (!form || isDeadlineExpired) return;
-		const body = buildAnswerBody(answers, form, false);
+		const preparedAnswers = await prepareAnswersForSubmit(answers, form);
+		const body = buildAnswerBody(preparedAnswers, form, false);
 		if (responseId) {
 			await updateFormResponse(projectId, formDeliveryId, body);
 		} else {
@@ -113,7 +118,8 @@ export function ProjectFormAnswerDialog({
 
 	const handleSubmit = async (answers: FormAnswers) => {
 		if (!form) return;
-		const body = buildAnswerBody(answers, form, true);
+		const preparedAnswers = await prepareAnswersForSubmit(answers, form);
+		const body = buildAnswerBody(preparedAnswers, form, true);
 		const response = responseId
 			? await updateFormResponse(projectId, formDeliveryId, body).then(
 					r => r.response

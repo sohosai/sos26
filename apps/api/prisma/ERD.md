@@ -222,7 +222,7 @@ erDiagram
   String formItemId FK
   String textValue "nullable"
   Float numberValue "nullable"
-  String fileUrl "nullable"
+  String fileId "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -334,7 +334,7 @@ erDiagram
   String projectId FK
   String textValue "nullable"
   Float numberValue "nullable"
-  String fileUrl "nullable"
+  String fileId "nullable"
   String actorId FK
   FormItemEditHistoryTrigger trigger
   DateTime createdAt
@@ -735,7 +735,7 @@ Properties as follows:
 - `formItemId`:
 - `textValue`:
 - `numberValue`:
-- `fileUrl`:
+- `fileId`:
 - `createdAt`:
 - `updatedAt`:
 
@@ -886,7 +886,7 @@ Properties as follows:
 - `projectId`:
 - `textValue`:
 - `numberValue`:
-- `fileUrl`:
+- `fileId`:
 - `actorId`:
 - `trigger`:
 - `createdAt`:

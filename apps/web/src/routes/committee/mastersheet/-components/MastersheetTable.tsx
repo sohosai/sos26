@@ -224,7 +224,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 
 		if (col.formItemType === "FILE") {
 			return columnHelper.accessor(
-				row => row.cells[col.id]?.formValue?.fileUrl ?? null,
+				row => row.cells[col.id]?.formValue?.fileId ?? null,
 				{
 					id: col.id,
 					header: () => <ColHeader col={col} />,

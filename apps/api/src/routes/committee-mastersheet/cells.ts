@@ -110,7 +110,7 @@ cellsRoute.put(
 				cellValue: {
 					textValue: cell.textValue,
 					numberValue: cell.numberValue,
-					fileUrl: null,
+					fileId: null,
 					selectedOptionIds: cell.selectedOptions.map(s => s.optionId),
 				},
 			},
@@ -186,7 +186,7 @@ cellsRoute.put(
 						projectId,
 						textValue: data.textValue ?? null,
 						numberValue: data.numberValue ?? null,
-						fileUrl: data.fileUrl ?? null,
+						fileId: data.fileId ?? null,
 						actorId: userId,
 						trigger: "COMMITTEE_EDIT",
 					},
@@ -225,7 +225,7 @@ cellsRoute.put(
 				formValue: {
 					textValue: history.textValue,
 					numberValue: history.numberValue,
-					fileUrl: history.fileUrl,
+					fileId: history.fileId,
 					selectedOptionIds: history.selectedOptions.map(
 						s => s.formItemOptionId
 					),
@@ -349,7 +349,7 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 				value: {
 					textValue: h.textValue,
 					numberValue: h.numberValue,
-					fileUrl: h.fileUrl,
+					fileId: h.fileId,
 					selectedOptionIds: h.selectedOptions.map(s => s.formItemOptionId),
 				},
 				actor: h.actor,

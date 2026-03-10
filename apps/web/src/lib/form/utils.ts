@@ -9,6 +9,7 @@ import type {
 	FormAnswers,
 	FormAnswerValue,
 } from "@/components/form/type";
+import { uploadFile } from "@/lib/api/files";
 
 type ProjectResponseAnswer = NonNullable<
 	GetProjectFormResponse["form"]["response"]
@@ -34,7 +35,7 @@ function resolveResponseValue(
 		case "NUMBER":
 			return answer.numberValue;
 		case "FILE":
-			return answer.fileUrl ?? "";
+			return answer.fileId ?? null;
 		default:
 			return answer.textValue ?? "";
 	}
@@ -80,11 +81,39 @@ function getDefaultAnswerValue(type: FormItemType): FormAnswerValue {
 	switch (type) {
 		case "CHECKBOX":
 			return [];
+		case "FILE":
+			return null;
 		case "NUMBER":
 			return null;
 		default:
 			return "";
 	}
+}
+
+export async function prepareAnswersForSubmit(
+	answers: FormAnswers,
+	form: Form
+): Promise<FormAnswers> {
+	const preparedAnswers: FormAnswers = { ...answers };
+
+	await Promise.all(
+		form.items.map(async item => {
+			if (item.type !== "FILE") return;
+
+			const value = preparedAnswers[item.id] ?? null;
+			if (value instanceof File) {
+				const result = await uploadFile(value);
+				preparedAnswers[item.id] = result.file.id;
+				return;
+			}
+			if (typeof value === "string" || value === null) {
+				return;
+			}
+			throw new Error(`FILE回答の型が不正です: ${item.id}`);
+		})
+	);
+
+	return preparedAnswers;
 }
 
 function normalizeOptionIds(value: FormAnswerValue): string[] {
@@ -116,7 +145,10 @@ function buildSingleAnswer(
 				selectedOptionIds: normalizeOptionIds(value),
 			};
 		case "FILE":
-			return { type, formItemId, fileUrl: value as string };
+			if (typeof value !== "string" && value !== null) {
+				throw new Error(`FILE回答の型が不正です: ${formItemId}`);
+			}
+			return { type, formItemId, fileId: value };
 	}
 	return assertNever(type);
 }
