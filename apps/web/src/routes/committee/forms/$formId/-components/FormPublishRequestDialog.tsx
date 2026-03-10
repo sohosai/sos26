@@ -51,6 +51,9 @@ export function FormPublishRequestDialog({
 	// 申請の必須回答かどうか
 	const [isRequired, setIsRequired] = useState(true);
 
+	// 回答の閲覧制限（責任者・副責任者のみ）
+	const [ownerOnly, setOwnerOnly] = useState(false);
+
 	const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(
 		new Set()
 	);
@@ -109,6 +112,7 @@ export function FormPublishRequestDialog({
 				deadlineAt,
 				allowLateResponse,
 				required: isRequired,
+				ownerOnly,
 				projectIds: [...selectedProjectIds],
 			});
 			onOpenChange(false);
@@ -134,6 +138,7 @@ export function FormPublishRequestDialog({
 			setDeadlineTime("23:59");
 			setAllowLateResponse(false);
 			setIsRequired(true);
+			setOwnerOnly(false);
 			setSelectedProjectIds(new Set());
 			setError(null);
 		}
@@ -246,6 +251,18 @@ export function FormPublishRequestDialog({
 							/>
 							<Text size="1" color="gray">
 								チェックを外すと、回答は任意になります。
+							</Text>
+						</div>
+
+						{/* 回答の閲覧制限 */}
+						<div className={styles.field}>
+							<Checkbox
+								label="回答の閲覧を責任者・副責任者に限定する"
+								checked={ownerOnly}
+								onCheckedChange={checked => setOwnerOnly(checked === true)}
+							/>
+							<Text size="1" color="gray">
+								チェックを入れると、企画の一般メンバーは回答の閲覧・入力ができなくなります（申請の存在は表示されます）。
 							</Text>
 						</div>
 

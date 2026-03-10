@@ -198,6 +198,7 @@ erDiagram
   DateTime deadlineAt "nullable"
   Boolean allowLateResponse
   Boolean required
+  Boolean ownerOnly
   DateTime createdAt
   DateTime updatedAt
 }
@@ -701,6 +702,7 @@ Properties as follows:
 - `deadlineAt`:
 - `allowLateResponse`:
 - `required`:
+- `ownerOnly`:
 - `createdAt`:
 - `updatedAt`:
 

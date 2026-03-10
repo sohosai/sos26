@@ -440,6 +440,7 @@ const appendEditHistory = async (
 
 projectFormRoute.get("/", requireAuth, requireProjectMember, async c => {
 	const projectId = c.req.param("projectId");
+	const projectRole = c.get("projectRole");
 
 	const now = new Date();
 
@@ -459,12 +460,16 @@ projectFormRoute.get("/", requireAuth, requireProjectMember, async c => {
 					deadlineAt: true,
 					allowLateResponse: true,
 					required: true,
+					ownerOnly: true,
 					form: { select: { id: true, title: true, description: true } },
 				},
 			},
 		},
 		orderBy: { formAuthorization: { scheduledSendAt: "desc" } },
 	});
+
+	const isOwnerOrSubOwner =
+		projectRole === "OWNER" || projectRole === "SUB_OWNER";
 
 	const deliveryIds = deliveries.map(d => d.id);
 	const responses = deliveryIds.length
@@ -481,19 +486,24 @@ projectFormRoute.get("/", requireAuth, requireProjectMember, async c => {
 	const responseMap = new Map(responses.map(r => [r.formDeliveryId, r]));
 	return c.json({
 		forms: deliveries.map(d => {
+			const isRestricted = d.formAuthorization.ownerOnly && !isOwnerOrSubOwner;
 			const response = responseMap.get(d.id) ?? null;
 			return {
 				formDeliveryId: d.id,
 				formId: d.formAuthorization.form.id,
 				title: d.formAuthorization.form.title,
-				description: d.formAuthorization.form.description,
+				description: isRestricted ? null : d.formAuthorization.form.description,
 				scheduledSendAt: d.formAuthorization.scheduledSendAt,
 				deadlineAt: d.formAuthorization.deadlineAt,
 				allowLateResponse: d.formAuthorization.allowLateResponse,
 				required: d.formAuthorization.required,
-				response: response
-					? { id: response.id, submittedAt: response.submittedAt }
-					: null,
+				ownerOnly: d.formAuthorization.ownerOnly,
+				restricted: isRestricted,
+				response: isRestricted
+					? null
+					: response
+						? { id: response.id, submittedAt: response.submittedAt }
+						: null,
 			};
 		}),
 	});
@@ -512,9 +522,15 @@ projectFormRoute.get(
 			projectId: c.req.param("projectId"),
 			formDeliveryId: c.req.param("formDeliveryId"),
 		});
+		const projectRole = c.get("projectRole");
 
 		const delivery = await getDeliveryOrThrow(projectId, formDeliveryId);
 		const { form } = delivery.formAuthorization;
+
+		// ownerOnly 制限チェック
+		if (delivery.formAuthorization.ownerOnly && projectRole === "MEMBER") {
+			throw Errors.forbidden("この申請は責任者・副責任者のみ閲覧できます");
+		}
 
 		const existingResponse = await prisma.formResponse.findFirst({
 			where: { formDeliveryId },
@@ -545,6 +561,7 @@ projectFormRoute.get(
 				deadlineAt: delivery.formAuthorization.deadlineAt,
 				allowLateResponse: delivery.formAuthorization.allowLateResponse,
 				required: delivery.formAuthorization.required,
+				ownerOnly: false,
 				items: form.items.map(item => ({
 					id: item.id,
 					label: item.label,
@@ -609,8 +626,14 @@ projectFormRoute.post(
 			formDeliveryId: c.req.param("formDeliveryId"),
 		});
 		const userId = c.get("user").id;
+		const projectRole = c.get("projectRole");
 
 		const delivery = await getDeliveryOrThrow(projectId, formDeliveryId);
+
+		// ownerOnly 制限チェック
+		if (delivery.formAuthorization.ownerOnly && projectRole === "MEMBER") {
+			throw Errors.forbidden("この申請は責任者・副責任者のみ回答できます");
+		}
 
 		const body = await c.req.json().catch(() => ({}));
 		const { answers, submit } = createFormResponseRequestSchema.parse(body);
@@ -680,8 +703,14 @@ projectFormRoute.patch(
 			formDeliveryId: c.req.param("formDeliveryId"),
 		});
 		const userId = c.get("user").id;
+		const projectRole = c.get("projectRole");
 
 		const delivery = await getDeliveryOrThrow(projectId, formDeliveryId);
+
+		// ownerOnly 制限チェック
+		if (delivery.formAuthorization.ownerOnly && projectRole === "MEMBER") {
+			throw Errors.forbidden("この申請は責任者・副責任者のみ回答できます");
+		}
 
 		const existing = await prisma.formResponse.findFirst({
 			where: { formDeliveryId },
