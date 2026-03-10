@@ -412,6 +412,16 @@ export const formResponseAnswerSchema = z.object({
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
 	fileId: z.string().nullable(),
+	fileMetadata: fileSchema
+		.pick({
+			id: true,
+			fileName: true,
+			mimeType: true,
+			size: true,
+			isPublic: true,
+		})
+		.nullable()
+		.optional(),
 	selectedOptions: z.array(
 		z.object({
 			id: z.string(),

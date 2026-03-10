@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import FilePreviewDialog from "@/components/filePreview/FilePreviewDialog";
 import type { UploadedFileValue } from "@/components/form/type";
 import { IconButton } from "@/components/primitives";
-import { fetchFile } from "@/lib/api/files";
+import { downloadFile, fetchFile } from "@/lib/api/files";
 import { FileUploadField } from "./FileUploadField";
 import styles from "./FileUploadFieldWithPreview.module.scss";
 
@@ -56,6 +56,22 @@ export function FileUploadFieldWithPreview({
 	const previewFile = value ?? fetchedFile;
 	const uploadedFileName =
 		uploadedFile?.fileName ?? (uploadedFile ? "アップロード済み" : undefined);
+
+	const handleDownload = async () => {
+		if (!canPreviewUploadedFile(uploadedFile)) {
+			return;
+		}
+
+		try {
+			await downloadFile(
+				uploadedFile.fileId,
+				uploadedFile.fileName,
+				uploadedFile.isPublic
+			);
+		} catch {
+			toast.error("ファイルのダウンロードに失敗しました");
+		}
+	};
 
 	const handlePreviewOpen = async () => {
 		if (value) {
@@ -118,6 +134,11 @@ export function FileUploadFieldWithPreview({
 				file={previewFile}
 				open={open}
 				onOpenChange={setOpen}
+				onDownload={
+					value === null && canPreviewUploadedFile(uploadedFile)
+						? handleDownload
+						: undefined
+				}
 			/>
 		</div>
 	);
