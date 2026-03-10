@@ -312,7 +312,7 @@ export type EditFormItemCellResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
-// GET /committee/mastersheet/columns/:columnId/history/:projectId
+// 編集履歴 共通スキーマ
 // ─────────────────────────────────────────────────────────────
 
 export const formItemEditHistorySchema = z.object({
@@ -328,11 +328,34 @@ export const formItemEditHistorySchema = z.object({
 	createdAt: z.coerce.date(),
 });
 
-export const getMastersheetHistoryResponseSchema = z.object({
-	history: z.array(formItemEditHistorySchema),
+// ─────────────────────────────────────────────────────────────
+// POST /committee/mastersheet/history (バッチ)
+// ─────────────────────────────────────────────────────────────
+
+export const batchMastersheetHistoryRequestSchema = z.object({
+	/** 取得対象のセル（空配列の場合は空レスポンス） */
+	cells: z.array(
+		z.object({
+			columnId: z.cuid(),
+			projectId: z.cuid(),
+		})
+	),
 });
-export type GetMastersheetHistoryResponse = z.infer<
-	typeof getMastersheetHistoryResponseSchema
+export type BatchMastersheetHistoryRequest = z.infer<
+	typeof batchMastersheetHistoryRequestSchema
+>;
+
+export const batchMastersheetHistoryResponseSchema = z.object({
+	groups: z.array(
+		z.object({
+			columnId: z.string(),
+			projectId: z.string(),
+			history: z.array(formItemEditHistorySchema),
+		})
+	),
+});
+export type BatchMastersheetHistoryResponse = z.infer<
+	typeof batchMastersheetHistoryResponseSchema
 >;
 
 // ─────────────────────────────────────────────────────────────

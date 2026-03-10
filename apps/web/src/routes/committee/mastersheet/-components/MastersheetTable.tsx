@@ -14,7 +14,7 @@ import {
 	type SortingState,
 	type VisibilityState,
 } from "@tanstack/react-table";
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import {
 	DataTable,
@@ -40,6 +40,11 @@ type MastersheetRow = {
 
 type ApiColumn = GetMastersheetDataResponse["columns"][number];
 
+export type SelectedCell = {
+	columnId: string;
+	projectId: string;
+};
+
 type Props = {
 	columns: GetMastersheetDataResponse["columns"];
 	rows: GetMastersheetDataResponse["rows"];
@@ -50,6 +55,8 @@ type Props = {
 	onSortingChange?: (sorting: SortingState) => void;
 	onColumnVisibilityChange?: (visibility: VisibilityState) => void;
 	onColumnFiltersChange?: (filters: ColumnFiltersState) => void;
+	onSelectionChange?: (cells: SelectedCell[]) => void;
+	selectionIgnoreRef?: React.RefObject<HTMLElement | null>;
 };
 
 const PROJECT_TYPE_LABEL = {
@@ -363,6 +370,8 @@ export function MastersheetTable({
 	onSortingChange,
 	onColumnVisibilityChange,
 	onColumnFiltersChange,
+	onSelectionChange,
+	selectionIgnoreRef,
 }: Props) {
 	const router = useRouter();
 
@@ -378,6 +387,18 @@ export function MastersheetTable({
 	const tableColumns = useMemo(
 		() => [...fixedColumns, ...columns.map(buildDynamicColumn)],
 		[columns]
+	);
+
+	const handleSelectionChange = useCallback(
+		(items: { row: MastersheetRow; columnId: string }[]) => {
+			if (!onSelectionChange) return;
+			const cells: SelectedCell[] = items.map(item => ({
+				columnId: item.columnId,
+				projectId: item.row.project.id,
+			}));
+			onSelectionChange(cells);
+		},
+		[onSelectionChange]
 	);
 
 	async function handleCellEdit(
@@ -434,6 +455,8 @@ export function MastersheetTable({
 			onColumnVisibilityChange={onColumnVisibilityChange}
 			onColumnFiltersChange={onColumnFiltersChange}
 			toolbarExtra={toolbarExtra}
+			onSelectionChange={handleSelectionChange}
+			selectionIgnoreRef={selectionIgnoreRef}
 		/>
 	);
 }

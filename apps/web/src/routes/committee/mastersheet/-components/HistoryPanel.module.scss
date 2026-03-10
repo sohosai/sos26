@@ -1,0 +1,139 @@
+.panel {
+	width: 360px;
+	flex-shrink: 0;
+	background: var(--color-background);
+	border: 1px solid var(--gray-6);
+	border-radius: var(--radius-3);
+	display: flex;
+	flex-direction: column;
+	max-height: calc(100vh - 160px);
+	overflow: hidden;
+}
+
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--space-3) var(--space-4);
+	border-bottom: 1px solid var(--gray-4);
+	flex-shrink: 0;
+}
+
+.headerLeft {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.headerTitle {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.content {
+	flex: 1;
+	overflow-y: auto;
+	padding: var(--space-3) var(--space-4);
+}
+
+.emptyState {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
+	padding: var(--space-6) var(--space-4);
+	text-align: center;
+}
+
+.cellGroup {
+	margin-bottom: var(--space-4);
+}
+
+.cellGroupHeader {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	margin-bottom: var(--space-2);
+	padding-bottom: var(--space-1);
+	border-bottom: 1px solid var(--gray-4);
+}
+
+.historyItem {
+	display: flex;
+	gap: var(--space-3);
+	padding: var(--space-2) 0;
+
+	& + & {
+		border-top: 1px solid var(--gray-3);
+	}
+}
+
+.timeline {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	flex-shrink: 0;
+	width: 8px;
+	padding-top: 6px;
+}
+
+.dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--accent-9);
+	flex-shrink: 0;
+}
+
+.dotSubmit {
+	background: var(--green-9);
+}
+
+.dotResubmit {
+	background: var(--orange-9);
+}
+
+.dotEdit {
+	background: var(--accent-9);
+}
+
+.line {
+	width: 1px;
+	flex: 1;
+	background: var(--gray-5);
+	margin-top: 4px;
+}
+
+.itemContent {
+	flex: 1;
+	min-width: 0;
+}
+
+.itemHeader {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	flex-wrap: wrap;
+}
+
+.itemValue {
+	margin-top: var(--space-1);
+	padding: var(--space-1) var(--space-2);
+	background: var(--gray-2);
+	border-radius: var(--radius-2);
+	word-break: break-all;
+}
+
+.loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--space-6);
+}
+
+.error {
+	padding: var(--space-4);
+	text-align: center;
+}

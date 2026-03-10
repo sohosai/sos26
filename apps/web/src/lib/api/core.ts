@@ -122,6 +122,7 @@ export async function callBodyApi<
 	params?: {
 		pathParams?: PathParams extends z.ZodTypeAny ? z.infer<PathParams> : never;
 		query?: Query extends z.ZodTypeAny ? z.infer<Query> : never;
+		signal?: AbortSignal;
 	}
 ): Promise<z.infer<Response>> {
 	const { path, searchParams } = preparePathAndQuery(endpoint, params);
@@ -134,6 +135,7 @@ export async function callBodyApi<
 			method: endpoint.method,
 			json: validatedBody,
 			searchParams,
+			signal: params?.signal,
 		}).json();
 
 		// レスポンスを実行時検証
