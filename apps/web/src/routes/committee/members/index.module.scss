@@ -63,6 +63,57 @@
 	}
 }
 
+.bureauTrigger {
+	all: unset;
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-1) var(--space-2);
+	border-radius: var(--radius-2);
+	font-size: var(--font-size-1);
+	cursor: pointer;
+	border: 1px solid var(--gray-6);
+	background-color: transparent;
+
+	&:hover {
+		background-color: var(--gray-a2);
+	}
+}
+
+.bureauDropdown {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	min-width: 180px;
+}
+
+.bureauOption {
+	all: unset;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-1) var(--space-1);
+	border-radius: var(--radius-2);
+	cursor: pointer;
+	width: 100%;
+	font: inherit;
+
+	&:hover {
+		background-color: var(--gray-a3);
+	}
+}
+
+.bureauCheckIcon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 14px;
+	height: 14px;
+	flex-shrink: 0;
+}
+
 .confirmActions {
 	display: flex;
 	justify-content: flex-end;

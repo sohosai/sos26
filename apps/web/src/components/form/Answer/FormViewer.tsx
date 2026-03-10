@@ -178,7 +178,7 @@ export function FormViewer({
 		<form className={styles.root} onSubmit={handleSubmit} noValidate>
 			<div className={styles.header}>
 				<Text size="5" weight="bold">
-					{form.name || "無題のフォーム"}
+					{form.name || "無題の申請"}
 				</Text>
 				{form.description && <Text size="2">{form.description}</Text>}
 			</div>

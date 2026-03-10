@@ -270,10 +270,10 @@ export function SupportDetail({
 
 				<Separator size="4" />
 
-				{/* 関連フォーム */}
+				{/* 関連申請 */}
 				<div className={styles.sidebarSection}>
 					<Text size="2" weight="medium" color="gray">
-						関連フォーム
+						関連申請
 					</Text>
 					{inquiry.relatedForm ? (
 						viewerRole === "committee" ? (

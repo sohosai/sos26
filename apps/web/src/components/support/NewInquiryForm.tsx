@@ -246,7 +246,7 @@ export function NewInquiryForm({
 						required
 					/>
 
-					{/* 関連フォーム選択（任意） */}
+					{/* 関連申請選択（任意） */}
 					{availableForms && availableForms.length > 0 && (
 						<FormSelector
 							forms={availableForms}
@@ -397,7 +397,7 @@ export function NewInquiryForm({
 	);
 }
 
-/* ─── 関連フォーム選択 ─── */
+/* ─── 関連申請選択 ─── */
 
 function FormSelector({
 	forms,
@@ -425,13 +425,13 @@ function FormSelector({
 	return (
 		<div className={styles.assignSection}>
 			<Text size="2" weight="medium">
-				関連フォーム（任意）
+				関連申請（任意）
 			</Text>
 			<Select
 				options={options}
 				value={selectedForm?.id ?? NONE}
 				onValueChange={handleChange}
-				placeholder="フォームを選択..."
+				placeholder="申請を選択..."
 			/>
 		</div>
 	);

@@ -48,7 +48,7 @@ export function FormPublishRequestDialog({
 	// 遅延提出を認めるか
 	const [allowLateResponse, setAllowLateResponse] = useState(false);
 
-	// フォーム必須回答かどうか
+	// 申請の必須回答かどうか
 	const [isRequired, setIsRequired] = useState(true);
 
 	const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(
@@ -233,14 +233,14 @@ export function FormPublishRequestDialog({
 								}
 							/>
 							<Text size="1" color="gray">
-								チェックを入れると、期限を過ぎた後もフォームへの回答を受け付けます。
+								チェックを入れると、期限を過ぎた後も申請への回答を受け付けます。
 							</Text>
 						</div>
 
-						{/* フォーム回答の必須設定 */}
+						{/* 申請回答の必須設定 */}
 						<div className={styles.field}>
 							<Checkbox
-								label="このフォームへの回答を必須にする"
+								label="この申請への回答を必須にする"
 								checked={isRequired}
 								onCheckedChange={checked => setIsRequired(checked === true)}
 							/>

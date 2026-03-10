@@ -1,6 +1,7 @@
 import {
 	AlertDialog,
 	Badge,
+	type BadgeProps,
 	Checkbox,
 	Heading,
 	Popover,
@@ -10,15 +11,21 @@ import {
 import {
 	type Bureau,
 	bureauLabelMap,
+	bureauSchema,
 	type CommitteePermission,
 	committeePermissionSchema,
 } from "@sos26/shared";
-import { IconChevronDown, IconPlus, IconTrash } from "@tabler/icons-react";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import {
+	IconCheck,
+	IconChevronDown,
+	IconPlus,
+	IconTrash,
+} from "@tabler/icons-react";
+import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { DataTable, NameCell, TagCell } from "@/components/patterns";
+import { DataTable, NameCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import {
 	createCommitteeMember,
@@ -26,8 +33,9 @@ import {
 	grantCommitteeMemberPermission,
 	listCommitteeMembers,
 	revokeCommitteeMemberPermission,
+	updateCommitteeMember,
 } from "@/lib/api/committee-member";
-import { useAuthStore } from "@/lib/auth";
+import { ForbiddenError, useAuthStore } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { isClientError } from "@/lib/http/error";
 import { AddMemberDialog } from "./-components/AddMemberDialog";
@@ -42,7 +50,7 @@ type CommitteeMemberRow = {
 	userId: string;
 	name: string;
 	email: string;
-	bureau: string[];
+	bureau: Bureau;
 	permissions: CommitteePermission[];
 	isExecutive: boolean;
 	joinedAt: Date;
@@ -51,7 +59,7 @@ type CommitteeMemberRow = {
 const permissionLabelMap: Record<CommitteePermission, string> = {
 	MEMBER_EDIT: "メンバー編集",
 	NOTICE_DELIVER: "お知らせ配信",
-	FORM_DELIVER: "フォーム配信",
+	FORM_DELIVER: "申請配信",
 	INQUIRY_ADMIN: "お問い合わせ管理",
 };
 
@@ -67,6 +75,75 @@ const bureauColorMap: Record<string, string> = {
 	情報メディアシステム局: "indigo",
 	案内所運営部会: "gray",
 };
+
+// ─────────────────────────────────────────────────────────────
+// 所属局セレクトセル
+// ─────────────────────────────────────────────────────────────
+
+const allBureaus = bureauSchema.options;
+
+type BureauCellProps = {
+	member: CommitteeMemberRow;
+	onChange: (memberId: string, bureau: Bureau) => void;
+};
+
+function BureauCell({ member, onChange }: BureauCellProps) {
+	const [open, setOpen] = useState(false);
+
+	return (
+		<Popover.Root
+			open={open}
+			onOpenChange={newOpen => {
+				if (newOpen) setOpen(true);
+			}}
+		>
+			<Popover.Trigger>
+				<button type="button" className={styles.bureauTrigger}>
+					<Badge
+						size="1"
+						variant="soft"
+						color={
+							(bureauColorMap[
+								bureauLabelMap[member.bureau]
+							] as BadgeProps["color"]) ?? "gray"
+						}
+					>
+						{bureauLabelMap[member.bureau]}
+					</Badge>
+					<IconChevronDown size={14} className={styles.chevron} />
+				</button>
+			</Popover.Trigger>
+			<Popover.Content
+				size="1"
+				className={styles.bureauDropdown}
+				onPointerDownOutside={() => setOpen(false)}
+				onEscapeKeyDown={() => setOpen(false)}
+			>
+				{allBureaus.map(bureau => {
+					const isSelected = member.bureau === bureau;
+					return (
+						<button
+							type="button"
+							key={bureau}
+							className={styles.bureauOption}
+							onClick={() => {
+								if (!isSelected) {
+									onChange(member.id, bureau);
+								}
+								setOpen(false);
+							}}
+						>
+							<span className={styles.bureauCheckIcon}>
+								{isSelected && <IconCheck size={14} />}
+							</span>
+							<Text size="2">{bureauLabelMap[bureau]}</Text>
+						</button>
+					);
+				})}
+			</Popover.Content>
+		</Popover.Root>
+	);
+}
 
 // ─────────────────────────────────────────────────────────────
 // 権限マルチセレクトセル
@@ -213,7 +290,7 @@ export const Route = createFileRoute("/committee/members/")({
 		);
 
 		if (!hasMemberEdit) {
-			throw redirect({ to: "/forbidden" });
+			throw new ForbiddenError();
 		}
 
 		return {
@@ -222,7 +299,7 @@ export const Route = createFileRoute("/committee/members/")({
 				userId: m.userId,
 				name: m.user.name,
 				email: m.user.email,
-				bureau: [bureauLabelMap[m.Bureau as Bureau]],
+				bureau: m.Bureau as Bureau,
 				permissions: m.permissions.map(p => p.permission),
 				isExecutive: m.isExecutive,
 				joinedAt: new Date(m.joinedAt),
@@ -247,6 +324,21 @@ function RouteComponent() {
 	useEffect(() => {
 		setMembers(initialMembers);
 	}, [initialMembers]);
+
+	const handleBureauChange = async (memberId: string, bureau: Bureau) => {
+		try {
+			await updateCommitteeMember(memberId, { Bureau: bureau });
+			setMembers(prev =>
+				prev.map(m => (m.id === memberId ? { ...m, bureau } : m))
+			);
+		} catch (error) {
+			toast.error(
+				isClientError(error)
+					? (error as Error).message
+					: "所属局の変更に失敗しました"
+			);
+		}
+	};
 
 	const executeToggle = async (
 		memberId: string,
@@ -344,7 +436,7 @@ function RouteComponent() {
 				userId: m.userId,
 				name: m.user.name,
 				email: m.user.email,
-				bureau: [bureauLabelMap[m.Bureau as Bureau]],
+				bureau: m.Bureau as Bureau,
 				permissions: m.permissions.map(p => p.permission),
 				isExecutive: m.isExecutive,
 				joinedAt: new Date(m.joinedAt),
@@ -361,12 +453,12 @@ function RouteComponent() {
 		memberColumnHelper.accessor("email", {
 			header: "メールアドレス",
 		}),
-		memberColumnHelper.accessor("bureau", {
+		memberColumnHelper.display({
+			id: "bureau",
 			header: "所属局",
-			cell: TagCell,
-			meta: {
-				tagColors: bureauColorMap,
-			},
+			cell: ({ row }) => (
+				<BureauCell member={row.original} onChange={handleBureauChange} />
+			),
 		}),
 		memberColumnHelper.display({
 			id: "permissions",

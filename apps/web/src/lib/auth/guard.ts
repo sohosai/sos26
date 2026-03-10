@@ -2,6 +2,17 @@ import { redirect } from "@tanstack/react-router";
 import { authReady, useAuthStore } from "./store";
 
 /**
+ * 権限不足を示すエラー
+ * errorComponent でキャッチして 403 画面をその場で表示するために使う
+ */
+export class ForbiddenError extends Error {
+	constructor(message = "アクセス権限がありません") {
+		super(message);
+		this.name = "ForbiddenError";
+	}
+}
+
+/**
  * 保護ルートの beforeLoad で使用する認証チェック関数
  *
  * @param pathname - 現在のパス（returnTo 用）
@@ -31,9 +42,7 @@ export async function requireCommitteeMember(): Promise<void> {
 	const { isCommitteeMember } = useAuthStore.getState();
 
 	if (!isCommitteeMember) {
-		throw redirect({
-			to: "/forbidden",
-		});
+		throw new ForbiddenError();
 	}
 }
 

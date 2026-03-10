@@ -66,8 +66,8 @@ export const Route = createFileRoute("/committee/forms/")({
 	component: CommitteeIndexPage,
 	head: () => ({
 		meta: [
-			{ title: "フォーム管理 | 雙峰祭オンラインシステム" },
-			{ name: "description", content: "フォーム管理" },
+			{ title: "申請管理 | 雙峰祭オンラインシステム" },
+			{ name: "description", content: "申請管理" },
 		],
 	}),
 	loader: async () => {
@@ -112,7 +112,7 @@ function CommitteeIndexPage() {
 
 	const columns = [
 		columnHelper.accessor("title", {
-			header: "フォーム名",
+			header: "申請名",
 		}),
 		columnHelper.accessor("ownerName", {
 			header: "オーナー",
@@ -174,9 +174,9 @@ function CommitteeIndexPage() {
 	return (
 		<div>
 			<div className={styles.header}>
-				<Heading size="6">フォーム</Heading>
+				<Heading size="6">申請</Heading>
 				<Text size="2" color="gray">
-					フォームの作成・管理ができます。
+					申請の作成・管理ができます。
 				</Text>
 			</div>
 			<DataTable<FormRow>
@@ -193,7 +193,7 @@ function CommitteeIndexPage() {
 				toolbarExtra={
 					<Button intent="primary" size="2" onClick={() => setDialogOpen(true)}>
 						<IconPlus size={16} stroke={1.5} />
-						フォームを作成
+						申請を作成
 					</Button>
 				}
 			/>
