@@ -14,7 +14,7 @@ import {
 	committeePermissionSchema,
 } from "@sos26/shared";
 import { IconChevronDown, IconPlus, IconTrash } from "@tabler/icons-react";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -27,7 +27,7 @@ import {
 	listCommitteeMembers,
 	revokeCommitteeMemberPermission,
 } from "@/lib/api/committee-member";
-import { useAuthStore } from "@/lib/auth";
+import { ForbiddenError, useAuthStore } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { isClientError } from "@/lib/http/error";
 import { AddMemberDialog } from "./-components/AddMemberDialog";
@@ -213,7 +213,7 @@ export const Route = createFileRoute("/committee/members/")({
 		);
 
 		if (!hasMemberEdit) {
-			throw redirect({ to: "/forbidden" });
+			throw new ForbiddenError();
 		}
 
 		return {
