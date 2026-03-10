@@ -13,6 +13,7 @@ export * from "./endpoints/types";
 export * from "./endpoints/user";
 export * from "./errors";
 export * from "./lib/email";
+export * from "./lib/form-pattern";
 export * from "./lib/phonetic";
 export * from "./lib/sanitize-config";
 export * from "./lib/token";

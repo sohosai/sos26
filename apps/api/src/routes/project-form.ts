@@ -2,6 +2,8 @@ import {
 	type CreateFormResponseRequest,
 	createFormResponseRequestSchema,
 	type FormItemType,
+	PATTERN_LABELS,
+	PATTERN_REGEXES,
 	projectFormPathParamsSchema,
 	updateFormResponseRequestSchema,
 } from "@sos26/shared";
@@ -265,18 +267,6 @@ function assertRequiredAnswered(
 		}
 	}
 }
-
-const PATTERN_REGEXES: Record<string, RegExp> = {
-	katakana: /^[\u30A0-\u30FF\u30FCー]+$/,
-	hiragana: /^[\u3040-\u309F\u30FC]+$/,
-	alphanumeric: /^[a-zA-Z0-9]+$/,
-};
-
-const PATTERN_LABELS: Record<string, string> = {
-	katakana: "全角カタカナ",
-	hiragana: "ひらがな",
-	alphanumeric: "半角英数字",
-};
 
 function resolveConstraintRegex(
 	pattern: string,
