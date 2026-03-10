@@ -5,6 +5,7 @@ import {
 } from "@/components/patterns/CheckboxGroup";
 import { RadioGroup, RadioGroupItem } from "@/components/patterns/RadioGroup";
 import { TextArea, TextField } from "@/components/primitives";
+import { buildFormDownloadFileName } from "@/lib/form/downloadFileName";
 import { FileUploadFieldWithPreview } from "../EachField/FileUploadFieldWithPreview";
 import { NumberField } from "../EachField/NumberField";
 import {
@@ -13,6 +14,7 @@ import {
 	type FormItem,
 	isFileAnswerValue,
 } from "../type";
+import { useDownloadFileNameContext } from "./DownloadFileNameContext";
 
 type FieldProps = {
 	item: FormItem;
@@ -22,6 +24,7 @@ type FieldProps = {
 };
 
 export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
+	const downloadFileNameContext = useDownloadFileNameContext();
 	const label = (
 		<Text size="2" weight="medium">
 			{item.label + (item.required ? " *" : "")}
@@ -93,11 +96,19 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 				const fileValue = isFileAnswerValue(value)
 					? value
 					: createEmptyFileAnswerValue();
+				const downloadFileName =
+					downloadFileNameContext && fileValue.uploadedFile?.fileName
+						? buildFormDownloadFileName({
+								...downloadFileNameContext,
+								originalFileName: fileValue.uploadedFile.fileName,
+							})
+						: undefined;
 				return (
 					<FileUploadFieldWithPreview
 						label=""
 						value={fileValue.pendingFile}
 						uploadedFile={fileValue.uploadedFile}
+						downloadFileName={downloadFileName}
 						onChange={file =>
 							onChange({
 								pendingFile: file,

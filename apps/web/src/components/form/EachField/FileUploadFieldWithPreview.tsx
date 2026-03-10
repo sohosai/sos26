@@ -12,6 +12,7 @@ type FileUploadProps = {
 	label: string;
 	value?: File | null;
 	uploadedFile?: UploadedFileValue | null;
+	downloadFileName?: string;
 	onChange: (file: File | null) => void;
 	required?: boolean;
 	disabled?: boolean;
@@ -36,6 +37,7 @@ export function FileUploadFieldWithPreview({
 	label,
 	value,
 	uploadedFile,
+	downloadFileName,
 	onChange,
 	required,
 	disabled,
@@ -66,7 +68,8 @@ export function FileUploadFieldWithPreview({
 			await downloadFile(
 				uploadedFile.fileId,
 				uploadedFile.fileName,
-				uploadedFile.isPublic
+				uploadedFile.isPublic,
+				downloadFileName
 			);
 		} catch {
 			toast.error("ファイルのダウンロードに失敗しました");

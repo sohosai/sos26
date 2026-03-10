@@ -460,7 +460,13 @@ export const formResponsePathParamsSchema = z.object({
 });
 
 export const getFormResponseResponseSchema = z.object({
-	response: formResponseSummarySchema,
+	response: formResponseSummarySchema.extend({
+		project: z.object({
+			id: z.string(),
+			number: z.number().int().positive(),
+			name: z.string(),
+		}),
+	}),
 });
 export type GetFormResponseResponse = z.infer<
 	typeof getFormResponseResponseSchema

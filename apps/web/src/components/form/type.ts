@@ -12,6 +12,12 @@ export type FileAnswerValue = {
 	uploadedFile: UploadedFileValue | null;
 };
 
+export type DownloadFileNameContext = {
+	projectNumber: number;
+	formTitle: string;
+	projectName: string;
+};
+
 export type FormAnswerValue =
 	| string
 	| number

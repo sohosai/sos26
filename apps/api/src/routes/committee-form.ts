@@ -861,7 +861,7 @@ committeeFormRoute.get(
 				respondent: { select: { id: true, name: true } },
 				formDelivery: {
 					include: {
-						project: { select: { id: true, name: true } },
+						project: { select: { id: true, number: true, name: true } },
 					},
 				},
 				answers: {
@@ -930,6 +930,7 @@ committeeFormRoute.get(
 				respondent: r.respondent,
 				project: {
 					id: r.formDelivery.project.id,
+					number: r.formDelivery.project.number,
 					name: r.formDelivery.project.name,
 				},
 				submittedAt: r.submittedAt,

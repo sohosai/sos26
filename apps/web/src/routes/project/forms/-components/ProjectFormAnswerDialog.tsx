@@ -2,6 +2,7 @@ import type { GetProjectFormResponse } from "@sos26/shared";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { FormAnswerDialog } from "@/components/form/Answer/AnswerDialog";
+import { DownloadFileNameProvider } from "@/components/form/Answer/DownloadFileNameContext";
 import type { Form, FormAnswers } from "@/components/form/type";
 import {
 	createFormResponse,
@@ -14,6 +15,7 @@ import {
 	prepareAnswersForSubmit,
 	responseToAnswers,
 } from "@/lib/form/utils";
+import { useProjectStore } from "@/lib/project/store";
 
 type Props = {
 	open: boolean;
@@ -41,6 +43,9 @@ export function ProjectFormAnswerDialog({
 	const [fetchState, setFetchState] = useState<FetchState>({ status: "idle" });
 	const [draftResponseId, setDraftResponseId] = useState<string | null>(null);
 	const [isDeadlineExpired, setIsDeadlineExpired] = useState(false);
+	const project = useProjectStore(state =>
+		state.projects.find(candidate => candidate.id === projectId)
+	);
 
 	// 締切の瞬間に1回だけ発火するタイマー
 	useEffect(() => {
@@ -103,6 +108,15 @@ export function ProjectFormAnswerDialog({
 		fetchState.status === "success" &&
 		fetchState.data.form.response?.submittedAt != null;
 
+	const downloadFileNameContext =
+		project && form
+			? {
+					projectNumber: project.number,
+					formTitle: form.name,
+					projectName: project.name,
+				}
+			: undefined;
+
 	const handleSaveDraft = async (answers: FormAnswers) => {
 		if (!form || isDeadlineExpired) return;
 		const preparedAnswers = await prepareAnswersForSubmit(answers, form);
@@ -131,22 +145,24 @@ export function ProjectFormAnswerDialog({
 	};
 
 	return (
-		<FormAnswerDialog
-			open={open}
-			onOpenChange={open => {
-				if (!open) {
-					setFetchState({ status: "idle" });
-					setDraftResponseId(null);
-					setIsDeadlineExpired(false);
-				}
-				onOpenChange(open);
-			}}
-			form={fetchState.status === "loading" ? null : form}
-			initialAnswers={initialAnswers}
-			onSubmit={handleSubmit}
-			onSaveDraft={isSubmitted ? undefined : handleSaveDraft}
-			disableSubmit={isDeadlineExpired}
-			disableSaveDraft={isDeadlineExpired || isSubmitted}
-		/>
+		<DownloadFileNameProvider value={downloadFileNameContext}>
+			<FormAnswerDialog
+				open={open}
+				onOpenChange={open => {
+					if (!open) {
+						setFetchState({ status: "idle" });
+						setDraftResponseId(null);
+						setIsDeadlineExpired(false);
+					}
+					onOpenChange(open);
+				}}
+				form={fetchState.status === "loading" ? null : form}
+				initialAnswers={initialAnswers}
+				onSubmit={handleSubmit}
+				onSaveDraft={isSubmitted ? undefined : handleSaveDraft}
+				disableSubmit={isDeadlineExpired}
+				disableSaveDraft={isDeadlineExpired || isSubmitted}
+			/>
+		</DownloadFileNameProvider>
 	);
 }
