@@ -1,6 +1,7 @@
 import {
 	AlertDialog,
 	Badge,
+	type BadgeProps,
 	Checkbox,
 	Heading,
 	Popover,
@@ -102,17 +103,9 @@ function BureauCell({ member, onChange }: BureauCellProps) {
 						size="1"
 						variant="soft"
 						color={
-							(bureauColorMap[bureauLabelMap[member.bureau]] as
-								| "red"
-								| "orange"
-								| "yellow"
-								| "green"
-								| "teal"
-								| "blue"
-								| "purple"
-								| "pink"
-								| "indigo"
-								| "gray") ?? "gray"
+							(bureauColorMap[
+								bureauLabelMap[member.bureau]
+							] as BadgeProps["color"]) ?? "gray"
 						}
 					>
 						{bureauLabelMap[member.bureau]}
