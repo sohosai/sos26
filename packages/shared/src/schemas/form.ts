@@ -28,22 +28,30 @@ export const textConstraintPatternSchema = z.enum([
 ]);
 export type TextConstraintPattern = z.infer<typeof textConstraintPatternSchema>;
 
-export const textConstraintsSchema = z.object({
-	minLength: z.number().int().nonnegative().optional(),
-	maxLength: z.number().int().positive().optional(),
-	pattern: textConstraintPatternSchema.optional(),
-	customPattern: z
-		.string()
-		.refine(val => {
-			try {
-				new RegExp(val);
-				return true;
-			} catch {
-				return false;
-			}
-		}, "正規表現の形式が不正です")
-		.optional(),
-});
+export const textConstraintsSchema = z
+	.object({
+		minLength: z.number().int().nonnegative().optional(),
+		maxLength: z.number().int().positive().optional(),
+		pattern: textConstraintPatternSchema.optional(),
+		customPattern: z
+			.string()
+			.refine(val => {
+				try {
+					new RegExp(val);
+					return true;
+				} catch {
+					return false;
+				}
+			}, "正規表現の形式が不正です")
+			.optional(),
+	})
+	.refine(
+		({ minLength, maxLength }) =>
+			minLength === undefined ||
+			maxLength === undefined ||
+			minLength <= maxLength,
+		{ message: "最小文字数は最大文字数以下にしてください", path: ["minLength"] }
+	);
 export type TextConstraints = z.infer<typeof textConstraintsSchema>;
 
 // ─────────────────────────────────────────────────────────────

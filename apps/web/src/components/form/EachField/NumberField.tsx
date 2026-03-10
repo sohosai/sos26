@@ -12,6 +12,7 @@ type Props = {
 	placeholder?: string;
 	required?: boolean;
 	disabled?: boolean;
+	error?: string;
 };
 
 export function NumberField({
@@ -23,6 +24,7 @@ export function NumberField({
 	placeholder = "数値を入力してください",
 	required = false,
 	disabled = false,
+	error,
 }: Props) {
 	const [display, setDisplay] = useState(
 		value === null || value === undefined ? "" : String(value)
@@ -96,6 +98,7 @@ export function NumberField({
 				onChange={handleChange}
 				required={required}
 				disabled={disabled}
+				error={error}
 			/>
 			{invalidMessage && (
 				<Text size="2" color="red">

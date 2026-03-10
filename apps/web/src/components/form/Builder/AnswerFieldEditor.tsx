@@ -35,6 +35,13 @@ function TextConstraintEditor({
 		onUpdate(isEmpty ? null : next);
 	};
 
+	const minMaxError =
+		constraints?.minLength !== undefined &&
+		constraints?.maxLength !== undefined &&
+		constraints.minLength > constraints.maxLength
+			? "最小文字数は最大文字数以下にしてください"
+			: undefined;
+
 	return (
 		<div className={styles.constraints}>
 			<Text size="2" weight="medium">
@@ -46,6 +53,7 @@ function TextConstraintEditor({
 					value={constraints?.minLength ?? null}
 					onChange={n => update({ minLength: n ?? undefined })}
 					placeholder="例: 10"
+					error={minMaxError}
 				/>
 				<NumberField
 					label="最大文字数"
