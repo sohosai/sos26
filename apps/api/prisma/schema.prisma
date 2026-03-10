@@ -704,8 +704,8 @@ model FormAnswer {
   //数値回答（number用）
   numberValue Float?
 
-  //ファイルURL（file用）
-  fileUrl String?
+  //ファイルID（file用）
+  fileId String?
 
   //選択肢回答（select, checkbox用）
   selectedOptions FormAnswerSelectedOption[]
@@ -1051,7 +1051,7 @@ model FormItemEditHistory {
   project     Project                    @relation(fields: [projectId], references: [id])
   textValue   String?
   numberValue Float?
-  fileUrl     String?
+  fileId      String?
   actorId     String
   actor       User                       @relation("FormItemEditHistoryActor", fields: [actorId], references: [id])
   trigger     FormItemEditHistoryTrigger

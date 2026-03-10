@@ -65,7 +65,7 @@ export const Route = createFileRoute("/committee/forms/$formId/answers/")({
 							color: getOptionColor(o.id),
 						};
 					});
-				} else if (a.fileUrl) {
+				} else if (a.fileId) {
 					map[a.formItemId] = "ファイル";
 				} else {
 					map[a.formItemId] = "";

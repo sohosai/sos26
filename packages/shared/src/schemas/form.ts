@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { approvalStatusSchema } from "./common";
+import { fileSchema } from "./file";
 import { userSchema } from "./user";
 
 // ─────────────────────────────────────────────────────────────
@@ -214,7 +215,7 @@ const numberAnswerSchema = z.object({
 const fileAnswerSchema = z.object({
 	...baseAnswerSchema,
 	type: z.literal("FILE"),
-	fileUrl: z.string().nullable(),
+	fileId: z.string().nullable(),
 });
 
 const selectAnswerSchema = z.object({
@@ -410,7 +411,17 @@ export const formResponseAnswerSchema = z.object({
 	formItemId: z.string(),
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileUrl: z.string().nullable(),
+	fileId: z.string().nullable(),
+	fileMetadata: fileSchema
+		.pick({
+			id: true,
+			fileName: true,
+			mimeType: true,
+			size: true,
+			isPublic: true,
+		})
+		.nullable()
+		.optional(),
 	selectedOptions: z.array(
 		z.object({
 			id: z.string(),
@@ -449,7 +460,13 @@ export const formResponsePathParamsSchema = z.object({
 });
 
 export const getFormResponseResponseSchema = z.object({
-	response: formResponseSummarySchema,
+	response: formResponseSummarySchema.extend({
+		project: z.object({
+			id: z.string(),
+			number: z.number().int().positive(),
+			name: z.string(),
+		}),
+	}),
 });
 export type GetFormResponseResponse = z.infer<
 	typeof getFormResponseResponseSchema
@@ -512,6 +529,13 @@ const projectFormItemOptionSchema = z.object({
 	sortOrder: z.number().int(),
 });
 
+const projectFormFileMetadataSchema = fileSchema.pick({
+	id: true,
+	fileName: true,
+	mimeType: true,
+	isPublic: true,
+});
+
 const projectFormItemSchema = z.object({
 	id: z.string(),
 	label: z.string(),
@@ -528,7 +552,8 @@ const formAnswerSchema = z.object({
 	formItemId: z.string(),
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileUrl: z.string().nullable(),
+	fileId: z.string().nullable(),
+	fileMetadata: projectFormFileMetadataSchema.nullable(),
 	selectedOptionIds: z.array(z.string()),
 });
 

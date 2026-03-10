@@ -799,7 +799,7 @@ committeeFormRoute.get(
 							formItemId: a.formItemId,
 							textValue: history.textValue,
 							numberValue: history.numberValue,
-							fileUrl: history.fileUrl,
+							fileId: history.fileId,
 							selectedOptions: history.selectedOptions.map(s => ({
 								id: s.formItemOption.id,
 								label: s.formItemOption.label,
@@ -810,7 +810,7 @@ committeeFormRoute.get(
 						formItemId: a.formItemId,
 						textValue: a.textValue,
 						numberValue: a.numberValue,
-						fileUrl: a.fileUrl,
+						fileId: a.fileId,
 						selectedOptions: a.selectedOptions.map(s => ({
 							id: s.formItemOption.id,
 							label: s.formItemOption.label,
@@ -861,7 +861,7 @@ committeeFormRoute.get(
 				respondent: { select: { id: true, name: true } },
 				formDelivery: {
 					include: {
-						project: { select: { id: true, name: true } },
+						project: { select: { id: true, number: true, name: true } },
 					},
 				},
 				answers: {
@@ -901,6 +901,28 @@ committeeFormRoute.get(
 		for (const h of allHistory) {
 			if (!latestByItem.has(h.formItemId)) latestByItem.set(h.formItemId, h);
 		}
+		const fileIds = [
+			...r.answers.map(answer => answer.fileId),
+			...allHistory.map(history => history.fileId),
+		].filter((id): id is string => Boolean(id));
+		const fileMap = new Map(
+			(
+				await prisma.file.findMany({
+					where: {
+						id: { in: [...new Set(fileIds)] },
+						status: "CONFIRMED",
+						deletedAt: null,
+					},
+					select: {
+						id: true,
+						fileName: true,
+						mimeType: true,
+						size: true,
+						isPublic: true,
+					},
+				})
+			).map(file => [file.id, file])
+		);
 
 		return c.json({
 			response: {
@@ -908,6 +930,7 @@ committeeFormRoute.get(
 				respondent: r.respondent,
 				project: {
 					id: r.formDelivery.project.id,
+					number: r.formDelivery.project.number,
 					name: r.formDelivery.project.name,
 				},
 				submittedAt: r.submittedAt,
@@ -919,7 +942,10 @@ committeeFormRoute.get(
 							formItemId: a.formItemId,
 							textValue: history.textValue,
 							numberValue: history.numberValue,
-							fileUrl: history.fileUrl,
+							fileId: history.fileId,
+							fileMetadata: history.fileId
+								? (fileMap.get(history.fileId) ?? null)
+								: null,
 							selectedOptions: history.selectedOptions.map(s => ({
 								id: s.formItemOption.id,
 								label: s.formItemOption.label,
@@ -930,7 +956,8 @@ committeeFormRoute.get(
 						formItemId: a.formItemId,
 						textValue: a.textValue,
 						numberValue: a.numberValue,
-						fileUrl: a.fileUrl,
+						fileId: a.fileId,
+						fileMetadata: a.fileId ? (fileMap.get(a.fileId) ?? null) : null,
 						selectedOptions: a.selectedOptions.map(s => ({
 							id: s.formItemOption.id,
 							label: s.formItemOption.label,

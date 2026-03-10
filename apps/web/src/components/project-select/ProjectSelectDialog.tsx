@@ -222,13 +222,13 @@ function buildReadOnlyDynamicColumn(
 
 		if (col.formItemType === "FILE") {
 			return columnHelper.accessor(
-				row => row.cells[col.id]?.formValue?.fileUrl ?? null,
+				row => row.cells[col.id]?.formValue?.fileId ?? null,
 				{
 					id: col.id,
 					header: () => <ColHeader col={col} />,
 					cell: ctx => {
-						const url = ctx.getValue() as string | null;
-						return url ? (
+						const fileId = ctx.getValue() as string | null;
+						return fileId ? (
 							<Text size="2" color="blue" truncate>
 								ファイル
 							</Text>
