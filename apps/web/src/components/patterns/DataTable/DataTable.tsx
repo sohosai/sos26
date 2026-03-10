@@ -83,6 +83,10 @@ type DataTableProps<T> = {
 	getRowId?: (row: T, index: number) => string;
 	/** rowSelection=true のとき初期選択状態（getRowId で返る ID をキーとする） */
 	initialRowSelection?: RowSelectionState;
+	/** セル選択変化を通知（選択されたセルの row/col インデックスペア） */
+	onSelectionChange?: (selected: { row: T; columnId: string }[]) => void;
+	/** テーブル外クリックで選択解除する際に除外する要素の ref */
+	selectionIgnoreRef?: React.RefObject<HTMLElement | null>;
 };
 
 // ─── カスタムフィルター関数 ───────────────────────────────
@@ -170,6 +174,8 @@ export function DataTable<T extends RowData>({
 	onRowSelectionChange,
 	getRowId,
 	initialRowSelection = {},
+	onSelectionChange,
+	selectionIgnoreRef,
 }: DataTableProps<T>) {
 	const f = { ...defaultFeatures, ...featuresProp };
 	// rowSelection=true のとき cell selection を無効化
@@ -288,6 +294,28 @@ export function DataTable<T extends RowData>({
 	useChangeCallback(columnVisibility, onColumnVisibilityChange);
 	useChangeCallback(columnFilters, onColumnFiltersChange);
 
+	// セル選択変化を親に通知
+	const onSelectionChangeRef = useRef(onSelectionChange);
+	onSelectionChangeRef.current = onSelectionChange;
+	// biome-ignore lint/correctness/useExhaustiveDependencies: selected triggers the callback
+	useEffect(() => {
+		if (!onSelectionChangeRef.current || !cellSelection) return;
+		const rows = table.getRowModel().rows;
+		const visibleColumns = table.getVisibleFlatColumns();
+		const items: { row: T; columnId: string }[] = [];
+		for (const cellId of selected) {
+			const [rowStr, colStr] = cellId.split(":");
+			const ri = Number(rowStr);
+			const ci = Number(colStr);
+			const row = rows[ri];
+			const col = visibleColumns[ci];
+			if (row && col) {
+				items.push({ row: row.original, columnId: col.id });
+			}
+		}
+		onSelectionChangeRef.current(items);
+	}, [selected, cellSelection]);
+
 	useCopyToClipboard(table, selected, cellSelection && f.copy);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: sorting/globalFilter/columnVisibility/columnFilters are intentional triggers
@@ -313,8 +341,13 @@ export function DataTable<T extends RowData>({
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (e.key === "Escape") clearSelection();
 		};
+		const ignoreRef = selectionIgnoreRef;
 		const handleOutsideClick = (e: MouseEvent) => {
-			if (tableRef.current && !tableRef.current.contains(e.target as Node)) {
+			const target = e.target as Node;
+			if (tableRef.current && !tableRef.current.contains(target)) {
+				if (ignoreRef?.current?.contains(target)) {
+					return;
+				}
 				clearSelection();
 			}
 		};
@@ -324,7 +357,7 @@ export function DataTable<T extends RowData>({
 			document.removeEventListener("keydown", handleKeyDown);
 			document.removeEventListener("mousedown", handleOutsideClick);
 		};
-	}, [clearSelection, cellSelection]);
+	}, [clearSelection, cellSelection, selectionIgnoreRef]);
 
 	const showToolbar = hasToolbar(f, toolbarExtra);
 

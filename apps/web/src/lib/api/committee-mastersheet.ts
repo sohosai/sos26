@@ -17,7 +17,9 @@ import {
 	type EditFormItemCellResponse,
 	editFormItemCellEndpoint,
 	type GetMastersheetDataResponse,
+	type GetMastersheetHistoryResponse,
 	getMastersheetDataEndpoint,
+	getMastersheetHistoryEndpoint,
 	type ListMastersheetAccessRequestsResponse,
 	type ListMastersheetViewsResponse,
 	listMastersheetAccessRequestsEndpoint,
@@ -104,6 +106,19 @@ export async function editFormItemCell(
 	body: EditFormItemCellRequest
 ): Promise<EditFormItemCellResponse> {
 	return callBodyApi(editFormItemCellEndpoint, body, {
+		pathParams: { columnId, projectId },
+	});
+}
+
+/**
+ * GET /committee/mastersheet/columns/:columnId/history/:projectId
+ * セルの編集履歴を取得
+ */
+export async function getMastersheetHistory(
+	columnId: string,
+	projectId: string
+): Promise<GetMastersheetHistoryResponse> {
+	return callGetApi(getMastersheetHistoryEndpoint, {
 		pathParams: { columnId, projectId },
 	});
 }
