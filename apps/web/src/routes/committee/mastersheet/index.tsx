@@ -16,6 +16,7 @@ import {
 	type SelectedCell,
 } from "./-components/MastersheetTable";
 import { type ViewState, ViewTabs } from "./-components/ViewTabs";
+import styles from "./index.module.scss";
 
 export const Route = createFileRoute("/committee/mastersheet/")({
 	loader: async () => {
@@ -130,8 +131,8 @@ function MastersheetPage() {
 				onSelectView={handleSelectView}
 				onActiveViewIdChange={handleActiveViewIdChange}
 			/>
-			<div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-				<div style={{ flex: 1, minWidth: 0, overflow: "auto" }}>
+			<div className={styles.layout}>
+				<div className={styles.tableWrapper}>
 					<MastersheetTable
 						key={tableKey}
 						columns={columns}

@@ -116,9 +116,10 @@ export async function editFormItemCell(
  * 編集履歴をバッチ取得
  */
 export async function batchMastersheetHistory(
-	cells: BatchMastersheetHistoryRequest["cells"]
+	cells: BatchMastersheetHistoryRequest["cells"],
+	signal?: AbortSignal
 ): Promise<BatchMastersheetHistoryResponse> {
-	return callBodyApi(batchMastersheetHistoryEndpoint, { cells });
+	return callBodyApi(batchMastersheetHistoryEndpoint, { cells }, { signal });
 }
 
 /**

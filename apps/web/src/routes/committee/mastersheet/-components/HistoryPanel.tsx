@@ -127,11 +127,21 @@ export function HistoryPanel({
 
 	const hasSelection = selectedCells.length > 0;
 
+	const prevSelectionKeyRef = useRef("");
+
 	useEffect(() => {
 		if (!open) return;
 
 		// FORM_ITEM セルに絞り込む
 		const cellsToFetch = getFormItemCells(selectedCells, columns);
+
+		// 内容が変わっていなければスキップ
+		const selectionKey = cellsToFetch
+			.map(c => `${c.columnId}:${c.projectId}`)
+			.sort()
+			.join(",");
+		if (selectionKey === prevSelectionKeyRef.current) return;
+		prevSelectionKeyRef.current = selectionKey;
 
 		// セル未選択 or FORM_ITEM が 0 件なら空表示
 		if (cellsToFetch.length === 0) {
@@ -148,7 +158,7 @@ export function HistoryPanel({
 		setLoading(true);
 		setError(null);
 
-		batchMastersheetHistory(cellsToFetch)
+		batchMastersheetHistory(cellsToFetch, controller.signal)
 			.then(res => {
 				if (controller.signal.aborted) return;
 

@@ -244,7 +244,9 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 	const userId = c.get("user").id;
 	const committeeMember = c.get("committeeMember");
 
-	const body = await c.req.json().catch(() => ({}));
+	const body = await c.req.json().catch(() => {
+		throw Errors.invalidRequest("リクエストボディが不正です");
+	});
 	const { cells } = batchMastersheetHistoryRequestSchema.parse(body);
 
 	// セル指定がなければ空レスポンス
