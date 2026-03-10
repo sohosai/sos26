@@ -31,6 +31,7 @@
     "db:pull": "bun run --cwd apps/api db:pull",
     "db:studio": "bun run --cwd apps/api db:studio",
     "db:format": "bun run --cwd apps/api db:format",
+    "db:seed": "bun run --cwd apps/api db:seed",
     "make-committee-member": "bun run --cwd apps/api make-committee-member"
   },
   "devDependencies": {
