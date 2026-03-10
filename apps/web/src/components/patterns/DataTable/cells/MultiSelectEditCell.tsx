@@ -17,11 +17,14 @@ export function MultiSelectEditCell<TData extends RowData>({
 	const [localIds, setLocalIds] = useState<string[]>([]);
 	const escapedRef = useRef(false);
 
+	const arraysEqual = (a: string[], b: string[]) =>
+		a.length === b.length && a.every((v, i) => v === b[i]);
+
 	const handleOpenChange = (isOpen: boolean) => {
 		if (isOpen) {
 			setLocalIds(ids);
 			escapedRef.current = false;
-		} else if (!escapedRef.current) {
+		} else if (!escapedRef.current && !arraysEqual(localIds, ids)) {
 			table.options.meta?.updateData(row.original, column.id, localIds);
 		}
 		setOpen(isOpen);
