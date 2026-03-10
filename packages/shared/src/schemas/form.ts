@@ -485,6 +485,7 @@ export const listProjectFormsResponseSchema = z.object({
 			required: z.boolean(),
 			allowLateResponse: z.boolean(),
 			ownerOnly: z.boolean(),
+			restricted: z.boolean(),
 			// 自分の回答状況
 			response: z
 				.object({

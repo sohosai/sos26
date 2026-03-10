@@ -18,7 +18,7 @@ type FormRow = {
 	deadlineAt: Date | null;
 	allowLateResponse: boolean;
 	required: boolean;
-	ownerOnly: boolean;
+	restricted: boolean;
 	responseId: string | null;
 	submittedAt: Date | null;
 };
@@ -43,7 +43,7 @@ export const Route = createFileRoute("/project/forms/")({
 				deadlineAt: f.deadlineAt,
 				allowLateResponse: f.allowLateResponse,
 				required: f.required,
-				ownerOnly: f.ownerOnly,
+				restricted: f.restricted,
 				responseId: f.response?.id ?? null,
 				submittedAt: f.response?.submittedAt ?? null,
 			})),
@@ -122,11 +122,10 @@ function RouteComponent() {
 			header: "回答状況",
 			cell: ctx => {
 				const submittedAt = ctx.getValue();
-				const { allowLateResponse, deadlineAt, responseId, ownerOnly } =
+				const { allowLateResponse, deadlineAt, responseId, restricted } =
 					ctx.row.original;
 
-				// ownerOnly で response が null の場合（一般メンバーには閲覧制限）
-				if (ownerOnly && responseId === null && submittedAt === null) {
+				if (restricted) {
 					return (
 						<Badge variant="soft" color="orange">
 							<IconLock size={12} />
@@ -175,14 +174,11 @@ function RouteComponent() {
 					deadlineAt,
 					formDeliveryId,
 					responseId,
-					ownerOnly,
+					restricted,
 				} = row.original;
 				const isExpired =
 					deadlineAt && !allowLateResponse && new Date() > deadlineAt;
-				// ownerOnly で response が null → 一般メンバーには閲覧制限
-				const isRestricted =
-					ownerOnly && responseId === null && !row.original.submittedAt;
-				const isDisabled = !!isExpired || isRestricted;
+				const isDisabled = !!isExpired || restricted;
 
 				return (
 					<Button
@@ -191,7 +187,7 @@ function RouteComponent() {
 						onClick={() => setAnsweringDeliveryId(formDeliveryId)}
 						disabled={isDisabled}
 					>
-						{isRestricted ? (
+						{restricted ? (
 							<>
 								<IconLock size={16} />
 								閲覧制限

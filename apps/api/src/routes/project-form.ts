@@ -497,7 +497,8 @@ projectFormRoute.get("/", requireAuth, requireProjectMember, async c => {
 				deadlineAt: d.formAuthorization.deadlineAt,
 				allowLateResponse: d.formAuthorization.allowLateResponse,
 				required: d.formAuthorization.required,
-				ownerOnly: isRestricted,
+				ownerOnly: d.formAuthorization.ownerOnly,
+				restricted: isRestricted,
 				response: isRestricted
 					? null
 					: response
