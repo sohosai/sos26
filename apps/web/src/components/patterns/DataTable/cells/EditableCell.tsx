@@ -29,13 +29,22 @@ export function EditableCell<TData extends RowData>({
 
 	const [isFocused, setIsFocused] = useState(false);
 
+	const toCommitted = () =>
+		inputType === "number"
+			? value === "" || value == null
+				? null
+				: Number(value)
+			: value;
+
 	const commitValue = (): boolean => {
-		const committed =
-			inputType === "number"
-				? value === "" || value == null
-					? null
-					: Number(value)
-				: value;
+		const committed = toCommitted();
+
+		if (committed === initialValue) {
+			setValidationError(null);
+			setIsEditing(false);
+			setIsFocused(false);
+			return true;
+		}
 
 		if (schema) {
 			const result = schema.safeParse(committed);
