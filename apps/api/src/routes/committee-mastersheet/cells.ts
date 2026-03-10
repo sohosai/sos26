@@ -300,6 +300,11 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 
 	const targetProjectIds = [...new Set(cells.map(c => c.projectId))];
 
+	// 対象セルの高速ルックアップ用 Set
+	const targetCellKeys = new Set(
+		cells.map(c => `${c.columnId}:${c.projectId}`)
+	);
+
 	// バッチクエリ
 	const allHistory = await prisma.formItemEditHistory.findMany({
 		where: {
@@ -324,10 +329,7 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 		if (!columnId) continue;
 
 		// 対象セルのみに絞り込む
-		const match = cells.some(
-			c => c.columnId === columnId && c.projectId === h.projectId
-		);
-		if (!match) continue;
+		if (!targetCellKeys.has(`${columnId}:${h.projectId}`)) continue;
 
 		const key = `${columnId}:${h.projectId}`;
 		let group = groupMap.get(key);

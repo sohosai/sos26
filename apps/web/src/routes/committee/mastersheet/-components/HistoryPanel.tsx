@@ -127,13 +127,17 @@ export function HistoryPanel({
 
 	const hasSelection = selectedCells.length > 0;
 
+	const formItemCells = useMemo(
+		() => getFormItemCells(selectedCells, columns),
+		[selectedCells, columns]
+	);
+
 	const prevSelectionKeyRef = useRef("");
 
 	useEffect(() => {
 		if (!open) return;
 
-		// FORM_ITEM セルに絞り込む
-		const cellsToFetch = getFormItemCells(selectedCells, columns);
+		const cellsToFetch = formItemCells;
 
 		// 内容が変わっていなければスキップ
 		const selectionKey = cellsToFetch
@@ -188,13 +192,11 @@ export function HistoryPanel({
 			});
 
 		return () => controller.abort();
-	}, [open, selectedCells, columns, columnMap, projectMap]);
+	}, [open, formItemCells, columnMap, projectMap]);
 
 	if (!open) return null;
 
-	const formCellCount = hasSelection
-		? getFormItemCells(selectedCells, columns).length
-		: null;
+	const formCellCount = hasSelection ? formItemCells.length : null;
 
 	return (
 		<div ref={ref} className={styles.panel}>

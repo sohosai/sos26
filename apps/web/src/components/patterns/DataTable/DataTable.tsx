@@ -362,7 +362,7 @@ export function DataTable<T extends RowData>({
 	const showToolbar = hasToolbar(f, toolbarExtra);
 
 	return (
-		<Box>
+		<Box ref={tableRef}>
 			{showToolbar && (
 				<Flex gap="3" mb="3" align="end">
 					{f.globalFilter && (
@@ -424,7 +424,6 @@ export function DataTable<T extends RowData>({
 				</Flex>
 			)}
 			<Table.Root
-				ref={tableRef}
 				variant="surface"
 				className={`${styles.root}${cellSelection && isDragging ? ` ${styles.selecting}` : ""}`}
 				style={{ overflowX: "auto" }}
