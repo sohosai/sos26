@@ -68,7 +68,7 @@ function formatValue(
 	entry: HistoryEntry,
 	column: ApiColumn | undefined
 ): string {
-	if (entry.value.fileUrl) return entry.value.fileUrl;
+	if (entry.value.fileId) return "ファイル";
 	if (entry.value.numberValue != null) return String(entry.value.numberValue);
 	if (entry.value.selectedOptionIds.length > 0 && column) {
 		return entry.value.selectedOptionIds
