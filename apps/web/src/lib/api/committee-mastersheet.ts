@@ -1,4 +1,7 @@
 import {
+	type BatchMastersheetHistoryRequest,
+	type BatchMastersheetHistoryResponse,
+	batchMastersheetHistoryEndpoint,
 	type CreateMastersheetAccessRequestResponse,
 	type CreateMastersheetColumnRequest,
 	type CreateMastersheetColumnResponse,
@@ -106,6 +109,17 @@ export async function editFormItemCell(
 	return callBodyApi(editFormItemCellEndpoint, body, {
 		pathParams: { columnId, projectId },
 	});
+}
+
+/**
+ * POST /committee/mastersheet/history
+ * 編集履歴をバッチ取得
+ */
+export async function batchMastersheetHistory(
+	cells: BatchMastersheetHistoryRequest["cells"],
+	signal?: AbortSignal
+): Promise<BatchMastersheetHistoryResponse> {
+	return callBodyApi(batchMastersheetHistoryEndpoint, { cells }, { signal });
 }
 
 /**

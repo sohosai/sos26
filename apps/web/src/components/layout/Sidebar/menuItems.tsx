@@ -15,7 +15,7 @@ export const projectMenuItems: MenuItem[] = [
 		to: "/project/members",
 	},
 	{
-		label: "フォーム",
+		label: "申請",
 		icon: <IconFileText size={18} />,
 		to: "/project/forms",
 	},
@@ -43,7 +43,7 @@ export const committeeMenuItems: MenuItem[] = [
 		to: "/committee/mastersheet",
 	},
 	{
-		label: "フォーム",
+		label: "申請",
 		icon: <IconFileText size={18} />,
 		to: "/committee/forms",
 	},

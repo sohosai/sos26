@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteRouteImport } from './routes/settings/route'
 import { Route as ProjectRouteRouteImport } from './routes/project/route'
 import { Route as DocsRouteRouteImport } from './routes/docs/route'
 import { Route as DevRouteRouteImport } from './routes/dev/route'
@@ -51,6 +52,11 @@ import { Route as AuthRegisterSetupIndexRouteImport } from './routes/auth/regist
 import { Route as CommitteeFormsFormIdAnswersIndexRouteImport } from './routes/committee/forms/$formId/answers/index'
 import { Route as CommitteeFormsFormIdAnswersAnswerIdIndexRouteImport } from './routes/committee/forms/$formId/answers/$answerId/index'
 
+const SettingsRouteRoute = SettingsRouteRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjectRouteRoute = ProjectRouteRouteImport.update({
   id: '/project',
   path: '/project',
@@ -82,9 +88,9 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
-  id: '/settings/',
-  path: '/settings/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsRouteRoute,
 } as any)
 const ProjectIndexRoute = ProjectIndexRouteImport.update({
   id: '/',
@@ -273,6 +279,7 @@ export interface FileRoutesByFullPath {
   '/dev': typeof DevRouteRouteWithChildren
   '/docs': typeof DocsRouteRouteWithChildren
   '/project': typeof ProjectRouteRouteWithChildren
+  '/settings': typeof SettingsRouteRouteWithChildren
   '/docs/$slug': typeof DocsSlugRoute
   '/committee/': typeof CommitteeIndexRoute
   '/docs/': typeof DocsIndexRoute
@@ -357,6 +364,7 @@ export interface FileRoutesById {
   '/dev': typeof DevRouteRouteWithChildren
   '/docs': typeof DocsRouteRouteWithChildren
   '/project': typeof ProjectRouteRouteWithChildren
+  '/settings': typeof SettingsRouteRouteWithChildren
   '/docs/$slug': typeof DocsSlugRoute
   '/committee/': typeof CommitteeIndexRoute
   '/docs/': typeof DocsIndexRoute
@@ -402,6 +410,7 @@ export interface FileRouteTypes {
     | '/dev'
     | '/docs'
     | '/project'
+    | '/settings'
     | '/docs/$slug'
     | '/committee/'
     | '/docs/'
@@ -485,6 +494,7 @@ export interface FileRouteTypes {
     | '/dev'
     | '/docs'
     | '/project'
+    | '/settings'
     | '/docs/$slug'
     | '/committee/'
     | '/docs/'
@@ -529,12 +539,19 @@ export interface RootRouteChildren {
   DevRouteRoute: typeof DevRouteRouteWithChildren
   DocsRouteRoute: typeof DocsRouteRouteWithChildren
   ProjectRouteRoute: typeof ProjectRouteRouteWithChildren
+  SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
   ForbiddenIndexRoute: typeof ForbiddenIndexRoute
-  SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/project': {
       id: '/project'
       path: '/project'
@@ -579,10 +596,10 @@ declare module '@tanstack/react-router' {
     }
     '/settings/': {
       id: '/settings/'
-      path: '/settings'
+      path: '/'
       fullPath: '/settings/'
       preLoaderRoute: typeof SettingsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof SettingsRouteRoute
     }
     '/project/': {
       id: '/project/'
@@ -944,6 +961,18 @@ const ProjectRouteRouteWithChildren = ProjectRouteRoute._addFileChildren(
   ProjectRouteRouteChildren,
 )
 
+interface SettingsRouteRouteChildren {
+  SettingsIndexRoute: typeof SettingsIndexRoute
+}
+
+const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
+  SettingsIndexRoute: SettingsIndexRoute,
+}
+
+const SettingsRouteRouteWithChildren = SettingsRouteRoute._addFileChildren(
+  SettingsRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRouteRoute: AuthRouteRouteWithChildren,
@@ -951,8 +980,8 @@ const rootRouteChildren: RootRouteChildren = {
   DevRouteRoute: DevRouteRouteWithChildren,
   DocsRouteRoute: DocsRouteRouteWithChildren,
   ProjectRouteRoute: ProjectRouteRouteWithChildren,
+  SettingsRouteRoute: SettingsRouteRouteWithChildren,
   ForbiddenIndexRoute: ForbiddenIndexRoute,
-  SettingsIndexRoute: SettingsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

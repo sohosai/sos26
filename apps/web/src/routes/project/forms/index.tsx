@@ -1,5 +1,5 @@
 import { Badge, Heading, Text } from "@radix-ui/themes";
-import { IconEdit } from "@tabler/icons-react";
+import { IconEdit, IconLock } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useCallback, useEffect, useState } from "react";
@@ -18,6 +18,7 @@ type FormRow = {
 	deadlineAt: Date | null;
 	allowLateResponse: boolean;
 	required: boolean;
+	restricted: boolean;
 	responseId: string | null;
 	submittedAt: Date | null;
 };
@@ -27,7 +28,7 @@ const columnHelper = createColumnHelper<FormRow>();
 export const Route = createFileRoute("/project/forms/")({
 	component: RouteComponent,
 	head: () => ({
-		meta: [{ title: "フォーム一覧 | 雙峰祭オンラインシステム" }],
+		meta: [{ title: "申請一覧 | 雙峰祭オンラインシステム" }],
 	}),
 	loader: async () => {
 		const { selectedProjectId } = useProjectStore.getState();
@@ -42,6 +43,7 @@ export const Route = createFileRoute("/project/forms/")({
 				deadlineAt: f.deadlineAt,
 				allowLateResponse: f.allowLateResponse,
 				required: f.required,
+				restricted: f.restricted,
 				responseId: f.response?.id ?? null,
 				submittedAt: f.response?.submittedAt ?? null,
 			})),
@@ -87,7 +89,7 @@ function RouteComponent() {
 
 	const columns = [
 		columnHelper.accessor("title", {
-			header: "フォーム名",
+			header: "申請名",
 		}),
 		columnHelper.accessor("scheduledSendAt", {
 			header: "配信日時",
@@ -120,7 +122,18 @@ function RouteComponent() {
 			header: "回答状況",
 			cell: ctx => {
 				const submittedAt = ctx.getValue();
-				const { allowLateResponse, deadlineAt, responseId } = ctx.row.original;
+				const { allowLateResponse, deadlineAt, responseId, restricted } =
+					ctx.row.original;
+
+				if (restricted) {
+					return (
+						<Badge variant="soft" color="orange">
+							<IconLock size={12} />
+							閲覧制限
+						</Badge>
+					);
+				}
+
 				const isExpired =
 					deadlineAt && !allowLateResponse && new Date() > deadlineAt;
 
@@ -157,15 +170,15 @@ function RouteComponent() {
 			header: "操作",
 			cell: ({ row }) => {
 				const {
-					// submittedAt,
 					allowLateResponse,
 					deadlineAt,
 					formDeliveryId,
 					responseId,
+					restricted,
 				} = row.original;
 				const isExpired =
 					deadlineAt && !allowLateResponse && new Date() > deadlineAt;
-				const isDisabled = !!isExpired;
+				const isDisabled = !!isExpired || restricted;
 
 				return (
 					<Button
@@ -174,8 +187,17 @@ function RouteComponent() {
 						onClick={() => setAnsweringDeliveryId(formDeliveryId)}
 						disabled={isDisabled}
 					>
-						<IconEdit size={16} />
-						{responseId ? "回答を編集" : "回答する"}
+						{restricted ? (
+							<>
+								<IconLock size={16} />
+								閲覧制限
+							</>
+						) : (
+							<>
+								<IconEdit size={16} />
+								{responseId ? "回答を編集" : "回答する"}
+							</>
+						)}
 					</Button>
 				);
 			},
@@ -186,9 +208,9 @@ function RouteComponent() {
 	return (
 		<div>
 			<div className={styles.header}>
-				<Heading size="6">フォーム一覧</Heading>
+				<Heading size="6">申請一覧</Heading>
 				<Text size="2" color="gray">
-					実委人から配信されたフォームに回答できます。
+					実委人から配信された申請に回答できます。
 				</Text>
 			</div>
 

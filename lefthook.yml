@@ -9,3 +9,9 @@ pre-commit:
       glob: "prisma/schema.prisma"
       run: bun run db:format
       stage_fixed: true
+
+pre-push:
+  commands:
+    protect-main:
+      interactive: true
+      run: bun scripts/confirm-push.ts

@@ -2,3 +2,4 @@
 // 新しいチェッカーを追加する場合はここに import を追加する
 import "./inquiry";
 import "./notice";
+import "./form";

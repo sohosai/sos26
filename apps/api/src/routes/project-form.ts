@@ -2,11 +2,14 @@ import {
 	type CreateFormResponseRequest,
 	createFormResponseRequestSchema,
 	type FormItemType,
+	PATTERN_LABELS,
+	PATTERN_REGEXES,
 	projectFormPathParamsSchema,
 	updateFormResponseRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
+import { constraintsFromPrisma } from "../lib/form-constraints";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -48,6 +51,10 @@ const getDeliveryOrThrow = async (
 									required: true,
 									sortOrder: true,
 									options: true,
+									constraintMinLength: true,
+									constraintMaxLength: true,
+									constraintPattern: true,
+									constraintCustomPattern: true,
 								},
 								orderBy: { sortOrder: "asc" },
 							},
@@ -115,7 +122,7 @@ const upsertAnswers = async (
 						: null,
 				numberValue:
 					answer.type === "NUMBER" ? (answer.numberValue ?? null) : null,
-				fileUrl: answer.type === "FILE" ? (answer.fileUrl ?? null) : null,
+				fileId: answer.type === "FILE" ? (answer.fileId ?? null) : null,
 			})),
 		});
 	}
@@ -187,6 +194,52 @@ function assertSelectedOptionsValid(
 // ヘルパー: レスポンス整形
 // ─────────────────────────────────────────────────────────────
 
+type ProjectFormFileMetadata = {
+	id: string;
+	fileName: string;
+	mimeType: string;
+	isPublic: boolean;
+};
+
+function toProjectFormFileMetadata(
+	file: ProjectFormFileMetadata | null | undefined
+): ProjectFormFileMetadata | null {
+	return file
+		? {
+				id: file.id,
+				fileName: file.fileName,
+				mimeType: file.mimeType,
+				isPublic: file.isPublic,
+			}
+		: null;
+}
+
+async function getProjectFormFileMetadataMap(
+	db: typeof prisma | PrismaTx,
+	fileIds: Array<string | null | undefined>
+) {
+	const uniqueIds = [...new Set(fileIds.filter((id): id is string => !!id))];
+	if (uniqueIds.length === 0) {
+		return new Map<string, ProjectFormFileMetadata>();
+	}
+
+	const files = await db.file.findMany({
+		where: {
+			id: { in: uniqueIds },
+			status: "CONFIRMED",
+			deletedAt: null,
+		},
+		select: {
+			id: true,
+			fileName: true,
+			mimeType: true,
+			isPublic: true,
+		},
+	});
+
+	return new Map(files.map(file => [file.id, file]));
+}
+
 const formatResponse = async (
 	tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
 	responseId: string
@@ -199,6 +252,10 @@ const formatResponse = async (
 			},
 		},
 	});
+	const fileMap = await getProjectFormFileMetadataMap(
+		tx,
+		response.answers.map(answer => answer.fileId)
+	);
 
 	return {
 		id: response.id,
@@ -207,7 +264,10 @@ const formatResponse = async (
 			formItemId: a.formItemId,
 			textValue: a.textValue,
 			numberValue: a.numberValue,
-			fileUrl: a.fileUrl,
+			fileId: a.fileId,
+			fileMetadata: toProjectFormFileMetadata(
+				a.fileId ? fileMap.get(a.fileId) : null
+			),
 			selectedOptionIds: a.selectedOptions.map(s => s.formItemOptionId),
 		})),
 	};
@@ -240,7 +300,7 @@ function assertRequiredAnswered(
 					return answer.numberValue == null;
 
 				case "FILE":
-					return !answer.fileUrl;
+					return !answer.fileId;
 
 				case "SELECT":
 				case "CHECKBOX":
@@ -260,6 +320,97 @@ function assertRequiredAnswered(
 		}
 	}
 }
+
+function resolveConstraintRegex(
+	pattern: string,
+	customPattern: string | null
+): RegExp | null {
+	if (pattern === "custom") {
+		if (!customPattern) return null;
+		try {
+			return new RegExp(customPattern);
+		} catch {
+			return null;
+		}
+	}
+	return PATTERN_REGEXES[pattern] ?? null;
+}
+
+function assertItemTextConstraints(
+	item: {
+		constraintMinLength: number | null;
+		constraintMaxLength: number | null;
+		constraintPattern: string | null;
+		constraintCustomPattern: string | null;
+	},
+	value: string
+) {
+	const {
+		constraintMinLength,
+		constraintMaxLength,
+		constraintPattern,
+		constraintCustomPattern,
+	} = item;
+
+	if (constraintMinLength !== null && value.length < constraintMinLength) {
+		throw Errors.invalidRequest(
+			`${constraintMinLength}文字以上で入力してください`
+		);
+	}
+
+	if (constraintMaxLength !== null && value.length > constraintMaxLength) {
+		throw Errors.invalidRequest(
+			`${constraintMaxLength}文字以内で入力してください`
+		);
+	}
+
+	if (constraintPattern !== null) {
+		const regex = resolveConstraintRegex(
+			constraintPattern,
+			constraintCustomPattern
+		);
+		if (regex && !regex.test(value)) {
+			const label =
+				constraintPattern === "custom"
+					? `パターン（${constraintCustomPattern}）`
+					: (PATTERN_LABELS[constraintPattern] ?? constraintPattern);
+			throw Errors.invalidRequest(`${label}のみで入力してください`);
+		}
+	}
+}
+
+function assertTextConstraints(
+	formItems: {
+		id: string;
+		type: FormItemType;
+		constraintMinLength: number | null;
+		constraintMaxLength: number | null;
+		constraintPattern: string | null;
+		constraintCustomPattern: string | null;
+	}[],
+	answers: CreateFormResponseRequest["answers"]
+) {
+	const answerMap = new Map(answers.map(a => [a.formItemId, a]));
+
+	for (const item of formItems) {
+		if (item.type !== "TEXT" && item.type !== "TEXTAREA") continue;
+		if (
+			item.constraintMinLength === null &&
+			item.constraintMaxLength === null &&
+			item.constraintPattern === null
+		)
+			continue;
+
+		const answer = answerMap.get(item.id);
+		if (!answer) continue;
+		if (answer.type !== "TEXT" && answer.type !== "TEXTAREA") continue;
+
+		const value = answer.textValue;
+		if (!value) continue;
+
+		assertItemTextConstraints(item, value);
+	}
+}
 // ─────────────────────────────────────────────────────────────
 // ヘルパー: FormItemEditHistory にレコードを追加
 // ─────────────────────────────────────────────────────────────
@@ -272,7 +423,7 @@ function extractAnswerValues(answer: CreateFormResponseRequest["answers"][0]) {
 	return {
 		textValue: isText ? (answer.textValue ?? null) : null,
 		numberValue: answer.type === "NUMBER" ? (answer.numberValue ?? null) : null,
-		fileUrl: answer.type === "FILE" ? (answer.fileUrl ?? null) : null,
+		fileId: answer.type === "FILE" ? (answer.fileId ?? null) : null,
 		optionIds: isSelect ? (answer.selectedOptionIds ?? []) : [],
 	};
 }
@@ -297,13 +448,13 @@ const appendEditHistory = async (
 	if (withoutOptions.length > 0) {
 		await tx.formItemEditHistory.createMany({
 			data: withoutOptions.map(answer => {
-				const { textValue, numberValue, fileUrl } = extractAnswerValues(answer);
+				const { textValue, numberValue, fileId } = extractAnswerValues(answer);
 				return {
 					formItemId: answer.formItemId,
 					projectId,
 					textValue,
 					numberValue,
-					fileUrl,
+					fileId,
 					actorId,
 					trigger,
 				};
@@ -313,7 +464,7 @@ const appendEditHistory = async (
 
 	// オプション有りの回答は個別作成（IDが必要なため）
 	for (const answer of withOptions) {
-		const { textValue, numberValue, fileUrl, optionIds } =
+		const { textValue, numberValue, fileId, optionIds } =
 			extractAnswerValues(answer);
 
 		const history = await tx.formItemEditHistory.create({
@@ -322,7 +473,7 @@ const appendEditHistory = async (
 				projectId,
 				textValue,
 				numberValue,
-				fileUrl,
+				fileId,
 				actorId,
 				trigger,
 			},
@@ -342,6 +493,7 @@ const appendEditHistory = async (
 
 projectFormRoute.get("/", requireAuth, requireProjectMember, async c => {
 	const projectId = c.req.param("projectId");
+	const projectRole = c.get("projectRole");
 
 	const now = new Date();
 
@@ -361,12 +513,16 @@ projectFormRoute.get("/", requireAuth, requireProjectMember, async c => {
 					deadlineAt: true,
 					allowLateResponse: true,
 					required: true,
+					ownerOnly: true,
 					form: { select: { id: true, title: true, description: true } },
 				},
 			},
 		},
 		orderBy: { formAuthorization: { scheduledSendAt: "desc" } },
 	});
+
+	const isOwnerOrSubOwner =
+		projectRole === "OWNER" || projectRole === "SUB_OWNER";
 
 	const deliveryIds = deliveries.map(d => d.id);
 	const responses = deliveryIds.length
@@ -383,19 +539,24 @@ projectFormRoute.get("/", requireAuth, requireProjectMember, async c => {
 	const responseMap = new Map(responses.map(r => [r.formDeliveryId, r]));
 	return c.json({
 		forms: deliveries.map(d => {
+			const isRestricted = d.formAuthorization.ownerOnly && !isOwnerOrSubOwner;
 			const response = responseMap.get(d.id) ?? null;
 			return {
 				formDeliveryId: d.id,
 				formId: d.formAuthorization.form.id,
 				title: d.formAuthorization.form.title,
-				description: d.formAuthorization.form.description,
+				description: isRestricted ? null : d.formAuthorization.form.description,
 				scheduledSendAt: d.formAuthorization.scheduledSendAt,
 				deadlineAt: d.formAuthorization.deadlineAt,
 				allowLateResponse: d.formAuthorization.allowLateResponse,
 				required: d.formAuthorization.required,
-				response: response
-					? { id: response.id, submittedAt: response.submittedAt }
-					: null,
+				ownerOnly: d.formAuthorization.ownerOnly,
+				restricted: isRestricted,
+				response: isRestricted
+					? null
+					: response
+						? { id: response.id, submittedAt: response.submittedAt }
+						: null,
 			};
 		}),
 	});
@@ -414,9 +575,15 @@ projectFormRoute.get(
 			projectId: c.req.param("projectId"),
 			formDeliveryId: c.req.param("formDeliveryId"),
 		});
+		const projectRole = c.get("projectRole");
 
 		const delivery = await getDeliveryOrThrow(projectId, formDeliveryId);
 		const { form } = delivery.formAuthorization;
+
+		// ownerOnly 制限チェック
+		if (delivery.formAuthorization.ownerOnly && projectRole === "MEMBER") {
+			throw Errors.forbidden("この申請は責任者・副責任者のみ閲覧できます");
+		}
 
 		const existingResponse = await prisma.formResponse.findFirst({
 			where: { formDeliveryId },
@@ -436,6 +603,10 @@ projectFormRoute.get(
 		for (const h of allHistory) {
 			if (!latestByItem.has(h.formItemId)) latestByItem.set(h.formItemId, h);
 		}
+		const fileMap = await getProjectFormFileMetadataMap(prisma, [
+			...(existingResponse?.answers.map(answer => answer.fileId) ?? []),
+			...allHistory.map(history => history.fileId),
+		]);
 
 		return c.json({
 			form: {
@@ -447,6 +618,7 @@ projectFormRoute.get(
 				deadlineAt: delivery.formAuthorization.deadlineAt,
 				allowLateResponse: delivery.formAuthorization.allowLateResponse,
 				required: delivery.formAuthorization.required,
+				ownerOnly: false,
 				items: form.items.map(item => ({
 					id: item.id,
 					label: item.label,
@@ -461,6 +633,7 @@ projectFormRoute.get(
 							label: opt.label,
 							sortOrder: opt.sortOrder,
 						})),
+					constraints: constraintsFromPrisma(item),
 				})),
 				response: existingResponse
 					? {
@@ -473,7 +646,10 @@ projectFormRoute.get(
 										formItemId: a.formItemId,
 										textValue: hist.textValue,
 										numberValue: hist.numberValue,
-										fileUrl: hist.fileUrl,
+										fileId: hist.fileId,
+										fileMetadata: toProjectFormFileMetadata(
+											hist.fileId ? fileMap.get(hist.fileId) : null
+										),
 										selectedOptionIds: hist.selectedOptions.map(
 											s => s.formItemOptionId
 										),
@@ -483,7 +659,10 @@ projectFormRoute.get(
 									formItemId: a.formItemId,
 									textValue: a.textValue,
 									numberValue: a.numberValue,
-									fileUrl: a.fileUrl,
+									fileId: a.fileId,
+									fileMetadata: toProjectFormFileMetadata(
+										a.fileId ? fileMap.get(a.fileId) : null
+									),
 									selectedOptionIds: a.selectedOptions.map(
 										s => s.formItemOptionId
 									),
@@ -510,8 +689,14 @@ projectFormRoute.post(
 			formDeliveryId: c.req.param("formDeliveryId"),
 		});
 		const userId = c.get("user").id;
+		const projectRole = c.get("projectRole");
 
 		const delivery = await getDeliveryOrThrow(projectId, formDeliveryId);
+
+		// ownerOnly 制限チェック
+		if (delivery.formAuthorization.ownerOnly && projectRole === "MEMBER") {
+			throw Errors.forbidden("この申請は責任者・副責任者のみ回答できます");
+		}
 
 		const body = await c.req.json().catch(() => ({}));
 		const { answers, submit } = createFormResponseRequestSchema.parse(body);
@@ -522,6 +707,7 @@ projectFormRoute.post(
 
 		if (submit) {
 			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
+			assertTextConstraints(delivery.formAuthorization.form.items, answers);
 		}
 
 		const response = await prisma.$transaction(async tx => {
@@ -580,8 +766,14 @@ projectFormRoute.patch(
 			formDeliveryId: c.req.param("formDeliveryId"),
 		});
 		const userId = c.get("user").id;
+		const projectRole = c.get("projectRole");
 
 		const delivery = await getDeliveryOrThrow(projectId, formDeliveryId);
+
+		// ownerOnly 制限チェック
+		if (delivery.formAuthorization.ownerOnly && projectRole === "MEMBER") {
+			throw Errors.forbidden("この申請は責任者・副責任者のみ回答できます");
+		}
 
 		const existing = await prisma.formResponse.findFirst({
 			where: { formDeliveryId },
@@ -599,6 +791,7 @@ projectFormRoute.patch(
 
 		if (submit || isAlreadySubmitted) {
 			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
+			assertTextConstraints(delivery.formAuthorization.form.items, answers);
 		}
 
 		const response = await prisma.$transaction(async tx => {

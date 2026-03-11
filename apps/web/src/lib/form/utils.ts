@@ -5,10 +5,17 @@ import type {
 	ListFormResponsesResponse,
 } from "@sos26/shared";
 import type {
+	FileAnswerValue,
 	Form,
 	FormAnswers,
 	FormAnswerValue,
+	UploadedFileValue,
 } from "@/components/form/type";
+import {
+	createEmptyFileAnswerValue,
+	isFileAnswerValue,
+} from "@/components/form/type";
+import { uploadFile } from "@/lib/api/files";
 
 type ProjectResponseAnswer = NonNullable<
 	GetProjectFormResponse["form"]["response"]
@@ -34,10 +41,38 @@ function resolveResponseValue(
 		case "NUMBER":
 			return answer.numberValue;
 		case "FILE":
-			return answer.fileUrl ?? "";
+			return resolveFileResponseValue(answer);
 		default:
 			return answer.textValue ?? "";
 	}
+}
+
+function resolveFileResponseValue(answer: AnyResponseAnswer): FileAnswerValue {
+	if (!answer.fileId) {
+		return createEmptyFileAnswerValue();
+	}
+
+	if ("fileMetadata" in answer && answer.fileMetadata) {
+		return {
+			pendingFile: null,
+			uploadedFile: {
+				fileId: answer.fileMetadata.id,
+				fileName: answer.fileMetadata.fileName,
+				mimeType: answer.fileMetadata.mimeType,
+				isPublic: answer.fileMetadata.isPublic,
+			},
+		};
+	}
+
+	return {
+		pendingFile: null,
+		uploadedFile: {
+			fileId: answer.fileId,
+			fileName: null,
+			mimeType: null,
+			isPublic: null,
+		},
+	};
 }
 
 function buildItemTypeMap(form: Form): Map<string, FormItemType> {
@@ -80,11 +115,48 @@ function getDefaultAnswerValue(type: FormItemType): FormAnswerValue {
 	switch (type) {
 		case "CHECKBOX":
 			return [];
+		case "FILE":
+			return createEmptyFileAnswerValue();
 		case "NUMBER":
 			return null;
 		default:
 			return "";
 	}
+}
+
+export async function prepareAnswersForSubmit(
+	answers: FormAnswers,
+	form: Form
+): Promise<FormAnswers> {
+	const preparedAnswers: FormAnswers = { ...answers };
+
+	await Promise.all(
+		form.items.map(async item => {
+			if (item.type !== "FILE") return;
+
+			const value = preparedAnswers[item.id];
+			if (!isFileAnswerValue(value)) {
+				throw new Error(`FILE回答の型が不正です: ${item.id}`);
+			}
+
+			if (value.pendingFile instanceof File) {
+				const result = await uploadFile(value.pendingFile);
+				const uploadedFile: UploadedFileValue = {
+					fileId: result.file.id,
+					fileName: result.file.fileName,
+					mimeType: result.file.mimeType,
+					isPublic: result.file.isPublic,
+				};
+				preparedAnswers[item.id] = {
+					pendingFile: null,
+					uploadedFile,
+				};
+				return;
+			}
+		})
+	);
+
+	return preparedAnswers;
 }
 
 function normalizeOptionIds(value: FormAnswerValue): string[] {
@@ -116,7 +188,10 @@ function buildSingleAnswer(
 				selectedOptionIds: normalizeOptionIds(value),
 			};
 		case "FILE":
-			return { type, formItemId, fileUrl: value as string };
+			if (!isFileAnswerValue(value)) {
+				throw new Error(`FILE回答の型が不正です: ${formItemId}`);
+			}
+			return { type, formItemId, fileId: value.uploadedFile?.fileId ?? null };
 	}
 	return assertNever(type);
 }

@@ -23,7 +23,7 @@ export function FormEditDialog({
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
 			<Dialog.Content className={styles.dialogContent}>
 				<VisuallyHidden>
-					<Dialog.Title>フォーム編集</Dialog.Title>
+					<Dialog.Title>申請編集</Dialog.Title>
 				</VisuallyHidden>
 				<div className={styles.dialogInner}>
 					<FormEditor

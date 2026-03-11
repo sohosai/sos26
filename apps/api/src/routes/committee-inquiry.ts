@@ -22,6 +22,29 @@ import type { AuthEnv } from "../types/auth-env";
 const committeeInquiryRoute = new Hono<AuthEnv>();
 
 // ─────────────────────────────────────────────────────────────
+// ヘルパー: 関連フォームの検証（オーナーまたは共同編集者のみ選択可）
+// ─────────────────────────────────────────────────────────────
+
+async function validateRelatedForm(
+	formId: string,
+	userId: string
+): Promise<void> {
+	const form = await prisma.form.findFirst({
+		where: {
+			id: formId,
+			deletedAt: null,
+			OR: [
+				{ ownerId: userId },
+				{ collaborators: { some: { userId, deletedAt: null } } },
+			],
+		},
+	});
+	if (!form) {
+		throw Errors.invalidRequest("指定されたフォームが見つかりません");
+	}
+}
+
+// ─────────────────────────────────────────────────────────────
 // 権限チェックヘルパー
 // ─────────────────────────────────────────────────────────────
 
@@ -173,6 +196,7 @@ committeeInquiryRoute.post(
 		const {
 			title,
 			body: inquiryBody,
+			relatedFormId,
 			projectId,
 			projectAssigneeUserIds,
 			committeeAssigneeUserIds,
@@ -249,6 +273,11 @@ committeeInquiryRoute.post(
 			}
 		}
 
+		// 関連フォームの検証（オーナーまたは共同編集者のみ）
+		if (relatedFormId) {
+			await validateRelatedForm(relatedFormId, user.id);
+		}
+
 		const inquiry = await prisma.inquiry.create({
 			data: {
 				title,
@@ -257,6 +286,7 @@ committeeInquiryRoute.post(
 				createdById: user.id,
 				creatorRole: "COMMITTEE",
 				projectId,
+				relatedFormId,
 				assignees: {
 					create: [
 						// 作成者（実委側）
@@ -416,6 +446,7 @@ committeeInquiryRoute.get(
 			include: {
 				createdBy: { select: userSelect },
 				project: { select: { id: true, name: true } },
+				relatedForm: { select: { id: true, title: true } },
 				assignees: {
 					where: { deletedAt: null },
 					include: assigneeInclude,
@@ -467,6 +498,7 @@ committeeInquiryRoute.get(
 			updatedAt: inquiry.updatedAt,
 			createdBy: inquiry.createdBy,
 			project: inquiry.project,
+			relatedForm: inquiry.relatedForm,
 			projectAssignees: inquiry.assignees
 				.filter(a => a.side === "PROJECT")
 				.map(formatAssignee),

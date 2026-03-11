@@ -1,17 +1,22 @@
 import { Heading, Text } from "@radix-ui/themes";
-import { IconLayoutColumns } from "@tabler/icons-react";
+import { IconHistory, IconLayoutColumns } from "@tabler/icons-react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import type {
 	ColumnFiltersState,
 	SortingState,
 	VisibilityState,
 } from "@tanstack/react-table";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/primitives";
 import { getMastersheetData } from "@/lib/api/committee-mastersheet";
 import { ColumnPanel } from "./-components/ColumnPanel";
-import { MastersheetTable } from "./-components/MastersheetTable";
+import { HistoryPanel } from "./-components/HistoryPanel";
+import {
+	MastersheetTable,
+	type SelectedCell,
+} from "./-components/MastersheetTable";
 import { type ViewState, ViewTabs } from "./-components/ViewTabs";
+import styles from "./index.module.scss";
 
 export const Route = createFileRoute("/committee/mastersheet/")({
 	loader: async () => {
@@ -38,7 +43,10 @@ const FIXED_COLUMN_IDS = [
 function MastersheetPage() {
 	const { columns, rows } = Route.useLoaderData();
 	const router = useRouter();
+	const historyPanelRef = useRef<HTMLDivElement>(null);
 	const [columnPanelOpen, setColumnPanelOpen] = useState(false);
+	const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
+	const [selectedCells, setSelectedCells] = useState<SelectedCell[]>([]);
 	const [tableKey, setTableKey] = useState(0);
 	const [sorting, setSorting] = useState<SortingState | undefined>(undefined);
 	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -69,9 +77,9 @@ function MastersheetPage() {
 
 		const knownIds = new Set(viewState.knownColumnIds ?? []);
 		const completeVisibility: VisibilityState = {};
-		// 固定カラム：常に表示
+		// 固定カラム：knownColumnIds に従う
 		for (const id of FIXED_COLUMN_IDS) {
-			completeVisibility[id] = true;
+			completeVisibility[id] = knownIds.has(id);
 		}
 		// 動的カラム：knownColumnIds に含まれていれば表示、なければ非表示
 		for (const col of columns) {
@@ -87,9 +95,17 @@ function MastersheetPage() {
 	}
 
 	const toolbarExtra = (
-		<Button intent="secondary" onClick={() => setColumnPanelOpen(true)}>
-			<IconLayoutColumns size={16} /> カラム
-		</Button>
+		<>
+			<Button
+				intent="secondary"
+				onClick={() => setHistoryPanelOpen(prev => !prev)}
+			>
+				<IconHistory size={16} /> 履歴
+			</Button>
+			<Button intent="secondary" onClick={() => setColumnPanelOpen(true)}>
+				<IconLayoutColumns size={16} /> カラム
+			</Button>
+		</>
 	);
 
 	return (
@@ -106,7 +122,7 @@ function MastersheetPage() {
 					sorting,
 					columnFilters,
 					knownColumnIds: [
-						...FIXED_COLUMN_IDS,
+						...FIXED_COLUMN_IDS.filter(id => columnVisibility[id] !== false),
 						...columns
 							.filter(c => columnVisibility[c.id] !== false)
 							.map(c => c.id),
@@ -115,18 +131,32 @@ function MastersheetPage() {
 				onSelectView={handleSelectView}
 				onActiveViewIdChange={handleActiveViewIdChange}
 			/>
-			<MastersheetTable
-				key={tableKey}
-				columns={columns}
-				rows={rows}
-				initialSorting={sorting}
-				initialColumnVisibility={columnVisibility}
-				initialColumnFilters={columnFilters}
-				onSortingChange={handleSortingChange}
-				onColumnVisibilityChange={handleColumnVisibilityChange}
-				onColumnFiltersChange={setColumnFilters}
-				toolbarExtra={toolbarExtra}
-			/>
+			<div className={styles.layout}>
+				<div className={styles.tableWrapper}>
+					<MastersheetTable
+						key={tableKey}
+						columns={columns}
+						rows={rows}
+						initialSorting={sorting}
+						initialColumnVisibility={columnVisibility}
+						initialColumnFilters={columnFilters}
+						onSortingChange={handleSortingChange}
+						onColumnVisibilityChange={handleColumnVisibilityChange}
+						onColumnFiltersChange={setColumnFilters}
+						toolbarExtra={toolbarExtra}
+						onSelectionChange={setSelectedCells}
+						selectionIgnoreRef={historyPanelRef}
+					/>
+				</div>
+				<HistoryPanel
+					ref={historyPanelRef}
+					open={historyPanelOpen}
+					onClose={() => setHistoryPanelOpen(false)}
+					columns={columns}
+					rows={rows}
+					selectedCells={selectedCells}
+				/>
+			</div>
 			<ColumnPanel
 				open={columnPanelOpen}
 				onOpenChange={setColumnPanelOpen}

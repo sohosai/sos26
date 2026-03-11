@@ -5,11 +5,16 @@ import {
 	formIdPathParamsSchema,
 	formResponsePathParamsSchema,
 	requestFormAuthorizationRequestSchema,
+	type TextConstraints,
 	updateFormAuthorizationRequestSchema,
 	updateFormDetailRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
+import {
+	constraintsFromPrisma,
+	type PrismaConstraintFields,
+} from "../lib/form-constraints";
 import {
 	notifyFormAuthorizationDecided,
 	notifyFormAuthorizationRequested,
@@ -21,8 +26,46 @@ import type { AuthEnv } from "../types/auth-env";
 const committeeFormRoute = new Hono<AuthEnv>();
 
 // ─────────────────────────────────────────────────────────────
-// ヘルパー: フォームの存在確認 編集権限チェック
+// ヘルパー: TextConstraints → Prisma 変換
 // ─────────────────────────────────────────────────────────────
+
+function constraintsToPrisma(
+	constraints: TextConstraints | null | undefined
+): PrismaConstraintFields {
+	return {
+		constraintMinLength: constraints?.minLength ?? null,
+		constraintMaxLength: constraints?.maxLength ?? null,
+		constraintPattern: constraints?.pattern ?? null,
+		constraintCustomPattern: constraints?.customPattern ?? null,
+	};
+}
+
+function mapItemToApiShape<T extends PrismaConstraintFields>(item: T) {
+	const {
+		constraintMinLength,
+		constraintMaxLength,
+		constraintPattern,
+		constraintCustomPattern,
+		...rest
+	} = item;
+	return {
+		...rest,
+		constraints: constraintsFromPrisma({
+			constraintMinLength,
+			constraintMaxLength,
+			constraintPattern,
+			constraintCustomPattern,
+		}),
+	};
+}
+
+function mapFormToApiShape<T extends { items: PrismaConstraintFields[] }>(
+	form: T
+) {
+	return { ...form, items: form.items.map(mapItemToApiShape) };
+}
+
+// フォームの存在確認 編集権限チェック
 
 const getFormOrThrow = async (formId: string) => {
 	const form = await prisma.form.findFirst({
@@ -75,8 +118,9 @@ committeeFormRoute.post(
 				...formData,
 				ownerId: userId,
 				items: {
-					create: items.map(({ options, ...item }) => ({
+					create: items.map(({ options, constraints, ...item }) => ({
 						...item,
+						...constraintsToPrisma(constraints),
 						options: options?.length ? { create: options } : undefined,
 					})),
 				},
@@ -86,7 +130,7 @@ committeeFormRoute.post(
 			},
 		});
 
-		return c.json({ form });
+		return c.json({ form: mapFormToApiShape(form) });
 	}
 );
 
@@ -124,6 +168,7 @@ committeeFormRoute.get(
 						scheduledSendAt: true,
 						allowLateResponse: true,
 						deadlineAt: true,
+						ownerOnly: true,
 						requestedTo: {
 							select: { id: true, name: true },
 						},
@@ -194,6 +239,7 @@ committeeFormRoute.get(
 		return c.json({
 			form: {
 				...form,
+				items: form.items.map(mapItemToApiShape),
 				authorizationDetail: form.authorizations[0] ?? null,
 				authorizations: undefined,
 			},
@@ -265,7 +311,10 @@ committeeFormRoute.patch(
 					}
 
 					// 既存itemを更新 / 新規itemを作成
-					for (const [index, { id, options, ...item }] of items.entries()) {
+					for (const [
+						index,
+						{ id, options, constraints, ...item },
+					] of items.entries()) {
 						if (id && existingIds.has(id)) {
 							if (options && answeredItemIds.has(id)) {
 								throw Errors.invalidRequest(
@@ -277,6 +326,7 @@ committeeFormRoute.patch(
 								where: { id },
 								data: {
 									...item,
+									...constraintsToPrisma(constraints),
 									sortOrder: index,
 									options: answeredItemIds.has(id)
 										? undefined
@@ -293,6 +343,7 @@ committeeFormRoute.patch(
 							await tx.formItem.create({
 								data: {
 									...item,
+									...constraintsToPrisma(constraints),
 									formId,
 									sortOrder: index,
 									options: options?.length
@@ -322,7 +373,7 @@ committeeFormRoute.patch(
 			{ isolationLevel: "Serializable" }
 		);
 
-		return c.json({ form });
+		return c.json({ form: mapFormToApiShape(form) });
 	}
 );
 
@@ -748,7 +799,7 @@ committeeFormRoute.get(
 							formItemId: a.formItemId,
 							textValue: history.textValue,
 							numberValue: history.numberValue,
-							fileUrl: history.fileUrl,
+							fileId: history.fileId,
 							selectedOptions: history.selectedOptions.map(s => ({
 								id: s.formItemOption.id,
 								label: s.formItemOption.label,
@@ -759,7 +810,7 @@ committeeFormRoute.get(
 						formItemId: a.formItemId,
 						textValue: a.textValue,
 						numberValue: a.numberValue,
-						fileUrl: a.fileUrl,
+						fileId: a.fileId,
 						selectedOptions: a.selectedOptions.map(s => ({
 							id: s.formItemOption.id,
 							label: s.formItemOption.label,
@@ -810,7 +861,7 @@ committeeFormRoute.get(
 				respondent: { select: { id: true, name: true } },
 				formDelivery: {
 					include: {
-						project: { select: { id: true, name: true } },
+						project: { select: { id: true, number: true, name: true } },
 					},
 				},
 				answers: {
@@ -850,6 +901,28 @@ committeeFormRoute.get(
 		for (const h of allHistory) {
 			if (!latestByItem.has(h.formItemId)) latestByItem.set(h.formItemId, h);
 		}
+		const fileIds = [
+			...r.answers.map(answer => answer.fileId),
+			...allHistory.map(history => history.fileId),
+		].filter((id): id is string => Boolean(id));
+		const fileMap = new Map(
+			(
+				await prisma.file.findMany({
+					where: {
+						id: { in: [...new Set(fileIds)] },
+						status: "CONFIRMED",
+						deletedAt: null,
+					},
+					select: {
+						id: true,
+						fileName: true,
+						mimeType: true,
+						size: true,
+						isPublic: true,
+					},
+				})
+			).map(file => [file.id, file])
+		);
 
 		return c.json({
 			response: {
@@ -857,6 +930,7 @@ committeeFormRoute.get(
 				respondent: r.respondent,
 				project: {
 					id: r.formDelivery.project.id,
+					number: r.formDelivery.project.number,
 					name: r.formDelivery.project.name,
 				},
 				submittedAt: r.submittedAt,
@@ -868,7 +942,10 @@ committeeFormRoute.get(
 							formItemId: a.formItemId,
 							textValue: history.textValue,
 							numberValue: history.numberValue,
-							fileUrl: history.fileUrl,
+							fileId: history.fileId,
+							fileMetadata: history.fileId
+								? (fileMap.get(history.fileId) ?? null)
+								: null,
 							selectedOptions: history.selectedOptions.map(s => ({
 								id: s.formItemOption.id,
 								label: s.formItemOption.label,
@@ -879,7 +956,8 @@ committeeFormRoute.get(
 						formItemId: a.formItemId,
 						textValue: a.textValue,
 						numberValue: a.numberValue,
-						fileUrl: a.fileUrl,
+						fileId: a.fileId,
+						fileMetadata: a.fileId ? (fileMap.get(a.fileId) ?? null) : null,
 						selectedOptions: a.selectedOptions.map(s => ({
 							id: s.formItemOption.id,
 							label: s.formItemOption.label,

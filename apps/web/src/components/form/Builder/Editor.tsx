@@ -36,7 +36,7 @@ export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 		const newErrors: Record<string, string> = {};
 
 		if (formName.trim() === "") {
-			newErrors.__formName = "フォーム名を入力してください";
+			newErrors.__formName = "申請名を入力してください";
 		}
 
 		if (items.length === 0) {
@@ -112,10 +112,10 @@ export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 	return (
 		<div className={styles.root}>
 			<TextField
-				label="フォーム名"
+				label="申請名"
 				value={formName}
 				onChange={setFormName}
-				placeholder="フォーム名を入力してください"
+				placeholder="申請名を入力してください"
 			/>
 			{errors.__formName && (
 				<Text size="2" color="red">
@@ -123,8 +123,8 @@ export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 				</Text>
 			)}
 			<TextArea
-				label="フォームの説明"
-				placeholder="このフォームの目的や注意事項を記入してください"
+				label="申請の説明"
+				placeholder="この申請の目的や注意事項を記入してください"
 				value={formDescription}
 				onChange={setFormDescription}
 				rows={3}

@@ -118,7 +118,7 @@ const columnViewerSchema = z.object({
 const cellValueDataSchema = z.object({
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileUrl: z.string().nullable(),
+	fileId: z.string().nullable(),
 	selectedOptionIds: z.array(z.string()),
 });
 
@@ -187,6 +187,23 @@ const columnOptionInputSchema = z.object({
 	sortOrder: z.number().int(),
 });
 
+/** カスタムカラム作成時の初期値（全企画に一括適用） */
+const initialValueInputSchema = z
+	.object({
+		textValue: z.string().nullable().optional(),
+		numberValue: z.number().nullable().optional(),
+		/** options 配列のインデックス（作成前で ID が未確定のため） */
+		selectedOptionIndexes: z.array(z.number().int().min(0)).optional(),
+	})
+	.refine(
+		v =>
+			(v.textValue != null && v.textValue !== "") ||
+			v.numberValue != null ||
+			(v.selectedOptionIndexes != null && v.selectedOptionIndexes.length > 0),
+		{ message: "初期値には少なくとも1つの値を指定してください" }
+	);
+export type InitialValueInput = z.infer<typeof initialValueInputSchema>;
+
 export const createMastersheetColumnRequestSchema = z.discriminatedUnion(
 	"type",
 	[
@@ -205,6 +222,7 @@ export const createMastersheetColumnRequestSchema = z.discriminatedUnion(
 			dataType: mastersheetDataTypeSchema,
 			viewers: z.array(mastersheetViewerInputSchema),
 			options: z.array(columnOptionInputSchema).optional(),
+			initialValue: initialValueInputSchema.optional(),
 		}),
 	]
 );
@@ -279,7 +297,7 @@ export type UpsertMastersheetCellResponse = z.infer<
 export const editFormItemCellRequestSchema = z.object({
 	textValue: z.string().nullable().optional(),
 	numberValue: z.number().nullable().optional(),
-	fileUrl: z.string().nullable().optional(),
+	fileId: z.string().nullable().optional(),
 	selectedOptionIds: z.array(z.string()).optional(),
 });
 export type EditFormItemCellRequest = z.infer<
@@ -294,7 +312,7 @@ export type EditFormItemCellResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
-// GET /committee/mastersheet/columns/:columnId/history/:projectId
+// 編集履歴 共通スキーマ
 // ─────────────────────────────────────────────────────────────
 
 export const formItemEditHistorySchema = z.object({
@@ -302,7 +320,7 @@ export const formItemEditHistorySchema = z.object({
 	value: z.object({
 		textValue: z.string().nullable(),
 		numberValue: z.number().nullable(),
-		fileUrl: z.string().nullable(),
+		fileId: z.string().nullable(),
 		selectedOptionIds: z.array(z.string()),
 	}),
 	actor: userSummarySchema,
@@ -310,11 +328,34 @@ export const formItemEditHistorySchema = z.object({
 	createdAt: z.coerce.date(),
 });
 
-export const getMastersheetHistoryResponseSchema = z.object({
-	history: z.array(formItemEditHistorySchema),
+// ─────────────────────────────────────────────────────────────
+// POST /committee/mastersheet/history (バッチ)
+// ─────────────────────────────────────────────────────────────
+
+export const batchMastersheetHistoryRequestSchema = z.object({
+	/** 取得対象のセル（空配列の場合は空レスポンス） */
+	cells: z.array(
+		z.object({
+			columnId: z.cuid(),
+			projectId: z.cuid(),
+		})
+	),
 });
-export type GetMastersheetHistoryResponse = z.infer<
-	typeof getMastersheetHistoryResponseSchema
+export type BatchMastersheetHistoryRequest = z.infer<
+	typeof batchMastersheetHistoryRequestSchema
+>;
+
+export const batchMastersheetHistoryResponseSchema = z.object({
+	groups: z.array(
+		z.object({
+			columnId: z.string(),
+			projectId: z.string(),
+			history: z.array(formItemEditHistorySchema),
+		})
+	),
+});
+export type BatchMastersheetHistoryResponse = z.infer<
+	typeof batchMastersheetHistoryResponseSchema
 >;
 
 // ─────────────────────────────────────────────────────────────

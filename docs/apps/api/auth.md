@@ -243,7 +243,7 @@ Set-Cookie: reg_ticket=<opaque>; HttpOnly; Path=/auth; SameSite=Lax; Max-Age=900
 ```json
 {
   "name": "筑波太郎",
-  "namePhonetic": "ツクバタロウ",
+  "namePhonetic": "つくばたろう",
   "telephoneNumber": "090-1234-5678",
   "password": "password123"
 }
@@ -259,7 +259,7 @@ Set-Cookie: reg_ticket=<opaque>; HttpOnly; Path=/auth; SameSite=Lax; Max-Age=900
     "firebaseUid": "...",
     "email": "s1234567@u.tsukuba.ac.jp",
     "name": "筑波太郎",
-    "namePhonetic": "ツクバタロウ",
+    "namePhonetic": "つくばたろう",
     "telephoneNumber": "090-1234-5678",
     "deletedAt": null,
     "createdAt": "...",
@@ -302,7 +302,7 @@ Authorization: Bearer <Firebase ID Token>
     "firebaseUid": "...",
     "email": "s1234567@u.tsukuba.ac.jp",
     "name": "筑波太郎",
-    "namePhonetic": "ツクバタロウ",
+    "namePhonetic": "つくばたろう",
     "telephoneNumber": "090-1234-5678",
     "deletedAt": null,
     "createdAt": "...",

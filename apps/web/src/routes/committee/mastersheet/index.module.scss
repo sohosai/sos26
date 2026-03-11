@@ -1,0 +1,11 @@
+.layout {
+	display: flex;
+	gap: var(--space-4);
+	align-items: flex-start;
+}
+
+.tableWrapper {
+	flex: 1;
+	min-width: 0;
+	overflow: auto;
+}

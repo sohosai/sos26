@@ -31,7 +31,7 @@ import styles from "./index.module.scss";
 export const Route = createFileRoute("/committee/forms/$formId/")({
 	component: RouteComponent,
 	head: () => ({
-		meta: [{ title: "フォーム詳細 | 雙峰祭オンラインシステム" }],
+		meta: [{ title: "申請詳細 | 雙峰祭オンラインシステム" }],
 	}),
 	loader: async ({ params }) => {
 		const [formRes, membersRes] = await Promise.all([
@@ -101,7 +101,7 @@ function RouteComponent() {
 			await deleteForm(formId);
 			navigate({ to: "/committee/forms" });
 		} catch {
-			toast.error("フォームの削除に失敗しました");
+			toast.error("申請の削除に失敗しました");
 		} finally {
 			setIsDeleting(false);
 		}
@@ -130,7 +130,7 @@ function RouteComponent() {
 			<div className={styles.main}>
 				<Link to="/committee/forms" className={styles.backLink}>
 					<IconArrowLeft size={16} />
-					<Text size="2">フォーム一覧に戻る</Text>
+					<Text size="2">申請一覧に戻る</Text>
 				</Link>
 
 				<header className={styles.titleSection}>
@@ -159,7 +159,7 @@ function RouteComponent() {
 
 				<Separator size="4" />
 
-				{/* フォーム項目プレビュー */}
+				{/* 申請項目プレビュー */}
 				<FormItemsPreview items={previewForm.items} />
 			</div>
 
@@ -195,9 +195,9 @@ function RouteComponent() {
 				onOpenChange={setDeleteConfirmOpen}
 			>
 				<AlertDialog.Content maxWidth="400px">
-					<AlertDialog.Title>フォームを削除</AlertDialog.Title>
+					<AlertDialog.Title>申請を削除</AlertDialog.Title>
 					<AlertDialog.Description size="2">
-						このフォームを削除しますか？この操作は取り消せません。
+						この申請を削除しますか？この操作は取り消せません。
 					</AlertDialog.Description>
 					<div className={styles.deleteActions}>
 						<AlertDialog.Cancel>

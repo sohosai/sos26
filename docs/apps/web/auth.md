@@ -67,7 +67,7 @@
 | 層 | 役割 | 管理する情報 |
 |----|------|-------------|
 | Firebase Authentication | 認証基盤 | メールアドレス、パスワード、ID トークン |
-| 自前 DB（User テーブル） | アプリ固有情報 | 名前、フリガナ、電話番号、作成日時 |
+| 自前 DB（User テーブル） | アプリ固有情報 | 名前、ふりがな、電話番号、作成日時 |
 
 Firebase はユーザー認証のみを担当し、アプリケーション固有のユーザー情報（名前、電話番号など）は自前の DB で管理します。
 
@@ -212,7 +212,7 @@ export const Route = createRootRoute({
 |--------------|------|---------|
 | `isTsukubaEmail(email)` | 筑波大学メールアドレス形式チェック | `/auth/register` |
 | `nameSchema` | 名前のバリデーション | `/auth/register/setup` |
-| `namePhoneticSchema` | 名前（フリガナ）のバリデーション | `/auth/register/setup` |
+| `namePhoneticSchema` | 名前（ふりがな）のバリデーション（カタカナ→ひらがな変換付き） | `/auth/register/setup` |
 | `telephoneNumberSchema` | 電話番号のバリデーション | `/auth/register/setup` |
 | `passwordSchema` | パスワード要件チェック（8文字以上） | `/auth/register/setup` |
 

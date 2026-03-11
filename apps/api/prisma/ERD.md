@@ -30,6 +30,8 @@ erDiagram
   String name
   String namePhonetic
   String telephoneNumber
+  String avatarFileId "nullable"
+  SendKey sendKey
   DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
@@ -161,6 +163,10 @@ erDiagram
   String description "nullable"
   FormItemType type
   Boolean required
+  Int constraintMinLength "nullable"
+  Int constraintMaxLength "nullable"
+  String constraintPattern "nullable"
+  String constraintCustomPattern "nullable"
   Int sortOrder
   DateTime createdAt
   DateTime updatedAt
@@ -202,6 +208,7 @@ erDiagram
   DateTime deadlineAt "nullable"
   Boolean allowLateResponse
   Boolean required
+  Boolean ownerOnly
   DateTime createdAt
   DateTime updatedAt
 }
@@ -225,7 +232,7 @@ erDiagram
   String formItemId FK
   String textValue "nullable"
   Float numberValue "nullable"
-  String fileUrl "nullable"
+  String fileId "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -337,7 +344,7 @@ erDiagram
   String projectId FK
   String textValue "nullable"
   Float numberValue "nullable"
-  String fileUrl "nullable"
+  String fileId "nullable"
   String actorId FK
   FormItemEditHistoryTrigger trigger
   DateTime createdAt
@@ -566,6 +573,8 @@ Properties as follows:
 - `name`:
 - `namePhonetic`:
 - `telephoneNumber`:
+- `avatarFileId`:
+- `sendKey`:
 - `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
@@ -739,6 +748,10 @@ Properties as follows:
 - `description`:
 - `type`:
 - `required`:
+- `constraintMinLength`:
+- `constraintMaxLength`:
+- `constraintPattern`:
+- `constraintCustomPattern`:
 - `sortOrder`:
 - `createdAt`:
 - `updatedAt`:
@@ -792,6 +805,7 @@ Properties as follows:
 - `deadlineAt`:
 - `allowLateResponse`:
 - `required`:
+- `ownerOnly`:
 - `createdAt`:
 - `updatedAt`:
 
@@ -824,7 +838,7 @@ Properties as follows:
 - `formItemId`:
 - `textValue`:
 - `numberValue`:
-- `fileUrl`:
+- `fileId`:
 - `createdAt`:
 - `updatedAt`:
 
@@ -975,7 +989,7 @@ Properties as follows:
 - `projectId`:
 - `textValue`:
 - `numberValue`:
-- `fileUrl`:
+- `fileId`:
 - `actorId`:
 - `trigger`:
 - `createdAt`:

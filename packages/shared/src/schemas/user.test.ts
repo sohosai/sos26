@@ -11,8 +11,10 @@ describe("userSchema", () => {
 		firebaseUid: "firebase-uid-123",
 		email: "s1234567@u.tsukuba.ac.jp",
 		name: "筑波太郎",
-		namePhonetic: "ツクバタロウ",
+		namePhonetic: "つくばたろう",
 		telephoneNumber: "090-1234-5678",
+		avatarFileId: null,
+		sendKey: "ENTER",
 		deletedAt: null,
 		createdAt: now,
 		updatedAt: now,
@@ -83,7 +85,7 @@ describe("userSchema", () => {
 	});
 
 	describe("namePhonetic", () => {
-		it("空のフリガナを拒否する", () => {
+		it("空のふりがなを拒否する", () => {
 			const result = userSchema.safeParse(
 				createValidUser({ namePhonetic: "" })
 			);

@@ -1,5 +1,7 @@
 import {
 	createMastersheetColumnRequestSchema,
+	type InitialValueInput,
+	type MastersheetDataType,
 	mastersheetColumnIdPathParamsSchema,
 	updateMastersheetColumnRequestSchema,
 } from "@sos26/shared";
@@ -16,9 +18,95 @@ import {
 	requireColumnOwner,
 	syncColumnOptions,
 	syncColumnViewers,
+	type TxClient,
 } from "./helpers";
 
 export const columnsRoute = new Hono<AuthEnv>();
+
+/** 初期値とデータ型の整合性を検証する */
+function validateInitialValueForDataType(
+	initialValue: InitialValueInput,
+	dataType: MastersheetDataType
+) {
+	if (
+		(dataType === "TEXT" || dataType === "NUMBER") &&
+		initialValue.selectedOptionIndexes?.length
+	) {
+		throw Errors.invalidRequest(
+			"テキスト・数値カラムに選択肢の初期値は指定できません"
+		);
+	}
+	if (
+		(dataType === "SELECT" || dataType === "MULTI_SELECT") &&
+		(initialValue.textValue != null || initialValue.numberValue != null)
+	) {
+		throw Errors.invalidRequest(
+			"選択カラムにテキスト・数値の初期値は指定できません"
+		);
+	}
+	if (dataType === "TEXT" && initialValue.numberValue != null) {
+		throw Errors.invalidRequest("テキストカラムに数値の初期値は指定できません");
+	}
+	if (dataType === "NUMBER" && initialValue.textValue != null) {
+		throw Errors.invalidRequest("数値カラムにテキストの初期値は指定できません");
+	}
+}
+
+/** 初期値を全企画のセルに一括適用する */
+async function applyInitialValue(
+	tx: TxClient,
+	columnId: string,
+	initialValue: InitialValueInput
+) {
+	const projects = await tx.project.findMany({
+		where: { deletedAt: null },
+		select: { id: true },
+	});
+	if (projects.length === 0) return;
+
+	// SELECT/MULTI_SELECT の場合、作成されたオプションの ID を取得
+	const resolvedOptionIds: string[] = [];
+	if (initialValue.selectedOptionIndexes?.length) {
+		const createdOptions = await tx.mastersheetColumnOption.findMany({
+			where: { columnId },
+			orderBy: { sortOrder: "asc" },
+			select: { id: true },
+		});
+		for (const idx of initialValue.selectedOptionIndexes) {
+			const opt = createdOptions[idx];
+			if (!opt) {
+				throw Errors.invalidRequest(`選択肢インデックス ${idx} が範囲外です`);
+			}
+			resolvedOptionIds.push(opt.id);
+		}
+	}
+
+	// セル値を一括作成
+	await tx.mastersheetCellValue.createMany({
+		data: projects.map(p => ({
+			columnId,
+			projectId: p.id,
+			textValue: initialValue.textValue ?? null,
+			numberValue: initialValue.numberValue ?? null,
+		})),
+	});
+
+	// SELECT/MULTI_SELECT の選択肢を一括作成
+	if (resolvedOptionIds.length > 0) {
+		const cells = await tx.mastersheetCellValue.findMany({
+			where: { columnId },
+			select: { id: true },
+		});
+		await tx.mastersheetCellSelectedOption.createMany({
+			data: cells.flatMap(cell =>
+				resolvedOptionIds.map(optionId => ({
+					cellId: cell.id,
+					optionId,
+				}))
+			),
+		});
+	}
+}
 
 // ─────────────────────────────────────────────────────────────
 // POST /committee/mastersheet/columns
@@ -113,6 +201,13 @@ columnsRoute.post("/columns", requireAuth, requireCommitteeMember, async c => {
 					})),
 				});
 			}
+
+			// 初期値が指定されている場合、全企画にセルを一括作成
+			if (data.initialValue) {
+				validateInitialValueForDataType(data.initialValue, data.dataType);
+				await applyInitialValue(tx, created.id, data.initialValue);
+			}
+
 			return tx.mastersheetColumn.findUniqueOrThrow({
 				where: { id: created.id },
 				include: {

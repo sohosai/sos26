@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { approvalStatusSchema } from "./common";
+import { fileSchema } from "./file";
 import { userSchema } from "./user";
 
 // ─────────────────────────────────────────────────────────────
@@ -15,6 +16,44 @@ export const formItemTypeSchema = z.enum([
 	"FILE",
 ]);
 export type FormItemType = z.infer<typeof formItemTypeSchema>;
+
+// ─────────────────────────────────────────────────────────────
+// テキスト制約スキーマ
+// ─────────────────────────────────────────────────────────────
+
+export const textConstraintPatternSchema = z.enum([
+	"katakana",
+	"hiragana",
+	"alphanumeric",
+	"custom",
+]);
+export type TextConstraintPattern = z.infer<typeof textConstraintPatternSchema>;
+
+export const textConstraintsSchema = z
+	.object({
+		minLength: z.number().int().nonnegative().optional(),
+		maxLength: z.number().int().positive().optional(),
+		pattern: textConstraintPatternSchema.optional(),
+		customPattern: z
+			.string()
+			.refine(val => {
+				try {
+					new RegExp(val);
+					return true;
+				} catch {
+					return false;
+				}
+			}, "正規表現の形式が不正です")
+			.optional(),
+	})
+	.refine(
+		({ minLength, maxLength }) =>
+			minLength === undefined ||
+			maxLength === undefined ||
+			minLength <= maxLength,
+		{ message: "最小文字数は最大文字数以下にしてください", path: ["minLength"] }
+	);
+export type TextConstraints = z.infer<typeof textConstraintsSchema>;
 
 // ─────────────────────────────────────────────────────────────
 // 基本モデルスキーマ
@@ -39,6 +78,7 @@ export const formItemSchema = z.object({
 	required: z.boolean().default(false),
 	sortOrder: z.number().int(),
 	options: z.array(formItemOptionSchema),
+	constraints: textConstraintsSchema.nullable(),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 });
@@ -78,6 +118,7 @@ export const formAuthorizationSchema = z.object({
 	deadlineAt: z.coerce.date().nullable(),
 	allowLateResponse: z.boolean(),
 	required: z.boolean(),
+	ownerOnly: z.boolean(),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 });
@@ -131,6 +172,7 @@ const authorizationSummarySchema = formAuthorizationSchema
 		scheduledSendAt: true,
 		deadlineAt: true,
 		allowLateResponse: true,
+		ownerOnly: true,
 	})
 	.extend({
 		requestedTo: userSummarySchema,
@@ -173,7 +215,7 @@ const numberAnswerSchema = z.object({
 const fileAnswerSchema = z.object({
 	...baseAnswerSchema,
 	type: z.literal("FILE"),
-	fileUrl: z.string().nullable(),
+	fileId: z.string().nullable(),
 });
 
 const selectAnswerSchema = z.object({
@@ -205,7 +247,10 @@ export const createFormItemInputSchema = formItemSchema
 		required: true,
 		sortOrder: true,
 	})
-	.extend({ options: z.array(createFormItemOptionInputSchema).optional() });
+	.extend({
+		options: z.array(createFormItemOptionInputSchema).optional(),
+		constraints: textConstraintsSchema.nullable().optional(),
+	});
 
 export const createFormRequestSchema = z.object({
 	title: z.string().min(1).default("無題のフォーム"),
@@ -325,6 +370,7 @@ export const requestFormAuthorizationRequestSchema = z.object({
 	deadlineAt: z.coerce.date().nullable().optional(),
 	allowLateResponse: z.boolean().default(false),
 	required: z.boolean().default(true),
+	ownerOnly: z.boolean().default(false),
 	projectIds: z.array(z.string().min(1)).min(1),
 });
 export type RequestFormAuthorizationRequest = z.infer<
@@ -365,7 +411,17 @@ export const formResponseAnswerSchema = z.object({
 	formItemId: z.string(),
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileUrl: z.string().nullable(),
+	fileId: z.string().nullable(),
+	fileMetadata: fileSchema
+		.pick({
+			id: true,
+			fileName: true,
+			mimeType: true,
+			size: true,
+			isPublic: true,
+		})
+		.nullable()
+		.optional(),
 	selectedOptions: z.array(
 		z.object({
 			id: z.string(),
@@ -404,7 +460,13 @@ export const formResponsePathParamsSchema = z.object({
 });
 
 export const getFormResponseResponseSchema = z.object({
-	response: formResponseSummarySchema,
+	response: formResponseSummarySchema.extend({
+		project: z.object({
+			id: z.string(),
+			number: z.number().int().positive(),
+			name: z.string(),
+		}),
+	}),
 });
 export type GetFormResponseResponse = z.infer<
 	typeof getFormResponseResponseSchema
@@ -439,6 +501,8 @@ export const listProjectFormsResponseSchema = z.object({
 			deadlineAt: z.coerce.date().nullable(),
 			required: z.boolean(),
 			allowLateResponse: z.boolean(),
+			ownerOnly: z.boolean(),
+			restricted: z.boolean(),
 			// 自分の回答状況
 			response: z
 				.object({
@@ -465,6 +529,13 @@ const projectFormItemOptionSchema = z.object({
 	sortOrder: z.number().int(),
 });
 
+const projectFormFileMetadataSchema = fileSchema.pick({
+	id: true,
+	fileName: true,
+	mimeType: true,
+	isPublic: true,
+});
+
 const projectFormItemSchema = z.object({
 	id: z.string(),
 	label: z.string(),
@@ -473,6 +544,7 @@ const projectFormItemSchema = z.object({
 	required: z.boolean(),
 	sortOrder: z.number().int(),
 	options: z.array(projectFormItemOptionSchema),
+	constraints: textConstraintsSchema.nullable(),
 });
 
 // 回答値スキーマ
@@ -480,7 +552,8 @@ const formAnswerSchema = z.object({
 	formItemId: z.string(),
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileUrl: z.string().nullable(),
+	fileId: z.string().nullable(),
+	fileMetadata: projectFormFileMetadataSchema.nullable(),
 	selectedOptionIds: z.array(z.string()),
 });
 
@@ -494,6 +567,7 @@ export const getProjectFormResponseSchema = z.object({
 		deadlineAt: z.coerce.date().nullable(),
 		allowLateResponse: z.boolean(),
 		required: z.boolean(),
+		ownerOnly: z.boolean(),
 		items: z.array(projectFormItemSchema),
 		// 既存の回答（下書き含む）
 		response: z
