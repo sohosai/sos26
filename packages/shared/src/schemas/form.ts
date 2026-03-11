@@ -18,6 +18,20 @@ export const formItemTypeSchema = z.enum([
 export type FormItemType = z.infer<typeof formItemTypeSchema>;
 
 // ─────────────────────────────────────────────────────────────
+// 回答バリデーション用の最小フォームアイテム型
+// ─────────────────────────────────────────────────────────────
+
+export const formAnswerValidationItemSchema = z.object({
+	id: z.string(),
+	type: formItemTypeSchema,
+	required: z.boolean(),
+	options: z.array(z.object({ id: z.string() })),
+});
+export type FormAnswerValidationItem = z.infer<
+	typeof formAnswerValidationItemSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
 // テキスト制約スキーマ
 // ─────────────────────────────────────────────────────────────
 
@@ -596,6 +610,7 @@ export const formAnswerInputSchema = z.discriminatedUnion("type", [
 	selectAnswerSchema,
 	checkboxAnswerSchema,
 ]);
+export type FormAnswerInput = z.infer<typeof formAnswerInputSchema>;
 
 export const registrationFormAnswersInputSchema = z.object({
 	formId: z.string().min(1),

@@ -9,6 +9,11 @@ import {
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import {
+	assertFormAnswersValid,
+	assertRequiredAnswered,
+} from "../lib/form-answer-validation";
+import { mapFormToApiShape } from "../lib/form-constraints";
+import {
 	notifySubOwnerRequestApproved,
 	notifySubOwnerRequestCancelled,
 	notifySubOwnerRequestRejected,
@@ -85,7 +90,19 @@ projectRoute.post("/create", requireAuth, async c => {
 				{ filterTypes: { has: data.type } },
 			],
 		},
-		select: { id: true, filterLocations: true },
+		select: {
+			id: true,
+			filterLocations: true,
+			items: {
+				select: {
+					id: true,
+					type: true,
+					required: true,
+					options: { select: { id: true } },
+				},
+				orderBy: { sortOrder: "asc" },
+			},
+		},
 	});
 	const locationFilteredForms = applicableForms.filter(
 		f =>
@@ -107,6 +124,19 @@ projectRoute.post("/create", requireAuth, async c => {
 	);
 	if (extraFormIds.length > 0) {
 		throw Errors.invalidRequest("対象外の申請フォームへの回答が含まれています");
+	}
+
+	// ── 各フォーム回答の内容チェック ──
+	if (registrationFormAnswers?.length) {
+		const formItemsMap = new Map(
+			locationFilteredForms.map(f => [f.id, f.items])
+		);
+		for (const { formId, answers } of registrationFormAnswers) {
+			const items = formItemsMap.get(formId);
+			if (!items) continue;
+			assertFormAnswersValid(items, answers);
+			assertRequiredAnswered(items, answers);
+		}
 	}
 
 	const project = await prisma.$transaction(async tx => {
@@ -794,7 +824,7 @@ projectRoute.get("/registration-forms", requireAuth, async c => {
 			f.filterLocations.includes(query.location)
 	);
 
-	return c.json({ forms: filtered });
+	return c.json({ forms: filtered.map(mapFormToApiShape) });
 });
 
 export { projectRoute };

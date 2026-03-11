@@ -9,6 +9,10 @@ import {
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
+import {
+	assertFormAnswersValid,
+	assertRequiredAnswered,
+} from "../lib/form-answer-validation";
 import { constraintsFromPrisma } from "../lib/form-constraints";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
@@ -92,20 +96,8 @@ const upsertAnswers = async (
 	answers: CreateFormResponseRequest["answers"],
 	formItems: { id: string; type: FormItemType }[]
 ) => {
-	const itemTypeMap = new Map(formItems.map(i => [i.id, i.type]));
 	// 既存回答を全削除して再作成（シンプルな全置き換え）
 	await tx.formAnswer.deleteMany({ where: { formResponseId: responseId } });
-
-	// 型チェック
-	for (const answer of answers) {
-		const type = itemTypeMap.get(answer.formItemId);
-		if (!type) {
-			throw Errors.invalidRequest("不正な設問IDです");
-		}
-		if (type !== answer.type) {
-			throw Errors.invalidRequest("設問タイプと回答タイプが一致しません");
-		}
-	}
 
 	// SELECT/CHECKBOX 以外はバッチ作成
 	const simpleAnswers = answers.filter(
@@ -145,50 +137,6 @@ const upsertAnswers = async (
 		});
 	}
 };
-
-// ─────────────────────────────────────────────────────────────
-// ヘルパー: 回答で含まれないIdをはじく
-// ─────────────────────────────────────────────────────────────
-function assertSelectedOptionsValid(
-	formItems: {
-		id: string;
-		type: FormItemType;
-		options: { id: string }[];
-	}[],
-	answers: CreateFormResponseRequest["answers"]
-) {
-	const itemMap = new Map(
-		formItems.map(item => [
-			item.id,
-			{
-				type: item.type,
-				optionIds: new Set(item.options.map(o => o.id)),
-			},
-		])
-	);
-
-	for (const answer of answers) {
-		const meta = itemMap.get(answer.formItemId);
-		if (!meta) {
-			throw Errors.invalidRequest("不正な設問IDです");
-		}
-
-		// SELECT / CHECKBOX 以外は無視
-		if (answer.type !== "SELECT" && answer.type !== "CHECKBOX") {
-			continue;
-		}
-
-		const ids = answer.selectedOptionIds ?? [];
-
-		for (const id of ids) {
-			if (!meta.optionIds.has(id)) {
-				throw Errors.invalidRequest(
-					`不正な選択肢IDです（formItemId: ${answer.formItemId}）`
-				);
-			}
-		}
-	}
-}
 
 // ─────────────────────────────────────────────────────────────
 // ヘルパー: レスポンス整形
@@ -272,54 +220,6 @@ const formatResponse = async (
 		})),
 	};
 };
-
-function assertRequiredAnswered(
-	formItems: {
-		id: string;
-		type: FormItemType;
-		required: boolean;
-	}[],
-	answers: CreateFormResponseRequest["answers"]
-) {
-	const answerMap = new Map(answers.map(a => [a.formItemId, a]));
-
-	for (const item of formItems) {
-		if (!item.required) continue;
-
-		const answer = answerMap.get(item.id);
-
-		const isEmpty = (() => {
-			if (!answer) return true;
-
-			switch (answer.type) {
-				case "TEXT":
-				case "TEXTAREA":
-					return !answer.textValue;
-
-				case "NUMBER":
-					return answer.numberValue == null;
-
-				case "FILE":
-					return !answer.fileId;
-
-				case "SELECT":
-				case "CHECKBOX":
-					return (
-						!answer.selectedOptionIds || answer.selectedOptionIds.length === 0
-					);
-
-				default:
-					return true;
-			}
-		})();
-
-		if (isEmpty) {
-			throw Errors.invalidRequest(
-				`必須項目が未入力です（formItemId: ${item.id}）`
-			);
-		}
-	}
-}
 
 function resolveConstraintRegex(
 	pattern: string,
@@ -701,7 +601,7 @@ projectFormRoute.post(
 		const body = await c.req.json().catch(() => ({}));
 		const { answers, submit } = createFormResponseRequestSchema.parse(body);
 
-		assertSelectedOptionsValid(delivery.formAuthorization.form.items, answers);
+		assertFormAnswersValid(delivery.formAuthorization.form.items, answers);
 
 		checkDeadline(delivery.formAuthorization);
 
@@ -783,7 +683,7 @@ projectFormRoute.patch(
 		const body = await c.req.json().catch(() => ({}));
 		const { answers, submit } = updateFormResponseRequestSchema.parse(body);
 
-		assertSelectedOptionsValid(delivery.formAuthorization.form.items, answers);
+		assertFormAnswersValid(delivery.formAuthorization.form.items, answers);
 
 		const isAlreadySubmitted = existing.submittedAt !== null;
 
