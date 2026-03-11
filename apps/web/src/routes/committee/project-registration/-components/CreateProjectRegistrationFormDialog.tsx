@@ -29,7 +29,7 @@ export function CreateProjectRegistrationFormDialog({
 		try {
 			await createProjectRegistrationForm({
 				title: values.title.trim(),
-				description: values.description.trim() || undefined,
+				description: values.description.trim() || null,
 				sortOrder: values.sortOrder,
 				filterTypes: values.filterTypes,
 				filterLocations: values.filterLocations,

@@ -200,7 +200,7 @@ function validateFilterTypesLocations(
 export const createProjectRegistrationFormRequestSchema = z
 	.object({
 		title: z.string().min(1).default("無題のフォーム"),
-		description: z.string().optional(),
+		description: z.string().nullable().optional(),
 		sortOrder: z.number().int().min(0).default(0),
 		filterTypes: z.array(projectTypeSchema).default([]),
 		filterLocations: z.array(projectLocationSchema).default([]),
