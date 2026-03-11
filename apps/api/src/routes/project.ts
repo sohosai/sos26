@@ -1,5 +1,6 @@
 import {
 	createProjectRequestSchema,
+	type FormAnswerValidationItem,
 	getActiveProjectRegistrationFormsQuerySchema,
 	joinProjectRequestSchema,
 	type ProjectMemberRole,
@@ -36,7 +37,7 @@ const buildPrismaAnswerData = (
 	formItemId: answer.formItemId,
 	textValue: "textValue" in answer ? answer.textValue : undefined,
 	numberValue: "numberValue" in answer ? answer.numberValue : undefined,
-	fileUrl: "fileUrl" in answer ? answer.fileUrl : undefined,
+	fileUrl: "fileId" in answer ? answer.fileId : undefined,
 	selectedOptions:
 		"selectedOptionIds" in answer && answer.selectedOptionIds?.length
 			? {
@@ -47,8 +48,51 @@ const buildPrismaAnswerData = (
 			: undefined,
 });
 
-// ─────────────────────────────────────────
-// POST /project/create
+// 企画登録フォームの過不足・内容チェック
+function validateRegistrationFormAnswers(
+	applicableForms: {
+		id: string;
+		filterLocations: string[];
+		items: FormAnswerValidationItem[];
+	}[],
+	location: string,
+	registrationFormAnswers: RegistrationFormAnswersInput[] | null | undefined
+) {
+	const locationFilteredForms = applicableForms.filter(
+		f => f.filterLocations.length === 0 || f.filterLocations.includes(location)
+	);
+	const applicableFormIds = new Set(locationFilteredForms.map(f => f.id));
+	const submittedFormIds = new Set(
+		(registrationFormAnswers ?? []).map(a => a.formId)
+	);
+
+	const missingFormIds = [...applicableFormIds].filter(
+		id => !submittedFormIds.has(id)
+	);
+	if (missingFormIds.length > 0) {
+		throw Errors.invalidRequest("必要な申請フォームへの回答が不足しています");
+	}
+
+	const extraFormIds = [...submittedFormIds].filter(
+		id => !applicableFormIds.has(id)
+	);
+	if (extraFormIds.length > 0) {
+		throw Errors.invalidRequest("対象外の申請フォームへの回答が含まれています");
+	}
+
+	if (registrationFormAnswers?.length) {
+		const formItemsMap = new Map(
+			locationFilteredForms.map(f => [f.id, f.items])
+		);
+		for (const { formId, answers } of registrationFormAnswers) {
+			const items = formItemsMap.get(formId);
+			if (!items) continue;
+			assertFormAnswersValid(items, answers);
+			assertRequiredAnswered(items, answers);
+		}
+	}
+}
+
 // 企画を作成
 // ─────────────────────────────────────────
 projectRoute.post("/create", requireAuth, async c => {
@@ -80,66 +124,37 @@ projectRoute.post("/create", requireAuth, async c => {
 	while (await prisma.project.findUnique({ where: { inviteCode } })) {
 		inviteCode = generateInviteCode();
 	}
-	// ── 対象フォームの過不足チェック ──
-	const applicableForms = await prisma.projectRegistrationForm.findMany({
-		where: {
-			isActive: true,
-			deletedAt: null,
-			OR: [
-				{ filterTypes: { isEmpty: true } },
-				{ filterTypes: { has: data.type } },
-			],
-		},
-		select: {
-			id: true,
-			filterLocations: true,
-			items: {
-				select: {
-					id: true,
-					type: true,
-					required: true,
-					options: { select: { id: true } },
-				},
-				orderBy: { sortOrder: "asc" },
-			},
-		},
-	});
-	const locationFilteredForms = applicableForms.filter(
-		f =>
-			f.filterLocations.length === 0 ||
-			f.filterLocations.includes(data.location)
-	);
-	const applicableFormIds = new Set(locationFilteredForms.map(f => f.id));
-	const submittedFormIds = new Set(
-		(registrationFormAnswers ?? []).map(a => a.formId)
-	);
-	const missingFormIds = [...applicableFormIds].filter(
-		id => !submittedFormIds.has(id)
-	);
-	if (missingFormIds.length > 0) {
-		throw Errors.invalidRequest("必要な申請フォームへの回答が不足しています");
-	}
-	const extraFormIds = [...submittedFormIds].filter(
-		id => !applicableFormIds.has(id)
-	);
-	if (extraFormIds.length > 0) {
-		throw Errors.invalidRequest("対象外の申請フォームへの回答が含まれています");
-	}
-
-	// ── 各フォーム回答の内容チェック ──
-	if (registrationFormAnswers?.length) {
-		const formItemsMap = new Map(
-			locationFilteredForms.map(f => [f.id, f.items])
-		);
-		for (const { formId, answers } of registrationFormAnswers) {
-			const items = formItemsMap.get(formId);
-			if (!items) continue;
-			assertFormAnswersValid(items, answers);
-			assertRequiredAnswered(items, answers);
-		}
-	}
-
 	const project = await prisma.$transaction(async tx => {
+		// ── 対象フォームの過不足チェック（トランザクション内で取得しTOCTOU防止）──
+		const applicableForms = await tx.projectRegistrationForm.findMany({
+			where: {
+				isActive: true,
+				deletedAt: null,
+				OR: [
+					{ filterTypes: { isEmpty: true } },
+					{ filterTypes: { has: data.type } },
+				],
+			},
+			select: {
+				id: true,
+				filterLocations: true,
+				items: {
+					select: {
+						id: true,
+						type: true,
+						required: true,
+						options: { select: { id: true } },
+					},
+					orderBy: { sortOrder: "asc" },
+				},
+			},
+		});
+		validateRegistrationFormAnswers(
+			applicableForms,
+			data.location,
+			registrationFormAnswers
+		);
+
 		const created = await tx.project.create({
 			data: {
 				...data,
