@@ -93,8 +93,7 @@ const checkDeadline = (auth: {
 const upsertAnswers = async (
 	tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
 	responseId: string,
-	answers: CreateFormResponseRequest["answers"],
-	formItems: { id: string; type: FormItemType }[]
+	answers: CreateFormResponseRequest["answers"]
 ) => {
 	// 既存回答を全削除して再作成（シンプルな全置き換え）
 	await tx.formAnswer.deleteMany({ where: { formResponseId: responseId } });
@@ -628,12 +627,7 @@ projectFormRoute.post(
 				},
 			});
 
-			await upsertAnswers(
-				tx,
-				created.id,
-				answers,
-				delivery.formAuthorization.form.items
-			);
+			await upsertAnswers(tx, created.id, answers);
 
 			if (submit) {
 				await appendEditHistory(
@@ -703,12 +697,7 @@ projectFormRoute.patch(
 				},
 			});
 
-			await upsertAnswers(
-				tx,
-				existing.id,
-				answers,
-				delivery.formAuthorization.form.items
-			);
+			await upsertAnswers(tx, existing.id, answers);
 
 			if (submit || isAlreadySubmitted) {
 				await appendEditHistory(
