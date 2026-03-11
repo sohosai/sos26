@@ -1372,6 +1372,7 @@ model ProjectRegistrationFormAnswer {
 
   @@unique([responseId, formItemId])
   @@index([responseId])
+  @@index([formItemId])
 }
 
 // 選択肢回答の中間テーブル
