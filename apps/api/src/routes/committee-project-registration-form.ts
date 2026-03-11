@@ -335,16 +335,18 @@ committeeProjectRegistrationFormRoute.patch(
 					await tx.projectRegistrationFormItem.deleteMany({
 						where: { formId },
 					});
-					for (const { options, constraints, ...item } of items) {
-						await tx.projectRegistrationFormItem.create({
-							data: {
-								...item,
-								...constraintsToPrisma(constraints),
-								formId,
-								options: options?.length ? { create: options } : undefined,
-							},
-						});
-					}
+					await Promise.all(
+						items.map(({ options, constraints, ...item }) =>
+							tx.projectRegistrationFormItem.create({
+								data: {
+									...item,
+									...constraintsToPrisma(constraints),
+									formId,
+									options: options?.length ? { create: options } : undefined,
+								},
+							})
+						)
+					);
 				}
 
 				return tx.projectRegistrationForm.findUniqueOrThrow({
