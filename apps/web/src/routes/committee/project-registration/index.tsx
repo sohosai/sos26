@@ -12,7 +12,10 @@ import { Button } from "@/components/primitives";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { listProjectRegistrationForms } from "@/lib/api/committee-project-registration-form";
 import { useAuthStore } from "@/lib/auth";
-import { getProjectRegistrationFormStatus } from "@/lib/form/form-status";
+import {
+	type FormStatusInfo,
+	getProjectRegistrationFormStatus,
+} from "@/lib/form/form-status";
 import { CreateProjectRegistrationFormDialog } from "./-components/CreateProjectRegistrationFormDialog";
 import {
 	PROJECT_LOCATION_LABELS,
@@ -30,7 +33,7 @@ type FormRow = {
 	filterTypes: string[];
 	filterLocations: string[];
 	updatedAt: Date;
-	statusInfo: { label: string; color: "green" | "orange" | "gray" | "red" };
+	statusInfo: FormStatusInfo;
 };
 
 type LoaderData = {
@@ -116,17 +119,6 @@ function ProjectRegistrationPage() {
 			header: "オーナー",
 			cell: NameCell,
 		}),
-		columnHelper.accessor("statusInfo", {
-			header: "ステータス",
-			cell: ctx => {
-				const { label, color } = ctx.getValue();
-				return (
-					<Badge variant="soft" color={color}>
-						{label}
-					</Badge>
-				);
-			},
-		}),
 		columnHelper.accessor("filterTypes", {
 			header: "対象区分",
 			cell: ctx => {
@@ -168,6 +160,17 @@ function ProjectRegistrationPage() {
 			header: "更新日",
 			cell: DateCell,
 			meta: { dateFormat: "date" },
+		}),
+		columnHelper.accessor("statusInfo", {
+			header: "ステータス",
+			cell: ctx => {
+				const { label, color } = ctx.getValue();
+				return (
+					<Badge variant="soft" color={color}>
+						{label}
+					</Badge>
+				);
+			},
 		}),
 		columnHelper.display({
 			id: "actions",
