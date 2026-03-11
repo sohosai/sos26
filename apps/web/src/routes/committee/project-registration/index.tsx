@@ -1,5 +1,4 @@
 import { Badge, Heading, Text } from "@radix-ui/themes";
-import type { ProjectRegistrationFormAuthorizationStatus } from "@sos26/shared";
 import { IconEye, IconPlus } from "@tabler/icons-react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
@@ -13,6 +12,7 @@ import { Button } from "@/components/primitives";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { listProjectRegistrationForms } from "@/lib/api/committee-project-registration-form";
 import { useAuthStore } from "@/lib/auth";
+import { getProjectRegistrationFormStatus } from "@/lib/form/form-status";
 import { CreateProjectRegistrationFormDialog } from "./-components/CreateProjectRegistrationFormDialog";
 import {
 	PROJECT_LOCATION_LABELS,
@@ -32,17 +32,6 @@ type FormRow = {
 	updatedAt: Date;
 	statusInfo: { label: string; color: "green" | "orange" | "gray" | "red" };
 };
-
-function getStatusInfo(
-	isActive: boolean,
-	latestAuthStatus: ProjectRegistrationFormAuthorizationStatus | null
-): FormRow["statusInfo"] {
-	if (isActive) return { label: "公開済み", color: "green" };
-	if (latestAuthStatus === "PENDING")
-		return { label: "承認待機中", color: "orange" };
-	if (latestAuthStatus === "REJECTED") return { label: "却下", color: "red" };
-	return { label: "下書き", color: "gray" };
-}
 
 type LoaderData = {
 	forms: FormRow[];
@@ -82,7 +71,7 @@ export const Route = createFileRoute("/committee/project-registration/")({
 				filterTypes: f.filterTypes,
 				filterLocations: f.filterLocations,
 				updatedAt: f.updatedAt,
-				statusInfo: getStatusInfo(
+				statusInfo: getProjectRegistrationFormStatus(
 					f.isActive,
 					f.latestAuthorization?.status ?? null
 				),

@@ -21,6 +21,7 @@ import {
 	updateProjectRegistrationFormAuthorization,
 } from "@/lib/api/committee-project-registration-form";
 import { useAuthStore } from "@/lib/auth";
+import { getProjectRegistrationFormStatus } from "@/lib/form/form-status";
 import { formatDate } from "@/lib/format";
 import { FormItemsPreview } from "@/routes/committee/forms/$formId/-components/FormItemsPreview";
 import {
@@ -316,28 +317,14 @@ function RouteComponent() {
 }
 
 function FormStatusBadge({ form }: { form: ProjectRegistrationFormDetail }) {
-	if (form.isActive)
-		return (
-			<Badge variant="soft" color="green">
-				公開済み
-			</Badge>
-		);
 	const latestAuth = form.authorizations[0];
-	if (latestAuth?.status === "PENDING")
-		return (
-			<Badge variant="soft" color="orange">
-				承認待機中
-			</Badge>
-		);
-	if (latestAuth?.status === "REJECTED")
-		return (
-			<Badge variant="soft" color="red">
-				却下
-			</Badge>
-		);
+	const { label, color } = getProjectRegistrationFormStatus(
+		form.isActive,
+		latestAuth?.status ?? null
+	);
 	return (
-		<Badge variant="soft" color="gray">
-			下書き
+		<Badge variant="soft" color={color}>
+			{label}
 		</Badge>
 	);
 }
