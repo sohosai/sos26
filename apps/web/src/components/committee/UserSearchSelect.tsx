@@ -12,6 +12,8 @@ type UserSearchSelectProps = {
 	onSelect: (user: UserSummary) => void;
 	onRemove: (userId: string) => void;
 	required?: boolean;
+	/** 検索結果から除外するユーザーID（既に委員であるユーザーなど） */
+	excludeIds?: string[];
 };
 
 export function UserSearchSelect({
@@ -20,6 +22,7 @@ export function UserSearchSelect({
 	onSelect,
 	onRemove,
 	required,
+	excludeIds,
 }: UserSearchSelectProps) {
 	const [query, setQuery] = useState("");
 	const [results, setResults] = useState<UserSummary[]>([]);
@@ -55,6 +58,7 @@ export function UserSearchSelect({
 	}, [query, doSearch]);
 
 	const selectedIds = new Set(selected.map(u => u.id));
+	const excludeSet = new Set(excludeIds ?? []);
 
 	const handleSelect = (user: UserSummary) => {
 		if (selectedIds.has(user.id)) return;
@@ -113,25 +117,27 @@ export function UserSearchSelect({
 						該当するユーザーが見つかりません
 					</Text>
 				) : (
-					results.map(user => (
-						<button
-							key={user.id}
-							type="button"
-							className={`${styles.userRow} ${selectedIds.has(user.id) ? styles.selected : ""}`}
-							onClick={() => handleSelect(user)}
-							disabled={selectedIds.has(user.id)}
-						>
-							<Avatar size={28} name={user.name} variant="beam" />
-							<div className={styles.userInfo}>
-								<Text size="2" weight="medium">
-									{user.name}
-								</Text>
-								<Text size="1" color="gray">
-									{user.email}
-								</Text>
-							</div>
-						</button>
-					))
+					results
+						.filter(user => !excludeSet.has(user.id))
+						.map(user => (
+							<button
+								key={user.id}
+								type="button"
+								className={`${styles.userRow} ${selectedIds.has(user.id) ? styles.selected : ""}`}
+								onClick={() => handleSelect(user)}
+								disabled={selectedIds.has(user.id)}
+							>
+								<Avatar size={28} name={user.name} variant="beam" />
+								<div className={styles.userInfo}>
+									<Text size="2" weight="medium">
+										{user.name}
+									</Text>
+									<Text size="1" color="gray">
+										{user.email}
+									</Text>
+								</div>
+							</button>
+						))
 				)}
 			</div>
 		</div>

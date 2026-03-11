@@ -23,12 +23,15 @@ type AddMemberDialogProps = {
 		Bureau: Bureau;
 		isExecutive?: boolean;
 	}) => Promise<unknown>;
+	/** 既に実委人であるユーザーIDのリスト（検索結果から除外される） */
+	excludeUserIds?: string[];
 };
 
 export function AddMemberDialog({
 	open,
 	onOpenChange,
 	onSubmit,
+	excludeUserIds,
 }: AddMemberDialogProps) {
 	const [selectedUsers, setSelectedUsers] = useState<UserSummary[]>([]);
 	const [bureau, setBureau] = useState<Bureau | "">("");
@@ -93,6 +96,7 @@ export function AddMemberDialog({
 						onRemove={userId =>
 							setSelectedUsers(prev => prev.filter(u => u.id !== userId))
 						}
+						excludeIds={excludeUserIds}
 						required
 					/>
 

@@ -412,6 +412,7 @@ function RouteComponent() {
 				open={addMemberOpen}
 				onOpenChange={setAddMemberOpen}
 				onSubmit={handleAddMember}
+				excludeUserIds={members.map(m => m.userId)}
 			/>
 		</div>
 	);
