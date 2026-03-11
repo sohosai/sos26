@@ -168,11 +168,13 @@ committeeProjectRegistrationFormRoute.get(
 		});
 
 		return c.json({
-			forms: forms.map(f => ({
-				...f,
-				latestAuthorization: f.authorizations[0] ?? null,
-				authorizations: undefined,
-			})),
+			forms: forms.map(f => {
+				const { authorizations, ...rest } = f;
+				return {
+					...rest,
+					latestAuthorization: authorizations[0] ?? null,
+				};
+			}),
 		});
 	}
 );
