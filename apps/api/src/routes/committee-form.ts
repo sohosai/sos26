@@ -427,33 +427,31 @@ committeeFormRoute.post(
 			);
 
 		// 既存チェック（ソフトデリート済みも含めて検索）
-		const existing = await prisma.formCollaborator.findFirst({
-			where: { formId, userId: targetUserId },
-		});
-		if (existing) {
-			if (!existing.deletedAt) {
-				throw Errors.alreadyExists("既に共同編集者です");
-			}
-
-			// ソフトデリート済み → 再有効化
-			const reactivated = await prisma.formCollaborator.update({
-				where: { id: existing.id },
-				data: { deletedAt: null },
-			});
-
-			return c.json({ collaborator: reactivated });
-		}
-
 		const body = await c.req.json().catch(() => ({}));
 		const data = addFormCollaboratorRequestSchema.parse(body);
 
-		const collaborator = await prisma.formCollaborator.create({
-			data: {
-				formId,
-				userId: targetUserId,
-				isWrite: data.isWrite,
+		const collaborator = await prisma.$transaction(
+			async tx => {
+				const existing = await tx.formCollaborator.findFirst({
+					where: { formId, userId: targetUserId },
+				});
+				if (existing) {
+					if (!existing.deletedAt)
+						throw Errors.alreadyExists("既に共同編集者です");
+
+					// ソフトデリート済み → 再有効化
+					return tx.formCollaborator.update({
+						where: { id: existing.id },
+						data: { deletedAt: null, isWrite: data.isWrite },
+					});
+				}
+
+				return tx.formCollaborator.create({
+					data: { formId, userId: targetUserId, isWrite: data.isWrite },
+				});
 			},
-		});
+			{ isolationLevel: "Serializable" }
+		);
 
 		return c.json({ collaborator });
 	}
