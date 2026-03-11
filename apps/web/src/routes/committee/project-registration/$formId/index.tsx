@@ -304,14 +304,16 @@ function RouteComponent() {
 								キャンセル
 							</Button>
 						</AlertDialog.Cancel>
-						<Button
-							intent="danger"
-							size="2"
-							onClick={handleDelete}
-							loading={isDeleting}
-						>
-							削除する
-						</Button>
+						<AlertDialog.Action>
+							<Button
+								intent="danger"
+								size="2"
+								onClick={handleDelete}
+								loading={isDeleting}
+							>
+								削除する
+							</Button>
+						</AlertDialog.Action>
 					</div>
 				</AlertDialog.Content>
 			</AlertDialog.Root>
