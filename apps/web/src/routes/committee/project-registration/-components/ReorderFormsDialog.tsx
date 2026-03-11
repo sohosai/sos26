@@ -8,6 +8,10 @@ import { Badge, Dialog, Text, VisuallyHidden } from "@radix-ui/themes";
 import { IconGripVertical, IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { Button, IconButton } from "@/components/primitives";
+import {
+	PROJECT_LOCATION_LABELS,
+	PROJECT_TYPE_LABELS,
+} from "./projectRegistrationLabels";
 import styles from "./ReorderFormsDialog.module.scss";
 
 const PLACEHOLDER_ID = "__placeholder__";
@@ -17,18 +21,6 @@ type FormPreview = {
 	title: string;
 	filterTypes: string[];
 	filterLocations: string[];
-};
-
-const PROJECT_TYPE_LABELS: Record<string, string> = {
-	NORMAL: "通常",
-	FOOD: "食品",
-	STAGE: "ステージ",
-};
-
-const PROJECT_LOCATION_LABELS: Record<string, string> = {
-	INDOOR: "屋内",
-	OUTDOOR: "屋外",
-	STAGE: "ステージ",
 };
 
 type Props = {

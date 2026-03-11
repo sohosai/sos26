@@ -14,6 +14,10 @@ import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { listProjectRegistrationForms } from "@/lib/api/committee-project-registration-form";
 import { useAuthStore } from "@/lib/auth";
 import { CreateProjectRegistrationFormDialog } from "./-components/CreateProjectRegistrationFormDialog";
+import {
+	PROJECT_LOCATION_LABELS,
+	PROJECT_TYPE_LABELS,
+} from "./-components/projectRegistrationLabels";
 import styles from "./index.module.scss";
 
 type FormRow = {
@@ -27,18 +31,6 @@ type FormRow = {
 	filterLocations: string[];
 	updatedAt: Date;
 	statusInfo: { label: string; color: "green" | "orange" | "gray" | "red" };
-};
-
-const PROJECT_TYPE_LABELS: Record<string, string> = {
-	NORMAL: "通常",
-	FOOD: "食品",
-	STAGE: "ステージ",
-};
-
-const PROJECT_LOCATION_LABELS: Record<string, string> = {
-	INDOOR: "屋内",
-	OUTDOOR: "屋外",
-	STAGE: "ステージ",
 };
 
 function getStatusInfo(

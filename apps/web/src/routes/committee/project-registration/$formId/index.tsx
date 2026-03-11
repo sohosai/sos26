@@ -23,21 +23,13 @@ import {
 import { useAuthStore } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { FormItemsPreview } from "@/routes/committee/forms/$formId/-components/FormItemsPreview";
+import {
+	PROJECT_LOCATION_LABELS,
+	PROJECT_TYPE_LABELS,
+} from "../-components/projectRegistrationLabels";
 import { EditProjectRegistrationFormDialog } from "./-components/EditProjectRegistrationFormDialog";
 import { ProjectRegistrationFormDetailSidebar } from "./-components/ProjectRegistrationFormDetailSidebar";
 import styles from "./index.module.scss";
-
-const PROJECT_TYPE_LABELS: Record<string, string> = {
-	NORMAL: "通常",
-	FOOD: "食品",
-	STAGE: "ステージ",
-};
-
-const PROJECT_LOCATION_LABELS: Record<string, string> = {
-	INDOOR: "屋内",
-	OUTDOOR: "屋外",
-	STAGE: "ステージ",
-};
 
 function formDetailToPreviewForm(form: ProjectRegistrationFormDetail): Form {
 	return {
