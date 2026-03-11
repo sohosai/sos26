@@ -4,6 +4,7 @@ import {
 	formItemSchema,
 	formItemTypeSchema,
 	textConstraintsSchema,
+	validateFormItemTypeOptions,
 } from "./form";
 import { projectLocationSchema, projectTypeSchema } from "./project";
 import { userSchema } from "./user";
@@ -111,15 +112,17 @@ export const projectRegistrationFormItemOptionInputSchema = z.object({
 	sortOrder: z.number().int(),
 });
 
-export const projectRegistrationFormItemInputSchema = z.object({
-	label: z.string().min(1, "質問文を入力してください"),
-	description: z.string().optional(),
-	type: formItemTypeSchema,
-	required: z.boolean().default(false),
-	sortOrder: z.number().int(),
-	options: z.array(projectRegistrationFormItemOptionInputSchema).optional(),
-	constraints: textConstraintsSchema.nullable().optional(),
-});
+export const projectRegistrationFormItemInputSchema = z
+	.object({
+		label: z.string().min(1, "質問文を入力してください"),
+		description: z.string().optional(),
+		type: formItemTypeSchema,
+		required: z.boolean().default(false),
+		sortOrder: z.number().int(),
+		options: z.array(projectRegistrationFormItemOptionInputSchema).optional(),
+		constraints: textConstraintsSchema.nullable().optional(),
+	})
+	.superRefine(validateFormItemTypeOptions);
 
 // ─────────────────────────────────────────────────────────────
 // path params

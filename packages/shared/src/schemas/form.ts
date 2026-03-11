@@ -253,7 +253,32 @@ export const createFormItemOptionInputSchema = z.object({
 	sortOrder: z.number().int(),
 });
 
-export const createFormItemInputSchema = formItemSchema
+/**
+ * SELECT/CHECKBOX は options 必須、それ以外は options 不可のバリデーション。
+ */
+export const validateFormItemTypeOptions = (
+	data: { type: string; options?: unknown[] },
+	ctx: z.RefinementCtx
+) => {
+	const needsOptions = data.type === "SELECT" || data.type === "CHECKBOX";
+	if (needsOptions && (!data.options || data.options.length === 0)) {
+		ctx.addIssue({
+			code: "custom",
+			message: "SELECT/CHECKBOXタイプの設問には選択肢を1つ以上設定してください",
+			path: ["options"],
+		});
+	}
+	if (!needsOptions && data.options && data.options.length > 0) {
+		ctx.addIssue({
+			code: "custom",
+			message: "このタイプの設問には選択肢を設定できません",
+			path: ["options"],
+		});
+	}
+};
+
+// .extend() を使うため superRefine なしのベーススキーマ（内部利用）
+const formItemInputObjectSchema = formItemSchema
 	.pick({
 		label: true,
 		description: true,
@@ -265,6 +290,10 @@ export const createFormItemInputSchema = formItemSchema
 		options: z.array(createFormItemOptionInputSchema).optional(),
 		constraints: textConstraintsSchema.nullable().optional(),
 	});
+
+export const createFormItemInputSchema = formItemInputObjectSchema.superRefine(
+	validateFormItemTypeOptions
+);
 
 export const createFormRequestSchema = z.object({
 	title: z.string().min(1).default("無題のフォーム"),
@@ -316,9 +345,9 @@ export type GetFormDetailResponse = z.infer<typeof getFormDetailResponseSchema>;
 // ─────────────────────────────────────────────────────────────
 
 // 更新リクエスト用のitem入力スキーマ
-export const updateFormItemInputSchema = createFormItemInputSchema.extend({
-	id: z.string().min(1).optional(),
-});
+export const updateFormItemInputSchema = formItemInputObjectSchema
+	.extend({ id: z.string().min(1).optional() })
+	.superRefine(validateFormItemTypeOptions);
 
 export const updateFormDetailRequestSchema = z.object({
 	title: z.string().min(1).optional(),
