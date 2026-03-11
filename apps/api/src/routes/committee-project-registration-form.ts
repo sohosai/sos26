@@ -596,10 +596,7 @@ committeeProjectRegistrationFormRoute.post(
 				userId: c.req.param("userId"),
 			});
 		const userId = c.get("user").id;
-
-		const form = await requireOwner(formId, userId);
-		if (form.isActive)
-			throw Errors.invalidRequest("有効化されたフォームは変更できません");
+		await requireOwner(formId, userId);
 
 		if (targetUserId === userId)
 			throw Errors.invalidRequest(
@@ -672,9 +669,7 @@ committeeProjectRegistrationFormRoute.delete(
 			});
 		const userId = c.get("user").id;
 
-		const form = await requireOwner(formId, userId);
-		if (form.isActive)
-			throw Errors.invalidRequest("有効化されたフォームは変更できません");
+		await requireOwner(formId, userId);
 
 		const collaborator =
 			await prisma.projectRegistrationFormCollaborator.findFirst({

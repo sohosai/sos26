@@ -65,6 +65,25 @@ export function ProjectRegistrationFormDetailSidebar({
 
 	const showAuthBox = canRequestAuth || latestAuth;
 
+	const canDelete = isOwner && !form.isActive;
+
+	const handleApprove = async (id: string) => {
+		setApprovingId(id);
+		try {
+			await onApprove(id);
+		} finally {
+			setApprovingId(null);
+		}
+	};
+	const handleReject = async (id: string) => {
+		setRejectingId(id);
+		try {
+			await onReject(id);
+		} finally {
+			setRejectingId(null);
+		}
+	};
+
 	return (
 		<>
 			<div className={styles.sidebarWrapper}>
@@ -132,24 +151,12 @@ export function ProjectRegistrationFormDetailSidebar({
 						)}
 					</div>
 
-					{(canEdit || (isOwner && !form.isActive)) && (
-						<>
-							<Separator size="4" />
-							<div className={styles.actions}>
-								{canEdit && (
-									<Button intent="secondary" size="2" onClick={onEdit}>
-										編集
-									</Button>
-								)}
-								{isOwner && !form.isActive && (
-									<Button intent="ghost" size="2" onClick={onDelete}>
-										<IconTrash size={14} />
-										削除
-									</Button>
-								)}
-							</div>
-						</>
-					)}
+					<ActionsSection
+						canEdit={canEdit}
+						canDelete={canDelete}
+						onEdit={onEdit}
+						onDelete={onDelete}
+					/>
 				</aside>
 
 				{/* ボックス2: 承認申請 */}
@@ -177,22 +184,8 @@ export function ProjectRegistrationFormDetailSidebar({
 								isApprover={isApprover}
 								approvingId={approvingId}
 								rejectingId={rejectingId}
-								onApprove={async id => {
-									setApprovingId(id);
-									try {
-										await onApprove(id);
-									} finally {
-										setApprovingId(null);
-									}
-								}}
-								onReject={async id => {
-									setRejectingId(id);
-									try {
-										await onReject(id);
-									} finally {
-										setRejectingId(null);
-									}
-								}}
+								onApprove={handleApprove}
+								onReject={handleReject}
 							/>
 						)}
 					</aside>
@@ -213,6 +206,40 @@ export function ProjectRegistrationFormDetailSidebar({
 				approvers={approvers}
 				onSuccess={onAuthRequestSuccess}
 			/>
+		</>
+	);
+}
+
+type ActionsSectionProps = {
+	canEdit: boolean;
+	canDelete: boolean;
+	onEdit: () => void;
+	onDelete: () => void;
+};
+
+function ActionsSection({
+	canEdit,
+	canDelete,
+	onEdit,
+	onDelete,
+}: ActionsSectionProps) {
+	if (!canEdit && !canDelete) return null;
+	return (
+		<>
+			<Separator size="4" />
+			<div className={styles.actions}>
+				{canEdit && (
+					<Button intent="secondary" size="2" onClick={onEdit}>
+						編集
+					</Button>
+				)}
+				{canDelete && (
+					<Button intent="ghost" size="2" onClick={onDelete}>
+						<IconTrash size={14} />
+						削除
+					</Button>
+				)}
+			</div>
 		</>
 	);
 }
