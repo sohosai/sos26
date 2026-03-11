@@ -161,7 +161,7 @@ function RouteComponent() {
 				status: "APPROVED",
 			});
 			await router.invalidate();
-			toast.success("承認しました。フォームが有効化されました。");
+			toast.success("承認しました。フォームが公開されました。");
 		} catch {
 			toast.error("承認に失敗しました");
 		}
@@ -319,7 +319,7 @@ function FormStatusBadge({ form }: { form: ProjectRegistrationFormDetail }) {
 	if (form.isActive)
 		return (
 			<Badge variant="soft" color="green">
-				有効
+				公開済み
 			</Badge>
 		);
 	const latestAuth = form.authorizations[0];

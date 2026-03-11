@@ -37,7 +37,7 @@ function getStatusInfo(
 	isActive: boolean,
 	latestAuthStatus: ProjectRegistrationFormAuthorizationStatus | null
 ): FormRow["statusInfo"] {
-	if (isActive) return { label: "有効", color: "green" };
+	if (isActive) return { label: "公開済み", color: "green" };
 	if (latestAuthStatus === "PENDING")
 		return { label: "承認待機中", color: "orange" };
 	if (latestAuthStatus === "REJECTED") return { label: "却下", color: "red" };
@@ -124,7 +124,7 @@ function ProjectRegistrationPage() {
 			header: "フォーム名",
 		}),
 		columnHelper.accessor("ownerName", {
-			header: "作成者",
+			header: "オーナー",
 			cell: NameCell,
 		}),
 		columnHelper.accessor("statusInfo", {
