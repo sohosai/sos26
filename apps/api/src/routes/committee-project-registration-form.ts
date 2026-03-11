@@ -15,6 +15,10 @@ import {
 	constraintsToPrisma,
 	mapFormToApiShape,
 } from "../lib/form-constraints";
+import {
+	notifyProjectRegistrationFormAuthorizationDecided,
+	notifyProjectRegistrationFormAuthorizationRequested,
+} from "../lib/notifications";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -436,7 +440,7 @@ committeeProjectRegistrationFormRoute.post(
 			c.req.param()
 		);
 		const userId = c.get("user").id;
-		await requireOwner(formId, userId);
+		const form = await requireOwner(formId, userId);
 
 		const body = await c.req.json().catch(() => ({}));
 		const { requestedToId } =
@@ -483,6 +487,13 @@ committeeProjectRegistrationFormRoute.post(
 			{ isolationLevel: "Serializable" }
 		);
 
+		void notifyProjectRegistrationFormAuthorizationRequested({
+			approverUserId: requestedToId,
+			requesterName: c.get("user").name,
+			formId,
+			formTitle: form.title,
+		});
+
 		return c.json({ authorization });
 	}
 );
@@ -512,7 +523,7 @@ committeeProjectRegistrationFormRoute.patch(
 				const auth = await tx.projectRegistrationFormAuthorization.findFirst({
 					where: { id: authorizationId, formId },
 					include: {
-						form: { select: { deletedAt: true } },
+						form: { select: { deletedAt: true, title: true } },
 					},
 				});
 
@@ -545,12 +556,23 @@ committeeProjectRegistrationFormRoute.patch(
 					});
 				}
 
-				return updated;
+				return {
+					authorization: updated,
+					requestedById: auth.requestedById,
+					formTitle: auth.form.title,
+				};
 			},
 			{ isolationLevel: "Serializable" }
 		);
 
-		return c.json({ authorization });
+		void notifyProjectRegistrationFormAuthorizationDecided({
+			requestedByUserId: authorization.requestedById,
+			formId,
+			formTitle: authorization.formTitle,
+			status,
+		});
+
+		return c.json({ authorization: authorization.authorization });
 	}
 );
 
