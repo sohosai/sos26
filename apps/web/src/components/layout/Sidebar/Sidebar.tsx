@@ -8,8 +8,9 @@ import {
 	IconSettings,
 } from "@tabler/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { IconButton } from "@/components/primitives";
+import { listCommitteeMemberPermissions } from "@/lib/api/committee-member";
 import { useAuthStore } from "@/lib/auth";
 import styles from "./Sidebar.module.scss";
 
@@ -43,7 +44,8 @@ const commonItems: MenuItem[] = [
 
 function getRoleSwitchItem(
 	pathname: string,
-	menuItems: MenuItem[]
+	menuItems: MenuItem[],
+	isCommitteeMember: boolean
 ): MenuItem | null {
 	// menuItems のパスからどのロールか判定（/settings 等でも正しく動作）
 	const hasProjectMenu = menuItems.some(item => item.to.startsWith("/project"));
@@ -55,6 +57,8 @@ function getRoleSwitchItem(
 		pathname.startsWith("/project") ||
 		(!pathname.startsWith("/committee") && hasProjectMenu)
 	) {
+		if (!isCommitteeMember) return null;
+
 		return {
 			label: "実委人に切り替え",
 			icon: <IconArrowsExchange size={18} />,
@@ -82,17 +86,62 @@ export function Sidebar({
 }: SidebarProps) {
 	const { location } = useRouterState();
 	const navigate = useNavigate();
-	const { signOut } = useAuthStore();
+	const { committeeMember, isCommitteeMember, signOut } = useAuthStore();
+	const [hasMemberEditPermission, setHasMemberEditPermission] = useState<
+		boolean | null
+	>(null);
+	const shouldCheckMemberEdit = menuItems.some(
+		item => item.to === "/committee/members"
+	);
 
 	const handleSignOut = async () => {
 		await signOut();
 		navigate({ to: "/auth/login" });
 	};
 
-	const roleSwitchItem = getRoleSwitchItem(location.pathname, menuItems);
+	useEffect(() => {
+		if (!shouldCheckMemberEdit || !committeeMember?.id) {
+			setHasMemberEditPermission(null);
+			return;
+		}
+
+		let cancelled = false;
+
+		const loadPermissions = async () => {
+			try {
+				const res = await listCommitteeMemberPermissions(committeeMember.id);
+				if (!cancelled) {
+					setHasMemberEditPermission(
+						res.permissions.some(p => p.permission === "MEMBER_EDIT")
+					);
+				}
+			} catch {
+				// 判定不能な場合は現状維持で表示する
+				if (!cancelled) {
+					setHasMemberEditPermission(null);
+				}
+			}
+		};
+
+		void loadPermissions();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [committeeMember?.id, shouldCheckMemberEdit]);
+
+	const roleSwitchItem = getRoleSwitchItem(
+		location.pathname,
+		menuItems,
+		isCommitteeMember
+	);
 	const footerItems = roleSwitchItem
-		? [...commonItems, roleSwitchItem]
+		? [roleSwitchItem, ...commonItems]
 		: commonItems;
+	const visibleMenuItems =
+		hasMemberEditPermission === false
+			? menuItems.filter(item => item.to !== "/committee/members")
+			: menuItems;
 
 	const renderItem = (item: MenuItem) => {
 		const active = location.pathname.startsWith(item.to);
@@ -165,7 +214,7 @@ export function Sidebar({
 				<div className={styles.projectSelector}>{projectSelector}</div>
 			)}
 
-			<nav className={styles.nav}>{menuItems.map(renderItem)}</nav>
+			<nav className={styles.nav}>{visibleMenuItems.map(renderItem)}</nav>
 
 			<div className={styles.footer}>
 				{footerItems.map(renderItem)}

@@ -9,11 +9,6 @@ import type { MenuItem } from "./Sidebar";
 
 export const projectMenuItems: MenuItem[] = [
 	{
-		label: "メンバー管理",
-		icon: <IconUsers size={18} />,
-		to: "/project/members",
-	},
-	{
 		label: "申請",
 		icon: <IconFileText size={18} />,
 		to: "/project/forms",
@@ -28,14 +23,14 @@ export const projectMenuItems: MenuItem[] = [
 		icon: <IconBell size={18} />,
 		to: "/project/notice",
 	},
-];
-
-export const committeeMenuItems: MenuItem[] = [
 	{
 		label: "メンバー管理",
 		icon: <IconUsers size={18} />,
-		to: "/committee/members",
+		to: "/project/members",
 	},
+];
+
+export const committeeMenuItems: MenuItem[] = [
 	{
 		label: "マスターシート",
 		icon: <IconTable size={18} />,
@@ -52,4 +47,9 @@ export const committeeMenuItems: MenuItem[] = [
 		to: "/committee/support",
 	},
 	{ label: "お知らせ", icon: <IconBell size={18} />, to: "/committee/notice" },
+	{
+		label: "メンバー管理",
+		icon: <IconUsers size={18} />,
+		to: "/committee/members",
+	},
 ];
