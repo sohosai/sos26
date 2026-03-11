@@ -39,6 +39,7 @@ export function CreateProjectRegistrationFormDialog({
 					type: item.type,
 					required: item.required,
 					sortOrder: index,
+					constraints: item.constraints,
 					options: item.options?.map((opt, i) => ({
 						label: opt.label,
 						sortOrder: i,

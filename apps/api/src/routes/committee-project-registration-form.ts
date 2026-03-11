@@ -10,6 +10,10 @@ import {
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
+import {
+	constraintsToPrisma,
+	mapFormToApiShape,
+} from "../lib/form-constraints";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -123,8 +127,9 @@ committeeProjectRegistrationFormRoute.post(
 						sortOrder: clampedSortOrder,
 						ownerId: userId,
 						items: {
-							create: items.map(({ options, ...item }) => ({
+							create: items.map(({ options, constraints, ...item }) => ({
 								...item,
+								...constraintsToPrisma(constraints),
 								options: options?.length ? { create: options } : undefined,
 							})),
 						},
@@ -148,7 +153,7 @@ committeeProjectRegistrationFormRoute.post(
 			{ isolationLevel: "Serializable" }
 		);
 
-		return c.json({ form });
+		return c.json({ form: mapFormToApiShape(form) });
 	}
 );
 
@@ -196,7 +201,7 @@ committeeProjectRegistrationFormRoute.get(
 			c.req.param()
 		);
 		const form = await getFormOrThrow(formId);
-		return c.json({ form });
+		return c.json({ form: mapFormToApiShape(form) });
 	}
 );
 
@@ -322,10 +327,11 @@ committeeProjectRegistrationFormRoute.patch(
 					await tx.projectRegistrationFormItem.deleteMany({
 						where: { formId },
 					});
-					for (const { options, ...item } of items) {
+					for (const { options, constraints, ...item } of items) {
 						await tx.projectRegistrationFormItem.create({
 							data: {
 								...item,
+								...constraintsToPrisma(constraints),
 								formId,
 								options: options?.length ? { create: options } : undefined,
 							},
@@ -355,7 +361,7 @@ committeeProjectRegistrationFormRoute.patch(
 			{ isolationLevel: "Serializable" }
 		);
 
-		return c.json({ form });
+		return c.json({ form: mapFormToApiShape(form) });
 	}
 );
 

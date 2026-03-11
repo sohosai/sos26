@@ -3,6 +3,7 @@ import {
 	formItemOptionSchema,
 	formItemSchema,
 	formItemTypeSchema,
+	textConstraintsSchema,
 } from "./form";
 import { projectLocationSchema, projectTypeSchema } from "./project";
 import { userSchema } from "./user";
@@ -29,6 +30,7 @@ export type ProjectRegistrationFormItemOption = z.infer<
 	typeof projectRegistrationFormItemOptionSchema
 >;
 
+// ProjectRegistrationFormItem は FormItem と同じ constraints を持つ
 export const projectRegistrationFormItemSchema = formItemSchema;
 export type ProjectRegistrationFormItem = z.infer<
 	typeof projectRegistrationFormItemSchema
@@ -116,6 +118,7 @@ export const projectRegistrationFormItemInputSchema = z.object({
 	required: z.boolean().default(false),
 	sortOrder: z.number().int(),
 	options: z.array(projectRegistrationFormItemOptionInputSchema).optional(),
+	constraints: textConstraintsSchema.nullable().optional(),
 });
 
 // ─────────────────────────────────────────────────────────────

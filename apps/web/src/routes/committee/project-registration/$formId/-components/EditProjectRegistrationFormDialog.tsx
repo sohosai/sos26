@@ -39,6 +39,7 @@ function toFormValues(
 				description: item.description ?? undefined,
 				type: item.type,
 				required: item.required,
+				constraints: item.constraints,
 				options: [...item.options]
 					.sort((a, b) => a.sortOrder - b.sortOrder)
 					.map(opt => ({ id: opt.id, label: opt.label })),
@@ -68,6 +69,7 @@ export function EditProjectRegistrationFormDialog({
 					type: item.type,
 					required: item.required,
 					sortOrder: index,
+					constraints: item.constraints,
 					options: item.options?.map((opt, i) => ({
 						label: opt.label,
 						sortOrder: i,

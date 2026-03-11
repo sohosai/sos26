@@ -1260,6 +1260,12 @@ model ProjectRegistrationFormItem {
   // 必須かどうか
   required Boolean @default(false)
 
+  // テキスト制約（TEXT/TEXTAREA のみ使用）
+  constraintMinLength     Int?
+  constraintMaxLength     Int?
+  constraintPattern       String?
+  constraintCustomPattern String?
+
   // 表示順
   sortOrder Int
 

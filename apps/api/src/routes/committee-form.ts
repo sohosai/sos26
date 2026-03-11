@@ -5,15 +5,15 @@ import {
 	formIdPathParamsSchema,
 	formResponsePathParamsSchema,
 	requestFormAuthorizationRequestSchema,
-	type TextConstraints,
 	updateFormAuthorizationRequestSchema,
 	updateFormDetailRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import {
-	constraintsFromPrisma,
-	type PrismaConstraintFields,
+	constraintsToPrisma,
+	mapFormToApiShape,
+	mapItemToApiShape,
 } from "../lib/form-constraints";
 import {
 	notifyFormAuthorizationDecided,
@@ -24,46 +24,6 @@ import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
 const committeeFormRoute = new Hono<AuthEnv>();
-
-// ─────────────────────────────────────────────────────────────
-// ヘルパー: TextConstraints → Prisma 変換
-// ─────────────────────────────────────────────────────────────
-
-function constraintsToPrisma(
-	constraints: TextConstraints | null | undefined
-): PrismaConstraintFields {
-	return {
-		constraintMinLength: constraints?.minLength ?? null,
-		constraintMaxLength: constraints?.maxLength ?? null,
-		constraintPattern: constraints?.pattern ?? null,
-		constraintCustomPattern: constraints?.customPattern ?? null,
-	};
-}
-
-function mapItemToApiShape<T extends PrismaConstraintFields>(item: T) {
-	const {
-		constraintMinLength,
-		constraintMaxLength,
-		constraintPattern,
-		constraintCustomPattern,
-		...rest
-	} = item;
-	return {
-		...rest,
-		constraints: constraintsFromPrisma({
-			constraintMinLength,
-			constraintMaxLength,
-			constraintPattern,
-			constraintCustomPattern,
-		}),
-	};
-}
-
-function mapFormToApiShape<T extends { items: PrismaConstraintFields[] }>(
-	form: T
-) {
-	return { ...form, items: form.items.map(mapItemToApiShape) };
-}
 
 // フォームの存在確認 編集権限チェック
 
