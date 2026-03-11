@@ -598,28 +598,29 @@ committeeProjectRegistrationFormRoute.post(
 		const { isWrite } =
 			addProjectRegistrationFormCollaboratorRequestSchema.parse(body);
 
-		const existing = await prisma.projectRegistrationFormCollaborator.findFirst(
-			{
-				where: { formId, userId: targetUserId },
-			}
-		);
+		const collaborator = await prisma.$transaction(
+			async tx => {
+				const existing = await tx.projectRegistrationFormCollaborator.findFirst(
+					{
+						where: { formId, userId: targetUserId },
+					}
+				);
+				if (existing) {
+					if (!existing.deletedAt)
+						throw Errors.alreadyExists("既に共同編集者として追加されています");
+					// 論理削除済みの場合は再有効化
+					return tx.projectRegistrationFormCollaborator.update({
+						where: { id: existing.id },
+						data: { deletedAt: null, isWrite },
+					});
+				}
 
-		if (existing) {
-			if (!existing.deletedAt)
-				throw Errors.alreadyExists("既に共同編集者として追加されています");
-			// 論理削除済みの場合は再有効化
-			const collaborator =
-				await prisma.projectRegistrationFormCollaborator.update({
-					where: { id: existing.id },
-					data: { deletedAt: null, isWrite },
+				return tx.projectRegistrationFormCollaborator.create({
+					data: { formId, userId: targetUserId, isWrite },
 				});
-			return c.json({ collaborator });
-		}
-
-		const collaborator =
-			await prisma.projectRegistrationFormCollaborator.create({
-				data: { formId, userId: targetUserId, isWrite },
-			});
+			},
+			{ isolationLevel: "Serializable" }
+		);
 		return c.json({ collaborator });
 	}
 );
