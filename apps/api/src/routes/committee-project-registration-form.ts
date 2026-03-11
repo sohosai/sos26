@@ -529,6 +529,20 @@ committeeProjectRegistrationFormRoute.patch(
 				if (auth.status !== "PENDING")
 					throw Errors.invalidRequest("この承認申請は既に処理済みです");
 
+				// 承認申請作成後に DELIVER 権限が剥奪されていないか再確認
+				const deliverMember = await tx.committeeMember.findFirst({
+					where: { userId: user.id, deletedAt: null },
+					include: { permissions: true },
+				});
+				if (
+					!deliverMember ||
+					!deliverMember.permissions.some(
+						p => p.permission === "PROJECT_REGISTRATION_FORM_DELIVER"
+					)
+				) {
+					throw Errors.forbidden("企画登録フォーム承認権限がありません");
+				}
+
 				const updated = await tx.projectRegistrationFormAuthorization.update({
 					where: { id: authorizationId, status: "PENDING" },
 					data: { status, decidedAt: new Date() },
