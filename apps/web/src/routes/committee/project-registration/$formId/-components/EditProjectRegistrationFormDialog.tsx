@@ -1,4 +1,5 @@
 import type { ProjectRegistrationFormDetail } from "@sos26/shared";
+import { useMemo } from "react";
 import { toast } from "sonner";
 import { updateProjectRegistrationForm } from "@/lib/api/committee-project-registration-form";
 import {
@@ -82,13 +83,15 @@ export function EditProjectRegistrationFormDialog({
 		}
 	};
 
+	const initialValues = useMemo(() => toFormValues(initialForm), [initialForm]);
+
 	return (
 		<ProjectRegistrationFormDialog
 			open={open}
 			onOpenChange={onOpenChange}
 			dialogTitle="企画登録フォームを編集"
 			submitLabel="保存"
-			initialValues={toFormValues(initialForm)}
+			initialValues={initialValues}
 			activeForms={activeForms}
 			onSubmit={handleSubmit}
 			onSuccess={onSuccess}

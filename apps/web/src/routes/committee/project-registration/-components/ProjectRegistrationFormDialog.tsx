@@ -1,7 +1,7 @@
 import { Dialog, Text, VisuallyHidden } from "@radix-ui/themes";
 import type { ProjectLocation, ProjectType } from "@sos26/shared";
 import { IconArrowsSort, IconPlus, IconX } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { FormItemList } from "@/components/form/Builder/ItemList";
 import type { FormItem } from "@/components/form/type";
@@ -92,9 +92,13 @@ export function ProjectRegistrationFormDialog({
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [pickerOpen, setPickerOpen] = useState(false);
 
+	const initialValuesRef = useRef(initialValues);
+	initialValuesRef.current = initialValues;
+	const prevOpenRef = useRef(false);
+
 	useEffect(() => {
-		if (open) {
-			const v = initialValues ?? makeDefaultValues();
+		if (open && !prevOpenRef.current) {
+			const v = initialValuesRef.current ?? makeDefaultValues();
 			setTitle(v.title);
 			setDescription(v.description);
 			setSortOrder(v.sortOrder);
@@ -103,7 +107,8 @@ export function ProjectRegistrationFormDialog({
 			setItems(v.items);
 			setErrors({});
 		}
-	}, [open, initialValues]);
+		prevOpenRef.current = open;
+	}, [open]);
 
 	// タイプと場所の選択ロジック
 	const handleStageTypeToggle = () => {
