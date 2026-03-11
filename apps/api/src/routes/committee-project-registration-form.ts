@@ -59,18 +59,6 @@ const requireOwner = async (formId: string, userId: string) => {
 	return form;
 };
 
-// 作成者または書き込み権限を持つ共同編集者を許可
-const requireWriteAccess = async (formId: string, userId: string) => {
-	const form = await getFormOrThrow(formId);
-	if (form.ownerId === userId) return form;
-	const isWriteCollaborator = form.collaborators.some(
-		c => c.user.id === userId && c.isWrite
-	);
-	if (!isWriteCollaborator)
-		throw Errors.forbidden("この操作は作成者または共同編集者のみ行えます");
-	return form;
-};
-
 // PROJECT_REGISTRATION_FORM_CREATE 権限チェック
 const requireCreatePermission = async (committeeMemberId: string) => {
 	const cm = await prisma.committeeMember.findUnique({
@@ -222,7 +210,6 @@ committeeProjectRegistrationFormRoute.patch(
 			c.req.param()
 		);
 		const userId = c.get("user").id;
-		await requireWriteAccess(formId, userId);
 
 		const body = await c.req.json().catch(() => ({}));
 		const { items, ...formDataParsed } =
@@ -235,12 +222,26 @@ committeeProjectRegistrationFormRoute.patch(
 				const existing = await tx.projectRegistrationForm.findFirstOrThrow({
 					where: { id: formId, deletedAt: null },
 					select: {
+						ownerId: true,
 						sortOrder: true,
 						isActive: true,
 						filterTypes: true,
 						filterLocations: true,
+						collaborators: {
+							where: { deletedAt: null },
+							select: { userId: true, isWrite: true },
+						},
 					},
 				});
+
+				// 作成者または書き込み権限を持つ共同編集者のみ許可
+				const hasWriteAccess =
+					existing.ownerId === userId ||
+					existing.collaborators.some(c => c.userId === userId && c.isWrite);
+				if (!hasWriteAccess)
+					throw Errors.forbidden(
+						"この操作は作成者または共同編集者のみ行えます"
+					);
 
 				if (existing.isActive)
 					throw Errors.invalidRequest("有効化されたフォームは変更できません");
@@ -382,16 +383,17 @@ committeeProjectRegistrationFormRoute.delete(
 			c.req.param()
 		);
 		const userId = c.get("user").id;
-		await requireOwner(formId, userId);
 
 		const now = new Date();
 		await prisma.$transaction(
 			async tx => {
 				const current = await tx.projectRegistrationForm.findFirst({
 					where: { id: formId, deletedAt: null },
-					select: { isActive: true, sortOrder: true },
+					select: { ownerId: true, isActive: true, sortOrder: true },
 				});
 				if (!current) throw Errors.notFound("企画登録フォームが見つかりません");
+				if (current.ownerId !== userId)
+					throw Errors.forbidden("この操作は作成者のみ行えます");
 				if (current.isActive)
 					throw Errors.invalidRequest("有効化されたフォームは削除できません");
 
