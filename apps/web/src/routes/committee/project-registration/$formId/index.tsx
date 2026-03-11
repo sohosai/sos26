@@ -23,11 +23,11 @@ import {
 import { useAuthStore } from "@/lib/auth";
 import { getProjectRegistrationFormStatus } from "@/lib/form/form-status";
 import { formatDate } from "@/lib/format";
-import { FormItemsPreview } from "@/routes/committee/forms/$formId/-components/FormItemsPreview";
 import {
 	PROJECT_LOCATION_LABELS,
 	PROJECT_TYPE_LABELS,
-} from "../-components/projectRegistrationLabels";
+} from "@/lib/project/options";
+import { FormItemsPreview } from "@/routes/committee/forms/$formId/-components/FormItemsPreview";
 import { EditProjectRegistrationFormDialog } from "./-components/EditProjectRegistrationFormDialog";
 import { ProjectRegistrationFormDetailSidebar } from "./-components/ProjectRegistrationFormDetailSidebar";
 import styles from "./index.module.scss";

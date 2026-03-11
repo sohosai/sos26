@@ -16,11 +16,11 @@ import {
 	type FormStatusInfo,
 	getProjectRegistrationFormStatus,
 } from "@/lib/form/form-status";
-import { CreateProjectRegistrationFormDialog } from "./-components/CreateProjectRegistrationFormDialog";
 import {
 	PROJECT_LOCATION_LABELS,
 	PROJECT_TYPE_LABELS,
-} from "./-components/projectRegistrationLabels";
+} from "@/lib/project/options";
+import { CreateProjectRegistrationFormDialog } from "./-components/CreateProjectRegistrationFormDialog";
 import styles from "./index.module.scss";
 
 type FormRow = {

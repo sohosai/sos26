@@ -12,20 +12,12 @@ import {
 	TextArea,
 	TextField,
 } from "@/components/primitives";
+import {
+	PROJECT_LOCATION_OPTIONS,
+	PROJECT_TYPE_OPTIONS,
+} from "@/lib/project/options";
 import styles from "./ProjectRegistrationFormDialog.module.scss";
 import { ReorderFormsDialog } from "./ReorderFormsDialog";
-
-const TYPE_OPTIONS: { value: ProjectType; label: string }[] = [
-	{ value: "NORMAL", label: "通常企画" },
-	{ value: "FOOD", label: "食品企画" },
-	{ value: "STAGE", label: "ステージ企画" },
-];
-
-const LOCATION_OPTIONS: { value: ProjectLocation; label: string }[] = [
-	{ value: "INDOOR", label: "屋内" },
-	{ value: "OUTDOOR", label: "屋外" },
-	{ value: "STAGE", label: "ステージ" },
-];
 
 export type ProjectRegistrationFormValues = {
 	title: string;
@@ -304,7 +296,7 @@ export function ProjectRegistrationFormDialog({
 								対象企画区分（空=全区分）
 							</Text>
 							<div className={styles.checkboxGroup}>
-								{TYPE_OPTIONS.map(opt => (
+								{PROJECT_TYPE_OPTIONS.map(opt => (
 									<Checkbox
 										key={opt.value}
 										label={opt.label}
@@ -320,7 +312,7 @@ export function ProjectRegistrationFormDialog({
 								対象実施場所（空=全場所）
 							</Text>
 							<div className={styles.checkboxGroup}>
-								{LOCATION_OPTIONS.map(opt => {
+								{PROJECT_LOCATION_OPTIONS.map(opt => {
 									const isStageOpt = opt.value === "STAGE";
 									const stageTypeSelected = filterTypes.includes("STAGE");
 									const nonStageTypeSelected = filterTypes.some(

@@ -11,7 +11,7 @@ import { Button, IconButton } from "@/components/primitives";
 import {
 	PROJECT_LOCATION_LABELS,
 	PROJECT_TYPE_LABELS,
-} from "./projectRegistrationLabels";
+} from "@/lib/project/options";
 import styles from "./ReorderFormsDialog.module.scss";
 
 const PLACEHOLDER_ID = "__placeholder__";

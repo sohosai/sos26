@@ -30,3 +30,9 @@
 	gap: var(--space-3);
 	padding-top: var(--space-2);
 }
+
+.locationLabel {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-4);
+}

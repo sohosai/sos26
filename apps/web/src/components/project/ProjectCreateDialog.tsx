@@ -16,6 +16,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/patterns";
 import { Button, Checkbox, TextField } from "@/components/primitives";
 import { createProject } from "@/lib/api/project";
 import { getActiveProjectRegistrationForms } from "@/lib/api/project-registration-form";
+import {
+	PROJECT_LOCATION_OPTIONS,
+	PROJECT_TYPE_OPTIONS,
+} from "@/lib/project/options";
 import styles from "./ProjectCreateDialog.module.scss";
 
 type Props = {
@@ -36,17 +40,6 @@ type Step1State = {
 type Step1Errors = Partial<Record<keyof Step1State, string>>;
 
 type RegForm = GetActiveProjectRegistrationFormsResponse["forms"][number];
-
-const TYPE_OPTIONS = [
-	{ id: "NORMAL", label: "通常企画" },
-	{ id: "FOOD", label: "食品企画" },
-	{ id: "STAGE", label: "ステージ企画" },
-];
-
-const LOCATION_OPTIONS_DEFAULT = [
-	{ id: "INDOOR", label: "屋内" },
-	{ id: "OUTDOOR", label: "屋外" },
-];
 
 const EMPTY_STEP1: Step1State = {
 	name: "",
@@ -87,7 +80,7 @@ function buildRegFormAnswers(
 				switch (type) {
 					case "TEXT":
 					case "TEXTAREA":
-						return { type, formItemId, textValue: value as string };
+						return { type, formItemId, textValue: value as string | null };
 					case "NUMBER":
 						return { type, formItemId, numberValue: value as number | null };
 					case "SELECT":
@@ -100,7 +93,7 @@ function buildRegFormAnswers(
 						return { type, formItemId, selectedOptionIds };
 					}
 					case "FILE":
-						return { type, formItemId, fileUrl: value as string };
+						return { type, formItemId, fileId: value as string | null };
 					default: {
 						const _exhaustive: never = type;
 						throw new Error(`Unsupported type: ${_exhaustive}`);
@@ -395,10 +388,9 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 				parsed.data as ProjectType,
 				parsedLoc.data as ProjectLocation
 			);
-			const sortedForms = [...forms].sort((a, b) => a.sortOrder - b.sortOrder);
-			setRegForms(sortedForms);
-			setRegFormAnswers(sortedForms.map(f => initFormAnswers(f.items)));
-			setRegFormErrors(sortedForms.map(() => ({})));
+			setRegForms(forms);
+			setRegFormAnswers(forms.map(f => initFormAnswers(f.items)));
+			setRegFormErrors(forms.map(() => ({})));
 			setStep(1);
 		} catch {
 			toast.error("追加フォームの取得に失敗しました");
@@ -573,8 +565,8 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 									required
 									name="type"
 								>
-									{TYPE_OPTIONS.map(opt => (
-										<RadioGroupItem key={opt.id} value={opt.id}>
+									{PROJECT_TYPE_OPTIONS.map(opt => (
+										<RadioGroupItem key={opt.value} value={opt.value}>
 											{opt.label}
 										</RadioGroupItem>
 									))}
@@ -617,9 +609,16 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 											name="location"
 											disabled={!step1.type}
 										>
-											{LOCATION_OPTIONS_DEFAULT.map(opt => (
-												<RadioGroupItem key={opt.id} value={opt.id}>
-													{opt.label}
+											{PROJECT_LOCATION_OPTIONS.filter(
+												opt => opt.value !== "STAGE"
+											).map(opt => (
+												<RadioGroupItem key={opt.value} value={opt.value}>
+													<span className={styles.locationLabel}>
+														{opt.label}
+														<Text as="span" size="1" color="gray">
+															{opt.caption}
+														</Text>
+													</span>
 												</RadioGroupItem>
 											))}
 										</RadioGroup>
