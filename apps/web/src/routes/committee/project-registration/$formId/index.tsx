@@ -181,10 +181,10 @@ function RouteComponent() {
 		setIsDeleting(true);
 		try {
 			await deleteProjectRegistrationForm(formId);
+			toast.success("フォームを削除しました");
 			navigate({ to: "/committee/project-registration" });
 		} catch {
 			toast.error("フォームの削除に失敗しました");
-		} finally {
 			setIsDeleting(false);
 		}
 	};
