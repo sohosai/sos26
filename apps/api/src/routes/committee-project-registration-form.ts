@@ -9,6 +9,7 @@ import {
 	updateProjectRegistrationFormRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
+import { requireDeliverPermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
 import {
 	constraintsToPrisma,
@@ -445,23 +446,13 @@ committeeProjectRegistrationFormRoute.post(
 			throw Errors.notFound("承認依頼先のユーザーが見つかりません");
 
 		// PROJECT_REGISTRATION_FORM_DELIVER 権限または委員長であることを確認
-		const deliverMember = await prisma.committeeMember.findFirst({
-			where: {
-				userId: requestedToId,
-				deletedAt: null,
-			},
-			include: { permissions: true },
-		});
-		if (
-			!deliverMember ||
-			!deliverMember.permissions.some(
-				p => p.permission === "PROJECT_REGISTRATION_FORM_DELIVER"
-			)
-		) {
-			throw Errors.invalidRequest(
-				"承認依頼先のユーザーに企画登録フォーム承認権限がありません"
-			);
-		}
+		await requireDeliverPermission(
+			prisma,
+			requestedToId,
+			"PROJECT_REGISTRATION_FORM_DELIVER",
+			"承認依頼先のユーザーに企画登録フォーム承認権限がありません",
+			"invalidRequest"
+		);
 
 		const authorization = await prisma.$transaction(
 			async tx => {
@@ -530,18 +521,12 @@ committeeProjectRegistrationFormRoute.patch(
 					throw Errors.invalidRequest("この承認申請は既に処理済みです");
 
 				// 承認申請作成後に DELIVER 権限が剥奪されていないか再確認
-				const deliverMember = await tx.committeeMember.findFirst({
-					where: { userId: user.id, deletedAt: null },
-					include: { permissions: true },
-				});
-				if (
-					!deliverMember ||
-					!deliverMember.permissions.some(
-						p => p.permission === "PROJECT_REGISTRATION_FORM_DELIVER"
-					)
-				) {
-					throw Errors.forbidden("企画登録フォーム承認権限がありません");
-				}
+				await requireDeliverPermission(
+					tx,
+					user.id,
+					"PROJECT_REGISTRATION_FORM_DELIVER",
+					"企画登録フォーム承認権限がありません"
+				);
 
 				const updated = await tx.projectRegistrationFormAuthorization.update({
 					where: { id: authorizationId, status: "PENDING" },

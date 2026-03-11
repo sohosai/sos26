@@ -9,6 +9,7 @@ import {
 	updateFormDetailRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
+import { requireDeliverPermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
 import {
 	constraintsToPrisma,
@@ -58,6 +59,24 @@ const requireOwner = async (formId: string, userId: string) => {
 	if (form.ownerId !== userId)
 		throw Errors.forbidden("この操作は作成者のみ行えます");
 	return form;
+};
+
+// 承認時の配信スケジュール日時バリデーション
+const validateApprovalSchedule = (
+	scheduledSendAt: Date,
+	deadlineAt: Date | null | undefined,
+	now: Date
+) => {
+	if (scheduledSendAt <= now) {
+		throw Errors.invalidRequest(
+			"配信希望日時を過ぎているため承認できません。新しい日時で再申請してください"
+		);
+	}
+	if (deadlineAt && scheduledSendAt >= deadlineAt) {
+		throw Errors.invalidRequest(
+			"配信希望日時と締め切り日時の順番が不正であるため承認できません。新しい日時で再申請してください"
+		);
+	}
 };
 
 // ─────────────────────────────────────────
@@ -597,35 +616,32 @@ committeeFormRoute.patch(
 				include: { form: { select: { deletedAt: true, title: true } } },
 			});
 
-			if (!authorization) {
-				throw Errors.notFound("承認申請が見つかりません");
-			}
+			if (!authorization) throw Errors.notFound("承認申請が見つかりません");
 
-			if (authorization.form.deletedAt) {
+			if (authorization.form.deletedAt)
 				throw Errors.invalidRequest("削除済みのフォームは承認できません");
-			}
 
-			if (authorization.requestedToId !== user.id) {
+			if (authorization.requestedToId !== user.id)
 				throw Errors.forbidden("この承認申請を操作する権限がありません");
-			}
 
-			if (authorization.status !== "PENDING") {
+			if (authorization.status !== "PENDING")
 				throw Errors.invalidRequest("この承認申請は既に処理済みです");
-			}
+
+			// 承認申請作成後に FORM_DELIVER 権限が剥奪されていないか再確認
+			await requireDeliverPermission(
+				tx,
+				user.id,
+				"FORM_DELIVER",
+				"フォーム承認権限がありません"
+			);
 
 			const now = new Date();
-			// 承認する場合、scheduledSendAt が未来であること
-			if (status === "APPROVED" && authorization.scheduledSendAt <= now) {
-				throw Errors.invalidRequest(
-					"配信希望日時を過ぎているため承認できません。新しい日時で再申請してください"
-				);
-			} else if (
-				status === "APPROVED" &&
-				authorization.deadlineAt &&
-				authorization.scheduledSendAt >= authorization.deadlineAt
-			) {
-				throw Errors.invalidRequest(
-					"配信希望日時と締め切り日時の順番が不正であるため承認できません。新しい日時で再申請してください"
+			// 承認する場合、スケジュール日時を検証
+			if (status === "APPROVED") {
+				validateApprovalSchedule(
+					authorization.scheduledSendAt,
+					authorization.deadlineAt,
+					now
 				);
 			}
 
