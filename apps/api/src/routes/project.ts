@@ -13,7 +13,7 @@ import {
 	assertFormAnswersValid,
 	assertRequiredAnswered,
 } from "../lib/form-answer-validation";
-import { mapFormToApiShape } from "../lib/form-constraints";
+import { mapItemToApiShape } from "../lib/form-constraints";
 import {
 	notifySubOwnerRequestApproved,
 	notifySubOwnerRequestCancelled,
@@ -839,7 +839,22 @@ projectRoute.get("/registration-forms", requireAuth, async c => {
 			f.filterLocations.includes(query.location)
 	);
 
-	return c.json({ forms: filtered.map(mapFormToApiShape) });
+	return c.json({
+		forms: filtered.map(
+			({
+				ownerId,
+				deletedAt,
+				isActive,
+				sortOrder,
+				filterTypes,
+				filterLocations,
+				...rest
+			}) => ({
+				...rest,
+				items: rest.items.map(mapItemToApiShape),
+			})
+		),
+	});
 });
 
 export { projectRoute };
