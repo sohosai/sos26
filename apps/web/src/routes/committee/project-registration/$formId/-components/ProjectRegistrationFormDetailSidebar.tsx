@@ -27,7 +27,7 @@ type Props = {
 	approvers: Approver[];
 	removingId: string | null;
 	onAddCollaborator: (userId: string) => Promise<void>;
-	onRemoveCollaborator: (userId: string) => void;
+	onRemoveCollaborator: (userId: string) => Promise<void>;
 	onApprove: (authorizationId: string) => Promise<void>;
 	onReject: (authorizationId: string) => Promise<void>;
 	onAuthRequestSuccess: () => void;

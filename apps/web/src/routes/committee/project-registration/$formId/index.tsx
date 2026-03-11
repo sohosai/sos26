@@ -128,6 +128,8 @@ function RouteComponent() {
 
 	const previewForm = useMemo(() => formDetailToPreviewForm(form), [form]);
 
+	if (!user) return null;
+
 	const handleAddCollaborator = async (targetUserId: string) => {
 		try {
 			await addProjectRegistrationFormCollaborator(formId, targetUserId, {
@@ -257,7 +259,7 @@ function RouteComponent() {
 
 			<ProjectRegistrationFormDetailSidebar
 				form={form}
-				userId={user?.id ?? ""}
+				userId={user.id}
 				isOwner={isOwner}
 				canEdit={canEdit}
 				availableMembers={availableMembers}
