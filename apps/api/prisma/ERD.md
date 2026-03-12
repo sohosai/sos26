@@ -283,6 +283,8 @@ erDiagram
   String body
   String createdById FK
   InquiryCreatorRole senderRole
+  Boolean isDraft
+  String draftCreatedById "nullable"
   DateTime deletedAt "nullable"
   DateTime createdAt
 }
@@ -817,6 +819,8 @@ Properties as follows:
 - `body`:
 - `createdById`:
 - `senderRole`:
+- `isDraft`:
+- `draftCreatedById`:
 - `deletedAt`:
 - `createdAt`:
 

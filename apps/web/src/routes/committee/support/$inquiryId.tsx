@@ -6,7 +6,9 @@ import { SupportDetail } from "@/components/support/SupportDetail";
 import {
 	addCommitteeInquiryAssignee,
 	addCommitteeInquiryComment,
+	deleteCommitteeInquiryComment,
 	getCommitteeInquiry,
+	publishDraftComment,
 	removeCommitteeInquiryAssignee,
 	reopenCommitteeInquiry,
 	updateCommitteeInquiryStatus,
@@ -114,12 +116,20 @@ function CommitteeSupportDetailPage() {
 					toast.error("ステータスの更新に失敗しました");
 				}
 			}}
-			onAddComment={async (body, fileIds) => {
+			onAddComment={async (body, fileIds, isDraft) => {
 				try {
-					await addCommitteeInquiryComment(inquiryId, { body, fileIds });
+					await addCommitteeInquiryComment(inquiryId, {
+						body,
+						fileIds,
+						isDraft,
+					});
 					await router.invalidate();
 				} catch {
-					toast.error("コメントの送信に失敗しました");
+					toast.error(
+						isDraft
+							? "下書きの保存に失敗しました"
+							: "コメントの送信に失敗しました"
+					);
 				}
 			}}
 			onAddAssignee={async (userId, side) => {
@@ -136,6 +146,24 @@ function CommitteeSupportDetailPage() {
 			onRemoveAssignee={async assigneeId => {
 				await removeCommitteeInquiryAssignee(inquiryId, assigneeId);
 				await router.invalidate();
+			}}
+			onPublishDraft={async commentId => {
+				try {
+					await publishDraftComment(inquiryId, commentId);
+					await router.invalidate();
+					toast.success("コメントを送信しました");
+				} catch {
+					toast.error("コメントの送信に失敗しました");
+				}
+			}}
+			onDeleteComment={async commentId => {
+				try {
+					await deleteCommitteeInquiryComment(inquiryId, commentId);
+					await router.invalidate();
+					toast.success("コメントを削除しました");
+				} catch {
+					toast.error("コメントの削除に失敗しました");
+				}
 			}}
 			onUpdateViewers={async viewers => {
 				try {

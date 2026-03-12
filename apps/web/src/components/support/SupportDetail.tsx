@@ -31,12 +31,18 @@ type SupportDetailProps = {
 	committeeMembers: { id: string; name: string }[];
 	projectMembers: { id: string; name: string }[];
 	onUpdateStatus: (status: "RESOLVED" | "IN_PROGRESS") => Promise<void>;
-	onAddComment: (body: string, fileIds?: string[]) => Promise<void>;
+	onAddComment: (
+		body: string,
+		fileIds?: string[],
+		isDraft?: boolean
+	) => Promise<void>;
 	onAddAssignee: (
 		userId: string,
 		side: "PROJECT" | "COMMITTEE"
 	) => Promise<void>;
 	onRemoveAssignee: (assigneeId: string) => Promise<void>;
+	onPublishDraft?: (commentId: string) => Promise<void>;
+	onDeleteComment?: (commentId: string) => Promise<void>;
 	viewers?: ViewerDetail[];
 	onUpdateViewers?: (viewers: ViewerInput[]) => Promise<void>;
 	/** 実委側: 担当者 or 管理者かどうか（編集 UI の出し分け） */
@@ -54,6 +60,8 @@ export function SupportDetail({
 	onAddComment,
 	onAddAssignee,
 	onRemoveAssignee,
+	onPublishDraft,
+	onDeleteComment,
 	viewers,
 	onUpdateViewers,
 	isAssigneeOrAdmin = false,
@@ -178,6 +186,25 @@ export function SupportDetail({
 								date={entry.data.createdAt}
 								body={entry.data.body}
 								attachments={entry.data.attachments}
+								isDraft={entry.data.isDraft}
+								isOwnDraft={
+									entry.data.isDraft &&
+									entry.data.draftCreatedById === currentUserId
+								}
+								onPublishDraft={
+									entry.data.isDraft &&
+									entry.data.draftCreatedById === currentUserId &&
+									onPublishDraft
+										? () => onPublishDraft(entry.data.id)
+										: undefined
+								}
+								onDeleteDraft={
+									entry.data.isDraft &&
+									entry.data.draftCreatedById === currentUserId &&
+									onDeleteComment
+										? () => onDeleteComment(entry.data.id)
+										: undefined
+								}
 							/>
 						) : (
 							<ActivityItem key={entry.data.id} activity={entry.data} />
@@ -188,7 +215,11 @@ export function SupportDetail({
 				<Separator size="4" />
 
 				{inquiry.status !== "RESOLVED" ? (
-					<ReplySection onAddComment={onAddComment} disabled={!canComment} />
+					<ReplySection
+						onAddComment={onAddComment}
+						disabled={!canComment}
+						enableDraft={viewerRole === "committee"}
+					/>
 				) : (
 					<section className={styles.replySection}>
 						<Text size="2" color="gray">

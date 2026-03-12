@@ -400,7 +400,7 @@ projectInquiryRoute.get(
 					include: assigneeInclude,
 				},
 				comments: {
-					where: { deletedAt: null },
+					where: { deletedAt: null, isDraft: false },
 					include: {
 						createdBy: { select: userSelect },
 						attachments: {

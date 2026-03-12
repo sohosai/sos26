@@ -13,15 +13,23 @@ export function TimelineItem({
 	date,
 	body,
 	attachments,
+	isDraft,
+	isOwnDraft,
+	onPublishDraft,
+	onDeleteDraft,
 }: {
 	name: string;
 	role: "project" | "committee";
 	date: Date;
 	body: string;
 	attachments?: InquiryAttachment[];
+	isDraft?: boolean;
+	isOwnDraft?: boolean;
+	onPublishDraft?: () => Promise<void>;
+	onDeleteDraft?: () => Promise<void>;
 }) {
 	return (
-		<div className={styles.timelineItem}>
+		<div className={styles.timelineItem} data-draft={isDraft || undefined}>
 			<span className={styles.avatar}>
 				<Avatar size={28} name={name} variant="beam" />
 			</span>
@@ -37,6 +45,11 @@ export function TimelineItem({
 					>
 						{role === "committee" ? "実行委員" : "企画者"}
 					</Badge>
+					{isDraft && (
+						<Badge size="1" variant="soft" color="orange">
+							下書き
+						</Badge>
+					)}
 					<Text size="1" color="gray" className={styles.timelineHeaderMeta}>
 						{formatDate(date, "datetime")}
 					</Text>
@@ -53,6 +66,24 @@ export function TimelineItem({
 								<AttachmentPreviewButton key={att.id} attachment={att} />
 							)
 						)}
+					</div>
+				)}
+				{isDraft && isOwnDraft && onPublishDraft && onDeleteDraft && (
+					<div className={styles.draftActions}>
+						<button
+							type="button"
+							className={styles.draftActionButton}
+							onClick={onPublishDraft}
+						>
+							送信
+						</button>
+						<button
+							type="button"
+							className={styles.draftActionButton}
+							onClick={onDeleteDraft}
+						>
+							削除
+						</button>
 					</div>
 				)}
 			</div>

@@ -69,6 +69,8 @@ export const inquiryCommentSchema = z.object({
 	body: z.string(),
 	createdById: z.cuid(),
 	senderRole: inquiryCreatorRoleSchema,
+	isDraft: z.boolean(),
+	draftCreatedById: z.cuid().nullable(),
 	createdAt: z.coerce.date(),
 });
 export type InquiryComment = z.infer<typeof inquiryCommentSchema>;
@@ -134,7 +136,14 @@ const assigneeWithUserSchema = inquiryAssigneeSchema
 
 /** コメント + 投稿者情報 */
 const commentWithUserSchema = inquiryCommentSchema
-	.pick({ id: true, body: true, senderRole: true, createdAt: true })
+	.pick({
+		id: true,
+		body: true,
+		senderRole: true,
+		isDraft: true,
+		draftCreatedById: true,
+		createdAt: true,
+	})
 	.extend({
 		createdBy: userSummarySchema,
 		attachments: z.array(inquiryAttachmentSchema),
@@ -238,6 +247,7 @@ export type GetProjectInquiryResponse = z.infer<
 export const addInquiryCommentRequestSchema = z.object({
 	body: z.string().min(1, "コメントを入力してください"),
 	fileIds: z.array(z.string()).optional(),
+	isDraft: z.boolean().optional(),
 });
 export type AddInquiryCommentRequest = z.infer<
 	typeof addInquiryCommentRequestSchema
@@ -248,6 +258,33 @@ export const addInquiryCommentResponseSchema = z.object({
 });
 export type AddInquiryCommentResponse = z.infer<
 	typeof addInquiryCommentResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// 実委側: POST /committee/inquiries/:inquiryId/comments/:commentId/publish
+// ─────────────────────────────────────────────────────────────
+
+export const inquiryCommentIdPathParamsSchema = z.object({
+	inquiryId: z.cuid(),
+	commentId: z.cuid(),
+});
+
+export const publishDraftCommentResponseSchema = z.object({
+	comment: commentWithUserSchema,
+});
+export type PublishDraftCommentResponse = z.infer<
+	typeof publishDraftCommentResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// 実委側: DELETE /committee/inquiries/:inquiryId/comments/:commentId
+// ─────────────────────────────────────────────────────────────
+
+export const deleteInquiryCommentResponseSchema = z.object({
+	success: z.literal(true),
+});
+export type DeleteInquiryCommentResponse = z.infer<
+	typeof deleteInquiryCommentResponseSchema
 >;
 
 // ─────────────────────────────────────────────────────────────

@@ -8,13 +8,16 @@ import {
 	createCommitteeInquiryResponseSchema,
 	createProjectInquiryRequestSchema,
 	createProjectInquiryResponseSchema,
+	deleteInquiryCommentResponseSchema,
 	getCommitteeInquiryResponseSchema,
 	getProjectInquiryResponseSchema,
+	inquiryCommentIdPathParamsSchema,
 	inquiryIdPathParamsSchema,
 	listCommitteeInquiriesResponseSchema,
 	listProjectInquiriesResponseSchema,
 	projectInquiryAssigneeIdPathParamsSchema,
 	projectInquiryIdPathParamsSchema,
+	publishDraftCommentResponseSchema,
 	removeInquiryAssigneeResponseSchema,
 	reopenInquiryResponseSchema,
 	updateInquiryStatusRequestSchema,
@@ -355,4 +358,43 @@ export const updateCommitteeInquiryViewersEndpoint: BodyEndpoint<
 	query: undefined,
 	request: updateInquiryViewersRequestSchema,
 	response: updateInquiryViewersResponseSchema,
+} as const;
+
+/**
+ * POST /committee/inquiries/:inquiryId/comments/:commentId/publish
+ * 下書きコメントを正式送信に変換（作成者のみ）
+ */
+export const publishDraftCommentEndpoint: Endpoint<
+	"POST",
+	"/committee/inquiries/:inquiryId/comments/:commentId/publish",
+	typeof inquiryCommentIdPathParamsSchema,
+	undefined,
+	undefined,
+	typeof publishDraftCommentResponseSchema
+> = {
+	method: "POST",
+	path: "/committee/inquiries/:inquiryId/comments/:commentId/publish",
+	pathParams: inquiryCommentIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: publishDraftCommentResponseSchema,
+} as const;
+
+/**
+ * DELETE /committee/inquiries/:inquiryId/comments/:commentId
+ * コメントを削除（下書きの場合は作成者のみ、通常コメントは管理者または作成者）
+ */
+export const deleteCommitteeInquiryCommentEndpoint: NoBodyEndpoint<
+	"DELETE",
+	"/committee/inquiries/:inquiryId/comments/:commentId",
+	typeof inquiryCommentIdPathParamsSchema,
+	undefined,
+	typeof deleteInquiryCommentResponseSchema
+> = {
+	method: "DELETE",
+	path: "/committee/inquiries/:inquiryId/comments/:commentId",
+	pathParams: inquiryCommentIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: deleteInquiryCommentResponseSchema,
 } as const;

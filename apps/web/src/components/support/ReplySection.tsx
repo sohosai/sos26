@@ -10,16 +10,22 @@ import styles from "./SupportDetail.module.scss";
 export function ReplySection({
 	onAddComment,
 	disabled,
+	enableDraft = false,
 }: {
-	onAddComment: (body: string, fileIds?: string[]) => Promise<void>;
+	onAddComment: (
+		body: string,
+		fileIds?: string[],
+		isDraft?: boolean
+	) => Promise<void>;
 	disabled?: boolean;
+	enableDraft?: boolean;
 }) {
 	const [replyText, setReplyText] = useState("");
 	const [replyFiles, setReplyFiles] = useState<File[]>([]);
 	const [replySending, setReplySending] = useState(false);
 	const replyFileInputRef = useRef<HTMLInputElement>(null);
 
-	const handleSubmitReply = async () => {
+	const handleSubmitReply = async (isDraft = false) => {
 		if (!replyText.trim() || disabled) return;
 		setReplySending(true);
 		try {
@@ -28,11 +34,13 @@ export function ReplySection({
 				const results = await Promise.all(replyFiles.map(f => uploadFile(f)));
 				fileIds = results.map(r => r.file.id);
 			}
-			await onAddComment(replyText.trim(), fileIds);
+			await onAddComment(replyText.trim(), fileIds, isDraft);
 			setReplyText("");
 			setReplyFiles([]);
 		} catch {
-			toast.error("コメントの送信に失敗しました");
+			toast.error(
+				isDraft ? "下書きの保存に失敗しました" : "コメントの送信に失敗しました"
+			);
 		} finally {
 			setReplySending(false);
 		}
@@ -107,12 +115,20 @@ export function ReplySection({
 				</div>
 			)}
 			<div className={styles.replyActions}>
-				<Button
-					onClick={handleSubmitReply}
+				{enableDraft && (
+					<Button
+						onClick={() => handleSubmitReply(true)}
+						disabled={disabled || !replyText.trim() || replySending}
+					>
+						{replySending ? "保存中..." : "下書きとして保存"}
+					</Button>
+				)}
+				{/* <Button
+					onClick={() => handleSubmitReply(false)}
 					disabled={disabled || !replyText.trim() || replySending}
 				>
 					{replySending ? "送信中..." : "送信"}
-				</Button>
+				</Button> */}
 			</div>
 		</section>
 	);

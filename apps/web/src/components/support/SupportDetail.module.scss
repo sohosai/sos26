@@ -82,6 +82,18 @@
 .timelineItem {
 	display: flex;
 	gap: var(--space-3);
+
+	&[data-draft] {
+		.timelineContent {
+			background-color: var(--orange-1);
+			border-color: var(--orange-6);
+		}
+
+		.timelineHeader {
+			background-color: var(--orange-2);
+			border-bottom-color: var(--orange-6);
+		}
+	}
 }
 
 .avatar {
@@ -126,6 +138,30 @@
 	white-space: pre-wrap;
 	word-break: break-word;
 	padding: var(--space-3) var(--space-4);
+}
+
+.draftActions {
+	display: flex;
+	gap: var(--space-2);
+	padding: 0 var(--space-4) var(--space-3);
+}
+
+.draftActionButton {
+	padding: var(--space-1) var(--space-3);
+	font-size: var(--font-size-2);
+	border-radius: var(--radius-2);
+	border: 1px solid var(--gray-7);
+	background-color: var(--gray-1);
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+
+	&:hover {
+		background-color: var(--gray-3);
+	}
+
+	&:active {
+		background-color: var(--gray-4);
+	}
 }
 
 .activityItem {

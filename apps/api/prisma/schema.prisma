@@ -905,6 +905,10 @@ model InquiryComment {
   // 投稿時のロール
   senderRole InquiryCreatorRole @default(PROJECT)
 
+  // 下書き機能
+  isDraft           Boolean @default(false)
+  draftCreatedById  String?
+
   attachments InquiryAttachment[]
 
   deletedAt DateTime?
