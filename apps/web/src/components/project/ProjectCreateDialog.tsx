@@ -130,7 +130,6 @@ type RegFormStepProps = {
 	errors: Record<string, string>;
 	step: number;
 	totalSteps: number;
-	isLastStep: boolean;
 	isSubmitting: boolean;
 	onAnswerChange: (itemId: string, value: FormAnswerValue) => void;
 	onSubmit: (e: React.FormEvent) => void;
@@ -144,7 +143,6 @@ function RegFormStep({
 	errors,
 	step,
 	totalSteps,
-	isLastStep,
 	isSubmitting,
 	onAnswerChange,
 	onSubmit,
@@ -206,15 +204,9 @@ function RegFormStep({
 				>
 					戻る
 				</Button>
-				{isLastStep ? (
-					<Button type="submit" loading={isSubmitting}>
-						登録する
-					</Button>
-				) : (
-					<Button type="button" onClick={onNext} disabled={isSubmitting}>
-						次へ
-					</Button>
-				)}
+				<Button type="button" onClick={onNext} disabled={isSubmitting}>
+					次へ
+				</Button>
 			</div>
 		</form>
 	);
@@ -678,7 +670,6 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 							errors={currentRegErrors}
 							step={step}
 							totalSteps={totalSteps}
-							isLastStep={false}
 							isSubmitting={isSubmitting}
 							onAnswerChange={(itemId, val) =>
 								updateRegAnswer(step - 1, itemId, val)

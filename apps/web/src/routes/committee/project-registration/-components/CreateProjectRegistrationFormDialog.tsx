@@ -46,9 +46,9 @@ export function CreateProjectRegistrationFormDialog({
 					})),
 				})),
 			});
-		} catch {
+		} catch (error) {
 			toast.error("フォームの作成に失敗しました");
-			throw new Error();
+			throw error;
 		}
 	};
 

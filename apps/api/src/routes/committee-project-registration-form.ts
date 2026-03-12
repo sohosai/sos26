@@ -254,10 +254,9 @@ committeeProjectRegistrationFormRoute.patch(
 
 				// filterTypes/filterLocations 整合性チェック
 				{
-					const mergedTypes =
-						formData.filterTypes ?? (existing.filterTypes as string[]);
+					const mergedTypes = formData.filterTypes ?? existing.filterTypes;
 					const mergedLocations =
-						formData.filterLocations ?? (existing.filterLocations as string[]);
+						formData.filterLocations ?? existing.filterLocations;
 					const hasStage = mergedTypes.includes("STAGE");
 					const hasNonStage = mergedTypes.some(t => t !== "STAGE");
 					if (

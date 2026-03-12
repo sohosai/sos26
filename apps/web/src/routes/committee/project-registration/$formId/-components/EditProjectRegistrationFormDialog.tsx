@@ -77,9 +77,9 @@ export function EditProjectRegistrationFormDialog({
 					})),
 				})),
 			});
-		} catch {
+		} catch (error) {
 			toast.error("フォームの更新に失敗しました");
-			throw new Error();
+			throw error;
 		}
 	};
 
