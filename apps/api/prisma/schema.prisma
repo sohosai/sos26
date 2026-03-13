@@ -356,6 +356,7 @@ model File {
 
   noticeAttachments  NoticeAttachment[]
   inquiryAttachments InquiryAttachment[]
+  projectRegistrationFormAnswers ProjectRegistrationFormAnswer[]
 
   @@index([uploadedById])
   @@index([status])
@@ -1364,6 +1365,7 @@ model ProjectRegistrationFormAnswer {
 
   // ファイルId（FILE用）
   fileId String?
+  file   File?   @relation(fields: [fileId], references: [id], onDelete: SetNull)
 
   // 選択肢回答（SELECT/CHECKBOX用）
   selectedOptions ProjectRegistrationFormAnswerSelectedOption[]
@@ -1374,6 +1376,7 @@ model ProjectRegistrationFormAnswer {
   @@unique([responseId, formItemId])
   @@index([responseId])
   @@index([formItemId])
+  @@index([fileId])
 }
 
 // 選択肢回答の中間テーブル

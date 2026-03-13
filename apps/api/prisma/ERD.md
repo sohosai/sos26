@@ -448,7 +448,7 @@ erDiagram
   String formItemId FK
   String textValue "nullable"
   Float numberValue "nullable"
-  String fileId "nullable"
+  String fileId FK "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -542,6 +542,7 @@ erDiagram
 "ProjectRegistrationFormResponse" }o--|| "Project" : project
 "ProjectRegistrationFormAnswer" }o--|| "ProjectRegistrationFormResponse" : response
 "ProjectRegistrationFormAnswer" }o--|| "ProjectRegistrationFormItem" : formItem
+"ProjectRegistrationFormAnswer" }o--o| "File" : file
 "ProjectRegistrationFormAnswerSelectedOption" }o--|| "ProjectRegistrationFormAnswer" : answer
 "ProjectRegistrationFormAnswerSelectedOption" }o--|| "ProjectRegistrationFormItemOption" : formItemOption
 ```
