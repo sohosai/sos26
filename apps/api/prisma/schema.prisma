@@ -1344,6 +1344,7 @@ model ProjectRegistrationFormResponse {
   updatedAt   DateTime @updatedAt
 
   @@unique([formId, projectId])
+  @@index([formId])
   @@index([projectId])
 }
 
