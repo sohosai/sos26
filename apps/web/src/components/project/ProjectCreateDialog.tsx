@@ -6,7 +6,12 @@ import type {
 	ProjectType,
 	RegistrationFormAnswersInput,
 } from "@sos26/shared";
-import { projectLocationSchema, projectTypeSchema } from "@sos26/shared";
+import {
+	isValidProjectDisplayName,
+	PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+	projectLocationSchema,
+	projectTypeSchema,
+} from "@sos26/shared";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -376,8 +381,14 @@ function resolveLocation(newType: string, prevLocation: string): string {
 function buildStep1Errors(step1: Step1State): Step1Errors {
 	const errs: Step1Errors = {};
 	if (!step1.name) errs.name = "企画名は必須です";
+	else if (!isValidProjectDisplayName(step1.name)) {
+		errs.name = PROJECT_DISPLAY_NAME_RULE_MESSAGE;
+	}
 	if (!step1.namePhonetic) errs.namePhonetic = "企画名（ふりがな）は必須です";
 	if (!step1.organizationName) errs.organizationName = "企画団体名は必須です";
+	else if (!isValidProjectDisplayName(step1.organizationName)) {
+		errs.organizationName = PROJECT_DISPLAY_NAME_RULE_MESSAGE;
+	}
 	if (!step1.organizationNamePhonetic)
 		errs.organizationNamePhonetic = "企画団体名（ふりがな）は必須です";
 	if (!step1.type) errs.type = "企画区分は必須です";
@@ -598,6 +609,10 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 						</div>
 
 						<div className={styles.fields}>
+							<Text size="1" color="gray">
+								{PROJECT_DISPLAY_NAME_RULE_MESSAGE}
+							</Text>
+
 							<div className={styles.field}>
 								<TextField
 									label="企画名 *"

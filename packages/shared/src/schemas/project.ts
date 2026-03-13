@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { toHiragana } from "../lib/phonetic";
+import {
+	isValidProjectDisplayName,
+	PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+} from "../lib/project-display-name";
 import { formAnswerInputSchema } from "./form";
 
 export const projectTypeSchema = z.enum(["STAGE", "FOOD", "NORMAL"]);
@@ -51,9 +55,13 @@ export type ProjectMember = z.infer<typeof projectMemberSchema>;
 
 export const createProjectRequestSchema = z
 	.object({
-		name: z.string().min(1),
+		name: z.string().min(1).refine(isValidProjectDisplayName, {
+			message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+		}),
 		namePhonetic: z.string().min(1).transform(toHiragana),
-		organizationName: z.string().min(1),
+		organizationName: z.string().min(1).refine(isValidProjectDisplayName, {
+			message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+		}),
 		organizationNamePhonetic: z.string().min(1).transform(toHiragana),
 		type: projectTypeSchema,
 		location: projectLocationSchema,
@@ -152,9 +160,21 @@ export type GetProjectDetailResponse = z.infer<
 
 export const updateProjectDetailRequestSchema = z
 	.object({
-		name: z.string().min(1).optional(),
+		name: z
+			.string()
+			.min(1)
+			.refine(isValidProjectDisplayName, {
+				message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+			})
+			.optional(),
 		namePhonetic: z.string().min(1).transform(toHiragana).optional(),
-		organizationName: z.string().min(1).optional(),
+		organizationName: z
+			.string()
+			.min(1)
+			.refine(isValidProjectDisplayName, {
+				message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+			})
+			.optional(),
 		organizationNamePhonetic: z
 			.string()
 			.min(1)

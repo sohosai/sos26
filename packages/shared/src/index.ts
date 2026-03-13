@@ -17,6 +17,7 @@ export * from "./errors";
 export * from "./lib/email";
 export * from "./lib/form-pattern";
 export * from "./lib/phonetic";
+export * from "./lib/project-display-name";
 export * from "./lib/sanitize-config";
 export * from "./lib/token";
 export * from "./schemas/auth";
