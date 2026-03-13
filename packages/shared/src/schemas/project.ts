@@ -1,8 +1,16 @@
 import { z } from "zod";
 import { toHiragana } from "../lib/phonetic";
+import {
+	isValidProjectDisplayName,
+	PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+} from "../lib/project-display-name";
+import { formAnswerInputSchema } from "./form";
 
 export const projectTypeSchema = z.enum(["STAGE", "FOOD", "NORMAL"]);
 export type ProjectType = z.infer<typeof projectTypeSchema>;
+
+export const projectLocationSchema = z.enum(["INDOOR", "OUTDOOR", "STAGE"]);
+export type ProjectLocation = z.infer<typeof projectLocationSchema>;
 
 export const projectSchema = z.object({
 	id: z.cuid(),
@@ -12,6 +20,7 @@ export const projectSchema = z.object({
 	organizationName: z.string().min(1),
 	organizationNamePhonetic: z.string().min(1).transform(toHiragana),
 	type: projectTypeSchema,
+	location: projectLocationSchema,
 	ownerId: z.string().min(1),
 	subOwnerId: z.string().nullable(),
 	inviteCode: z.string().length(6),
@@ -44,13 +53,45 @@ export type ProjectMember = z.infer<typeof projectMemberSchema>;
 // POST /project/create
 // ─────────────────────────────────────────────────────────────
 
-export const createProjectRequestSchema = z.object({
-	name: z.string().min(1),
-	namePhonetic: z.string().min(1).transform(toHiragana),
-	organizationName: z.string().min(1),
-	organizationNamePhonetic: z.string().min(1).transform(toHiragana),
-	type: projectTypeSchema,
-});
+export const createProjectRequestSchema = z
+	.object({
+		name: z.string().min(1).refine(isValidProjectDisplayName, {
+			message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+		}),
+		namePhonetic: z.string().min(1).transform(toHiragana),
+		organizationName: z.string().min(1).refine(isValidProjectDisplayName, {
+			message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+		}),
+		organizationNamePhonetic: z.string().min(1).transform(toHiragana),
+		type: projectTypeSchema,
+		location: projectLocationSchema,
+		registrationFormAnswers: z
+			.array(
+				z.object({
+					formId: z.string().min(1),
+					answers: z.array(formAnswerInputSchema),
+				})
+			)
+			.optional(),
+		agreedToRegistrationConstraints: z.literal(true),
+		agreedToInfoImmutability: z.literal(true),
+	})
+	.superRefine((data, ctx) => {
+		if (data.type === "STAGE" && data.location !== "STAGE") {
+			ctx.addIssue({
+				code: "custom",
+				message: "ステージ企画の実施場所はステージのみ指定できます",
+				path: ["location"],
+			});
+		}
+		if (data.type !== "STAGE" && data.location === "STAGE") {
+			ctx.addIssue({
+				code: "custom",
+				message: "ステージ以外の企画の実施場所にステージは指定できません",
+				path: ["location"],
+			});
+		}
+	});
 
 export type CreateProjectRequest = z.infer<typeof createProjectRequestSchema>;
 
@@ -117,13 +158,48 @@ export type GetProjectDetailResponse = z.infer<
 // PATCH /project/:projectId/detail
 // ─────────────────────────────────────────────
 
-export const updateProjectDetailRequestSchema = z.object({
-	name: z.string().min(1).optional(),
-	namePhonetic: z.string().min(1).transform(toHiragana).optional(),
-	organizationName: z.string().min(1).optional(),
-	organizationNamePhonetic: z.string().min(1).transform(toHiragana).optional(),
-	type: projectTypeSchema.optional(),
-});
+export const updateProjectDetailRequestSchema = z
+	.object({
+		name: z
+			.string()
+			.min(1)
+			.refine(isValidProjectDisplayName, {
+				message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+			})
+			.optional(),
+		namePhonetic: z.string().min(1).transform(toHiragana).optional(),
+		organizationName: z
+			.string()
+			.min(1)
+			.refine(isValidProjectDisplayName, {
+				message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+			})
+			.optional(),
+		organizationNamePhonetic: z
+			.string()
+			.min(1)
+			.transform(toHiragana)
+			.optional(),
+		type: projectTypeSchema.optional(),
+		location: projectLocationSchema.optional(),
+	})
+	.superRefine((data, ctx) => {
+		if (data.type === undefined || data.location === undefined) return;
+		if (data.type === "STAGE" && data.location !== "STAGE") {
+			ctx.addIssue({
+				code: "custom",
+				message: "ステージ企画の実施場所はステージのみ指定できます",
+				path: ["location"],
+			});
+		}
+		if (data.type !== "STAGE" && data.location === "STAGE") {
+			ctx.addIssue({
+				code: "custom",
+				message: "ステージ以外の企画の実施場所にステージは指定できません",
+				path: ["location"],
+			});
+		}
+	});
 
 export type UpdateProjectDetailRequest = z.infer<
 	typeof updateProjectDetailRequestSchema

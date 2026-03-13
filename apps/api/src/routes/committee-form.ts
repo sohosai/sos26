@@ -5,15 +5,16 @@ import {
 	formIdPathParamsSchema,
 	formResponsePathParamsSchema,
 	requestFormAuthorizationRequestSchema,
-	type TextConstraints,
 	updateFormAuthorizationRequestSchema,
 	updateFormDetailRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
+import { requireDeliverPermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
 import {
-	constraintsFromPrisma,
-	type PrismaConstraintFields,
+	constraintsToPrisma,
+	mapFormToApiShape,
+	mapItemToApiShape,
 } from "../lib/form-constraints";
 import {
 	notifyFormAuthorizationDecided,
@@ -24,46 +25,6 @@ import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
 const committeeFormRoute = new Hono<AuthEnv>();
-
-// ─────────────────────────────────────────────────────────────
-// ヘルパー: TextConstraints → Prisma 変換
-// ─────────────────────────────────────────────────────────────
-
-function constraintsToPrisma(
-	constraints: TextConstraints | null | undefined
-): PrismaConstraintFields {
-	return {
-		constraintMinLength: constraints?.minLength ?? null,
-		constraintMaxLength: constraints?.maxLength ?? null,
-		constraintPattern: constraints?.pattern ?? null,
-		constraintCustomPattern: constraints?.customPattern ?? null,
-	};
-}
-
-function mapItemToApiShape<T extends PrismaConstraintFields>(item: T) {
-	const {
-		constraintMinLength,
-		constraintMaxLength,
-		constraintPattern,
-		constraintCustomPattern,
-		...rest
-	} = item;
-	return {
-		...rest,
-		constraints: constraintsFromPrisma({
-			constraintMinLength,
-			constraintMaxLength,
-			constraintPattern,
-			constraintCustomPattern,
-		}),
-	};
-}
-
-function mapFormToApiShape<T extends { items: PrismaConstraintFields[] }>(
-	form: T
-) {
-	return { ...form, items: form.items.map(mapItemToApiShape) };
-}
 
 // フォームの存在確認 編集権限チェック
 
@@ -98,6 +59,24 @@ const requireOwner = async (formId: string, userId: string) => {
 	if (form.ownerId !== userId)
 		throw Errors.forbidden("この操作は作成者のみ行えます");
 	return form;
+};
+
+// 承認時の配信スケジュール日時バリデーション
+const validateApprovalSchedule = (
+	scheduledSendAt: Date,
+	deadlineAt: Date | null | undefined,
+	now: Date
+) => {
+	if (scheduledSendAt <= now) {
+		throw Errors.invalidRequest(
+			"配信希望日時を過ぎているため承認できません。新しい日時で再申請してください"
+		);
+	}
+	if (deadlineAt && scheduledSendAt >= deadlineAt) {
+		throw Errors.invalidRequest(
+			"配信希望日時と締め切り日時の順番が不正であるため承認できません。新しい日時で再申請してください"
+		);
+	}
 };
 
 // ─────────────────────────────────────────
@@ -448,33 +427,31 @@ committeeFormRoute.post(
 			);
 
 		// 既存チェック（ソフトデリート済みも含めて検索）
-		const existing = await prisma.formCollaborator.findFirst({
-			where: { formId, userId: targetUserId },
-		});
-		if (existing) {
-			if (!existing.deletedAt) {
-				throw Errors.alreadyExists("既に共同編集者です");
-			}
-
-			// ソフトデリート済み → 再有効化
-			const reactivated = await prisma.formCollaborator.update({
-				where: { id: existing.id },
-				data: { deletedAt: null },
-			});
-
-			return c.json({ collaborator: reactivated });
-		}
-
 		const body = await c.req.json().catch(() => ({}));
 		const data = addFormCollaboratorRequestSchema.parse(body);
 
-		const collaborator = await prisma.formCollaborator.create({
-			data: {
-				formId,
-				userId: targetUserId,
-				isWrite: data.isWrite,
+		const collaborator = await prisma.$transaction(
+			async tx => {
+				const existing = await tx.formCollaborator.findFirst({
+					where: { formId, userId: targetUserId },
+				});
+				if (existing) {
+					if (!existing.deletedAt)
+						throw Errors.alreadyExists("既に共同編集者です");
+
+					// ソフトデリート済み → 再有効化
+					return tx.formCollaborator.update({
+						where: { id: existing.id },
+						data: { deletedAt: null, isWrite: data.isWrite },
+					});
+				}
+
+				return tx.formCollaborator.create({
+					data: { formId, userId: targetUserId, isWrite: data.isWrite },
+				});
 			},
-		});
+			{ isolationLevel: "Serializable" }
+		);
 
 		return c.json({ collaborator });
 	}
@@ -637,35 +614,32 @@ committeeFormRoute.patch(
 				include: { form: { select: { deletedAt: true, title: true } } },
 			});
 
-			if (!authorization) {
-				throw Errors.notFound("承認申請が見つかりません");
-			}
+			if (!authorization) throw Errors.notFound("承認申請が見つかりません");
 
-			if (authorization.form.deletedAt) {
+			if (authorization.form.deletedAt)
 				throw Errors.invalidRequest("削除済みのフォームは承認できません");
-			}
 
-			if (authorization.requestedToId !== user.id) {
+			if (authorization.requestedToId !== user.id)
 				throw Errors.forbidden("この承認申請を操作する権限がありません");
-			}
 
-			if (authorization.status !== "PENDING") {
+			if (authorization.status !== "PENDING")
 				throw Errors.invalidRequest("この承認申請は既に処理済みです");
-			}
+
+			// 承認申請作成後に FORM_DELIVER 権限が剥奪されていないか再確認
+			await requireDeliverPermission(
+				tx,
+				user.id,
+				"FORM_DELIVER",
+				"フォーム承認権限がありません"
+			);
 
 			const now = new Date();
-			// 承認する場合、scheduledSendAt が未来であること
-			if (status === "APPROVED" && authorization.scheduledSendAt <= now) {
-				throw Errors.invalidRequest(
-					"配信希望日時を過ぎているため承認できません。新しい日時で再申請してください"
-				);
-			} else if (
-				status === "APPROVED" &&
-				authorization.deadlineAt &&
-				authorization.scheduledSendAt >= authorization.deadlineAt
-			) {
-				throw Errors.invalidRequest(
-					"配信希望日時と締め切り日時の順番が不正であるため承認できません。新しい日時で再申請してください"
+			// 承認する場合、スケジュール日時を検証
+			if (status === "APPROVED") {
+				validateApprovalSchedule(
+					authorization.scheduledSendAt,
+					authorization.deadlineAt,
+					now
 				);
 			}
 

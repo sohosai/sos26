@@ -92,6 +92,7 @@ const mockProject: Project = {
 	organizationName: "テスト団体",
 	organizationNamePhonetic: "てすとだんたい",
 	type: "NORMAL",
+	location: "INDOOR",
 	ownerId: "clxxxxxxxxxxxxxxxxx",
 	subOwnerId: "clzzzzzzzzzzzzzzzz",
 	inviteCode: "ABC123",
