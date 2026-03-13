@@ -17,6 +17,7 @@ import { ActivityItem, TimelineItem } from "./Timeline";
 import type {
 	ActivityInfo,
 	CommentInfo,
+	CommitteeCommentInfo,
 	InquiryDetail,
 	ViewerDetail,
 	ViewerInput,
@@ -49,6 +50,425 @@ type SupportDetailProps = {
 	isAssigneeOrAdmin?: boolean;
 };
 
+type ReplyTab = "comment" | "draft";
+
+type TimelineEntry =
+	| { kind: "comment"; data: CommentInfo }
+	| { kind: "activity"; data: ActivityInfo };
+
+function isCommitteeDraftComment(
+	comment: CommentInfo
+): comment is CommitteeCommentInfo {
+	return "isDraft" in comment && comment.isDraft === true;
+}
+
+function getDraftComments(
+	comments: CommentInfo[],
+	viewerRole: "project" | "committee"
+): CommitteeCommentInfo[] {
+	if (viewerRole !== "committee") {
+		return [];
+	}
+	return comments.filter(isCommitteeDraftComment);
+}
+
+function toTimelineRole(senderRole: "PROJECT" | "COMMITTEE") {
+	return senderRole === "COMMITTEE" ? "committee" : "project";
+}
+
+function buildTimelineEntries(
+	regularComments: CommentInfo[],
+	activities: ActivityInfo[]
+): TimelineEntry[] {
+	return [
+		...regularComments.map(comment => ({
+			kind: "comment" as const,
+			data: comment,
+		})),
+		...activities.map(activity => ({
+			kind: "activity" as const,
+			data: activity,
+		})),
+	].sort(
+		(a, b) =>
+			new Date(a.data.createdAt).getTime() -
+			new Date(b.data.createdAt).getTime()
+	);
+}
+
+function InquiryTimeline({
+	inquiry,
+	timelineEntries,
+}: {
+	inquiry: InquiryDetail;
+	timelineEntries: TimelineEntry[];
+}) {
+	return (
+		<div className={styles.timeline}>
+			<TimelineItem
+				name={inquiry.createdBy.name}
+				role={inquiry.creatorRole === "COMMITTEE" ? "committee" : "project"}
+				date={inquiry.createdAt}
+				body={inquiry.body}
+				attachments={inquiry.attachments}
+			/>
+
+			{timelineEntries.map(entry => {
+				if (entry.kind === "comment") {
+					return (
+						<TimelineItem
+							key={entry.data.id}
+							name={entry.data.createdBy.name}
+							role={toTimelineRole(entry.data.senderRole)}
+							date={entry.data.createdAt}
+							body={entry.data.body}
+							attachments={entry.data.attachments}
+						/>
+					);
+				}
+
+				return <ActivityItem key={entry.data.id} activity={entry.data} />;
+			})}
+		</div>
+	);
+}
+
+function DraftCommentItem({
+	comment,
+	currentUserId,
+	onPublishDraft,
+	onDeleteComment,
+}: {
+	comment: CommitteeCommentInfo;
+	currentUserId: string;
+	onPublishDraft?: (commentId: string) => Promise<void>;
+	onDeleteComment?: (commentId: string) => Promise<void>;
+}) {
+	const isOwnDraft = comment.draftCreatedById === currentUserId;
+	const handlePublishDraft =
+		isOwnDraft && onPublishDraft ? () => onPublishDraft(comment.id) : undefined;
+	const handleDeleteDraft =
+		isOwnDraft && onDeleteComment
+			? () => onDeleteComment(comment.id)
+			: undefined;
+
+	return (
+		<TimelineItem
+			name={comment.createdBy.name}
+			role={toTimelineRole(comment.senderRole)}
+			date={comment.createdAt}
+			body={comment.body}
+			attachments={comment.attachments}
+			isDraft
+			isOwnDraft={isOwnDraft}
+			onPublishDraft={handlePublishDraft}
+			onDeleteDraft={handleDeleteDraft}
+		/>
+	);
+}
+
+function DraftCommentsPanel({
+	draftComments,
+	currentUserId,
+	onPublishDraft,
+	onDeleteComment,
+}: {
+	draftComments: CommitteeCommentInfo[];
+	currentUserId: string;
+	onPublishDraft?: (commentId: string) => Promise<void>;
+	onDeleteComment?: (commentId: string) => Promise<void>;
+}) {
+	if (draftComments.length === 0) {
+		return (
+			<Text size="2" color="gray">
+				下書きはありません。
+			</Text>
+		);
+	}
+
+	return (
+		<div className={styles.draftList}>
+			{draftComments.map(comment => (
+				<DraftCommentItem
+					key={comment.id}
+					comment={comment}
+					currentUserId={currentUserId}
+					onPublishDraft={onPublishDraft}
+					onDeleteComment={onDeleteComment}
+				/>
+			))}
+		</div>
+	);
+}
+
+function InquiryReplyPanel({
+	inquiryStatus,
+	viewerRole,
+	activeReplyTab,
+	onChangeReplyTab,
+	draftComments,
+	currentUserId,
+	canComment,
+	onAddComment,
+	onPublishDraft,
+	onDeleteComment,
+	onUpdateStatus,
+}: {
+	inquiryStatus: InquiryDetail["status"];
+	viewerRole: "project" | "committee";
+	activeReplyTab: ReplyTab;
+	onChangeReplyTab: (tab: ReplyTab) => void;
+	draftComments: CommitteeCommentInfo[];
+	currentUserId: string;
+	canComment: boolean;
+	onAddComment: SupportDetailProps["onAddComment"];
+	onPublishDraft?: (commentId: string) => Promise<void>;
+	onDeleteComment?: (commentId: string) => Promise<void>;
+	onUpdateStatus: (status: "RESOLVED" | "IN_PROGRESS") => Promise<void>;
+}) {
+	if (inquiryStatus === "RESOLVED") {
+		return (
+			<section className={styles.replySection}>
+				<Text size="2" color="gray">
+					このお問い合わせは解決済みのため、コメントを追加できません。
+				</Text>
+				{viewerRole === "project" && (
+					<Button
+						intent="secondary"
+						onClick={() => onUpdateStatus("IN_PROGRESS")}
+					>
+						再オープンする
+					</Button>
+				)}
+			</section>
+		);
+	}
+
+	const isDraftTab = viewerRole === "committee" && activeReplyTab === "draft";
+
+	return (
+		<section className={styles.replySection}>
+			{viewerRole === "committee" && (
+				<div className={styles.replyTabs} role="tablist" aria-label="返信操作">
+					<button
+						type="button"
+						role="tab"
+						aria-selected={activeReplyTab === "comment"}
+						data-active={activeReplyTab === "comment" || undefined}
+						className={styles.replyTabButton}
+						onClick={() => onChangeReplyTab("comment")}
+					>
+						コメントを追加
+					</button>
+					<button
+						type="button"
+						role="tab"
+						aria-selected={activeReplyTab === "draft"}
+						data-active={activeReplyTab === "draft" || undefined}
+						className={styles.replyTabButton}
+						onClick={() => onChangeReplyTab("draft")}
+					>
+						下書き
+					</button>
+				</div>
+			)}
+
+			{isDraftTab ? (
+				<section className={styles.draftTabPanel}>
+					<Heading size="3">下書き</Heading>
+					<DraftCommentsPanel
+						draftComments={draftComments}
+						currentUserId={currentUserId}
+						onPublishDraft={onPublishDraft}
+						onDeleteComment={onDeleteComment}
+					/>
+				</section>
+			) : (
+				<ReplySection
+					onAddComment={onAddComment}
+					disabled={!canComment}
+					enableDraft={viewerRole === "committee"}
+				/>
+			)}
+		</section>
+	);
+}
+
+function RelatedFormContent({
+	relatedForm,
+	viewerRole,
+}: {
+	relatedForm: InquiryDetail["relatedForm"];
+	viewerRole: "project" | "committee";
+}) {
+	if (!relatedForm) {
+		return (
+			<Text size="1" color="gray">
+				なし
+			</Text>
+		);
+	}
+
+	if (viewerRole === "committee") {
+		return (
+			<Link
+				to="/committee/forms/$formId"
+				params={{ formId: relatedForm.id }}
+				className={styles.formLink}
+			>
+				<IconFileDescription size={16} />
+				<Text size="2">{relatedForm.title}</Text>
+			</Link>
+		);
+	}
+
+	return (
+		<div className={styles.formLink}>
+			<IconFileDescription size={16} />
+			<Text size="2">{relatedForm.title}</Text>
+		</div>
+	);
+}
+
+function SupportSidebar({
+	inquiry,
+	viewerRole,
+	committeeMembers,
+	projectMembers,
+	viewers,
+	onUpdateViewers,
+	canEditCommittee,
+	onUpdateStatus,
+	onToggleAssignee,
+	onRemoveAssignee,
+	statusLabel,
+	statusColor,
+	StatusIcon,
+}: {
+	inquiry: InquiryDetail;
+	viewerRole: "project" | "committee";
+	committeeMembers: { id: string; name: string }[];
+	projectMembers: { id: string; name: string }[];
+	viewers?: ViewerDetail[];
+	onUpdateViewers?: (viewers: ViewerInput[]) => Promise<void>;
+	canEditCommittee: boolean;
+	onUpdateStatus: (status: "RESOLVED" | "IN_PROGRESS") => Promise<void>;
+	onToggleAssignee: (
+		userId: string,
+		side: "PROJECT" | "COMMITTEE"
+	) => Promise<void>;
+	onRemoveAssignee: (assigneeId: string, userId: string) => Promise<void>;
+	statusLabel: string;
+	statusColor: "orange" | "blue" | "green";
+	StatusIcon: typeof IconCheck;
+}) {
+	const canEditProjectAssignee = canEditCommittee || viewerRole === "project";
+
+	return (
+		<aside className={styles.sidebar}>
+			<div className={styles.sidebarSection}>
+				<Text size="2" weight="medium" color="gray">
+					対応状況
+				</Text>
+				<Badge color={statusColor} size="2" variant="soft">
+					<StatusIcon size={14} />
+					{statusLabel}
+				</Badge>
+			</div>
+
+			<Separator size="4" />
+
+			<div className={styles.sidebarSection}>
+				<Text size="2" weight="medium" color="gray">
+					実行委員 担当者
+				</Text>
+				<AssigneeList
+					assignees={inquiry.committeeAssignees}
+					variant="committee"
+					canEdit={canEditCommittee}
+					onRemove={onRemoveAssignee}
+				/>
+				{canEditCommittee && (
+					<AssigneePopover
+						members={committeeMembers}
+						assignees={inquiry.committeeAssignees}
+						side="COMMITTEE"
+						onToggle={onToggleAssignee}
+					/>
+				)}
+			</div>
+
+			<Separator size="4" />
+
+			<div className={styles.sidebarSection}>
+				<Text size="2" weight="medium" color="gray">
+					企画側 担当者
+				</Text>
+				<AssigneeList
+					assignees={inquiry.projectAssignees}
+					variant="project"
+					canEdit={canEditProjectAssignee}
+					onRemove={onRemoveAssignee}
+				/>
+				{canEditProjectAssignee && (
+					<AssigneePopover
+						members={projectMembers}
+						assignees={inquiry.projectAssignees}
+						side="PROJECT"
+						onToggle={onToggleAssignee}
+					/>
+				)}
+			</div>
+
+			<Separator size="4" />
+
+			<div className={styles.sidebarSection}>
+				<Text size="2" weight="medium" color="gray">
+					関連申請
+				</Text>
+				<RelatedFormContent
+					relatedForm={inquiry.relatedForm}
+					viewerRole={viewerRole}
+				/>
+			</div>
+
+			{viewerRole === "committee" && viewers && (
+				<>
+					<Separator size="4" />
+					<ViewerSettings
+						viewers={viewers}
+						committeeMembers={committeeMembers}
+						onUpdate={onUpdateViewers}
+						readOnly={!canEditCommittee}
+					/>
+				</>
+			)}
+
+			{canEditCommittee && (
+				<>
+					<Separator size="4" />
+					{inquiry.status !== "RESOLVED" ? (
+						<Button
+							intent="secondary"
+							onClick={() => onUpdateStatus("RESOLVED")}
+						>
+							<IconCheck size={16} />
+							解決済みにする
+						</Button>
+					) : (
+						<Button
+							intent="secondary"
+							onClick={() => onUpdateStatus("IN_PROGRESS")}
+						>
+							再オープンする
+						</Button>
+					)}
+				</>
+			)}
+		</aside>
+	);
+}
+
 export function SupportDetail({
 	inquiry,
 	viewerRole,
@@ -71,6 +491,9 @@ export function SupportDetail({
 	const [pendingRemoveAssigneeId, setPendingRemoveAssigneeId] = useState<
 		string | null
 	>(null);
+	const [activeReplyTab, setActiveReplyTab] = useState<"comment" | "draft">(
+		"comment"
+	);
 
 	const config = statusConfig[inquiry.status];
 	const StatusIcon = config.icon;
@@ -79,6 +502,10 @@ export function SupportDetail({
 	const canEditCommittee = viewerRole === "committee" && isAssigneeOrAdmin;
 	// 担当者/管理者のみコメント可能
 	const canComment = isAssigneeOrAdmin;
+	const regularComments = inquiry.comments.filter(
+		comment => !isCommitteeDraftComment(comment)
+	);
+	const draftComments = getDraftComments(inquiry.comments, viewerRole);
 
 	const handleRemoveAssignee = async (assigneeId: string, userId: string) => {
 		if (userId === currentUserId) {
@@ -121,21 +548,9 @@ export function SupportDetail({
 		}
 	};
 
-	// コメントとアクティビティを時系列で統合
-	type TimelineEntry =
-		| { kind: "comment"; data: CommentInfo }
-		| { kind: "activity"; data: ActivityInfo };
-
-	const timelineEntries: TimelineEntry[] = [
-		...inquiry.comments.map(m => ({ kind: "comment" as const, data: m })),
-		...inquiry.activities.map(a => ({
-			kind: "activity" as const,
-			data: a,
-		})),
-	].sort(
-		(a, b) =>
-			new Date(a.data.createdAt).getTime() -
-			new Date(b.data.createdAt).getTime()
+	const timelineEntries = buildTimelineEntries(
+		regularComments,
+		inquiry.activities
 	);
 
 	return (
@@ -163,207 +578,40 @@ export function SupportDetail({
 					</Text>
 				</header>
 
-				{/* 本文（最初の投稿） */}
-				<div className={styles.timeline}>
-					<TimelineItem
-						name={inquiry.createdBy.name}
-						role={inquiry.creatorRole === "COMMITTEE" ? "committee" : "project"}
-						date={inquiry.createdAt}
-						body={inquiry.body}
-						attachments={inquiry.attachments}
-					/>
-
-					{timelineEntries.map(entry =>
-						entry.kind === "comment" ? (
-							<TimelineItem
-								key={entry.data.id}
-								name={entry.data.createdBy.name}
-								role={
-									entry.data.senderRole === "COMMITTEE"
-										? "committee"
-										: "project"
-								}
-								date={entry.data.createdAt}
-								body={entry.data.body}
-								attachments={entry.data.attachments}
-								isDraft={entry.data.isDraft}
-								isOwnDraft={
-									entry.data.isDraft &&
-									entry.data.draftCreatedById === currentUserId
-								}
-								onPublishDraft={
-									entry.data.isDraft &&
-									entry.data.draftCreatedById === currentUserId &&
-									onPublishDraft
-										? () => onPublishDraft(entry.data.id)
-										: undefined
-								}
-								onDeleteDraft={
-									entry.data.isDraft &&
-									entry.data.draftCreatedById === currentUserId &&
-									onDeleteComment
-										? () => onDeleteComment(entry.data.id)
-										: undefined
-								}
-							/>
-						) : (
-							<ActivityItem key={entry.data.id} activity={entry.data} />
-						)
-					)}
-				</div>
+				<InquiryTimeline inquiry={inquiry} timelineEntries={timelineEntries} />
 
 				<Separator size="4" />
 
-				{inquiry.status !== "RESOLVED" ? (
-					<ReplySection
-						onAddComment={onAddComment}
-						disabled={!canComment}
-						enableDraft={viewerRole === "committee"}
-					/>
-				) : (
-					<section className={styles.replySection}>
-						<Text size="2" color="gray">
-							このお問い合わせは解決済みのため、コメントを追加できません。
-						</Text>
-						{viewerRole === "project" && (
-							<Button
-								intent="secondary"
-								onClick={() => onUpdateStatus("IN_PROGRESS")}
-							>
-								再オープンする
-							</Button>
-						)}
-					</section>
-				)}
+				<InquiryReplyPanel
+					inquiryStatus={inquiry.status}
+					viewerRole={viewerRole}
+					activeReplyTab={activeReplyTab}
+					onChangeReplyTab={setActiveReplyTab}
+					draftComments={draftComments}
+					currentUserId={currentUserId}
+					canComment={canComment}
+					onAddComment={onAddComment}
+					onPublishDraft={onPublishDraft}
+					onDeleteComment={onDeleteComment}
+					onUpdateStatus={onUpdateStatus}
+				/>
 			</div>
 
-			{/* サイドバー */}
-			<aside className={styles.sidebar}>
-				<div className={styles.sidebarSection}>
-					<Text size="2" weight="medium" color="gray">
-						対応状況
-					</Text>
-					<Badge color={config.color} size="2" variant="soft">
-						<StatusIcon size={14} />
-						{config.label}
-					</Badge>
-				</div>
-
-				<Separator size="4" />
-
-				{/* 実行委員担当者 */}
-				<div className={styles.sidebarSection}>
-					<Text size="2" weight="medium" color="gray">
-						実行委員 担当者
-					</Text>
-					<AssigneeList
-						assignees={inquiry.committeeAssignees}
-						variant="committee"
-						canEdit={canEditCommittee}
-						onRemove={(assigneeId, userId) =>
-							handleRemoveAssignee(assigneeId, userId)
-						}
-					/>
-					{canEditCommittee && (
-						<AssigneePopover
-							members={committeeMembers}
-							assignees={inquiry.committeeAssignees}
-							side="COMMITTEE"
-							onToggle={toggleAssignee}
-						/>
-					)}
-				</div>
-
-				<Separator size="4" />
-
-				{/* 企画側担当者 */}
-				<div className={styles.sidebarSection}>
-					<Text size="2" weight="medium" color="gray">
-						企画側 担当者
-					</Text>
-					<AssigneeList
-						assignees={inquiry.projectAssignees}
-						variant="project"
-						canEdit={canEditCommittee || viewerRole === "project"}
-						onRemove={(assigneeId, userId) =>
-							handleRemoveAssignee(assigneeId, userId)
-						}
-					/>
-					{(canEditCommittee || viewerRole === "project") && (
-						<AssigneePopover
-							members={projectMembers}
-							assignees={inquiry.projectAssignees}
-							side="PROJECT"
-							onToggle={toggleAssignee}
-						/>
-					)}
-				</div>
-
-				<Separator size="4" />
-
-				{/* 関連申請 */}
-				<div className={styles.sidebarSection}>
-					<Text size="2" weight="medium" color="gray">
-						関連申請
-					</Text>
-					{inquiry.relatedForm ? (
-						viewerRole === "committee" ? (
-							<Link
-								to="/committee/forms/$formId"
-								params={{ formId: inquiry.relatedForm.id }}
-								className={styles.formLink}
-							>
-								<IconFileDescription size={16} />
-								<Text size="2">{inquiry.relatedForm.title}</Text>
-							</Link>
-						) : (
-							<div className={styles.formLink}>
-								<IconFileDescription size={16} />
-								<Text size="2">{inquiry.relatedForm.title}</Text>
-							</div>
-						)
-					) : (
-						<Text size="1" color="gray">
-							なし
-						</Text>
-					)}
-				</div>
-
-				{viewerRole === "committee" && viewers && (
-					<>
-						<Separator size="4" />
-						<ViewerSettings
-							viewers={viewers}
-							committeeMembers={committeeMembers}
-							onUpdate={onUpdateViewers}
-							readOnly={!canEditCommittee}
-						/>
-					</>
-				)}
-
-				{canEditCommittee && (
-					<>
-						<Separator size="4" />
-						{inquiry.status !== "RESOLVED" && (
-							<Button
-								intent="secondary"
-								onClick={() => onUpdateStatus("RESOLVED")}
-							>
-								<IconCheck size={16} />
-								解決済みにする
-							</Button>
-						)}
-						{inquiry.status === "RESOLVED" && (
-							<Button
-								intent="secondary"
-								onClick={() => onUpdateStatus("IN_PROGRESS")}
-							>
-								再オープンする
-							</Button>
-						)}
-					</>
-				)}
-			</aside>
+			<SupportSidebar
+				inquiry={inquiry}
+				viewerRole={viewerRole}
+				committeeMembers={committeeMembers}
+				projectMembers={projectMembers}
+				viewers={viewers}
+				onUpdateViewers={onUpdateViewers}
+				canEditCommittee={canEditCommittee}
+				onUpdateStatus={onUpdateStatus}
+				onToggleAssignee={toggleAssignee}
+				onRemoveAssignee={handleRemoveAssignee}
+				statusLabel={config.label}
+				statusColor={config.color}
+				StatusIcon={StatusIcon}
+			/>
 
 			<AlertDialog.Root
 				open={selfRemoveConfirmOpen}

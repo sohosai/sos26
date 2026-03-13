@@ -456,7 +456,9 @@ committeeInquiryRoute.get(
 					include: { user: { select: userSelect } },
 				},
 				comments: {
-					where: { deletedAt: null },
+					where: {
+						deletedAt: null,
+					},
 					include: {
 						createdBy: { select: userSelect },
 						attachments: {
@@ -485,7 +487,7 @@ committeeInquiryRoute.get(
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
 
-		// コメントを整形し、下書きは常に最後に表示するようソート
+		// コメントを整形し、通常コメントの後に下書きを表示する
 		const formattedComments = inquiry.comments.map(cm => ({
 			id: cm.id,
 			body: cm.body,
