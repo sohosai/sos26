@@ -402,7 +402,7 @@ export const projectRegistrationFormResponseAnswerSchema = z.object({
 	formItemId: z.string(),
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileUrl: z.string().nullable(),
+	fileId: z.string().nullable(),
 	selectedOptions: z.array(
 		z.object({
 			id: z.string(),

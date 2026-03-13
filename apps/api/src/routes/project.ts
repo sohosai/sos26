@@ -37,7 +37,7 @@ const buildPrismaAnswerData = (
 	formItemId: answer.formItemId,
 	textValue: "textValue" in answer ? answer.textValue : undefined,
 	numberValue: "numberValue" in answer ? answer.numberValue : undefined,
-	fileUrl: "fileId" in answer ? answer.fileId : undefined,
+	fileId: "fileId" in answer ? answer.fileId : undefined,
 	selectedOptions:
 		"selectedOptionIds" in answer && answer.selectedOptionIds?.length
 			? {

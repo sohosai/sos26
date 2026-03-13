@@ -1361,8 +1361,8 @@ model ProjectRegistrationFormAnswer {
   // 数値回答（NUMBER用）
   numberValue Float?
 
-  // ファイルURL（FILE用）
-  fileUrl String?
+  // ファイルId（FILE用）
+  fileId String?
 
   // 選択肢回答（SELECT/CHECKBOX用）
   selectedOptions ProjectRegistrationFormAnswerSelectedOption[]

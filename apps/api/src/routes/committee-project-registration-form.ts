@@ -735,7 +735,7 @@ committeeProjectRegistrationFormRoute.get(
 					formItemId: a.formItemId,
 					textValue: a.textValue,
 					numberValue: a.numberValue,
-					fileUrl: a.fileUrl,
+					fileId: a.fileId,
 					selectedOptions: a.selectedOptions.map(s => ({
 						id: s.formItemOption.id,
 						label: s.formItemOption.label,

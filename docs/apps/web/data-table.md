@@ -251,10 +251,10 @@ columnHelper.accessor("email", {
 
 ### FileCell
 
-ファイルリンク表示セル。URL を受け取り、ファイルアイコン付きのリンクとして表示する。読み取り専用。値が null/undefined の場合は `─` を表示。
+ファイルリンク表示セル。fileId を受け取り、ファイルアイコン付きのリンクとして表示する。読み取り専用。値が null/undefined の場合は `─` を表示。
 
 ```tsx
-columnHelper.accessor("fileUrl", {
+columnHelper.accessor("fileId", {
 	header: "添付ファイル",
 	cell: FileCell,
 }),

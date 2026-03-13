@@ -108,7 +108,7 @@ ProjectRegistrationForm ─┬─ ProjectRegistrationFormItem ── ProjectRegi
 | `TEXT` | 短文テキスト | `textValue` |
 | `TEXTAREA` | 長文テキスト | `textValue` |
 | `NUMBER` | 数値 | `numberValue` |
-| `FILE` | ファイル | `fileUrl` |
+| `FILE` | ファイル | `fileId` |
 | `SELECT` | 単一選択 | `ProjectRegistrationFormAnswerSelectedOption` |
 | `CHECKBOX` | 複数選択 | `ProjectRegistrationFormAnswerSelectedOption` |
 

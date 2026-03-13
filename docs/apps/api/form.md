@@ -206,7 +206,7 @@
 
 - `TEXT` / `TEXTAREA`: `textValue` が空でない
 - `NUMBER`: `numberValue != null`
-- `FILE`: `fileUrl` が空でない
+- `FILE`: `fileId` が空でない
 - `SELECT` / `CHECKBOX`: `selectedOptionIds` が1件以上
 
 ### 4. 期限チェック
