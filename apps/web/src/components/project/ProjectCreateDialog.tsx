@@ -11,9 +11,15 @@ import { IconInfoCircle } from "@tabler/icons-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AnswerField } from "@/components/form/Answer/AnswerField";
-import type { FormAnswers, FormAnswerValue } from "@/components/form/type";
+import {
+	createEmptyFileAnswerValue,
+	type FormAnswers,
+	type FormAnswerValue,
+	isFileAnswerValue,
+} from "@/components/form/type";
 import { RadioGroup, RadioGroupItem } from "@/components/patterns";
 import { Button, Checkbox, TextField } from "@/components/primitives";
+import { uploadFile } from "@/lib/api/files";
 import { createProject } from "@/lib/api/project";
 import { getActiveProjectRegistrationForms } from "@/lib/api/project-registration-form";
 import {
@@ -40,6 +46,9 @@ type Step1State = {
 type Step1Errors = Partial<Record<keyof Step1State, string>>;
 
 type RegForm = GetActiveProjectRegistrationFormsResponse["forms"][number];
+type RegFormItem = RegForm["items"][number];
+type RegFormAnswer = RegistrationFormAnswersInput["answers"][number];
+type RegFormAnswerType = RegFormAnswer["type"];
 
 const EMPTY_STEP1: Step1State = {
 	name: "",
@@ -52,6 +61,7 @@ const EMPTY_STEP1: Step1State = {
 
 function getDefaultAnswerValue(type: string): FormAnswerValue {
 	if (type === "CHECKBOX") return [];
+	if (type === "FILE") return createEmptyFileAnswerValue();
 	if (type === "NUMBER") return null;
 	return "";
 }
@@ -64,6 +74,53 @@ function initFormAnswers(items: RegForm["items"]): FormAnswers {
 	return answers;
 }
 
+function normalizeSelectedOptionIds(value: FormAnswerValue): string[] {
+	if (Array.isArray(value)) {
+		return value.filter(v => v !== "");
+	}
+	if (typeof value === "string" && value !== "") {
+		return [value];
+	}
+	return [];
+}
+
+function buildRegFormAnswer(
+	item: RegFormItem,
+	answers: FormAnswers
+): RegFormAnswer {
+	const value = answers[item.id] ?? getDefaultAnswerValue(item.type);
+	const type = item.type as RegFormAnswerType;
+	const formItemId = item.id;
+
+	switch (type) {
+		case "TEXT":
+		case "TEXTAREA":
+			return { type, formItemId, textValue: value as string | null };
+		case "NUMBER":
+			return { type, formItemId, numberValue: value as number | null };
+		case "SELECT":
+		case "CHECKBOX":
+			return {
+				type,
+				formItemId,
+				selectedOptionIds: normalizeSelectedOptionIds(value),
+			};
+		case "FILE":
+			if (!isFileAnswerValue(value)) {
+				throw new Error(`FILE回答の型が不正です: ${formItemId}`);
+			}
+			return {
+				type,
+				formItemId,
+				fileId: value.uploadedFile?.fileId ?? null,
+			};
+		default: {
+			const _exhaustive: never = type;
+			throw new Error(`Unsupported type: ${_exhaustive}`);
+		}
+	}
+}
+
 function buildRegFormAnswers(
 	forms: RegForm[],
 	formAnswers: FormAnswers[]
@@ -72,36 +129,48 @@ function buildRegFormAnswers(
 		const answers = formAnswers[fi] ?? {};
 		return {
 			formId: form.id,
-			answers: form.items.map(item => {
-				const value = answers[item.id] ?? getDefaultAnswerValue(item.type);
-				const type =
-					item.type as RegistrationFormAnswersInput["answers"][number]["type"];
-				const formItemId = item.id;
-				switch (type) {
-					case "TEXT":
-					case "TEXTAREA":
-						return { type, formItemId, textValue: value as string | null };
-					case "NUMBER":
-						return { type, formItemId, numberValue: value as number | null };
-					case "SELECT":
-					case "CHECKBOX": {
-						const selectedOptionIds = Array.isArray(value)
-							? value.filter(v => v !== "")
-							: typeof value === "string" && value !== ""
-								? [value]
-								: [];
-						return { type, formItemId, selectedOptionIds };
-					}
-					case "FILE":
-						return { type, formItemId, fileId: value as string | null };
-					default: {
-						const _exhaustive: never = type;
-						throw new Error(`Unsupported type: ${_exhaustive}`);
-					}
-				}
-			}),
+			answers: form.items.map(item => buildRegFormAnswer(item, answers)),
 		};
 	});
+}
+
+async function prepareRegFormAnswersForSubmit(
+	forms: RegForm[],
+	formAnswers: FormAnswers[]
+): Promise<FormAnswers[]> {
+	const preparedAnswers = formAnswers.map(answers => ({ ...answers }));
+
+	await Promise.all(
+		forms.map(async (form, formIndex) => {
+			const answers = preparedAnswers[formIndex] ?? {};
+
+			for (const item of form.items) {
+				if (item.type !== "FILE") continue;
+
+				const value = answers[item.id];
+				if (!isFileAnswerValue(value)) {
+					throw new Error(`FILE回答の型が不正です: ${item.id}`);
+				}
+
+				if (value.pendingFile instanceof File) {
+					const result = await uploadFile(value.pendingFile);
+					answers[item.id] = {
+						pendingFile: null,
+						uploadedFile: {
+							fileId: result.file.id,
+							fileName: result.file.fileName,
+							mimeType: result.file.mimeType,
+							isPublic: result.file.isPublic,
+						},
+					};
+				}
+			}
+
+			preparedAnswers[formIndex] = answers;
+		})
+	);
+
+	return preparedAnswers;
 }
 
 function validateRegFormAnswers(
@@ -112,6 +181,15 @@ function validateRegFormAnswers(
 	for (const item of items) {
 		if (!item.required) continue;
 		const val = answers[item.id];
+		if (item.type === "FILE") {
+			if (
+				!isFileAnswerValue(val) ||
+				(val.pendingFile === null && val.uploadedFile === null)
+			) {
+				errors[item.id] = "この項目は必須です";
+			}
+			continue;
+		}
 		if (
 			val === undefined ||
 			val === null ||
@@ -440,10 +518,17 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 	const submitProject = async (
 		type: ProjectType,
 		location: ProjectLocation,
-		regAnswers: RegistrationFormAnswersInput[]
+		forms: RegForm[],
+		formAnswers: FormAnswers[]
 	) => {
 		setIsSubmitting(true);
 		try {
+			const preparedRegAnswers = await prepareRegFormAnswersForSubmit(
+				forms,
+				formAnswers
+			);
+			setRegFormAnswers(preparedRegAnswers);
+
 			const res = await createProject({
 				name: step1.name,
 				namePhonetic: step1.namePhonetic,
@@ -451,7 +536,10 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 				organizationNamePhonetic: step1.organizationNamePhonetic,
 				type,
 				location,
-				registrationFormAnswers: regAnswers.length > 0 ? regAnswers : undefined,
+				registrationFormAnswers:
+					forms.length > 0
+						? buildRegFormAnswers(forms, preparedRegAnswers)
+						: undefined,
 				agreedToRegistrationConstraints: true,
 				agreedToInfoImmutability: true,
 			});
@@ -479,7 +567,8 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 		await submitProject(
 			parsed.data as ProjectType,
 			parsedLoc.data as ProjectLocation,
-			buildRegFormAnswers(regForms, regFormAnswers)
+			regForms,
+			regFormAnswers
 		);
 	};
 
