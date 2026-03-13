@@ -142,6 +142,7 @@ ProjectRegistrationForm ─┬─ ProjectRegistrationFormItem ── ProjectRegi
 - タイトル・説明文・設問・表示順・フィルタを一括で登録
 - 作成時、指定 `sortOrder` 以降の既存フォームは自動的に +1 シフトされる
 - 作成直後は `isActive: false`（下書き状態）
+- **sortOrder 範囲**: [0, 既存フォーム総数]（末尾への追加が可能）
 
 ### 6.2 フォーム編集
 
@@ -158,6 +159,10 @@ ProjectRegistrationForm ─┬─ ProjectRegistrationFormItem ── ProjectRegi
 
 - タイトル・説明文・表示順・フィルタ
 - 設問の追加・更新・削除（設問更新時、選択肢は全削除→再作成）
+
+#### sortOrder 動作
+- **sortOrder 範囲**: [0, 既存フォーム総数]（CREATE と同じ範囲。末尾への移動が可能）
+- 指定 `sortOrder` へ移動する際、既存フォームが自動的にシフト（上に移動で +1、下に移動で -1）
 
 ### 6.3 共同編集者の管理
 

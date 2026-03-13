@@ -281,13 +281,13 @@ committeeProjectRegistrationFormRoute.patch(
 					formData.sortOrder !== existing.sortOrder
 				) {
 					const oldOrder = existing.sortOrder;
-					// sortOrder を有効範囲 [0, 総数-1] に丸める
+					// sortOrder を有効範囲 [0, 総数] に丸める
 					const totalCount = await tx.projectRegistrationForm.count({
 						where: { deletedAt: null },
 					});
 					const newOrder = Math.min(
 						Math.max(formData.sortOrder, 0),
-						totalCount - 1
+						totalCount
 					);
 					formData = { ...formData, sortOrder: newOrder };
 					if (newOrder === oldOrder) {
