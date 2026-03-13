@@ -7,6 +7,7 @@ import type {
 	RegistrationFormAnswersInput,
 } from "@sos26/shared";
 import {
+	isBlankProjectDisplayName,
 	isValidProjectDisplayName,
 	PROJECT_DISPLAY_NAME_RULE_MESSAGE,
 	projectLocationSchema,
@@ -380,12 +381,13 @@ function resolveLocation(newType: string, prevLocation: string): string {
 
 function buildStep1Errors(step1: Step1State): Step1Errors {
 	const errs: Step1Errors = {};
-	if (!step1.name) errs.name = "企画名は必須です";
+	if (isBlankProjectDisplayName(step1.name)) errs.name = "企画名は必須です";
 	else if (!isValidProjectDisplayName(step1.name)) {
 		errs.name = PROJECT_DISPLAY_NAME_RULE_MESSAGE;
 	}
 	if (!step1.namePhonetic) errs.namePhonetic = "企画名（ふりがな）は必須です";
-	if (!step1.organizationName) errs.organizationName = "企画団体名は必須です";
+	if (isBlankProjectDisplayName(step1.organizationName))
+		errs.organizationName = "企画団体名は必須です";
 	else if (!isValidProjectDisplayName(step1.organizationName)) {
 		errs.organizationName = PROJECT_DISPLAY_NAME_RULE_MESSAGE;
 	}
