@@ -77,7 +77,8 @@ export function NoticeDetailSidebar({
 	const hasPendingAuth = notice.authorizations.some(
 		a => a.status === "PENDING"
 	);
-	const canPublish = canEdit && !hasApprovedAuth && !hasPendingAuth;
+	const canEditNotice = canEdit && !hasApprovedAuth && !hasPendingAuth;
+	const canPublish = canEditNotice;
 
 	const showAuthBox = canPublish || latestAuth;
 
@@ -148,11 +149,11 @@ export function NoticeDetailSidebar({
 						)}
 					</div>
 
-					{(canEdit || isOwner) && (
+					{(canEditNotice || isOwner) && (
 						<>
 							<Separator size="4" />
 							<div className={styles.actions}>
-								{canEdit && (
+								{canEditNotice && (
 									<Button intent="secondary" size="2" onClick={onEdit}>
 										編集
 									</Button>

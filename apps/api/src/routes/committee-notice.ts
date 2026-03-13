@@ -216,11 +216,16 @@ committeeNoticeRoute.patch(
 			where: { id: noticeId, deletedAt: null },
 			include: {
 				collaborators: { where: { deletedAt: null } },
+				authorizations: { where: { status: "APPROVED" }, take: 1 },
 			},
 		});
 
 		if (!notice) {
 			throw Errors.notFound("お知らせが見つかりません");
+		}
+
+		if (notice.authorizations.length > 0) {
+			throw Errors.invalidRequest("配信承認済みのお知らせは編集できません");
 		}
 
 		// owner または共同編集者のみ編集可能
