@@ -586,6 +586,8 @@ projectInquiryRoute.post(
 					id: comment.id,
 					body: comment.body,
 					senderRole: comment.senderRole,
+					isDraft: false,
+					draftCreatedById: null,
 					createdAt: comment.createdAt,
 					createdBy: comment.createdBy,
 					attachments: comment.attachments.map(formatAttachment),

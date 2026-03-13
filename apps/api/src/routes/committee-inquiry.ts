@@ -485,6 +485,28 @@ committeeInquiryRoute.get(
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
 
+		// コメントを整形し、下書きは常に最後に表示するようソート
+		const formattedComments = inquiry.comments.map(cm => ({
+			id: cm.id,
+			body: cm.body,
+			senderRole: cm.senderRole,
+			isDraft: cm.isDraft,
+			draftCreatedById: cm.draftCreatedById,
+			createdAt: cm.createdAt,
+			createdBy: cm.createdBy,
+			attachments: cm.attachments.map(formatAttachment),
+		}));
+
+		// 通常のコメント（isDraft: false）と下書き（isDraft: true）に分離
+		const regularComments = formattedComments.filter(cm => !cm.isDraft);
+		const draftComments = formattedComments.filter(cm => cm.isDraft);
+
+		// 下書きもcreatedAtでソート（複数の下書きがある場合のため）
+		draftComments.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+		// 通常のコメントはcreatedAtでソート済み、その後に下書きを追加
+		const sortedComments = [...regularComments, ...draftComments];
+
 		const formatted = {
 			id: inquiry.id,
 			title: inquiry.title,
@@ -512,16 +534,7 @@ committeeInquiryRoute.get(
 				createdAt: v.createdAt,
 				user: v.user,
 			})),
-			comments: inquiry.comments.map(cm => ({
-				id: cm.id,
-				body: cm.body,
-				senderRole: cm.senderRole,
-				isDraft: cm.isDraft,
-				draftCreatedById: cm.draftCreatedById,
-				createdAt: cm.createdAt,
-				createdBy: cm.createdBy,
-				attachments: cm.attachments.map(formatAttachment),
-			})),
+			comments: sortedComments,
 			activities: inquiry.activities.map(act => ({
 				id: act.id,
 				type: act.type,

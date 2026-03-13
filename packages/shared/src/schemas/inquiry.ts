@@ -134,7 +134,7 @@ const assigneeWithUserSchema = inquiryAssigneeSchema
 		user: userSummarySchema,
 	});
 
-/** コメント + 投稿者情報 */
+/** コメント + 投稿者情報（Committee側用 - 下書き含む） */
 const commentWithUserSchema = inquiryCommentSchema
 	.pick({
 		id: true,
@@ -142,6 +142,19 @@ const commentWithUserSchema = inquiryCommentSchema
 		senderRole: true,
 		isDraft: true,
 		draftCreatedById: true,
+		createdAt: true,
+	})
+	.extend({
+		createdBy: userSummarySchema,
+		attachments: z.array(inquiryAttachmentSchema),
+	});
+
+/** コメント + 投稿者情報（Project側用 - 下書き除外） */
+const commentWithUserSchemaForProject = inquiryCommentSchema
+	.pick({
+		id: true,
+		body: true,
+		senderRole: true,
 		createdAt: true,
 	})
 	.extend({
@@ -231,7 +244,7 @@ export const getProjectInquiryResponseSchema = z.object({
 		relatedForm: relatedFormSummarySchema,
 		projectAssignees: z.array(assigneeWithUserSchema),
 		committeeAssignees: z.array(assigneeWithUserSchema),
-		comments: z.array(commentWithUserSchema),
+		comments: z.array(commentWithUserSchemaForProject),
 		activities: z.array(activityWithUserSchema),
 		attachments: z.array(inquiryAttachmentSchema),
 	}),

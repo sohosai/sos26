@@ -115,20 +115,21 @@ export function ReplySection({
 				</div>
 			)}
 			<div className={styles.replyActions}>
-				{enableDraft && (
+				{enableDraft ? (
 					<Button
 						onClick={() => handleSubmitReply(true)}
 						disabled={disabled || !replyText.trim() || replySending}
 					>
 						{replySending ? "保存中..." : "下書きとして保存"}
 					</Button>
+				) : (
+					<Button
+						onClick={() => handleSubmitReply(false)}
+						disabled={disabled || !replyText.trim() || replySending}
+					>
+						{replySending ? "送信中..." : "送信"}
+					</Button>
 				)}
-				{/* <Button
-					onClick={() => handleSubmitReply(false)}
-					disabled={disabled || !replyText.trim() || replySending}
-				>
-					{replySending ? "送信中..." : "送信"}
-				</Button> */}
 			</div>
 		</section>
 	);
