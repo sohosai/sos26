@@ -1,12 +1,23 @@
-import { Dialog, Text } from "@radix-ui/themes";
+import { Dialog, SegmentedControl, Text } from "@radix-ui/themes";
+import type { ProjectLocation, ProjectType } from "@sos26/shared";
 import { IconListCheck, IconSend, IconX } from "@tabler/icons-react";
 import Avatar from "boring-avatars";
 import { useState } from "react";
 
-import { Button, IconButton, Select, TextField } from "@/components/primitives";
+import {
+	Button,
+	Checkbox,
+	IconButton,
+	Select,
+	TextField,
+} from "@/components/primitives";
 import { ProjectSelectDialog } from "@/components/project-select";
 import { createNoticeAuthorization } from "@/lib/api/committee-notice";
 import { isClientError } from "@/lib/http/error";
+import {
+	PROJECT_LOCATION_OPTIONS,
+	PROJECT_TYPE_OPTIONS,
+} from "@/lib/project/options";
 import styles from "./PublishRequestDialog.module.scss";
 
 type Approver = {
@@ -22,6 +33,8 @@ type Props = {
 	onSuccess: () => void;
 };
 
+type DeliveryMode = "CATEGORY" | "INDIVIDUAL";
+
 export function PublishRequestDialog({
 	open,
 	onOpenChange,
@@ -32,9 +45,21 @@ export function PublishRequestDialog({
 	const [approverId, setApproverId] = useState("");
 	const [date, setDate] = useState("");
 	const [time, setTime] = useState("09:00");
+
+	// 配信先モード
+	const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("INDIVIDUAL");
+
+	// 個別指定
 	const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(
 		new Set()
 	);
+
+	// カテゴリ指定
+	const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
+	const [selectedLocations, setSelectedLocations] = useState<Set<string>>(
+		new Set()
+	);
+
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [projectSelectOpen, setProjectSelectOpen] = useState(false);
@@ -45,7 +70,13 @@ export function PublishRequestDialog({
 		icon: <Avatar size={16} name={a.name} variant="beam" />,
 	}));
 
-	const canSubmit = approverId && date && time && selectedProjectIds.size > 0;
+	const canSubmit =
+		approverId &&
+		date &&
+		time &&
+		(deliveryMode === "INDIVIDUAL"
+			? selectedProjectIds.size > 0
+			: selectedTypes.size + selectedLocations.size > 0);
 
 	const handleSubmit = async () => {
 		if (!canSubmit) return;
@@ -53,10 +84,23 @@ export function PublishRequestDialog({
 		setError(null);
 		try {
 			const deliveredAt = new Date(`${date}T${time}+09:00`);
+
+			const deliveryTarget =
+				deliveryMode === "CATEGORY"
+					? {
+							mode: "CATEGORY" as const,
+							projectTypes: [...selectedTypes] as ProjectType[],
+							projectLocations: [...selectedLocations] as ProjectLocation[],
+						}
+					: {
+							mode: "INDIVIDUAL" as const,
+							projectIds: [...selectedProjectIds],
+						};
+
 			await createNoticeAuthorization(noticeId, {
 				requestedToId: approverId,
 				deliveredAt,
-				projectIds: [...selectedProjectIds],
+				deliveryTarget,
 			});
 			onOpenChange(false);
 			onSuccess();
@@ -77,9 +121,30 @@ export function PublishRequestDialog({
 			setApproverId("");
 			setDate("");
 			setTime("09:00");
+			setDeliveryMode("INDIVIDUAL");
 			setSelectedProjectIds(new Set());
+			setSelectedTypes(new Set());
+			setSelectedLocations(new Set());
 			setError(null);
 		}
+	};
+
+	const toggleType = (type: string) => {
+		setSelectedTypes(prev => {
+			const next = new Set(prev);
+			if (next.has(type)) next.delete(type);
+			else next.add(type);
+			return next;
+		});
+	};
+
+	const toggleLocation = (location: string) => {
+		setSelectedLocations(prev => {
+			const next = new Set(prev);
+			if (next.has(location)) next.delete(location);
+			else next.add(location);
+			return next;
+		});
 	};
 
 	return (
@@ -137,22 +202,80 @@ export function PublishRequestDialog({
 							/>
 						</div>
 
-						{/* 公開先プロジェクト */}
+						{/* 配信先指定モード */}
 						<div className={styles.field}>
 							<Text as="label" size="2" weight="medium">
-								公開先プロジェクト
+								配信先の指定方法
 							</Text>
-							<Button
-								intent="secondary"
+							<SegmentedControl.Root
+								value={deliveryMode}
+								onValueChange={v => setDeliveryMode(v as DeliveryMode)}
 								size="2"
-								onClick={() => setProjectSelectOpen(true)}
 							>
-								<IconListCheck size={16} />
-								{selectedProjectIds.size > 0
-									? `${selectedProjectIds.size}件の企画を選択中`
-									: "配信先を選択"}
-							</Button>
+								<SegmentedControl.Item value="INDIVIDUAL">
+									個別指定
+								</SegmentedControl.Item>
+								<SegmentedControl.Item value="CATEGORY">
+									カテゴリ指定
+								</SegmentedControl.Item>
+							</SegmentedControl.Root>
 						</div>
+
+						{deliveryMode === "INDIVIDUAL" ? (
+							/* 個別指定モード */
+							<div className={styles.field}>
+								<Text as="label" size="2" weight="medium">
+									公開先プロジェクト
+								</Text>
+								<Button
+									intent="secondary"
+									size="2"
+									onClick={() => setProjectSelectOpen(true)}
+								>
+									<IconListCheck size={16} />
+									{selectedProjectIds.size > 0
+										? `${selectedProjectIds.size}件の企画を選択中`
+										: "配信先を選択"}
+								</Button>
+							</div>
+						) : (
+							/* カテゴリ指定モード */
+							<>
+								<div className={styles.field}>
+									<Text as="label" size="2" weight="medium">
+										企画区分
+									</Text>
+									<div className={styles.checkboxGroup}>
+										{PROJECT_TYPE_OPTIONS.map(opt => (
+											<Checkbox
+												key={opt.value}
+												label={opt.label}
+												checked={selectedTypes.has(opt.value)}
+												onCheckedChange={() => toggleType(opt.value)}
+											/>
+										))}
+									</div>
+								</div>
+								<div className={styles.field}>
+									<Text as="label" size="2" weight="medium">
+										実施場所
+									</Text>
+									<div className={styles.checkboxGroup}>
+										{PROJECT_LOCATION_OPTIONS.map(opt => (
+											<Checkbox
+												key={opt.value}
+												label={opt.label}
+												checked={selectedLocations.has(opt.value)}
+												onCheckedChange={() => toggleLocation(opt.value)}
+											/>
+										))}
+									</div>
+								</div>
+								<Text size="1" color="gray">
+									選択した企画区分・実施場所のいずれかに該当する企画に配信されます。
+								</Text>
+							</>
+						)}
 
 						{error && (
 							<Text size="2" color="red">
