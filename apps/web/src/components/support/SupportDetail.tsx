@@ -269,7 +269,11 @@ function InquiryReplyPanel({
 						onClick={() => onChangeReplyTab("draft")}
 					>
 						下書き
-						<span className={styles.replyTabCount}>{draftComments.length}</span>
+						{draftComments.length > 0 && (
+							<span className={styles.replyTabCount}>
+								{draftComments.length}
+							</span>
+						)}
 					</button>
 				</div>
 			)}
