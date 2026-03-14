@@ -1,5 +1,5 @@
 import { Badge, Separator, Text } from "@radix-ui/themes";
-import type { GetFormDetailResponse } from "@sos26/shared";
+import type { DeliveryMode, GetFormDetailResponse } from "@sos26/shared";
 import {
 	IconCheck,
 	IconPlus,
@@ -16,6 +16,10 @@ import { Button, IconButton } from "@/components/primitives";
 import { validateAuthorizationDates } from "@/lib/form/AuthDateCheck";
 import { getFormStatusFromAuth } from "@/lib/form/form-status";
 import { formatDate } from "@/lib/format";
+import {
+	PROJECT_LOCATION_LABELS,
+	PROJECT_TYPE_LABELS,
+} from "@/lib/project/options";
 import styles from "./FormDetailSidebar.module.scss";
 import { FormPublishRequestDialog } from "./FormPublishRequestDialog";
 
@@ -339,20 +343,12 @@ function AuthDetailSection({
 				</Text>
 				<Text size="2">{formatDate(auth.scheduledSendAt, "datetime")}</Text>
 			</div>
-			{auth.deliveries.length > 0 && (
-				<div className={styles.authDetailRow}>
-					<Text size="2" color="gray">
-						配信先
-					</Text>
-					<div className={styles.projectTags}>
-						{auth.deliveries.map(d => (
-							<Badge key={d.id} variant="soft" size="1">
-								{d.project.name}
-							</Badge>
-						))}
-					</div>
-				</div>
-			)}
+			<DeliveryTargetDisplay
+				deliveryMode={auth.deliveryMode}
+				filterTypes={auth.filterTypes}
+				filterLocations={auth.filterLocations}
+				deliveries={auth.deliveries}
+			/>
 			{auth.deadlineAt && (
 				<>
 					<div className={styles.authDetailRow}>
@@ -428,6 +424,70 @@ function AuthDetailSection({
 					</Button>
 				</div>
 			)}
+		</div>
+	);
+}
+
+function DeliveryTargetDisplay({
+	deliveryMode,
+	filterTypes,
+	filterLocations,
+	deliveries,
+}: {
+	deliveryMode: DeliveryMode;
+	filterTypes: string[];
+	filterLocations: string[];
+	deliveries: { id: string; project: { id: string; name: string } }[];
+}) {
+	if (deliveryMode === "CATEGORY") {
+		const isAll = filterTypes.length === 0 && filterLocations.length === 0;
+		return (
+			<div className={styles.authDetailRow}>
+				<Text size="2" color="gray">
+					配信先
+				</Text>
+				{isAll ? (
+					<Badge variant="soft" size="1" color="blue">
+						全企画
+					</Badge>
+				) : (
+					<div className={styles.projectTags}>
+						{filterTypes.map(t => (
+							<Badge key={t} variant="soft" size="1" color="violet">
+								{PROJECT_TYPE_LABELS[t] ?? t}
+							</Badge>
+						))}
+						{filterLocations.map(l => (
+							<Badge key={l} variant="soft" size="1" color="cyan">
+								{PROJECT_LOCATION_LABELS[l] ?? l}
+							</Badge>
+						))}
+					</div>
+				)}
+				<Text size="1" color="gray">
+					カテゴリ指定
+				</Text>
+			</div>
+		);
+	}
+
+	if (deliveries.length === 0) return null;
+
+	return (
+		<div className={styles.authDetailRow}>
+			<Text size="2" color="gray">
+				配信先
+			</Text>
+			<div className={styles.projectTags}>
+				{deliveries.map(d => (
+					<Badge key={d.id} variant="soft" size="1">
+						{d.project.name}
+					</Badge>
+				))}
+			</div>
+			<Text size="1" color="gray">
+				個別指定（{deliveries.length}件）
+			</Text>
 		</div>
 	);
 }
