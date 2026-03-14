@@ -1,9 +1,11 @@
 import { Badge, Text } from "@radix-ui/themes";
 import type { InquiryAttachment } from "@sos26/shared";
 import Avatar from "boring-avatars";
+import { useState } from "react";
 import { AttachmentPreviewButton } from "@/components/filePreview/AttachmentPreviewButton";
 import { formatDate } from "@/lib/format";
 import { useStorageUrl } from "@/lib/storage";
+import { Button } from "../primitives";
 import styles from "./SupportDetail.module.scss";
 import type { ActivityInfo } from "./types";
 
@@ -28,6 +30,34 @@ export function TimelineItem({
 	onPublishDraft?: () => Promise<void>;
 	onDeleteDraft?: () => Promise<void>;
 }) {
+	const [isPublishingDraft, setIsPublishingDraft] = useState(false);
+	const [isDeletingDraft, setIsDeletingDraft] = useState(false);
+	const isDraftActionPending = isPublishingDraft || isDeletingDraft;
+
+	const handlePublishDraft = async () => {
+		if (!onPublishDraft || isDraftActionPending) {
+			return;
+		}
+		setIsPublishingDraft(true);
+		try {
+			await onPublishDraft();
+		} finally {
+			setIsPublishingDraft(false);
+		}
+	};
+
+	const handleDeleteDraft = async () => {
+		if (!onDeleteDraft || isDraftActionPending) {
+			return;
+		}
+		setIsDeletingDraft(true);
+		try {
+			await onDeleteDraft();
+		} finally {
+			setIsDeletingDraft(false);
+		}
+	};
+
 	return (
 		<div className={styles.timelineItem} data-draft={isDraft || undefined}>
 			<span className={styles.avatar}>
@@ -70,20 +100,20 @@ export function TimelineItem({
 				)}
 				{isDraft && isOwnDraft && onPublishDraft && onDeleteDraft && (
 					<div className={styles.draftActions}>
-						<button
-							type="button"
-							className={styles.draftActionButton}
-							onClick={onPublishDraft}
+						<Button
+							intent="secondary"
+							onClick={handlePublishDraft}
+							disabled={isDraftActionPending}
 						>
-							送信
-						</button>
-						<button
-							type="button"
-							className={styles.draftActionButton}
-							onClick={onDeleteDraft}
+							{isPublishingDraft ? "送信中..." : "送信"}
+						</Button>
+						<Button
+							intent="secondary"
+							onClick={handleDeleteDraft}
+							disabled={isDraftActionPending}
 						>
-							削除
-						</button>
+							{isDeletingDraft ? "削除中..." : "削除"}
+						</Button>
 					</div>
 				)}
 			</div>
