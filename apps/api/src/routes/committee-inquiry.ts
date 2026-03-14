@@ -393,7 +393,7 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 			},
 			_count: {
 				select: {
-					comments: { where: { deletedAt: null } },
+					comments: { where: { deletedAt: null, isDraft: false } },
 				},
 			},
 		},
