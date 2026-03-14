@@ -313,6 +313,7 @@ erDiagram
   Int sortOrder
   String createdById FK
   String formItemId FK,UK "nullable"
+  String projectRegistrationFormItemId FK,UK "nullable"
   MastersheetDataType dataType "nullable"
   MastersheetColumnVisibility visibility "nullable"
   DateTime createdAt
@@ -353,6 +354,22 @@ erDiagram
   String id PK
   String editHistoryId FK
   String formItemOptionId FK
+}
+"ProjectRegistrationFormItemEditHistory" {
+  String id PK
+  String projectRegistrationFormItemId FK
+  String projectId FK
+  String textValue "nullable"
+  Float numberValue "nullable"
+  String fileId "nullable"
+  String actorId FK
+  ProjectRegistrationFormItemEditHistoryTrigger trigger
+  DateTime createdAt
+}
+"ProjectRegistrationFormItemEditHistorySelectedOption" {
+  String id PK
+  String editHistoryId FK
+  String projectRegistrationFormItemOptionId FK
 }
 "MastersheetColumnViewer" {
   String id PK
@@ -513,6 +530,7 @@ erDiagram
 "InquiryActivity" }o--o| "User" : target
 "MastersheetColumn" }o--|| "User" : createdBy
 "MastersheetColumn" |o--o| "FormItem" : formItem
+"MastersheetColumn" |o--o| "ProjectRegistrationFormItem" : projectRegistrationFormItem
 "MastersheetColumnOption" }o--|| "MastersheetColumn" : column
 "MastersheetCellValue" }o--|| "MastersheetColumn" : column
 "MastersheetCellValue" }o--|| "Project" : project
@@ -523,6 +541,11 @@ erDiagram
 "FormItemEditHistory" }o--|| "User" : actor
 "FormItemEditHistorySelectedOption" }o--|| "FormItemEditHistory" : editHistory
 "FormItemEditHistorySelectedOption" }o--|| "FormItemOption" : formItemOption
+"ProjectRegistrationFormItemEditHistory" }o--|| "ProjectRegistrationFormItem" : projectRegistrationFormItem
+"ProjectRegistrationFormItemEditHistory" }o--|| "Project" : project
+"ProjectRegistrationFormItemEditHistory" }o--|| "User" : actor
+"ProjectRegistrationFormItemEditHistorySelectedOption" }o--|| "ProjectRegistrationFormItemEditHistory" : editHistory
+"ProjectRegistrationFormItemEditHistorySelectedOption" }o--|| "ProjectRegistrationFormItemOption" : projectRegistrationFormItemOption
 "MastersheetColumnViewer" }o--|| "MastersheetColumn" : column
 "MastersheetColumnViewer" }o--o| "User" : user
 "MastersheetAccessRequest" }o--|| "MastersheetColumn" : column
@@ -951,6 +974,7 @@ Properties as follows:
 - `sortOrder`:
 - `createdById`:
 - `formItemId`:
+- `projectRegistrationFormItemId`:
 - `dataType`:
 - `visibility`:
 - `createdAt`:
@@ -1006,6 +1030,28 @@ Properties as follows:
 - `id`:
 - `editHistoryId`:
 - `formItemOptionId`:
+
+### `ProjectRegistrationFormItemEditHistory`
+
+Properties as follows:
+
+- `id`:
+- `projectRegistrationFormItemId`:
+- `projectId`:
+- `textValue`:
+- `numberValue`:
+- `fileId`:
+- `actorId`:
+- `trigger`:
+- `createdAt`:
+
+### `ProjectRegistrationFormItemEditHistorySelectedOption`
+
+Properties as follows:
+
+- `id`:
+- `editHistoryId`:
+- `projectRegistrationFormItemOptionId`:
 
 ### `MastersheetColumnViewer`
 

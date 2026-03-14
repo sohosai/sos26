@@ -118,6 +118,10 @@ function ColumnMetaBadges({ col }: { col: ApiColumn }) {
 				<Text size="1" color="gray">
 					フォームのアクセス権に準ずる
 				</Text>
+			) : col.type === "PROJECT_REGISTRATION_FORM_ITEM" ? (
+				<Text size="1" color="gray">
+					企画登録フォームのアクセス権に準ずる
+				</Text>
 			) : (
 				<div className={styles.viewerBadges}>
 					{col.viewers.length === 0 ? (
@@ -305,6 +309,22 @@ function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// ヘルパー: カラム種別バッジ
+// ─────────────────────────────────────────────────────────────
+
+function getColumnTypeLabel(col: { type: string; dataType?: string | null }) {
+	if (col.type === "FORM_ITEM") return "フォーム";
+	if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") return "企画登録フォーム";
+	return DATA_TYPE_LABEL[col.dataType ?? ""] ?? "カスタム";
+}
+
+function getColumnTypeBadgeColor(type: string) {
+	if (type === "FORM_ITEM") return "blue" as const;
+	if (type === "PROJECT_REGISTRATION_FORM_ITEM") return "teal" as const;
+	return "gray" as const;
+}
+
+// ─────────────────────────────────────────────────────────────
 // アクセス済みカラムカード（表示中 / 非表示セクション）
 // ─────────────────────────────────────────────────────────────
 
@@ -368,11 +388,6 @@ function AccessibleColumnRow({
 		}
 	}
 
-	const typeLabel =
-		col.type === "FORM_ITEM"
-			? "フォーム"
-			: (DATA_TYPE_LABEL[col.dataType ?? ""] ?? "カスタム");
-
 	return (
 		<div className={styles.columnCard}>
 			<div className={styles.cardTop}>
@@ -382,11 +397,8 @@ function AccessibleColumnRow({
 							<Text size="2" weight="medium" truncate>
 								{col.name}
 							</Text>
-							<Badge
-								size="1"
-								color={col.type === "FORM_ITEM" ? "blue" : "gray"}
-							>
-								{typeLabel}
+							<Badge size="1" color={getColumnTypeBadgeColor(col.type)}>
+								{getColumnTypeLabel(col)}
 							</Badge>
 						</div>
 						<div className={styles.cardRight}>
@@ -539,11 +551,8 @@ function RequestableColumnRow({
 							<Text size="2" weight="medium" truncate>
 								{col.name}
 							</Text>
-							<Badge
-								size="1"
-								color={col.type === "FORM_ITEM" ? "blue" : "gray"}
-							>
-								{col.type === "FORM_ITEM" ? "フォーム" : "カスタム"}
+							<Badge size="1" color={getColumnTypeBadgeColor(col.type)}>
+								{getColumnTypeLabel(col)}
 							</Badge>
 						</div>
 						<div style={{ flexShrink: 0 }}>

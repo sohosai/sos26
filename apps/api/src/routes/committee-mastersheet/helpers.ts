@@ -27,6 +27,17 @@ export const getColumnFull = async (columnId: string) => {
 					},
 				},
 			},
+			projectRegistrationFormItem: {
+				select: {
+					id: true,
+					formId: true,
+					type: true,
+					options: {
+						orderBy: { sortOrder: "asc" },
+						select: { id: true, label: true, sortOrder: true },
+					},
+				},
+			},
 			options: {
 				orderBy: { sortOrder: "asc" },
 				select: { id: true, label: true, sortOrder: true },
@@ -56,15 +67,37 @@ export const getAccessibleFormIds = async (userId: string) => {
 	return new Set(forms.map(f => f.id));
 };
 
-/** カラムアクセス権チェック（accessibleFormIds はバッチ取得済みのものを渡す） */
+/** 自分がアクセス可能な企画登録フォーム ID セットを返す */
+export const getAccessiblePrfFormIds = async (userId: string) => {
+	const forms = await prisma.projectRegistrationForm.findMany({
+		where: {
+			deletedAt: null,
+			OR: [
+				{ ownerId: userId },
+				{ collaborators: { some: { userId, deletedAt: null } } },
+			],
+		},
+		select: { id: true },
+	});
+	return new Set(forms.map(f => f.id));
+};
+
+/** カラムアクセス権チェック（accessibleFormIds / accessiblePrfFormIds はバッチ取得済みのものを渡す） */
 export function canViewColumn(
 	col: ColumnFull,
 	userId: string,
 	committeeMember: CommitteeMember,
-	accessibleFormIds: Set<string>
+	accessibleFormIds: Set<string>,
+	accessiblePrfFormIds: Set<string>
 ): boolean {
 	if (col.type === "FORM_ITEM") {
 		return col.formItem !== null && accessibleFormIds.has(col.formItem.formId);
+	}
+	if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
+		return (
+			col.projectRegistrationFormItem !== null &&
+			accessiblePrfFormIds.has(col.projectRegistrationFormItem.formId)
+		);
 	}
 	// CUSTOM
 	if (col.createdById === userId) return true;
@@ -99,6 +132,14 @@ export const requireColumnOwner = async (columnId: string, userId: string) => {
 // ─────────────────────────────────────────────────────────────
 
 export function formatColumnDef(col: ColumnFull, userId: string) {
+	const options =
+		col.type === "FORM_ITEM" && col.formItem?.options?.length
+			? col.formItem.options
+			: col.type === "PROJECT_REGISTRATION_FORM_ITEM" &&
+					col.projectRegistrationFormItem?.options?.length
+				? col.projectRegistrationFormItem.options
+				: col.options;
+
 	return {
 		id: col.id,
 		type: col.type,
@@ -110,6 +151,9 @@ export function formatColumnDef(col: ColumnFull, userId: string) {
 		isOwner: col.createdById === userId,
 		formItemId: col.formItemId,
 		formItemType: col.formItem?.type ?? null,
+		projectRegistrationFormItemId: col.projectRegistrationFormItemId,
+		projectRegistrationFormItemType:
+			col.projectRegistrationFormItem?.type ?? null,
 		dataType: col.dataType,
 		visibility: col.visibility,
 		viewers: col.viewers.map(v => ({
@@ -119,10 +163,7 @@ export function formatColumnDef(col: ColumnFull, userId: string) {
 			userId: v.userId,
 			userName: v.user?.name ?? null,
 		})),
-		options:
-			col.type === "FORM_ITEM" && col.formItem?.options?.length
-				? col.formItem.options
-				: col.options,
+		options,
 		createdAt: col.createdAt,
 	};
 }
@@ -228,6 +269,114 @@ export function buildFormItemCell(
 	return {
 		columnId: colId,
 		status,
+		formValue,
+	};
+}
+
+// ─────────────────────────────────────────────────────────────
+// 企画登録フォーム設問のデータ組み立てヘルパー
+// ─────────────────────────────────────────────────────────────
+
+export type PrfResponseWithAnswers =
+	Prisma.ProjectRegistrationFormResponseGetPayload<{
+		include: {
+			answers: {
+				include: {
+					selectedOptions: {
+						select: { formItemOptionId: true };
+					};
+				};
+			};
+		};
+	}>;
+
+export type PrfHistoryWithOptions =
+	Prisma.ProjectRegistrationFormItemEditHistoryGetPayload<{
+		include: {
+			selectedOptions: {
+				select: { projectRegistrationFormItemOptionId: true };
+			};
+		};
+	}>;
+
+/** prfItemId × projectId ごとに最新1件の編集履歴を取得 */
+export async function fetchLatestPrfHistoryByCell(
+	prfItemIds: string[]
+): Promise<Map<string, PrfHistoryWithOptions>> {
+	const result = new Map<string, PrfHistoryWithOptions>();
+	if (prfItemIds.length === 0) return result;
+
+	const allHistory =
+		await prisma.projectRegistrationFormItemEditHistory.findMany({
+			where: { projectRegistrationFormItemId: { in: prfItemIds } },
+			orderBy: { createdAt: "desc" },
+			include: {
+				selectedOptions: {
+					select: { projectRegistrationFormItemOptionId: true },
+				},
+			},
+		});
+
+	for (const h of allHistory) {
+		const key = `${h.projectRegistrationFormItemId}:${h.projectId}`;
+		if (!result.has(key)) result.set(key, h);
+	}
+
+	return result;
+}
+
+export function buildPrfItemCell(
+	colId: string,
+	prfItem: { id: string; formId: string },
+	projectId: string,
+	responseByFormProject: Map<string, Map<string, PrfResponseWithAnswers>>,
+	latestPrfHistoryByCell: Map<string, PrfHistoryWithOptions>
+) {
+	const responseMap = responseByFormProject.get(prfItem.formId);
+	const response = responseMap?.get(projectId);
+	const historyKey = `${prfItem.id}:${projectId}`;
+	const latestHistory = latestPrfHistoryByCell.get(historyKey);
+
+	if (!response) {
+		return {
+			columnId: colId,
+			status: "NOT_APPLICABLE" as const,
+			formValue: null,
+		};
+	}
+
+	if (latestHistory) {
+		return {
+			columnId: colId,
+			status:
+				latestHistory.trigger === "COMMITTEE_EDIT"
+					? ("COMMITTEE_EDITED" as const)
+					: ("SUBMITTED" as const),
+			formValue: {
+				textValue: latestHistory.textValue,
+				numberValue: latestHistory.numberValue,
+				fileId: latestHistory.fileId,
+				selectedOptionIds: latestHistory.selectedOptions.map(
+					s => s.projectRegistrationFormItemOptionId
+				),
+			},
+		};
+	}
+
+	// フォールバック: ProjectRegistrationFormAnswer
+	const answer = response.answers.find(a => a.formItemId === prfItem.id);
+	const formValue = answer
+		? {
+				textValue: answer.textValue,
+				numberValue: answer.numberValue,
+				fileId: answer.fileId,
+				selectedOptionIds: answer.selectedOptions.map(s => s.formItemOptionId),
+			}
+		: null;
+
+	return {
+		columnId: colId,
+		status: "SUBMITTED" as const,
 		formValue,
 	};
 }
