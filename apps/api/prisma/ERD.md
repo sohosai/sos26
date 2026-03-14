@@ -138,6 +138,9 @@ erDiagram
   NoticeAuthorizationStatus status
   DateTime decidedAt "nullable"
   DateTime deliveredAt
+  DeliveryMode deliveryMode
+  ProjectType filterTypes
+  ProjectLocation filterLocations
   DateTime createdAt
   DateTime updatedAt
 }
@@ -209,6 +212,9 @@ erDiagram
   Boolean allowLateResponse
   Boolean required
   Boolean ownerOnly
+  DeliveryMode deliveryMode
+  ProjectType filterTypes
+  ProjectLocation filterLocations
   DateTime createdAt
   DateTime updatedAt
 }
@@ -719,6 +725,9 @@ Properties as follows:
 - `status`:
 - `decidedAt`:
 - `deliveredAt`:
+- `deliveryMode`:
+- `filterTypes`:
+- `filterLocations`:
 - `createdAt`:
 - `updatedAt`:
 
@@ -811,6 +820,9 @@ Properties as follows:
 - `allowLateResponse`:
 - `required`:
 - `ownerOnly`:
+- `deliveryMode`:
+- `filterTypes`:
+- `filterLocations`:
 - `createdAt`:
 - `updatedAt`:
 
