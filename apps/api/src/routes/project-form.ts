@@ -440,9 +440,9 @@ async function syncCategoryFormDeliveries(
 // ─────────────────────────────────────────────────────────────
 
 projectFormRoute.get("/", requireAuth, requireProjectMember, async c => {
-	const projectId = c.req.param("projectId");
-	const projectRole = c.get("projectRole");
 	const project = c.get("project");
+	const projectId = project.id;
+	const projectRole = c.get("projectRole");
 
 	// カテゴリ指定の遅延Delivery同期
 	await syncCategoryFormDeliveries(projectId, project.type, project.location);
