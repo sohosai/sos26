@@ -1,3 +1,5 @@
+import { textToHtml } from "./textToHtml";
+
 export function accessRequestReceivedTemplate(params: {
 	requesterName: string;
 	columnName: string;
@@ -14,7 +16,7 @@ ${params.url}
 
 	return {
 		subject: "【雙峰祭オンラインシステム】カラムへのアクセス申請",
-		html: body.replace(/\n/g, "<br />"),
+		html: textToHtml(body),
 		text: body,
 	};
 }

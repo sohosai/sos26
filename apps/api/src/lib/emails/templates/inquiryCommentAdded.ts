@@ -1,3 +1,5 @@
+import { textToHtml } from "./textToHtml";
+
 export function inquiryCommentAddedTemplate(params: {
 	inquiryTitle: string;
 	commenterName: string;
@@ -21,7 +23,7 @@ ${params.url}
 	return {
 		subject:
 			"【雙峰祭オンラインシステム】お問い合わせにコメントが追加されました",
-		html: body.replace(/\n/g, "<br />"),
+		html: textToHtml(body),
 		text: body,
 	};
 }

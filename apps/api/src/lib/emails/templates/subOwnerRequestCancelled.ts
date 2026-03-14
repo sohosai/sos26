@@ -1,3 +1,5 @@
+import { textToHtml } from "./textToHtml";
+
 export function subOwnerRequestCancelledTemplate(params: {
 	ownerName: string;
 	projectName: string;
@@ -12,7 +14,7 @@ export function subOwnerRequestCancelledTemplate(params: {
 
 	return {
 		subject: "【雙峰祭オンラインシステム】副責任者リクエストが取り消されました",
-		html: body.replace(/\n/g, "<br />"),
+		html: textToHtml(body),
 		text: body,
 	};
 }
