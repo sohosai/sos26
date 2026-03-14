@@ -108,8 +108,8 @@ model User {
   mastersheetViews                               MastersheetView[]
 
   // FormItemEditHistory関連
-  formItemEditHistory    FormItemEditHistory[]                        @relation("FormItemEditHistoryActor")
-  prfItemEditHistory     ProjectRegistrationFormItemEditHistory[]     @relation("PrfItemEditHistoryActor")
+  formItemEditHistory FormItemEditHistory[]                    @relation("FormItemEditHistoryActor")
+  prfItemEditHistory  ProjectRegistrationFormItemEditHistory[] @relation("PrfItemEditHistoryActor")
 
   @@unique([firebaseUid, deletedAt])
   @@unique([email, deletedAt])
@@ -184,9 +184,9 @@ model Project {
   projectRegistrationFormResponses ProjectRegistrationFormResponse[]
   projectSubOwnerRequests          ProjectSubOwnerRequest[]
 
-  mastersheetCellValues            MastersheetCellValue[]
-  formItemEditHistory              FormItemEditHistory[]
-  prfItemEditHistory               ProjectRegistrationFormItemEditHistory[]
+  mastersheetCellValues MastersheetCellValue[]
+  formItemEditHistory   FormItemEditHistory[]
+  prfItemEditHistory    ProjectRegistrationFormItemEditHistory[]
 
   @@index([ownerId])
   @@index([subOwnerId])
@@ -1020,7 +1020,7 @@ model MastersheetColumn {
   formItem   FormItem? @relation(fields: [formItemId], references: [id])
 
   // 企画登録フォーム由来カラムの場合（同一フォーム項目のカラムは1つのみ）
-  projectRegistrationFormItemId String?                    @unique
+  projectRegistrationFormItemId String?                      @unique
   projectRegistrationFormItem   ProjectRegistrationFormItem? @relation(fields: [projectRegistrationFormItemId], references: [id])
 
   // 自由追加カラムの場合
@@ -1130,18 +1130,18 @@ enum ProjectRegistrationFormItemEditHistoryTrigger {
 }
 
 model ProjectRegistrationFormItemEditHistory {
-  id                            String                                          @id @default(cuid())
+  id                            String                                        @id @default(cuid())
   projectRegistrationFormItemId String
-  projectRegistrationFormItem   ProjectRegistrationFormItem                     @relation(fields: [projectRegistrationFormItemId], references: [id], onDelete: Cascade)
+  projectRegistrationFormItem   ProjectRegistrationFormItem                   @relation(fields: [projectRegistrationFormItemId], references: [id], onDelete: Cascade)
   projectId                     String
-  project                       Project                                        @relation(fields: [projectId], references: [id])
+  project                       Project                                       @relation(fields: [projectId], references: [id])
   textValue                     String?
   numberValue                   Float?
   fileId                        String?
   actorId                       String
-  actor                         User                                           @relation("PrfItemEditHistoryActor", fields: [actorId], references: [id])
+  actor                         User                                          @relation("PrfItemEditHistoryActor", fields: [actorId], references: [id])
   trigger                       ProjectRegistrationFormItemEditHistoryTrigger
-  createdAt                     DateTime                                       @default(now())
+  createdAt                     DateTime                                      @default(now())
 
   selectedOptions ProjectRegistrationFormItemEditHistorySelectedOption[]
 
@@ -1150,11 +1150,11 @@ model ProjectRegistrationFormItemEditHistory {
 }
 
 model ProjectRegistrationFormItemEditHistorySelectedOption {
-  id                                  String                                    @id @default(cuid())
+  id                                  String                                 @id @default(cuid())
   editHistoryId                       String
-  editHistory                         ProjectRegistrationFormItemEditHistory    @relation(fields: [editHistoryId], references: [id], onDelete: Cascade)
+  editHistory                         ProjectRegistrationFormItemEditHistory @relation(fields: [editHistoryId], references: [id], onDelete: Cascade)
   projectRegistrationFormItemOptionId String
-  projectRegistrationFormItemOption   ProjectRegistrationFormItemOption         @relation(fields: [projectRegistrationFormItemOptionId], references: [id])
+  projectRegistrationFormItemOption   ProjectRegistrationFormItemOption      @relation(fields: [projectRegistrationFormItemOptionId], references: [id])
 
   @@unique([editHistoryId, projectRegistrationFormItemOptionId])
 }
