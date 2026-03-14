@@ -1,6 +1,11 @@
 import { z } from "zod";
-import { approvalStatusSchema } from "./common";
+import {
+	approvalStatusSchema,
+	deliveryModeSchema,
+	deliveryTargetSchema,
+} from "./common";
 import { fileSchema } from "./file";
+import { projectLocationSchema, projectTypeSchema } from "./project";
 import { userSchema } from "./user";
 
 // ─────────────────────────────────────────────────────────────
@@ -133,6 +138,9 @@ export const formAuthorizationSchema = z.object({
 	allowLateResponse: z.boolean(),
 	required: z.boolean(),
 	ownerOnly: z.boolean(),
+	deliveryMode: deliveryModeSchema,
+	filterTypes: z.array(projectTypeSchema),
+	filterLocations: z.array(projectLocationSchema),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 });
@@ -414,7 +422,7 @@ export const requestFormAuthorizationRequestSchema = z.object({
 	allowLateResponse: z.boolean().default(false),
 	required: z.boolean().default(true),
 	ownerOnly: z.boolean().default(false),
-	projectIds: z.array(z.string().min(1)).min(1),
+	deliveryTarget: deliveryTargetSchema,
 });
 export type RequestFormAuthorizationRequest = z.infer<
 	typeof requestFormAuthorizationRequestSchema

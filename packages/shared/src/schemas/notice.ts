@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { deliveryModeSchema, deliveryTargetSchema } from "./common";
 import { userSchema } from "./user";
 
 // ─────────────────────────────────────────────────────────────
@@ -35,6 +36,8 @@ export type NoticeAuthorizationStatus = z.infer<
 	typeof noticeAuthorizationStatusSchema
 >;
 
+import { projectLocationSchema, projectTypeSchema } from "./project";
+
 export const noticeAuthorizationSchema = z.object({
 	id: z.cuid(),
 	noticeId: z.cuid(),
@@ -43,6 +46,9 @@ export const noticeAuthorizationSchema = z.object({
 	status: noticeAuthorizationStatusSchema,
 	decidedAt: z.coerce.date().nullable(),
 	deliveredAt: z.coerce.date(),
+	deliveryMode: deliveryModeSchema,
+	filterTypes: z.array(projectTypeSchema),
+	filterLocations: z.array(projectLocationSchema),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 });
@@ -235,16 +241,14 @@ export type RemoveCollaboratorResponse = z.infer<
 export const createNoticeAuthorizationRequestSchema = z.object({
 	requestedToId: z.cuid(),
 	deliveredAt: z.coerce.date(),
-	projectIds: z.array(z.cuid()).min(1, "配信先企画を指定してください"),
+	deliveryTarget: deliveryTargetSchema,
 });
 export type CreateNoticeAuthorizationRequest = z.infer<
 	typeof createNoticeAuthorizationRequestSchema
 >;
 
 export const createNoticeAuthorizationResponseSchema = z.object({
-	authorization: noticeAuthorizationSchema.extend({
-		deliveries: z.array(noticeDeliverySchema),
-	}),
+	authorization: noticeAuthorizationSchema,
 });
 export type CreateNoticeAuthorizationResponse = z.infer<
 	typeof createNoticeAuthorizationResponseSchema
