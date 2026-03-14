@@ -74,9 +74,7 @@ export function PublishRequestDialog({
 		approverId &&
 		date &&
 		time &&
-		(deliveryMode === "INDIVIDUAL"
-			? selectedProjectIds.size > 0
-			: selectedTypes.size + selectedLocations.size > 0);
+		(deliveryMode === "CATEGORY" || selectedProjectIds.size > 0);
 
 	const handleSubmit = async () => {
 		if (!canSubmit) return;
@@ -272,7 +270,7 @@ export function PublishRequestDialog({
 									</div>
 								</div>
 								<Text size="1" color="gray">
-									選択した企画区分・実施場所のいずれかに該当する企画に配信されます。
+									選択した企画区分・実施場所のいずれかに該当する企画に配信されます。未選択の場合は全企画に配信されます。
 								</Text>
 							</>
 						)}

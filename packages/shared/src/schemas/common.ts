@@ -29,7 +29,7 @@ export type ApprovalStatus = z.infer<typeof approvalStatusSchema>;
 export const deliveryModeSchema = z.enum(["INDIVIDUAL", "CATEGORY"]);
 export type DeliveryMode = z.infer<typeof deliveryModeSchema>;
 
-/** カテゴリ指定: 企画区分・実施場所で配信先をフィルタ（OR結合、合計1つ以上） */
+/** カテゴリ指定: 企画区分・実施場所で配信先をフィルタ（OR結合、両方空=全企画対象） */
 const categoryTargetSchema = z.object({
 	mode: z.literal("CATEGORY"),
 	projectTypes: z.array(projectTypeSchema),
@@ -42,18 +42,8 @@ const individualTargetSchema = z.object({
 	projectIds: z.array(z.string().min(1)).min(1, "配信先企画を指定してください"),
 });
 
-export const deliveryTargetSchema = z
-	.discriminatedUnion("mode", [categoryTargetSchema, individualTargetSchema])
-	.superRefine((data, ctx) => {
-		if (
-			data.mode === "CATEGORY" &&
-			data.projectTypes.length + data.projectLocations.length < 1
-		) {
-			ctx.addIssue({
-				code: "custom",
-				message: "企画区分または実施場所を1つ以上指定してください",
-				path: ["projectTypes"],
-			});
-		}
-	});
+export const deliveryTargetSchema = z.discriminatedUnion("mode", [
+	categoryTargetSchema,
+	individualTargetSchema,
+]);
 export type DeliveryTarget = z.infer<typeof deliveryTargetSchema>;

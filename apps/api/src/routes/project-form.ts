@@ -409,6 +409,9 @@ async function syncCategoryFormDeliveries(
 	});
 
 	for (const auth of categoryAuths) {
+		// 両方空 = 全企画対象
+		const isAllTarget =
+			auth.filterTypes.length === 0 && auth.filterLocations.length === 0;
 		// OR条件: filterTypes のいずれかに一致 OR filterLocations のいずれかに一致
 		const matchesType =
 			auth.filterTypes.length > 0 && auth.filterTypes.includes(projectType);
@@ -416,7 +419,7 @@ async function syncCategoryFormDeliveries(
 			auth.filterLocations.length > 0 &&
 			auth.filterLocations.includes(projectLocation);
 
-		if (!matchesType && !matchesLocation) continue;
+		if (!isAllTarget && !matchesType && !matchesLocation) continue;
 
 		// まだ Delivery がなければ作成
 		await prisma.formDelivery.upsert({
