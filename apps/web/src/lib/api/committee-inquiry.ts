@@ -8,18 +8,25 @@ import {
 	type CreateCommitteeInquiryRequest,
 	type CreateCommitteeInquiryResponse,
 	createCommitteeInquiryEndpoint,
+	type DeleteInquiryCommentResponse,
+	deleteCommitteeInquiryCommentEndpoint,
 	type GetCommitteeInquiryResponse,
 	getCommitteeInquiryEndpoint,
 	type ListCommitteeInquiriesResponse,
 	listCommitteeInquiriesEndpoint,
+	type PublishDraftCommentResponse,
+	publishDraftCommentEndpoint,
 	type RemoveInquiryAssigneeResponse,
 	type ReopenInquiryResponse,
 	removeCommitteeInquiryAssigneeEndpoint,
 	reopenCommitteeInquiryEndpoint,
+	type UpdateDraftCommentRequest,
+	type UpdateDraftCommentResponse,
 	type UpdateInquiryStatusRequest,
 	type UpdateInquiryStatusResponse,
 	type UpdateInquiryViewersRequest,
 	type UpdateInquiryViewersResponse,
+	updateCommitteeDraftCommentEndpoint,
 	updateCommitteeInquiryStatusEndpoint,
 	updateCommitteeInquiryViewersEndpoint,
 } from "@sos26/shared";
@@ -129,5 +136,45 @@ export async function updateCommitteeInquiryViewers(
 ): Promise<UpdateInquiryViewersResponse> {
 	return callBodyApi(updateCommitteeInquiryViewersEndpoint, body, {
 		pathParams: { inquiryId },
+	});
+}
+
+/**
+ * POST /committee/inquiries/:inquiryId/comments/:commentId/publish
+ * 下書きコメントを正式送信
+ */
+export async function publishDraftComment(
+	inquiryId: string,
+	commentId: string
+): Promise<PublishDraftCommentResponse> {
+	return callNoBodyApi(publishDraftCommentEndpoint, {
+		pathParams: { inquiryId, commentId },
+	});
+}
+
+/**
+ * PATCH /committee/inquiries/:inquiryId/comments/:commentId
+ * 下書きコメントを更新
+ */
+export async function updateCommitteeDraftComment(
+	inquiryId: string,
+	commentId: string,
+	body: UpdateDraftCommentRequest
+): Promise<UpdateDraftCommentResponse> {
+	return callBodyApi(updateCommitteeDraftCommentEndpoint, body, {
+		pathParams: { inquiryId, commentId },
+	});
+}
+
+/**
+ * DELETE /committee/inquiries/:inquiryId/comments/:commentId
+ * コメントを削除
+ */
+export async function deleteCommitteeInquiryComment(
+	inquiryId: string,
+	commentId: string
+): Promise<DeleteInquiryCommentResponse> {
+	return callNoBodyApi(deleteCommitteeInquiryCommentEndpoint, {
+		pathParams: { inquiryId, commentId },
 	});
 }

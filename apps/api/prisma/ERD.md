@@ -293,8 +293,11 @@ erDiagram
   String body
   String createdById FK
   InquiryCreatorRole senderRole
+  Boolean isDraft
+  String draftCreatedById "nullable"
   DateTime deletedAt "nullable"
   DateTime createdAt
+  DateTime sentAt "nullable"
 }
 "InquiryActivity" {
   String id PK
@@ -925,8 +928,11 @@ Properties as follows:
 - `body`:
 - `createdById`:
 - `senderRole`:
+- `isDraft`:
+- `draftCreatedById`:
 - `deletedAt`:
 - `createdAt`:
+- `sentAt`:
 
 ### `InquiryActivity`
 

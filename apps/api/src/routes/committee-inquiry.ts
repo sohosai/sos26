@@ -4,7 +4,9 @@ import {
 	addInquiryCommentRequestSchema,
 	committeeInquiryAssigneeIdPathParamsSchema,
 	createCommitteeInquiryRequestSchema,
+	inquiryCommentIdPathParamsSchema,
 	inquiryIdPathParamsSchema,
+	updateDraftCommentRequestSchema,
 	updateInquiryStatusRequestSchema,
 	updateInquiryViewersRequestSchema,
 } from "@sos26/shared";
@@ -180,6 +182,10 @@ function formatAttachment(a: {
 		isPublic: a.file.isPublic,
 		createdAt: a.createdAt,
 	};
+}
+
+function getCommentSentAt(comment: { createdAt: Date; sentAt: Date | null }) {
+	return comment.sentAt ?? comment.createdAt;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -393,7 +399,7 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 			},
 			_count: {
 				select: {
-					comments: { where: { deletedAt: null } },
+					comments: { where: { deletedAt: null, isDraft: false } },
 				},
 			},
 		},
@@ -456,7 +462,9 @@ committeeInquiryRoute.get(
 					include: { user: { select: userSelect } },
 				},
 				comments: {
-					where: { deletedAt: null },
+					where: {
+						deletedAt: null,
+					},
 					include: {
 						createdBy: { select: userSelect },
 						attachments: {
@@ -485,6 +493,34 @@ committeeInquiryRoute.get(
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
 
+		// コメントを整形し、通常コメントの後に下書きを表示する
+		const formattedComments = inquiry.comments.map(cm => ({
+			id: cm.id,
+			body: cm.body,
+			senderRole: cm.senderRole,
+			isDraft: cm.isDraft,
+			draftCreatedById: cm.draftCreatedById,
+			createdAt: cm.createdAt,
+			sentAt: cm.sentAt,
+			createdBy: cm.createdBy,
+			attachments: cm.attachments.map(formatAttachment),
+		}));
+
+		// 通常のコメント（isDraft: false）と下書き（isDraft: true）に分離
+		const regularComments = formattedComments.filter(cm => !cm.isDraft);
+		const draftComments = formattedComments.filter(cm => cm.isDraft);
+
+		// 通常コメントは送信時刻でソート（既存データは createdAt をフォールバック）
+		regularComments.sort(
+			(a, b) => getCommentSentAt(a).getTime() - getCommentSentAt(b).getTime()
+		);
+
+		// 下書きもcreatedAtでソート（複数の下書きがある場合のため）
+		draftComments.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+		// 通常コメントの後に下書きを追加
+		const sortedComments = [...regularComments, ...draftComments];
+
 		const formatted = {
 			id: inquiry.id,
 			title: inquiry.title,
@@ -512,14 +548,7 @@ committeeInquiryRoute.get(
 				createdAt: v.createdAt,
 				user: v.user,
 			})),
-			comments: inquiry.comments.map(cm => ({
-				id: cm.id,
-				body: cm.body,
-				senderRole: cm.senderRole,
-				createdAt: cm.createdAt,
-				createdBy: cm.createdBy,
-				attachments: cm.attachments.map(formatAttachment),
-			})),
+			comments: sortedComments,
 			activities: inquiry.activities.map(act => ({
 				id: act.id,
 				type: act.type,
@@ -549,8 +578,11 @@ committeeInquiryRoute.post(
 			inquiryId: c.req.param("inquiryId"),
 		});
 		const body = await c.req.json().catch(() => ({}));
-		const { body: commentBody, fileIds } =
-			addInquiryCommentRequestSchema.parse(body);
+		const {
+			body: commentBody,
+			fileIds,
+			isDraft,
+		} = addInquiryCommentRequestSchema.parse(body);
 
 		// 担当者 or 管理者チェック
 		await requireAssigneeOrAdmin(inquiryId, user.id, committeeMember);
@@ -591,6 +623,9 @@ committeeInquiryRoute.post(
 					body: commentBody,
 					createdById: user.id,
 					senderRole: "COMMITTEE",
+					isDraft: isDraft ?? false,
+					draftCreatedById: isDraft ? user.id : null,
+					sentAt: isDraft ? null : new Date(),
 				},
 				include: { createdBy: { select: userSelect } },
 			});
@@ -634,13 +669,16 @@ committeeInquiryRoute.post(
 			return { ...created, attachments };
 		});
 
-		void notifyInquiryCommentAdded({
-			inquiryId,
-			inquiryTitle: inquiry.title,
-			commenterUserId: user.id,
-			commenterName: user.name,
-			commentBodyPreview: commentBody.slice(0, 200),
-		});
+		// 下書きでない場合のみ通知を送信
+		if (!isDraft) {
+			void notifyInquiryCommentAdded({
+				inquiryId,
+				inquiryTitle: inquiry.title,
+				commenterUserId: user.id,
+				commenterName: user.name,
+				commentBodyPreview: commentBody.slice(0, 200),
+			});
+		}
 
 		return c.json(
 			{
@@ -648,13 +686,242 @@ committeeInquiryRoute.post(
 					id: comment.id,
 					body: comment.body,
 					senderRole: comment.senderRole,
+					isDraft: comment.isDraft,
+					draftCreatedById: comment.draftCreatedById,
 					createdAt: comment.createdAt,
+					sentAt: comment.sentAt,
 					createdBy: comment.createdBy,
 					attachments: comment.attachments.map(formatAttachment),
 				},
 			},
 			201
 		);
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// POST /committee/inquiries/:inquiryId/comments/:commentId/publish
+// 下書きコメントを正式送信（作成者のみ）
+// ─────────────────────────────────────────────────────────────
+committeeInquiryRoute.post(
+	"/:inquiryId/comments/:commentId/publish",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { inquiryId, commentId } = {
+			inquiryId: c.req.param("inquiryId"),
+			commentId: c.req.param("commentId"),
+		};
+
+		// コメントの存在と下書き状態を確認
+		const existingComment = await prisma.inquiryComment.findFirst({
+			where: {
+				id: commentId,
+				inquiryId,
+				deletedAt: null,
+			},
+			include: { inquiry: true, createdBy: { select: userSelect } },
+		});
+
+		if (!existingComment) {
+			throw Errors.notFound("コメントが見つかりません");
+		}
+
+		if (!existingComment.isDraft) {
+			throw Errors.invalidRequest("このコメントは既に送信済みです");
+		}
+
+		// 作成者のみが送信可能
+		if (existingComment.draftCreatedById !== user.id) {
+			throw Errors.forbidden("下書きの送信は作成者のみが可能です");
+		}
+
+		// お問い合わせがRESOLVED状態でないことを確認
+		if (existingComment.inquiry.status === "RESOLVED") {
+			throw Errors.invalidRequest(
+				"解決済みのお問い合わせにはコメントできません"
+			);
+		}
+
+		// 下書きを正式送信に変換（送信時刻をコメント時刻として確定）
+		const comment = await prisma.$transaction(async tx => {
+			const publishedAt = new Date();
+			const updated = await tx.inquiryComment.update({
+				where: { id: commentId },
+				data: {
+					isDraft: false,
+					draftCreatedById: null,
+					sentAt: publishedAt,
+				},
+				include: { createdBy: { select: userSelect } },
+			});
+
+			// 親の updatedAt を更新
+			await tx.inquiry.update({
+				where: { id: inquiryId },
+				data: { updatedAt: publishedAt },
+			});
+
+			// 添付ファイルを取得
+			const attachments = await tx.inquiryAttachment.findMany({
+				where: { commentId: updated.id, deletedAt: null },
+				include: attachmentInclude,
+			});
+
+			return { ...updated, attachments };
+		});
+
+		// 通知を送信
+		void notifyInquiryCommentAdded({
+			inquiryId,
+			inquiryTitle: existingComment.inquiry.title,
+			commenterUserId: user.id,
+			commenterName: user.name,
+			commentBodyPreview: comment.body.slice(0, 200),
+		});
+
+		return c.json({
+			comment: {
+				id: comment.id,
+				body: comment.body,
+				senderRole: comment.senderRole,
+				isDraft: comment.isDraft,
+				draftCreatedById: comment.draftCreatedById,
+				createdAt: comment.createdAt,
+				sentAt: comment.sentAt,
+				createdBy: comment.createdBy,
+				attachments: comment.attachments.map(formatAttachment),
+			},
+		});
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// PATCH /committee/inquiries/:inquiryId/comments/:commentId
+// 下書きコメントを更新（作成者のみ）
+// ─────────────────────────────────────────────────────────────
+committeeInquiryRoute.patch(
+	"/:inquiryId/comments/:commentId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { inquiryId, commentId } = inquiryCommentIdPathParamsSchema.parse({
+			inquiryId: c.req.param("inquiryId"),
+			commentId: c.req.param("commentId"),
+		});
+		const body = await c.req.json().catch(() => ({}));
+		const { body: draftBody } = updateDraftCommentRequestSchema.parse(body);
+
+		const existingComment = await prisma.inquiryComment.findFirst({
+			where: {
+				id: commentId,
+				inquiryId,
+				deletedAt: null,
+			},
+			include: { inquiry: true, createdBy: { select: userSelect } },
+		});
+		if (!existingComment) {
+			throw Errors.notFound("コメントが見つかりません");
+		}
+		if (!existingComment.isDraft) {
+			throw Errors.invalidRequest("送信済みコメントは編集できません");
+		}
+		if (existingComment.draftCreatedById !== user.id) {
+			throw Errors.forbidden("下書きの編集は作成者のみが可能です");
+		}
+		if (existingComment.inquiry.status === "RESOLVED") {
+			throw Errors.invalidRequest(
+				"解決済みのお問い合わせにはコメントできません"
+			);
+		}
+
+		const comment = await prisma.$transaction(async tx => {
+			const now = new Date();
+			const updated = await tx.inquiryComment.update({
+				where: { id: commentId },
+				data: { body: draftBody },
+				include: { createdBy: { select: userSelect } },
+			});
+			await tx.inquiry.update({
+				where: { id: inquiryId },
+				data: { updatedAt: now },
+			});
+			const attachments = await tx.inquiryAttachment.findMany({
+				where: { commentId: updated.id, deletedAt: null },
+				include: attachmentInclude,
+			});
+			return { ...updated, attachments };
+		});
+
+		return c.json({
+			comment: {
+				id: comment.id,
+				body: comment.body,
+				senderRole: comment.senderRole,
+				isDraft: comment.isDraft,
+				draftCreatedById: comment.draftCreatedById,
+				createdAt: comment.createdAt,
+				sentAt: comment.sentAt,
+				createdBy: comment.createdBy,
+				attachments: comment.attachments.map(formatAttachment),
+			},
+		});
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// DELETE /committee/inquiries/:inquiryId/comments/:commentId
+// コメントを削除（下書きは作成者のみ、通常コメントは管理者または作成者）
+// ─────────────────────────────────────────────────────────────
+committeeInquiryRoute.delete(
+	"/:inquiryId/comments/:commentId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const committeeMember = c.get("committeeMember");
+		const { inquiryId, commentId } = {
+			inquiryId: c.req.param("inquiryId"),
+			commentId: c.req.param("commentId"),
+		};
+
+		// コメントの存在確認
+		const existingComment = await prisma.inquiryComment.findFirst({
+			where: {
+				id: commentId,
+				inquiryId,
+				deletedAt: null,
+			},
+		});
+
+		if (!existingComment) {
+			throw Errors.notFound("コメントが見つかりません");
+		}
+
+		// 権限チェック
+		if (existingComment.isDraft) {
+			// 下書きの場合: 作成者のみ削除可能
+			if (existingComment.draftCreatedById !== user.id) {
+				throw Errors.forbidden("下書きの削除は作成者のみが可能です");
+			}
+		} else {
+			// 通常コメントの場合: 管理者または作成者
+			const isAdmin = await isInquiryAdmin(committeeMember.id);
+			const isCreator = existingComment.createdById === user.id;
+			if (!isAdmin && !isCreator) {
+				throw Errors.forbidden("このコメントを削除する権限がありません");
+			}
+		}
+
+		// 論理削除
+		await prisma.inquiryComment.update({
+			where: { id: commentId },
+			data: { deletedAt: new Date() },
+		});
+
+		return c.json({ success: true as const });
 	}
 );
 

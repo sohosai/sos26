@@ -82,6 +82,18 @@
 .timelineItem {
 	display: flex;
 	gap: var(--space-3);
+
+	&[data-draft] {
+		.timelineContent {
+			background-color: var(--orange-1);
+			border-color: var(--orange-6);
+		}
+
+		.timelineHeader {
+			background-color: var(--orange-2);
+			border-bottom-color: var(--orange-6);
+		}
+	}
 }
 
 .avatar {
@@ -128,6 +140,17 @@
 	padding: var(--space-3) var(--space-4);
 }
 
+.draftEditor {
+	padding: var(--space-3) var(--space-4);
+}
+
+.draftActions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-2);
+	padding: 0 var(--space-4) var(--space-3);
+}
+
 .activityItem {
 	display: flex;
 	align-items: center;
@@ -146,8 +169,69 @@
 	gap: var(--space-3);
 }
 
+.replyTabs {
+	display: flex;
+	gap: var(--space-1);
+	border-bottom: 1px solid var(--gray-6);
+}
+
+.replyTabButton {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	padding: var(--space-2) var(--space-3);
+	border: none;
+	border-bottom: 2px solid transparent;
+	background: none;
+	color: var(--gray-10);
+	font-size: var(--font-size-2);
+	cursor: pointer;
+	transition: color 0.15s;
+
+	&:hover {
+		color: var(--gray-12);
+	}
+
+	&[data-active] {
+		color: var(--accent-11);
+		font-weight: 500;
+		border-bottom-color: var(--accent-9);
+	}
+}
+
+.replyTabCount {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border-radius: 9999px;
+	background-color: var(--gray-4);
+	color: var(--gray-10);
+	font-size: var(--font-size-1);
+	font-weight: 500;
+}
+
+.replyTabButton[data-active] .replyTabCount {
+	background-color: var(--accent-4);
+	color: var(--accent-11);
+}
+
+.draftTabPanel {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.draftList {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
 .replyActions {
 	display: flex;
+	gap:var(--space-2);
 	justify-content: flex-end;
 }
 
