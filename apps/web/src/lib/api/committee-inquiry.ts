@@ -20,10 +20,13 @@ import {
 	type ReopenInquiryResponse,
 	removeCommitteeInquiryAssigneeEndpoint,
 	reopenCommitteeInquiryEndpoint,
+	type UpdateDraftCommentRequest,
+	type UpdateDraftCommentResponse,
 	type UpdateInquiryStatusRequest,
 	type UpdateInquiryStatusResponse,
 	type UpdateInquiryViewersRequest,
 	type UpdateInquiryViewersResponse,
+	updateCommitteeDraftCommentEndpoint,
 	updateCommitteeInquiryStatusEndpoint,
 	updateCommitteeInquiryViewersEndpoint,
 } from "@sos26/shared";
@@ -145,6 +148,20 @@ export async function publishDraftComment(
 	commentId: string
 ): Promise<PublishDraftCommentResponse> {
 	return callNoBodyApi(publishDraftCommentEndpoint, {
+		pathParams: { inquiryId, commentId },
+	});
+}
+
+/**
+ * PATCH /committee/inquiries/:inquiryId/comments/:commentId
+ * 下書きコメントを更新
+ */
+export async function updateCommitteeDraftComment(
+	inquiryId: string,
+	commentId: string,
+	body: UpdateDraftCommentRequest
+): Promise<UpdateDraftCommentResponse> {
+	return callBodyApi(updateCommitteeDraftCommentEndpoint, body, {
 		pathParams: { inquiryId, commentId },
 	});
 }

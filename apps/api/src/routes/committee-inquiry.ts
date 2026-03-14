@@ -4,7 +4,9 @@ import {
 	addInquiryCommentRequestSchema,
 	committeeInquiryAssigneeIdPathParamsSchema,
 	createCommitteeInquiryRequestSchema,
+	inquiryCommentIdPathParamsSchema,
 	inquiryIdPathParamsSchema,
+	updateDraftCommentRequestSchema,
 	updateInquiryStatusRequestSchema,
 	updateInquiryViewersRequestSchema,
 } from "@sos26/shared";
@@ -777,6 +779,80 @@ committeeInquiryRoute.post(
 			commenterUserId: user.id,
 			commenterName: user.name,
 			commentBodyPreview: comment.body.slice(0, 200),
+		});
+
+		return c.json({
+			comment: {
+				id: comment.id,
+				body: comment.body,
+				senderRole: comment.senderRole,
+				isDraft: comment.isDraft,
+				draftCreatedById: comment.draftCreatedById,
+				createdAt: comment.createdAt,
+				sentAt: comment.sentAt,
+				createdBy: comment.createdBy,
+				attachments: comment.attachments.map(formatAttachment),
+			},
+		});
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// PATCH /committee/inquiries/:inquiryId/comments/:commentId
+// 下書きコメントを更新（作成者のみ）
+// ─────────────────────────────────────────────────────────────
+committeeInquiryRoute.patch(
+	"/:inquiryId/comments/:commentId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { inquiryId, commentId } = inquiryCommentIdPathParamsSchema.parse({
+			inquiryId: c.req.param("inquiryId"),
+			commentId: c.req.param("commentId"),
+		});
+		const body = await c.req.json().catch(() => ({}));
+		const { body: draftBody } = updateDraftCommentRequestSchema.parse(body);
+
+		const existingComment = await prisma.inquiryComment.findFirst({
+			where: {
+				id: commentId,
+				inquiryId,
+				deletedAt: null,
+			},
+			include: { inquiry: true, createdBy: { select: userSelect } },
+		});
+		if (!existingComment) {
+			throw Errors.notFound("コメントが見つかりません");
+		}
+		if (!existingComment.isDraft) {
+			throw Errors.invalidRequest("送信済みコメントは編集できません");
+		}
+		if (existingComment.draftCreatedById !== user.id) {
+			throw Errors.forbidden("下書きの編集は作成者のみが可能です");
+		}
+		if (existingComment.inquiry.status === "RESOLVED") {
+			throw Errors.invalidRequest(
+				"解決済みのお問い合わせにはコメントできません"
+			);
+		}
+
+		const comment = await prisma.$transaction(async tx => {
+			const now = new Date();
+			const updated = await tx.inquiryComment.update({
+				where: { id: commentId },
+				data: { body: draftBody },
+				include: { createdBy: { select: userSelect } },
+			});
+			await tx.inquiry.update({
+				where: { id: inquiryId },
+				data: { updatedAt: now },
+			});
+			const attachments = await tx.inquiryAttachment.findMany({
+				where: { commentId: updated.id, deletedAt: null },
+				include: attachmentInclude,
+			});
+			return { ...updated, attachments };
 		});
 
 		return c.json({

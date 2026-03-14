@@ -292,6 +292,20 @@ export type PublishDraftCommentResponse = z.infer<
 	typeof publishDraftCommentResponseSchema
 >;
 
+export const updateDraftCommentRequestSchema = z.object({
+	body: z.string().min(1, "コメントを入力してください"),
+});
+export type UpdateDraftCommentRequest = z.infer<
+	typeof updateDraftCommentRequestSchema
+>;
+
+export const updateDraftCommentResponseSchema = z.object({
+	comment: commentWithUserSchema,
+});
+export type UpdateDraftCommentResponse = z.infer<
+	typeof updateDraftCommentResponseSchema
+>;
+
 // ─────────────────────────────────────────────────────────────
 // 実委側: DELETE /committee/inquiries/:inquiryId/comments/:commentId
 // ─────────────────────────────────────────────────────────────

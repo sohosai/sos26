@@ -11,6 +11,7 @@ import {
 	publishDraftComment,
 	removeCommitteeInquiryAssignee,
 	reopenCommitteeInquiry,
+	updateCommitteeDraftComment,
 	updateCommitteeInquiryStatus,
 	updateCommitteeInquiryViewers,
 } from "@/lib/api/committee-inquiry";
@@ -166,6 +167,15 @@ function CommitteeSupportDetailPage() {
 					toast.success("コメントを削除しました");
 				} catch {
 					toast.error("コメントの削除に失敗しました");
+				}
+			}}
+			onUpdateDraft={async (commentId, body) => {
+				try {
+					await updateCommitteeDraftComment(inquiryId, commentId, { body });
+					await router.invalidate();
+					toast.success("下書きを更新しました");
+				} catch {
+					toast.error("下書きの更新に失敗しました");
 				}
 			}}
 			onUpdateViewers={async viewers => {

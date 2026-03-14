@@ -20,6 +20,8 @@ import {
 	publishDraftCommentResponseSchema,
 	removeInquiryAssigneeResponseSchema,
 	reopenInquiryResponseSchema,
+	updateDraftCommentRequestSchema,
+	updateDraftCommentResponseSchema,
 	updateInquiryStatusRequestSchema,
 	updateInquiryStatusResponseSchema,
 	updateInquiryViewersRequestSchema,
@@ -378,6 +380,26 @@ export const publishDraftCommentEndpoint: Endpoint<
 	query: undefined,
 	request: undefined,
 	response: publishDraftCommentResponseSchema,
+} as const;
+
+/**
+ * PATCH /committee/inquiries/:inquiryId/comments/:commentId
+ * 下書きコメントを更新（作成者のみ）
+ */
+export const updateCommitteeDraftCommentEndpoint: BodyEndpoint<
+	"PATCH",
+	"/committee/inquiries/:inquiryId/comments/:commentId",
+	typeof inquiryCommentIdPathParamsSchema,
+	undefined,
+	typeof updateDraftCommentRequestSchema,
+	typeof updateDraftCommentResponseSchema
+> = {
+	method: "PATCH",
+	path: "/committee/inquiries/:inquiryId/comments/:commentId",
+	pathParams: inquiryCommentIdPathParamsSchema,
+	query: undefined,
+	request: updateDraftCommentRequestSchema,
+	response: updateDraftCommentResponseSchema,
 } as const;
 
 /**

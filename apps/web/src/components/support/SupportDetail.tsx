@@ -44,6 +44,7 @@ type SupportDetailProps = {
 	onRemoveAssignee: (assigneeId: string) => Promise<void>;
 	onPublishDraft?: (commentId: string) => Promise<void>;
 	onDeleteComment?: (commentId: string) => Promise<void>;
+	onUpdateDraft?: (commentId: string, body: string) => Promise<void>;
 	viewers?: ViewerDetail[];
 	onUpdateViewers?: (viewers: ViewerInput[]) => Promise<void>;
 	/** 実委側: 担当者 or 管理者かどうか（編集 UI の出し分け） */
@@ -147,11 +148,13 @@ function DraftCommentItem({
 	currentUserId,
 	onPublishDraft,
 	onDeleteComment,
+	onUpdateDraft,
 }: {
 	comment: CommitteeCommentInfo;
 	currentUserId: string;
 	onPublishDraft?: (commentId: string) => Promise<void>;
 	onDeleteComment?: (commentId: string) => Promise<void>;
+	onUpdateDraft?: (commentId: string, body: string) => Promise<void>;
 }) {
 	const isOwnDraft = comment.draftCreatedById === currentUserId;
 	const handlePublishDraft =
@@ -159,6 +162,10 @@ function DraftCommentItem({
 	const handleDeleteDraft =
 		isOwnDraft && onDeleteComment
 			? () => onDeleteComment(comment.id)
+			: undefined;
+	const handleUpdateDraft =
+		isOwnDraft && onUpdateDraft
+			? (body: string) => onUpdateDraft(comment.id, body)
 			: undefined;
 
 	return (
@@ -172,6 +179,7 @@ function DraftCommentItem({
 			isOwnDraft={isOwnDraft}
 			onPublishDraft={handlePublishDraft}
 			onDeleteDraft={handleDeleteDraft}
+			onUpdateDraft={handleUpdateDraft}
 		/>
 	);
 }
@@ -181,11 +189,13 @@ function DraftCommentsPanel({
 	currentUserId,
 	onPublishDraft,
 	onDeleteComment,
+	onUpdateDraft,
 }: {
 	draftComments: CommitteeCommentInfo[];
 	currentUserId: string;
 	onPublishDraft?: (commentId: string) => Promise<void>;
 	onDeleteComment?: (commentId: string) => Promise<void>;
+	onUpdateDraft?: (commentId: string, body: string) => Promise<void>;
 }) {
 	if (draftComments.length === 0) {
 		return (
@@ -204,6 +214,7 @@ function DraftCommentsPanel({
 					currentUserId={currentUserId}
 					onPublishDraft={onPublishDraft}
 					onDeleteComment={onDeleteComment}
+					onUpdateDraft={onUpdateDraft}
 				/>
 			))}
 		</div>
@@ -221,6 +232,7 @@ function InquiryReplyPanel({
 	onAddComment,
 	onPublishDraft,
 	onDeleteComment,
+	onUpdateDraft,
 	onUpdateStatus,
 }: {
 	inquiryStatus: InquiryDetail["status"];
@@ -233,6 +245,7 @@ function InquiryReplyPanel({
 	onAddComment: SupportDetailProps["onAddComment"];
 	onPublishDraft?: (commentId: string) => Promise<void>;
 	onDeleteComment?: (commentId: string) => Promise<void>;
+	onUpdateDraft?: (commentId: string, body: string) => Promise<void>;
 	onUpdateStatus: (status: "RESOLVED" | "IN_PROGRESS") => Promise<void>;
 }) {
 	if (inquiryStatus === "RESOLVED") {
@@ -295,6 +308,7 @@ function InquiryReplyPanel({
 						currentUserId={currentUserId}
 						onPublishDraft={onPublishDraft}
 						onDeleteComment={onDeleteComment}
+						onUpdateDraft={onUpdateDraft}
 					/>
 				</section>
 			) : (
@@ -496,6 +510,7 @@ export function SupportDetail({
 	onRemoveAssignee,
 	onPublishDraft,
 	onDeleteComment,
+	onUpdateDraft,
 	viewers,
 	onUpdateViewers,
 	isAssigneeOrAdmin = false,
@@ -605,6 +620,7 @@ export function SupportDetail({
 					onAddComment={onAddComment}
 					onPublishDraft={onPublishDraft}
 					onDeleteComment={onDeleteComment}
+					onUpdateDraft={onUpdateDraft}
 					onUpdateStatus={onUpdateStatus}
 				/>
 			</div>
