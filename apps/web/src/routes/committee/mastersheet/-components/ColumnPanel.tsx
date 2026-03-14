@@ -37,6 +37,7 @@ import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { isClientError } from "@/lib/http/error";
 import { AddCustomColumnDialog } from "./AddCustomColumnDialog";
 import { AddFormItemColumnsDialog } from "./AddFormItemColumnsDialog";
+import { AddPrfItemColumnsDialog } from "./AddPrfItemColumnsDialog";
 import styles from "./ColumnPanel.module.scss";
 import { getScopeColor, ViewerSelector } from "./ViewerSelector";
 
@@ -117,6 +118,10 @@ function ColumnMetaBadges({ col }: { col: ApiColumn }) {
 			{col.type === "FORM_ITEM" ? (
 				<Text size="1" color="gray">
 					フォームのアクセス権に準ずる
+				</Text>
+			) : col.type === "PROJECT_REGISTRATION_FORM_ITEM" ? (
+				<Text size="1" color="gray">
+					企画登録フォームのアクセス権に準ずる
 				</Text>
 			) : (
 				<div className={styles.viewerBadges}>
@@ -305,6 +310,22 @@ function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// ヘルパー: カラム種別バッジ
+// ─────────────────────────────────────────────────────────────
+
+function getColumnTypeLabel(col: { type: string; dataType?: string | null }) {
+	if (col.type === "FORM_ITEM") return "フォーム";
+	if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") return "企画登録フォーム";
+	return DATA_TYPE_LABEL[col.dataType ?? ""] ?? "カスタム";
+}
+
+function getColumnTypeBadgeColor(type: string) {
+	if (type === "FORM_ITEM") return "blue" as const;
+	if (type === "PROJECT_REGISTRATION_FORM_ITEM") return "teal" as const;
+	return "gray" as const;
+}
+
+// ─────────────────────────────────────────────────────────────
 // アクセス済みカラムカード（表示中 / 非表示セクション）
 // ─────────────────────────────────────────────────────────────
 
@@ -368,11 +389,6 @@ function AccessibleColumnRow({
 		}
 	}
 
-	const typeLabel =
-		col.type === "FORM_ITEM"
-			? "フォーム"
-			: (DATA_TYPE_LABEL[col.dataType ?? ""] ?? "カスタム");
-
 	return (
 		<div className={styles.columnCard}>
 			<div className={styles.cardTop}>
@@ -382,11 +398,8 @@ function AccessibleColumnRow({
 							<Text size="2" weight="medium" truncate>
 								{col.name}
 							</Text>
-							<Badge
-								size="1"
-								color={col.type === "FORM_ITEM" ? "blue" : "gray"}
-							>
-								{typeLabel}
+							<Badge size="1" color={getColumnTypeBadgeColor(col.type)}>
+								{getColumnTypeLabel(col)}
 							</Badge>
 						</div>
 						<div className={styles.cardRight}>
@@ -539,11 +552,8 @@ function RequestableColumnRow({
 							<Text size="2" weight="medium" truncate>
 								{col.name}
 							</Text>
-							<Badge
-								size="1"
-								color={col.type === "FORM_ITEM" ? "blue" : "gray"}
-							>
-								{col.type === "FORM_ITEM" ? "フォーム" : "カスタム"}
+							<Badge size="1" color={getColumnTypeBadgeColor(col.type)}>
+								{getColumnTypeLabel(col)}
 							</Badge>
 						</div>
 						<div style={{ flexShrink: 0 }}>
@@ -661,6 +671,7 @@ export function ColumnPanel({
 	const [requesting, setRequesting] = useState<Set<string>>(new Set());
 	const [addCustomOpen, setAddCustomOpen] = useState(false);
 	const [addFormItemOpen, setAddFormItemOpen] = useState(false);
+	const [addPrfItemOpen, setAddPrfItemOpen] = useState(false);
 	const [sectionsOpen, setSectionsOpen] = useState({
 		fixed: true,
 		visible: true,
@@ -750,6 +761,13 @@ export function ColumnPanel({
 								onClick={() => setAddFormItemOpen(true)}
 							>
 								<IconPlus size={16} /> フォームから追加
+							</Button>
+							<Button
+								intent="secondary"
+								size="2"
+								onClick={() => setAddPrfItemOpen(true)}
+							>
+								<IconPlus size={16} /> 企画登録フォームから追加
 							</Button>
 							<Button
 								intent="secondary"
@@ -894,6 +912,12 @@ export function ColumnPanel({
 			<AddFormItemColumnsDialog
 				open={addFormItemOpen}
 				onOpenChange={setAddFormItemOpen}
+				columns={columns}
+				onSuccess={onSuccess}
+			/>
+			<AddPrfItemColumnsDialog
+				open={addPrfItemOpen}
+				onOpenChange={setAddPrfItemOpen}
 				columns={columns}
 				onSuccess={onSuccess}
 			/>

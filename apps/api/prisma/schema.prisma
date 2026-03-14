@@ -108,7 +108,8 @@ model User {
   mastersheetViews                               MastersheetView[]
 
   // FormItemEditHistory関連
-  formItemEditHistory FormItemEditHistory[] @relation("FormItemEditHistoryActor")
+  formItemEditHistory FormItemEditHistory[]                    @relation("FormItemEditHistoryActor")
+  prfItemEditHistory  ProjectRegistrationFormItemEditHistory[] @relation("PrfItemEditHistoryActor")
 
   @@unique([firebaseUid, deletedAt])
   @@unique([email, deletedAt])
@@ -185,6 +186,7 @@ model Project {
 
   mastersheetCellValues MastersheetCellValue[]
   formItemEditHistory   FormItemEditHistory[]
+  prfItemEditHistory    ProjectRegistrationFormItemEditHistory[]
 
   @@index([ownerId])
   @@index([subOwnerId])
@@ -987,6 +989,7 @@ model InquiryActivity {
 enum MastersheetColumnType {
   FORM_ITEM // フォーム由来
   CUSTOM // 自由追加
+  PROJECT_REGISTRATION_FORM_ITEM // 企画登録フォーム由来
 }
 
 enum MastersheetDataType {
@@ -1015,6 +1018,10 @@ model MastersheetColumn {
   // フォーム由来カラムの場合（同一フォーム項目のカラムは1つのみ）
   formItemId String?   @unique
   formItem   FormItem? @relation(fields: [formItemId], references: [id])
+
+  // 企画登録フォーム由来カラムの場合（同一フォーム項目のカラムは1つのみ）
+  projectRegistrationFormItemId String?                      @unique
+  projectRegistrationFormItem   ProjectRegistrationFormItem? @relation(fields: [projectRegistrationFormItemId], references: [id])
 
   // 自由追加カラムの場合
   dataType   MastersheetDataType?
@@ -1113,6 +1120,43 @@ model FormItemEditHistorySelectedOption {
   formItemOption   FormItemOption      @relation(fields: [formItemOptionId], references: [id])
 
   @@unique([editHistoryId, formItemOptionId])
+}
+
+// ─── 企画登録フォーム設問の編集履歴（append-only）───
+
+enum ProjectRegistrationFormItemEditHistoryTrigger {
+  PROJECT_SUBMIT
+  COMMITTEE_EDIT
+}
+
+model ProjectRegistrationFormItemEditHistory {
+  id                            String                                        @id @default(cuid())
+  projectRegistrationFormItemId String
+  projectRegistrationFormItem   ProjectRegistrationFormItem                   @relation(fields: [projectRegistrationFormItemId], references: [id], onDelete: Cascade)
+  projectId                     String
+  project                       Project                                       @relation(fields: [projectId], references: [id])
+  textValue                     String?
+  numberValue                   Float?
+  fileId                        String?
+  actorId                       String
+  actor                         User                                          @relation("PrfItemEditHistoryActor", fields: [actorId], references: [id])
+  trigger                       ProjectRegistrationFormItemEditHistoryTrigger
+  createdAt                     DateTime                                      @default(now())
+
+  selectedOptions ProjectRegistrationFormItemEditHistorySelectedOption[]
+
+  @@index([projectRegistrationFormItemId, projectId, createdAt(sort: Desc)])
+  @@index([actorId])
+}
+
+model ProjectRegistrationFormItemEditHistorySelectedOption {
+  id                                  String                                 @id @default(cuid())
+  editHistoryId                       String
+  editHistory                         ProjectRegistrationFormItemEditHistory @relation(fields: [editHistoryId], references: [id], onDelete: Cascade)
+  projectRegistrationFormItemOptionId String
+  projectRegistrationFormItemOption   ProjectRegistrationFormItemOption      @relation(fields: [projectRegistrationFormItemOptionId], references: [id])
+
+  @@unique([editHistoryId, projectRegistrationFormItemOptionId])
 }
 
 // ─── カラムの公開範囲（自由追加カラム用）───
@@ -1276,6 +1320,12 @@ model ProjectRegistrationFormItem {
   // 回答
   answers ProjectRegistrationFormAnswer[]
 
+  // マスターシートカラム
+  mastersheetColumn MastersheetColumn?
+
+  // 編集履歴
+  editHistory ProjectRegistrationFormItemEditHistory[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1296,6 +1346,9 @@ model ProjectRegistrationFormItemOption {
 
   // 回答での選択
   selectedIn ProjectRegistrationFormAnswerSelectedOption[]
+
+  // 編集履歴での選択
+  editHistorySelections ProjectRegistrationFormItemEditHistorySelectedOption[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

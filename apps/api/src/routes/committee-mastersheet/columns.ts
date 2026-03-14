@@ -15,6 +15,7 @@ import {
 	canViewColumn,
 	formatColumnDef,
 	getAccessibleFormIds,
+	getAccessiblePrfFormIds,
 	requireColumnOwner,
 	syncColumnOptions,
 	syncColumnViewers,
@@ -109,6 +110,137 @@ async function applyInitialValue(
 }
 
 // ─────────────────────────────────────────────────────────────
+// ヘルパー: カラム作成時の include 共通定義
+// ─────────────────────────────────────────────────────────────
+
+const columnCreateInclude = {
+	formItem: {
+		select: {
+			id: true,
+			formId: true,
+			type: true,
+			options: {
+				orderBy: { sortOrder: "asc" as const },
+				select: { id: true, label: true, sortOrder: true },
+			},
+		},
+	},
+	projectRegistrationFormItem: {
+		select: {
+			id: true,
+			formId: true,
+			type: true,
+			options: {
+				orderBy: { sortOrder: "asc" as const },
+				select: { id: true, label: true, sortOrder: true },
+			},
+		},
+	},
+	options: {
+		orderBy: { sortOrder: "asc" as const },
+		select: { id: true, label: true, sortOrder: true },
+	},
+	createdBy: { select: { name: true } },
+	viewers: { include: { user: { select: { name: true } } } },
+} as const;
+
+/** FORM_ITEM カラムを作成する */
+async function createFormItemColumn(
+	data: {
+		formItemId: string;
+		name: string;
+		description?: string | null;
+		sortOrder: number;
+	},
+	userId: string
+) {
+	const formItem = await prisma.formItem.findUnique({
+		where: { id: data.formItemId },
+		include: {
+			form: {
+				include: { collaborators: { where: { deletedAt: null } } },
+			},
+		},
+	});
+	if (!formItem) throw Errors.notFound("フォーム項目が見つかりません");
+
+	const form = formItem.form;
+	const hasAccess =
+		form.ownerId === userId ||
+		form.collaborators.some(col => col.userId === userId);
+	if (!hasAccess)
+		throw Errors.forbidden("このフォームへのアクセス権がありません");
+
+	const existing = await prisma.mastersheetColumn.findUnique({
+		where: { formItemId: data.formItemId },
+	});
+	if (existing)
+		throw Errors.alreadyExists("このフォーム項目のカラムは既に存在します");
+
+	return prisma.mastersheetColumn.create({
+		data: {
+			type: "FORM_ITEM",
+			name: data.name,
+			description: data.description ?? null,
+			sortOrder: data.sortOrder,
+			createdById: userId,
+			formItemId: data.formItemId,
+		},
+		include: columnCreateInclude,
+	});
+}
+
+/** PROJECT_REGISTRATION_FORM_ITEM カラムを作成する */
+async function createPrfItemColumn(
+	data: {
+		projectRegistrationFormItemId: string;
+		name: string;
+		description?: string | null;
+		sortOrder: number;
+	},
+	userId: string
+) {
+	const prfItem = await prisma.projectRegistrationFormItem.findUnique({
+		where: { id: data.projectRegistrationFormItemId },
+		include: {
+			form: {
+				include: { collaborators: { where: { deletedAt: null } } },
+			},
+		},
+	});
+	if (!prfItem) throw Errors.notFound("企画登録フォーム項目が見つかりません");
+
+	const form = prfItem.form;
+	const hasAccess =
+		form.ownerId === userId ||
+		form.collaborators.some(col => col.userId === userId);
+	if (!hasAccess)
+		throw Errors.forbidden("この企画登録フォームへのアクセス権がありません");
+
+	const existing = await prisma.mastersheetColumn.findUnique({
+		where: {
+			projectRegistrationFormItemId: data.projectRegistrationFormItemId,
+		},
+	});
+	if (existing)
+		throw Errors.alreadyExists(
+			"この企画登録フォーム項目のカラムは既に存在します"
+		);
+
+	return prisma.mastersheetColumn.create({
+		data: {
+			type: "PROJECT_REGISTRATION_FORM_ITEM",
+			name: data.name,
+			description: data.description ?? null,
+			sortOrder: data.sortOrder,
+			createdById: userId,
+			projectRegistrationFormItemId: data.projectRegistrationFormItemId,
+		},
+		include: columnCreateInclude,
+	});
+}
+
+// ─────────────────────────────────────────────────────────────
 // POST /committee/mastersheet/columns
 // ─────────────────────────────────────────────────────────────
 
@@ -118,60 +250,12 @@ columnsRoute.post("/columns", requireAuth, requireCommitteeMember, async c => {
 	const data = createMastersheetColumnRequestSchema.parse(body);
 
 	if (data.type === "FORM_ITEM") {
-		// フォームへのアクセス権チェック
-		const formItem = await prisma.formItem.findUnique({
-			where: { id: data.formItemId },
-			include: {
-				form: {
-					include: { collaborators: { where: { deletedAt: null } } },
-				},
-			},
-		});
-		if (!formItem) throw Errors.notFound("フォーム項目が見つかりません");
+		const col = await createFormItemColumn(data, userId);
+		return c.json({ column: formatColumnDef(col, userId) }, 201);
+	}
 
-		const form = formItem.form;
-		const hasAccess =
-			form.ownerId === userId ||
-			form.collaborators.some(col => col.userId === userId);
-		if (!hasAccess)
-			throw Errors.forbidden("このフォームへのアクセス権がありません");
-
-		const existing = await prisma.mastersheetColumn.findUnique({
-			where: { formItemId: data.formItemId },
-		});
-		if (existing)
-			throw Errors.alreadyExists("このフォーム項目のカラムは既に存在します");
-
-		const col = await prisma.mastersheetColumn.create({
-			data: {
-				type: "FORM_ITEM",
-				name: data.name,
-				description: data.description ?? null,
-				sortOrder: data.sortOrder,
-				createdById: userId,
-				formItemId: data.formItemId,
-			},
-			include: {
-				formItem: {
-					select: {
-						id: true,
-						formId: true,
-						type: true,
-						options: {
-							orderBy: { sortOrder: "asc" as const },
-							select: { id: true, label: true, sortOrder: true },
-						},
-					},
-				},
-				options: {
-					orderBy: { sortOrder: "asc" },
-					select: { id: true, label: true, sortOrder: true },
-				},
-				createdBy: { select: { name: true } },
-				viewers: { include: { user: { select: { name: true } } } },
-			},
-		});
-
+	if (data.type === "PROJECT_REGISTRATION_FORM_ITEM") {
+		const col = await createPrfItemColumn(data, userId);
 		return c.json({ column: formatColumnDef(col, userId) }, 201);
 	}
 
@@ -212,6 +296,17 @@ columnsRoute.post("/columns", requireAuth, requireCommitteeMember, async c => {
 				where: { id: created.id },
 				include: {
 					formItem: {
+						select: {
+							id: true,
+							formId: true,
+							type: true,
+							options: {
+								orderBy: { sortOrder: "asc" as const },
+								select: { id: true, label: true, sortOrder: true },
+							},
+						},
+					},
+					projectRegistrationFormItem: {
 						select: {
 							id: true,
 							formId: true,
@@ -295,6 +390,17 @@ columnsRoute.patch(
 								},
 							},
 						},
+						projectRegistrationFormItem: {
+							select: {
+								id: true,
+								formId: true,
+								type: true,
+								options: {
+									orderBy: { sortOrder: "asc" as const },
+									select: { id: true, label: true, sortOrder: true },
+								},
+							},
+						},
 						options: {
 							orderBy: { sortOrder: "asc" },
 							select: { id: true, label: true, sortOrder: true },
@@ -350,12 +456,24 @@ columnsRoute.get(
 				OR: [
 					{ visibility: "PUBLIC" },
 					{ createdById: userId },
-					// FORM_ITEM はアクセス権があれば表示
+					// FORM_ITEM / PROJECT_REGISTRATION_FORM_ITEM はアクセス権があれば表示
 					{ type: "FORM_ITEM" },
+					{ type: "PROJECT_REGISTRATION_FORM_ITEM" },
 				],
 			},
 			include: {
 				formItem: {
+					select: {
+						id: true,
+						formId: true,
+						type: true,
+						options: {
+							orderBy: { sortOrder: "asc" as const },
+							select: { id: true, label: true, sortOrder: true },
+						},
+					},
+				},
+				projectRegistrationFormItem: {
 					select: {
 						id: true,
 						formId: true,
@@ -381,6 +499,7 @@ columnsRoute.get(
 		});
 
 		const accessibleFormIds = await getAccessibleFormIds(userId);
+		const accessiblePrfFormIds = await getAccessiblePrfFormIds(userId);
 
 		return c.json({
 			columns: columns.map(col => {
@@ -388,7 +507,8 @@ columnsRoute.get(
 					col as ColumnFull,
 					userId,
 					committeeMember,
-					accessibleFormIds
+					accessibleFormIds,
+					accessiblePrfFormIds
 				);
 				const pendingRequest = col.accessRequests.length > 0;
 

@@ -9,7 +9,134 @@ import { Errors } from "../../lib/error";
 import { prisma } from "../../lib/prisma";
 import { requireAuth, requireCommitteeMember } from "../../middlewares/auth";
 import type { AuthEnv } from "../../types/auth-env";
-import { canViewColumn, getAccessibleFormIds, getColumnFull } from "./helpers";
+import {
+	canViewColumn,
+	getAccessibleFormIds,
+	getAccessiblePrfFormIds,
+	getColumnFull,
+} from "./helpers";
+
+// ─────────────────────────────────────────────────────────────
+// ヘルパー: 編集履歴のグループマップ構築
+// ─────────────────────────────────────────────────────────────
+
+type HistoryEntry = {
+	id: string;
+	value: {
+		textValue: string | null;
+		numberValue: number | null;
+		fileId: string | null;
+		selectedOptionIds: string[];
+	};
+	actor: { id: string; name: string };
+	trigger: string;
+	createdAt: Date;
+};
+
+type HistoryGroup = {
+	columnId: string;
+	projectId: string;
+	history: HistoryEntry[];
+};
+
+type HistoryGroupMap = Map<string, HistoryGroup>;
+
+/** FormItemEditHistory をグループマップに追加する */
+async function collectFormItemHistory(
+	formItemIds: string[],
+	targetProjectIds: string[],
+	formItemToColumn: Map<string, string>,
+	targetCellKeys: Set<string>,
+	groupMap: HistoryGroupMap
+) {
+	const allHistory = await prisma.formItemEditHistory.findMany({
+		where: {
+			formItemId: { in: formItemIds },
+			projectId: { in: targetProjectIds },
+		},
+		include: {
+			actor: { select: { id: true, name: true } },
+			selectedOptions: { select: { formItemOptionId: true } },
+		},
+		orderBy: { createdAt: "desc" },
+	});
+
+	for (const h of allHistory) {
+		const columnId = formItemToColumn.get(h.formItemId);
+		if (!columnId) continue;
+		if (!targetCellKeys.has(`${columnId}:${h.projectId}`)) continue;
+
+		const key = `${columnId}:${h.projectId}`;
+		let group = groupMap.get(key);
+		if (!group) {
+			group = { columnId, projectId: h.projectId, history: [] };
+			groupMap.set(key, group);
+		}
+		group.history.push({
+			id: h.id,
+			value: {
+				textValue: h.textValue,
+				numberValue: h.numberValue,
+				fileId: h.fileId,
+				selectedOptionIds: h.selectedOptions.map(s => s.formItemOptionId),
+			},
+			actor: h.actor,
+			trigger: h.trigger,
+			createdAt: h.createdAt,
+		});
+	}
+}
+
+/** ProjectRegistrationFormItemEditHistory をグループマップに追加する */
+async function collectPrfItemHistory(
+	prfItemIds: string[],
+	targetProjectIds: string[],
+	prfItemToColumn: Map<string, string>,
+	targetCellKeys: Set<string>,
+	groupMap: HistoryGroupMap
+) {
+	const allPrfHistory =
+		await prisma.projectRegistrationFormItemEditHistory.findMany({
+			where: {
+				projectRegistrationFormItemId: { in: prfItemIds },
+				projectId: { in: targetProjectIds },
+			},
+			include: {
+				actor: { select: { id: true, name: true } },
+				selectedOptions: {
+					select: { projectRegistrationFormItemOptionId: true },
+				},
+			},
+			orderBy: { createdAt: "desc" },
+		});
+
+	for (const h of allPrfHistory) {
+		const columnId = prfItemToColumn.get(h.projectRegistrationFormItemId);
+		if (!columnId) continue;
+		if (!targetCellKeys.has(`${columnId}:${h.projectId}`)) continue;
+
+		const key = `${columnId}:${h.projectId}`;
+		let group = groupMap.get(key);
+		if (!group) {
+			group = { columnId, projectId: h.projectId, history: [] };
+			groupMap.set(key, group);
+		}
+		group.history.push({
+			id: h.id,
+			value: {
+				textValue: h.textValue,
+				numberValue: h.numberValue,
+				fileId: h.fileId,
+				selectedOptionIds: h.selectedOptions.map(
+					s => s.projectRegistrationFormItemOptionId
+				),
+			},
+			actor: h.actor,
+			trigger: h.trigger,
+			createdAt: h.createdAt,
+		});
+	}
+}
 
 export const cellsRoute = new Hono<AuthEnv>();
 
@@ -33,7 +160,16 @@ cellsRoute.put(
 			throw Errors.invalidRequest("CUSTOM カラムのみセル値を編集できます");
 
 		const accessibleFormIds = await getAccessibleFormIds(userId);
-		if (!canViewColumn(col, userId, committeeMember, accessibleFormIds))
+		const accessiblePrfFormIds = await getAccessiblePrfFormIds(userId);
+		if (
+			!canViewColumn(
+				col,
+				userId,
+				committeeMember,
+				accessibleFormIds,
+				accessiblePrfFormIds
+			)
+		)
 			throw Errors.forbidden("このカラムへのアクセス権がありません");
 
 		const project = await prisma.project.findFirst({
@@ -120,7 +256,7 @@ cellsRoute.put(
 
 // ─────────────────────────────────────────────────────────────
 // PUT /committee/mastersheet/edits/:columnId/:projectId
-// フォーム由来カラムの値を編集（FormItemEditHistory に COMMITTEE_EDIT を追加）
+// フォーム由来カラム / 企画登録フォーム由来カラムの値を編集
 // ─────────────────────────────────────────────────────────────
 
 cellsRoute.put(
@@ -134,13 +270,25 @@ cellsRoute.put(
 			mastersheetColumnProjectPathParamsSchema.parse(c.req.param());
 
 		const col = await getColumnFull(columnId);
-		if (col.type !== "FORM_ITEM")
-			throw Errors.invalidRequest("FORM_ITEM カラムのみ編集できます");
-		if (!col.formItemId)
-			throw Errors.invalidRequest("フォーム項目が紐づいていません");
+		if (
+			col.type !== "FORM_ITEM" &&
+			col.type !== "PROJECT_REGISTRATION_FORM_ITEM"
+		)
+			throw Errors.invalidRequest(
+				"FORM_ITEM または PROJECT_REGISTRATION_FORM_ITEM カラムのみ編集できます"
+			);
 
 		const accessibleFormIds = await getAccessibleFormIds(userId);
-		if (!canViewColumn(col, userId, committeeMember, accessibleFormIds))
+		const accessiblePrfFormIds = await getAccessiblePrfFormIds(userId);
+		if (
+			!canViewColumn(
+				col,
+				userId,
+				committeeMember,
+				accessibleFormIds,
+				accessiblePrfFormIds
+			)
+		)
 			throw Errors.forbidden("このカラムへのアクセス権がありません");
 
 		const project = await prisma.project.findFirst({
@@ -148,41 +296,125 @@ cellsRoute.put(
 		});
 		if (!project) throw Errors.notFound("企画が見つかりません");
 
-		const formItemId = col.formItemId;
-
-		// NOT_ANSWERED（未提出 かつ 履歴なし）は編集不可
-		const [response, latestHistory] = await Promise.all([
-			prisma.formResponse.findFirst({
-				where: {
-					formDelivery: {
-						projectId,
-						formAuthorization: {
-							form: { items: { some: { id: formItemId } } },
-						},
-					},
-					submittedAt: { not: null },
-				},
-				select: { id: true },
-			}),
-			prisma.formItemEditHistory.findFirst({
-				where: { formItemId, projectId },
-				select: { id: true },
-			}),
-		]);
-		if (!response && !latestHistory) {
-			throw Errors.invalidRequest(
-				"未回答の企画は編集できません。提出後に編集してください"
-			);
-		}
-
 		const body = await c.req.json().catch(() => ({}));
 		const data = editFormItemCellRequestSchema.parse(body);
 
+		if (col.type === "FORM_ITEM") {
+			if (!col.formItemId)
+				throw Errors.invalidRequest("フォーム項目が紐づいていません");
+
+			const formItemId = col.formItemId;
+
+			// NOT_ANSWERED（未提出 かつ 履歴なし）は編集不可
+			const [response, latestHistory] = await Promise.all([
+				prisma.formResponse.findFirst({
+					where: {
+						formDelivery: {
+							projectId,
+							formAuthorization: {
+								form: { items: { some: { id: formItemId } } },
+							},
+						},
+						submittedAt: { not: null },
+					},
+					select: { id: true },
+				}),
+				prisma.formItemEditHistory.findFirst({
+					where: { formItemId, projectId },
+					select: { id: true },
+				}),
+			]);
+			if (!response && !latestHistory) {
+				throw Errors.invalidRequest(
+					"未回答の企画は編集できません。提出後に編集してください"
+				);
+			}
+
+			const history = await prisma.$transaction(
+				async tx => {
+					const created = await tx.formItemEditHistory.create({
+						data: {
+							formItemId,
+							projectId,
+							textValue: data.textValue ?? null,
+							numberValue: data.numberValue ?? null,
+							fileId: data.fileId ?? null,
+							actorId: userId,
+							trigger: "COMMITTEE_EDIT",
+						},
+					});
+
+					if (data.selectedOptionIds?.length) {
+						const validIds = new Set(
+							col.formItem?.options.map(o => o.id) ?? []
+						);
+						const invalid = data.selectedOptionIds.filter(
+							id => !validIds.has(id)
+						);
+						if (invalid.length > 0)
+							throw Errors.invalidRequest("無効な選択肢が含まれています");
+
+						await tx.formItemEditHistorySelectedOption.createMany({
+							data: data.selectedOptionIds.map(optionId => ({
+								editHistoryId: created.id,
+								formItemOptionId: optionId,
+							})),
+						});
+					}
+
+					return tx.formItemEditHistory.findUniqueOrThrow({
+						where: { id: created.id },
+						include: {
+							selectedOptions: { select: { formItemOptionId: true } },
+						},
+					});
+				},
+				{ isolationLevel: "Serializable" }
+			);
+
+			return c.json({
+				cell: {
+					columnId,
+					status: "COMMITTEE_EDITED" as const,
+					formValue: {
+						textValue: history.textValue,
+						numberValue: history.numberValue,
+						fileId: history.fileId,
+						selectedOptionIds: history.selectedOptions.map(
+							s => s.formItemOptionId
+						),
+					},
+				},
+			});
+		}
+
+		// PROJECT_REGISTRATION_FORM_ITEM
+		const prfItemId = col.projectRegistrationFormItemId;
+		if (!prfItemId)
+			throw Errors.invalidRequest("企画登録フォーム項目が紐づいていません");
+
+		// NOT_APPLICABLE（回答なし）は編集不可
+		const prfItem = col.projectRegistrationFormItem;
+		if (!prfItem)
+			throw Errors.invalidRequest("企画登録フォーム項目が紐づいていません");
+
+		const prfResponse = await prisma.projectRegistrationFormResponse.findUnique(
+			{
+				where: {
+					formId_projectId: { formId: prfItem.formId, projectId },
+				},
+				select: { id: true },
+			}
+		);
+		if (!prfResponse) {
+			throw Errors.invalidRequest("この企画には回答がないため編集できません");
+		}
+
 		const history = await prisma.$transaction(
 			async tx => {
-				const created = await tx.formItemEditHistory.create({
+				const created = await tx.projectRegistrationFormItemEditHistory.create({
 					data: {
-						formItemId,
+						projectRegistrationFormItemId: prfItemId,
 						projectId,
 						textValue: data.textValue ?? null,
 						numberValue: data.numberValue ?? null,
@@ -193,25 +425,31 @@ cellsRoute.put(
 				});
 
 				if (data.selectedOptionIds?.length) {
-					const validIds = new Set(col.formItem?.options.map(o => o.id) ?? []);
+					const validIds = new Set(prfItem.options.map(o => o.id));
 					const invalid = data.selectedOptionIds.filter(
 						id => !validIds.has(id)
 					);
 					if (invalid.length > 0)
 						throw Errors.invalidRequest("無効な選択肢が含まれています");
 
-					await tx.formItemEditHistorySelectedOption.createMany({
-						data: data.selectedOptionIds.map(optionId => ({
-							editHistoryId: created.id,
-							formItemOptionId: optionId,
-						})),
-					});
+					await tx.projectRegistrationFormItemEditHistorySelectedOption.createMany(
+						{
+							data: data.selectedOptionIds.map(optionId => ({
+								editHistoryId: created.id,
+								projectRegistrationFormItemOptionId: optionId,
+							})),
+						}
+					);
 				}
 
-				return tx.formItemEditHistory.findUniqueOrThrow({
+				return tx.projectRegistrationFormItemEditHistory.findUniqueOrThrow({
 					where: { id: created.id },
 					include: {
-						selectedOptions: { select: { formItemOptionId: true } },
+						selectedOptions: {
+							select: {
+								projectRegistrationFormItemOptionId: true,
+							},
+						},
 					},
 				});
 			},
@@ -227,7 +465,7 @@ cellsRoute.put(
 					numberValue: history.numberValue,
 					fileId: history.fileId,
 					selectedOptionIds: history.selectedOptions.map(
-						s => s.formItemOptionId
+						s => s.projectRegistrationFormItemOptionId
 					),
 				},
 			},
@@ -255,6 +493,7 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 	}
 
 	const accessibleFormIds = await getAccessibleFormIds(userId);
+	const accessiblePrfFormIds = await getAccessiblePrfFormIds(userId);
 
 	// 対象カラムを特定
 	const targetColumnIds = [...new Set(cells.map(c => c.columnId))];
@@ -262,10 +501,14 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 	const columns = await prisma.mastersheetColumn.findMany({
 		where: {
 			id: { in: targetColumnIds },
-			formItemId: { not: null },
+			OR: [
+				{ formItemId: { not: null } },
+				{ projectRegistrationFormItemId: { not: null } },
+			],
 		},
 		include: {
 			formItem: { select: { id: true, formId: true } },
+			projectRegistrationFormItem: { select: { id: true, formId: true } },
 			createdBy: { select: { name: true } },
 			viewers: { include: { user: { select: { name: true } } } },
 		},
@@ -277,7 +520,8 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 			col as Parameters<typeof canViewColumn>[0],
 			userId,
 			committeeMember,
-			accessibleFormIds
+			accessibleFormIds,
+			accessiblePrfFormIds
 		)
 	);
 
@@ -285,77 +529,72 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 		return c.json({ groups: [] });
 	}
 
-	// formItemId → columnId のマップ
+	const targetProjectIds = [...new Set(cells.map(c => c.projectId))];
+	const targetCellKeys = new Set(
+		cells.map(c => `${c.columnId}:${c.projectId}`)
+	);
+
+	// FORM_ITEM カラムの履歴
 	const formItemToColumn = new Map(
 		accessibleColumns
 			.filter(
 				(
 					col
-				): col is typeof col & { formItem: NonNullable<typeof col.formItem> } =>
-					col.formItem != null
+				): col is typeof col & {
+					formItem: NonNullable<typeof col.formItem>;
+				} => col.type === "FORM_ITEM" && col.formItem != null
 			)
 			.map(col => [col.formItem.id, col.id] as const)
 	);
 	const formItemIds = [...formItemToColumn.keys()];
 
-	const targetProjectIds = [...new Set(cells.map(c => c.projectId))];
-
-	// 対象セルの高速ルックアップ用 Set
-	const targetCellKeys = new Set(
-		cells.map(c => `${c.columnId}:${c.projectId}`)
+	// PRF_ITEM カラムの履歴
+	const prfItemToColumn = new Map(
+		accessibleColumns
+			.filter(
+				(
+					col
+				): col is typeof col & {
+					projectRegistrationFormItem: NonNullable<
+						typeof col.projectRegistrationFormItem
+					>;
+				} =>
+					col.type === "PROJECT_REGISTRATION_FORM_ITEM" &&
+					col.projectRegistrationFormItem != null
+			)
+			.map(col => [col.projectRegistrationFormItem.id, col.id] as const)
 	);
+	const prfItemIds = [...prfItemToColumn.keys()];
 
-	// バッチクエリ
-	const allHistory = await prisma.formItemEditHistory.findMany({
-		where: {
-			formItemId: { in: formItemIds },
-			projectId: { in: targetProjectIds },
-		},
-		include: {
-			actor: { select: { id: true, name: true } },
-			selectedOptions: { select: { formItemOptionId: true } },
-		},
-		orderBy: { createdAt: "desc" },
-	});
+	const groupMap: HistoryGroupMap = new Map();
 
-	// (columnId, projectId) でグルーピング
-	const groupMap = new Map<
-		string,
-		{ columnId: string; projectId: string; history: typeof allHistory }
-	>();
+	// FormItemEditHistory
+	if (formItemIds.length > 0) {
+		await collectFormItemHistory(
+			formItemIds,
+			targetProjectIds,
+			formItemToColumn,
+			targetCellKeys,
+			groupMap
+		);
+	}
 
-	for (const h of allHistory) {
-		const columnId = formItemToColumn.get(h.formItemId);
-		if (!columnId) continue;
-
-		// 対象セルのみに絞り込む
-		if (!targetCellKeys.has(`${columnId}:${h.projectId}`)) continue;
-
-		const key = `${columnId}:${h.projectId}`;
-		let group = groupMap.get(key);
-		if (!group) {
-			group = { columnId, projectId: h.projectId, history: [] };
-			groupMap.set(key, group);
-		}
-		group.history.push(h);
+	// ProjectRegistrationFormItemEditHistory
+	if (prfItemIds.length > 0) {
+		await collectPrfItemHistory(
+			prfItemIds,
+			targetProjectIds,
+			prfItemToColumn,
+			targetCellKeys,
+			groupMap
+		);
 	}
 
 	return c.json({
 		groups: [...groupMap.values()].map(g => ({
 			columnId: g.columnId,
 			projectId: g.projectId,
-			history: g.history.map(h => ({
-				id: h.id,
-				value: {
-					textValue: h.textValue,
-					numberValue: h.numberValue,
-					fileId: h.fileId,
-					selectedOptionIds: h.selectedOptions.map(s => s.formItemOptionId),
-				},
-				actor: h.actor,
-				trigger: h.trigger,
-				createdAt: h.createdAt,
-			})),
+			history: g.history,
 		})),
 	});
 });

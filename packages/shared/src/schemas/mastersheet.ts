@@ -8,7 +8,11 @@ import { userSchema } from "./user";
 // Enum スキーマ
 // ─────────────────────────────────────────────────────────────
 
-export const mastersheetColumnTypeSchema = z.enum(["FORM_ITEM", "CUSTOM"]);
+export const mastersheetColumnTypeSchema = z.enum([
+	"FORM_ITEM",
+	"CUSTOM",
+	"PROJECT_REGISTRATION_FORM_ITEM",
+]);
 export type MastersheetColumnType = z.infer<typeof mastersheetColumnTypeSchema>;
 
 export const mastersheetDataTypeSchema = z.enum([
@@ -30,6 +34,7 @@ export const mastersheetCellStatusSchema = z.enum([
 	"NOT_ANSWERED", // 未回答
 	"SUBMITTED", // 提出済み
 	"COMMITTEE_EDITED", // 実委編集済み
+	"NOT_APPLICABLE", // 企画登録フォーム: 対象外または後から追加
 ]);
 export type MastersheetCellStatus = z.infer<typeof mastersheetCellStatusSchema>;
 
@@ -135,6 +140,9 @@ const mastersheetColumnDefSchema = z.object({
 	// FORM_ITEM の場合
 	formItemId: z.string().nullable(),
 	formItemType: formItemTypeSchema.nullable(),
+	// PROJECT_REGISTRATION_FORM_ITEM の場合
+	projectRegistrationFormItemId: z.string().nullable(),
+	projectRegistrationFormItemType: formItemTypeSchema.nullable(),
 	// CUSTOM の場合
 	dataType: mastersheetDataTypeSchema.nullable(),
 	visibility: mastersheetColumnVisibilitySchema.nullable(),
@@ -223,6 +231,13 @@ export const createMastersheetColumnRequestSchema = z.discriminatedUnion(
 			viewers: z.array(mastersheetViewerInputSchema),
 			options: z.array(columnOptionInputSchema).optional(),
 			initialValue: initialValueInputSchema.optional(),
+		}),
+		z.object({
+			type: z.literal("PROJECT_REGISTRATION_FORM_ITEM"),
+			name: z.string().min(1),
+			description: z.string().optional(),
+			sortOrder: z.number().int(),
+			projectRegistrationFormItemId: z.cuid(),
 		}),
 	]
 );

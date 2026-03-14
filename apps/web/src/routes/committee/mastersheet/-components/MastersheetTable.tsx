@@ -5,7 +5,11 @@ import type {
 	UpsertMastersheetCellRequest,
 } from "@sos26/shared";
 import { type ProjectType, projectTypeSchema } from "@sos26/shared";
-import { IconFileText, IconPencil } from "@tabler/icons-react";
+import {
+	IconClipboardText,
+	IconFileText,
+	IconPencil,
+} from "@tabler/icons-react";
 import { useRouter } from "@tanstack/react-router";
 import type { ColumnFiltersState } from "@tanstack/react-table";
 import {
@@ -68,23 +72,38 @@ const PROJECT_TYPE_LABEL = {
 const columnHelper = createColumnHelper<MastersheetRow>();
 
 function ColHeader({ col }: { col: ApiColumn }) {
+	let icon: ReactNode;
+	if (col.type === "FORM_ITEM") {
+		icon = (
+			<Tooltip content="フォーム由来カラム">
+				<IconFileText
+					size={12}
+					style={{ color: "var(--gray-8)", flexShrink: 0 }}
+				/>
+			</Tooltip>
+		);
+	} else if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
+		icon = (
+			<Tooltip content="企画登録フォーム由来カラム">
+				<IconClipboardText
+					size={12}
+					style={{ color: "var(--gray-8)", flexShrink: 0 }}
+				/>
+			</Tooltip>
+		);
+	} else {
+		icon = (
+			<Tooltip content="カスタムカラム">
+				<IconPencil
+					size={12}
+					style={{ color: "var(--gray-8)", flexShrink: 0 }}
+				/>
+			</Tooltip>
+		);
+	}
 	return (
 		<span className={styles.colHeader}>
-			{col.type === "FORM_ITEM" ? (
-				<Tooltip content="フォーム由来カラム">
-					<IconFileText
-						size={12}
-						style={{ color: "var(--gray-8)", flexShrink: 0 }}
-					/>
-				</Tooltip>
-			) : (
-				<Tooltip content="カスタムカラム">
-					<IconPencil
-						size={12}
-						style={{ color: "var(--gray-8)", flexShrink: 0 }}
-					/>
-				</Tooltip>
-			)}
+			{icon}
 			{col.name}
 		</span>
 	);
@@ -151,10 +170,15 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 	}),
 ];
 
-/** FORM_ITEM セルが編集不可かどうか（未配信・未回答） */
+/** FORM_ITEM / PROJECT_REGISTRATION_FORM_ITEM セルが編集不可かどうか */
 function isFormItemInactive(row: MastersheetRow, colId: string): boolean {
 	const status = row.cells[colId]?.status;
-	return !status || status === "NOT_DELIVERED" || status === "NOT_ANSWERED";
+	return (
+		!status ||
+		status === "NOT_DELIVERED" ||
+		status === "NOT_ANSWERED" ||
+		status === "NOT_APPLICABLE"
+	);
 }
 
 const INACTIVE_PLACEHOLDER = (
@@ -165,13 +189,17 @@ const INACTIVE_PLACEHOLDER = (
 
 // biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
 function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
-	if (col.type === "FORM_ITEM") {
+	if (
+		col.type === "FORM_ITEM" ||
+		col.type === "PROJECT_REGISTRATION_FORM_ITEM"
+	) {
+		const itemType = col.formItemType ?? col.projectRegistrationFormItemType;
 		const selectOptions = col.options.map(o => ({
 			value: o.id,
 			label: o.label,
 		}));
 
-		if (col.formItemType === "SELECT") {
+		if (itemType === "SELECT") {
 			return columnHelper.accessor(
 				row => row.cells[col.id]?.formValue?.selectedOptionIds?.[0] ?? "",
 				{
@@ -188,7 +216,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 			);
 		}
 
-		if (col.formItemType === "CHECKBOX") {
+		if (itemType === "CHECKBOX") {
 			return columnHelper.accessor(
 				row => row.cells[col.id]?.formValue?.selectedOptionIds ?? [],
 				{
@@ -205,7 +233,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 			);
 		}
 
-		if (col.formItemType === "NUMBER") {
+		if (itemType === "NUMBER") {
 			return columnHelper.accessor(
 				row => row.cells[col.id]?.formValue?.numberValue ?? null,
 				{
@@ -222,7 +250,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 			);
 		}
 
-		if (col.formItemType === "FILE") {
+		if (itemType === "FILE") {
 			return columnHelper.accessor(
 				row => row.cells[col.id]?.formValue?.fileId ?? null,
 				{
@@ -410,11 +438,16 @@ export function MastersheetTable({
 		if (!col) return;
 
 		try {
-			if (col.type === "FORM_ITEM") {
+			if (
+				col.type === "FORM_ITEM" ||
+				col.type === "PROJECT_REGISTRATION_FORM_ITEM"
+			) {
+				const itemType =
+					col.formItemType ?? col.projectRegistrationFormItemType;
 				await editFormItemCell(
 					columnId,
 					row.project.id,
-					buildEditPayload(col.formItemType, value)
+					buildEditPayload(itemType, value)
 				);
 			} else {
 				await upsertMastersheetCell(
