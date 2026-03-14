@@ -49,7 +49,7 @@ function ProjectLayout() {
 
 	const handleSelectProject = (projectId: string) => {
 		setSelectedProjectId(projectId);
-		navigate({ to: "/project" });
+		navigate({ to: "/project/" });
 	};
 
 	const handleJoinProject = async (inviteCode: string) => {
