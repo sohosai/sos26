@@ -124,6 +124,9 @@ function CommitteeSupportDetailPage() {
 						isDraft,
 					});
 					await router.invalidate();
+					if (isDraft) {
+						toast.success("下書きを保存しました");
+					}
 				} catch {
 					toast.error(
 						isDraft
