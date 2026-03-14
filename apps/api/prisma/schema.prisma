@@ -913,6 +913,7 @@ model InquiryComment {
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
+  sentAt    DateTime?
 
   @@index([inquiryId])
   @@index([deletedAt])

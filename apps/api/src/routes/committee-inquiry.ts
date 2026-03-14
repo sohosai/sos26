@@ -182,6 +182,10 @@ function formatAttachment(a: {
 	};
 }
 
+function getCommentSentAt(comment: { createdAt: Date; sentAt: Date | null }) {
+	return comment.sentAt ?? comment.createdAt;
+}
+
 // ─────────────────────────────────────────────────────────────
 // POST /committee/inquiries
 // お問い合わせを作成（企画側担当者の指定が必須）
@@ -495,6 +499,7 @@ committeeInquiryRoute.get(
 			isDraft: cm.isDraft,
 			draftCreatedById: cm.draftCreatedById,
 			createdAt: cm.createdAt,
+			sentAt: cm.sentAt,
 			createdBy: cm.createdBy,
 			attachments: cm.attachments.map(formatAttachment),
 		}));
@@ -503,10 +508,15 @@ committeeInquiryRoute.get(
 		const regularComments = formattedComments.filter(cm => !cm.isDraft);
 		const draftComments = formattedComments.filter(cm => cm.isDraft);
 
+		// 通常コメントは送信時刻でソート（既存データは createdAt をフォールバック）
+		regularComments.sort(
+			(a, b) => getCommentSentAt(a).getTime() - getCommentSentAt(b).getTime()
+		);
+
 		// 下書きもcreatedAtでソート（複数の下書きがある場合のため）
 		draftComments.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
-		// 通常のコメントはcreatedAtでソート済み、その後に下書きを追加
+		// 通常コメントの後に下書きを追加
 		const sortedComments = [...regularComments, ...draftComments];
 
 		const formatted = {
@@ -613,6 +623,7 @@ committeeInquiryRoute.post(
 					senderRole: "COMMITTEE",
 					isDraft: isDraft ?? false,
 					draftCreatedById: isDraft ? user.id : null,
+					sentAt: isDraft ? null : new Date(),
 				},
 				include: { createdBy: { select: userSelect } },
 			});
@@ -676,6 +687,7 @@ committeeInquiryRoute.post(
 					isDraft: comment.isDraft,
 					draftCreatedById: comment.draftCreatedById,
 					createdAt: comment.createdAt,
+					sentAt: comment.sentAt,
 					createdBy: comment.createdBy,
 					attachments: comment.attachments.map(formatAttachment),
 				},
@@ -738,7 +750,7 @@ committeeInquiryRoute.post(
 				data: {
 					isDraft: false,
 					draftCreatedById: null,
-					createdAt: publishedAt,
+					sentAt: publishedAt,
 				},
 				include: { createdBy: { select: userSelect } },
 			});
@@ -775,6 +787,7 @@ committeeInquiryRoute.post(
 				isDraft: comment.isDraft,
 				draftCreatedById: comment.draftCreatedById,
 				createdAt: comment.createdAt,
+				sentAt: comment.sentAt,
 				createdBy: comment.createdBy,
 				attachments: comment.attachments.map(formatAttachment),
 			},

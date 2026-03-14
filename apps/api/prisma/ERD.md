@@ -287,6 +287,7 @@ erDiagram
   String draftCreatedById "nullable"
   DateTime deletedAt "nullable"
   DateTime createdAt
+  DateTime sentAt "nullable"
 }
 "InquiryActivity" {
   String id PK
@@ -823,6 +824,7 @@ Properties as follows:
 - `draftCreatedById`:
 - `deletedAt`:
 - `createdAt`:
+- `sentAt`:
 
 ### `InquiryActivity`
 

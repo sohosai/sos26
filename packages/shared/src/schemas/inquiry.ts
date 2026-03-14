@@ -72,6 +72,7 @@ export const inquiryCommentSchema = z.object({
 	isDraft: z.boolean(),
 	draftCreatedById: z.cuid().nullable(),
 	createdAt: z.coerce.date(),
+	sentAt: z.coerce.date().nullable(),
 });
 export type InquiryComment = z.infer<typeof inquiryCommentSchema>;
 
@@ -143,6 +144,7 @@ const commentWithUserSchema = inquiryCommentSchema
 		isDraft: true,
 		draftCreatedById: true,
 		createdAt: true,
+		sentAt: true,
 	})
 	.extend({
 		createdBy: userSummarySchema,
@@ -156,6 +158,7 @@ const commentWithUserSchemaForProject = inquiryCommentSchema
 		body: true,
 		senderRole: true,
 		createdAt: true,
+		sentAt: true,
 	})
 	.extend({
 		createdBy: userSummarySchema,

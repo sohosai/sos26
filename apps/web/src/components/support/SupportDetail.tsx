@@ -76,6 +76,13 @@ function toTimelineRole(senderRole: "PROJECT" | "COMMITTEE") {
 	return senderRole === "COMMITTEE" ? "committee" : "project";
 }
 
+function getCommentDisplayDate(comment: CommentInfo): Date {
+	if (isCommitteeDraftComment(comment)) {
+		return comment.createdAt;
+	}
+	return comment.sentAt ?? comment.createdAt;
+}
+
 function buildTimelineEntries(
 	regularComments: CommentInfo[],
 	activities: ActivityInfo[]
@@ -89,11 +96,13 @@ function buildTimelineEntries(
 			kind: "activity" as const,
 			data: activity,
 		})),
-	].sort(
-		(a, b) =>
-			new Date(a.data.createdAt).getTime() -
-			new Date(b.data.createdAt).getTime()
-	);
+	].sort((a, b) => {
+		const aDate =
+			a.kind === "comment" ? getCommentDisplayDate(a.data) : a.data.createdAt;
+		const bDate =
+			b.kind === "comment" ? getCommentDisplayDate(b.data) : b.data.createdAt;
+		return new Date(aDate).getTime() - new Date(bDate).getTime();
+	});
 }
 
 function InquiryTimeline({
@@ -120,7 +129,7 @@ function InquiryTimeline({
 							key={entry.data.id}
 							name={entry.data.createdBy.name}
 							role={toTimelineRole(entry.data.senderRole)}
-							date={entry.data.createdAt}
+							date={getCommentDisplayDate(entry.data)}
 							body={entry.data.body}
 							attachments={entry.data.attachments}
 						/>

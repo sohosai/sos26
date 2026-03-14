@@ -183,6 +183,10 @@ function formatAssignee(a: {
 	};
 }
 
+function getCommentSentAt(comment: { createdAt: Date; sentAt: Date | null }) {
+	return comment.sentAt ?? comment.createdAt;
+}
+
 // ─────────────────────────────────────────────────────────────
 // POST /project/:projectId/inquiries
 // お問い合わせを作成
@@ -429,6 +433,20 @@ projectInquiryRoute.get(
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
 
+		const sortedComments = inquiry.comments
+			.map(cm => ({
+				id: cm.id,
+				body: cm.body,
+				senderRole: cm.senderRole,
+				createdAt: cm.createdAt,
+				sentAt: cm.sentAt,
+				createdBy: cm.createdBy,
+				attachments: cm.attachments.map(formatAttachment),
+			}))
+			.sort(
+				(a, b) => getCommentSentAt(a).getTime() - getCommentSentAt(b).getTime()
+			);
+
 		const formatted = {
 			id: inquiry.id,
 			title: inquiry.title,
@@ -449,14 +467,7 @@ projectInquiryRoute.get(
 			committeeAssignees: inquiry.assignees
 				.filter(a => a.side === "COMMITTEE")
 				.map(formatAssignee),
-			comments: inquiry.comments.map(cm => ({
-				id: cm.id,
-				body: cm.body,
-				senderRole: cm.senderRole,
-				createdAt: cm.createdAt,
-				createdBy: cm.createdBy,
-				attachments: cm.attachments.map(formatAttachment),
-			})),
+			comments: sortedComments,
 			activities: inquiry.activities.map(act => ({
 				id: act.id,
 				type: act.type,
@@ -529,6 +540,7 @@ projectInquiryRoute.post(
 					body: commentBody,
 					createdById: user.id,
 					senderRole: "PROJECT",
+					sentAt: new Date(),
 				},
 				include: { createdBy: { select: userSelect } },
 			});
@@ -586,9 +598,10 @@ projectInquiryRoute.post(
 					id: comment.id,
 					body: comment.body,
 					senderRole: comment.senderRole,
-					isDraft: false,
-					draftCreatedById: null,
+					isDraft: comment.isDraft,
+					draftCreatedById: comment.draftCreatedById,
 					createdAt: comment.createdAt,
+					sentAt: comment.sentAt,
 					createdBy: comment.createdBy,
 					attachments: comment.attachments.map(formatAttachment),
 				},
