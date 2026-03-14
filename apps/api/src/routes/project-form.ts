@@ -1,3 +1,4 @@
+import type { ProjectLocation, ProjectType } from "@prisma/client";
 import {
 	type CreateFormResponseRequest,
 	createFormResponseRequestSchema,
@@ -387,12 +388,64 @@ const appendEditHistory = async (
 };
 
 // ─────────────────────────────────────────────────────────────
+// ヘルパー: カテゴリ指定の遅延Delivery同期
+// ─────────────────────────────────────────────────────────────
+async function syncCategoryFormDeliveries(
+	projectId: string,
+	projectType: ProjectType,
+	projectLocation: ProjectLocation
+) {
+	const now = new Date();
+
+	// カテゴリモードで承認済み・配信時刻到来済みの Authorization を取得
+	const categoryAuths = await prisma.formAuthorization.findMany({
+		where: {
+			deliveryMode: "CATEGORY",
+			status: "APPROVED",
+			scheduledSendAt: { lte: now },
+			form: { deletedAt: null },
+		},
+		select: { id: true, filterTypes: true, filterLocations: true },
+	});
+
+	for (const auth of categoryAuths) {
+		// OR条件: filterTypes のいずれかに一致 OR filterLocations のいずれかに一致
+		const matchesType =
+			auth.filterTypes.length > 0 && auth.filterTypes.includes(projectType);
+		const matchesLocation =
+			auth.filterLocations.length > 0 &&
+			auth.filterLocations.includes(projectLocation);
+
+		if (!matchesType && !matchesLocation) continue;
+
+		// まだ Delivery がなければ作成
+		await prisma.formDelivery.upsert({
+			where: {
+				formAuthorizationId_projectId: {
+					formAuthorizationId: auth.id,
+					projectId,
+				},
+			},
+			create: {
+				formAuthorizationId: auth.id,
+				projectId,
+			},
+			update: {},
+		});
+	}
+}
+
+// ─────────────────────────────────────────────────────────────
 // GET /project/:projectId/forms
 // ─────────────────────────────────────────────────────────────
 
 projectFormRoute.get("/", requireAuth, requireProjectMember, async c => {
 	const projectId = c.req.param("projectId");
 	const projectRole = c.get("projectRole");
+	const project = c.get("project");
+
+	// カテゴリ指定の遅延Delivery同期
+	await syncCategoryFormDeliveries(projectId, project.type, project.location);
 
 	const now = new Date();
 

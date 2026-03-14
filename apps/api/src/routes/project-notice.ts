@@ -1,3 +1,4 @@
+import type { ProjectLocation, ProjectType } from "@prisma/client";
 import { projectNoticeIdPathParamsSchema } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
@@ -6,6 +7,54 @@ import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
 const projectNoticeRoute = new Hono<AuthEnv>();
+
+// ─────────────────────────────────────────────────────────────
+// ヘルパー: カテゴリ指定の遅延Delivery同期
+// ─────────────────────────────────────────────────────────────
+async function syncCategoryNoticeDeliveries(
+	projectId: string,
+	projectType: ProjectType,
+	projectLocation: ProjectLocation
+) {
+	const now = new Date();
+
+	// カテゴリモードで承認済み・配信時刻到来済みの Authorization を取得
+	const categoryAuths = await prisma.noticeAuthorization.findMany({
+		where: {
+			deliveryMode: "CATEGORY",
+			status: "APPROVED",
+			deliveredAt: { lte: now },
+			notice: { deletedAt: null },
+		},
+		select: { id: true, filterTypes: true, filterLocations: true },
+	});
+
+	for (const auth of categoryAuths) {
+		// OR条件: filterTypes のいずれかに一致 OR filterLocations のいずれかに一致
+		const matchesType =
+			auth.filterTypes.length > 0 && auth.filterTypes.includes(projectType);
+		const matchesLocation =
+			auth.filterLocations.length > 0 &&
+			auth.filterLocations.includes(projectLocation);
+
+		if (!matchesType && !matchesLocation) continue;
+
+		// まだ Delivery がなければ作成
+		await prisma.noticeDelivery.upsert({
+			where: {
+				noticeAuthorizationId_projectId: {
+					noticeAuthorizationId: auth.id,
+					projectId,
+				},
+			},
+			create: {
+				noticeAuthorizationId: auth.id,
+				projectId,
+			},
+			update: {},
+		});
+	}
+}
 
 // ─────────────────────────────────────────────────────────────
 // GET /project/:projectId/notices
@@ -18,6 +67,13 @@ projectNoticeRoute.get(
 	async c => {
 		const user = c.get("user");
 		const project = c.get("project");
+
+		// カテゴリ指定の遅延Delivery同期
+		await syncCategoryNoticeDeliveries(
+			project.id,
+			project.type,
+			project.location
+		);
 
 		const deliveries = await prisma.noticeDelivery.findMany({
 			where: {
@@ -85,6 +141,13 @@ projectNoticeRoute.get(
 			projectId: c.req.param("projectId"),
 			noticeId: c.req.param("noticeId"),
 		});
+
+		// カテゴリ指定の遅延Delivery同期
+		await syncCategoryNoticeDeliveries(
+			project.id,
+			project.type,
+			project.location
+		);
 
 		const delivery = await prisma.noticeDelivery.findFirst({
 			where: {
@@ -178,6 +241,13 @@ projectNoticeRoute.post(
 			projectId: c.req.param("projectId"),
 			noticeId: c.req.param("noticeId"),
 		});
+
+		// カテゴリ指定の遅延Delivery同期
+		await syncCategoryNoticeDeliveries(
+			project.id,
+			project.type,
+			project.location
+		);
 
 		// 対象企画に配信済みの NoticeDelivery を特定
 		const delivery = await prisma.noticeDelivery.findFirst({

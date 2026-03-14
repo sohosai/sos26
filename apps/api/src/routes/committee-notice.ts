@@ -613,7 +613,7 @@ committeeNoticeRoute.post(
 			noticeId: c.req.param("noticeId"),
 		});
 		const body = await c.req.json().catch(() => ({}));
-		const { requestedToId, deliveredAt, projectIds } =
+		const { requestedToId, deliveredAt, deliveryTarget } =
 			createNoticeAuthorizationRequestSchema.parse(body);
 
 		const notice = await prisma.notice.findFirst({
@@ -652,20 +652,20 @@ committeeNoticeRoute.post(
 			throw Errors.invalidRequest("配信希望日時は未来の日時を指定してください");
 		}
 
-		// 配信先企画の重複を排除
-		const uniqueProjectIds = [...new Set(projectIds)];
-
-		// 配信先企画が全て存在するか確認
-		const existingProjects = await prisma.project.findMany({
-			where: { id: { in: uniqueProjectIds }, deletedAt: null },
-			select: { id: true },
-		});
-		if (existingProjects.length !== uniqueProjectIds.length) {
-			const existingIds = new Set(existingProjects.map(p => p.id));
-			const missingIds = uniqueProjectIds.filter(id => !existingIds.has(id));
-			throw Errors.invalidRequest(
-				`存在しない企画が含まれています: ${missingIds.join(", ")}`
-			);
+		// 個別指定モードの場合、配信先企画の存在確認
+		if (deliveryTarget.mode === "INDIVIDUAL") {
+			const uniqueProjectIds = [...new Set(deliveryTarget.projectIds)];
+			const existingProjects = await prisma.project.findMany({
+				where: { id: { in: uniqueProjectIds }, deletedAt: null },
+				select: { id: true },
+			});
+			if (existingProjects.length !== uniqueProjectIds.length) {
+				const existingIds = new Set(existingProjects.map(p => p.id));
+				const missingIds = uniqueProjectIds.filter(id => !existingIds.has(id));
+				throw Errors.invalidRequest(
+					`存在しない企画が含まれています: ${missingIds.join(", ")}`
+				);
+			}
 		}
 
 		// Serializable トランザクション内で重複チェック + 作成を行い、
@@ -682,27 +682,44 @@ committeeNoticeRoute.post(
 					throw Errors.alreadyExists("既に承認待ちの申請があります");
 				}
 
-				const auth = await tx.noticeAuthorization.create({
+				if (deliveryTarget.mode === "INDIVIDUAL") {
+					const uniqueProjectIds = [...new Set(deliveryTarget.projectIds)];
+					const auth = await tx.noticeAuthorization.create({
+						data: {
+							noticeId,
+							requestedById: user.id,
+							requestedToId,
+							deliveredAt,
+							deliveryMode: "INDIVIDUAL",
+						},
+					});
+
+					await Promise.all(
+						uniqueProjectIds.map(projectId =>
+							tx.noticeDelivery.create({
+								data: {
+									noticeAuthorizationId: auth.id,
+									projectId,
+								},
+							})
+						)
+					);
+
+					return auth;
+				}
+
+				// カテゴリ指定モード: フィルタ条件を保存するのみ
+				return tx.noticeAuthorization.create({
 					data: {
 						noticeId,
 						requestedById: user.id,
 						requestedToId,
 						deliveredAt,
+						deliveryMode: "CATEGORY",
+						filterTypes: deliveryTarget.projectTypes,
+						filterLocations: deliveryTarget.projectLocations,
 					},
 				});
-
-				const deliveries = await Promise.all(
-					uniqueProjectIds.map(projectId =>
-						tx.noticeDelivery.create({
-							data: {
-								noticeAuthorizationId: auth.id,
-								projectId,
-							},
-						})
-					)
-				);
-
-				return { ...auth, deliveries };
 			},
 			{ isolationLevel: "Serializable" }
 		);
