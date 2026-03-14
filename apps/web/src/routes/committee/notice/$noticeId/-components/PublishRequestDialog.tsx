@@ -47,7 +47,7 @@ export function PublishRequestDialog({
 	const [time, setTime] = useState("09:00");
 
 	// 配信先モード
-	const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("INDIVIDUAL");
+	const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("CATEGORY");
 
 	// 個別指定
 	const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(
@@ -212,11 +212,11 @@ export function PublishRequestDialog({
 								onValueChange={v => setDeliveryMode(v as DeliveryMode)}
 								size="2"
 							>
-								<SegmentedControl.Item value="INDIVIDUAL">
-									個別指定
-								</SegmentedControl.Item>
 								<SegmentedControl.Item value="CATEGORY">
 									カテゴリ指定
+								</SegmentedControl.Item>
+								<SegmentedControl.Item value="INDIVIDUAL">
+									個別指定
 								</SegmentedControl.Item>
 							</SegmentedControl.Root>
 						</div>
