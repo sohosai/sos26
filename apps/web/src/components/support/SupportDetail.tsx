@@ -580,8 +580,6 @@ export function SupportDetail({
 
 				<InquiryTimeline inquiry={inquiry} timelineEntries={timelineEntries} />
 
-				<Separator size="4" />
-
 				<InquiryReplyPanel
 					inquiryStatus={inquiry.status}
 					viewerRole={viewerRole}
