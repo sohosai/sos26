@@ -1,3 +1,5 @@
+import { textToHtml } from "./textToHtml";
+
 export function projectRegistrationFormAuthorizationApprovedTemplate(params: {
 	formTitle: string;
 	url: string;
@@ -16,7 +18,7 @@ ${params.url}
 	return {
 		subject:
 			"【雙峰祭オンラインシステム】企画登録フォーム承認申請が承認されました",
-		html: body.replace(/\n/g, "<br />"),
+		html: textToHtml(body),
 		text: body,
 	};
 }

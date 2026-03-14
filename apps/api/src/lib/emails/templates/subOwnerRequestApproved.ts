@@ -1,3 +1,5 @@
+import { textToHtml } from "./textToHtml";
+
 export function subOwnerRequestApprovedTemplate(params: {
 	userName: string;
 	projectName: string;
@@ -14,7 +16,7 @@ ${params.userName} さんが副責任者に任命されました。
 
 	return {
 		subject: "【雙峰祭オンラインシステム】副責任者リクエストが承認されました",
-		html: body.replace(/\n/g, "<br />"),
+		html: textToHtml(body),
 		text: body,
 	};
 }

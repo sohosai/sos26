@@ -1,3 +1,5 @@
+import { textToHtml } from "./textToHtml";
+
 export function verificationTemplate(params: { verifyUrl: string }) {
 	const body = `雙峰祭オンラインシステムへのご登録ありがとうございます。
 
@@ -13,7 +15,7 @@ ${params.verifyUrl}
 
 	return {
 		subject: "【雙峰祭オンラインシステム】メールアドレスの確認",
-		html: body.replace(/\n/g, "<br />"),
+		html: textToHtml(body),
 		text: body,
 	};
 }
