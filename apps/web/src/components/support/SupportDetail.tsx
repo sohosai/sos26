@@ -269,6 +269,7 @@ function InquiryReplyPanel({
 						onClick={() => onChangeReplyTab("draft")}
 					>
 						下書き
+						<span className={styles.replyTabCount}>{draftComments.length}</span>
 					</button>
 				</div>
 			)}

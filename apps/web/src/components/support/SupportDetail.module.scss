@@ -194,6 +194,24 @@
 	}
 }
 
+.replyTabCount {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border-radius: 9999px;
+	background-color: var(--gray-4);
+	color: var(--gray-10);
+	font-size: var(--font-size-1);
+	font-weight: 500;
+}
+
+.replyTabButton[data-active] .replyTabCount {
+	background-color: var(--accent-4);
+	color: var(--accent-11);
+}
+
 .draftTabPanel {
 	display: flex;
 	flex-direction: column;
