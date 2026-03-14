@@ -37,6 +37,7 @@ import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { isClientError } from "@/lib/http/error";
 import { AddCustomColumnDialog } from "./AddCustomColumnDialog";
 import { AddFormItemColumnsDialog } from "./AddFormItemColumnsDialog";
+import { AddPrfItemColumnsDialog } from "./AddPrfItemColumnsDialog";
 import styles from "./ColumnPanel.module.scss";
 import { getScopeColor, ViewerSelector } from "./ViewerSelector";
 
@@ -670,6 +671,7 @@ export function ColumnPanel({
 	const [requesting, setRequesting] = useState<Set<string>>(new Set());
 	const [addCustomOpen, setAddCustomOpen] = useState(false);
 	const [addFormItemOpen, setAddFormItemOpen] = useState(false);
+	const [addPrfItemOpen, setAddPrfItemOpen] = useState(false);
 	const [sectionsOpen, setSectionsOpen] = useState({
 		fixed: true,
 		visible: true,
@@ -759,6 +761,13 @@ export function ColumnPanel({
 								onClick={() => setAddFormItemOpen(true)}
 							>
 								<IconPlus size={16} /> フォームから追加
+							</Button>
+							<Button
+								intent="secondary"
+								size="2"
+								onClick={() => setAddPrfItemOpen(true)}
+							>
+								<IconPlus size={16} /> 企画登録フォームから追加
 							</Button>
 							<Button
 								intent="secondary"
@@ -903,6 +912,12 @@ export function ColumnPanel({
 			<AddFormItemColumnsDialog
 				open={addFormItemOpen}
 				onOpenChange={setAddFormItemOpen}
+				columns={columns}
+				onSuccess={onSuccess}
+			/>
+			<AddPrfItemColumnsDialog
+				open={addPrfItemOpen}
+				onOpenChange={setAddPrfItemOpen}
 				columns={columns}
 				onSuccess={onSuccess}
 			/>
