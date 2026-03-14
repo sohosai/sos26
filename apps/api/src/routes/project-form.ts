@@ -408,32 +408,44 @@ async function syncCategoryFormDeliveries(
 		select: { id: true, filterTypes: true, filterLocations: true },
 	});
 
-	for (const auth of categoryAuths) {
-		// 両方空 = 全企画対象
-		const isAllTarget =
-			auth.filterTypes.length === 0 && auth.filterLocations.length === 0;
-		// OR条件: filterTypes のいずれかに一致 OR filterLocations のいずれかに一致
-		const matchesType =
-			auth.filterTypes.length > 0 && auth.filterTypes.includes(projectType);
-		const matchesLocation =
-			auth.filterLocations.length > 0 &&
-			auth.filterLocations.includes(projectLocation);
+	// フィルタ条件に合致する Authorization を絞り込み
+	const matchingAuthIds = categoryAuths
+		.filter(auth => {
+			const isAllTarget =
+				auth.filterTypes.length === 0 && auth.filterLocations.length === 0;
+			const matchesType =
+				auth.filterTypes.length > 0 && auth.filterTypes.includes(projectType);
+			const matchesLocation =
+				auth.filterLocations.length > 0 &&
+				auth.filterLocations.includes(projectLocation);
+			return isAllTarget || matchesType || matchesLocation;
+		})
+		.map(auth => auth.id);
 
-		if (!isAllTarget && !matchesType && !matchesLocation) continue;
+	if (matchingAuthIds.length === 0) return;
 
-		// まだ Delivery がなければ作成
-		await prisma.formDelivery.upsert({
-			where: {
-				formAuthorizationId_projectId: {
-					formAuthorizationId: auth.id,
-					projectId,
-				},
-			},
-			create: {
-				formAuthorizationId: auth.id,
-				projectId,
-			},
-			update: {},
+	// この企画に対して既に Delivery が存在する Authorization を一括取得
+	const existingDeliveries = await prisma.formDelivery.findMany({
+		where: {
+			projectId,
+			formAuthorizationId: { in: matchingAuthIds },
+		},
+		select: { formAuthorizationId: true },
+	});
+
+	const existingAuthIds = new Set(
+		existingDeliveries.map(d => d.formAuthorizationId)
+	);
+
+	// 未作成分だけ一括作成
+	const newDeliveries = matchingAuthIds
+		.filter(id => !existingAuthIds.has(id))
+		.map(formAuthorizationId => ({ formAuthorizationId, projectId }));
+
+	if (newDeliveries.length > 0) {
+		await prisma.formDelivery.createMany({
+			data: newDeliveries,
+			skipDuplicates: true,
 		});
 	}
 }

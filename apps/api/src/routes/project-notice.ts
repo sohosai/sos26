@@ -29,32 +29,44 @@ async function syncCategoryNoticeDeliveries(
 		select: { id: true, filterTypes: true, filterLocations: true },
 	});
 
-	for (const auth of categoryAuths) {
-		// 両方空 = 全企画対象
-		const isAllTarget =
-			auth.filterTypes.length === 0 && auth.filterLocations.length === 0;
-		// OR条件: filterTypes のいずれかに一致 OR filterLocations のいずれかに一致
-		const matchesType =
-			auth.filterTypes.length > 0 && auth.filterTypes.includes(projectType);
-		const matchesLocation =
-			auth.filterLocations.length > 0 &&
-			auth.filterLocations.includes(projectLocation);
+	// フィルタ条件に合致する Authorization を絞り込み
+	const matchingAuthIds = categoryAuths
+		.filter(auth => {
+			const isAllTarget =
+				auth.filterTypes.length === 0 && auth.filterLocations.length === 0;
+			const matchesType =
+				auth.filterTypes.length > 0 && auth.filterTypes.includes(projectType);
+			const matchesLocation =
+				auth.filterLocations.length > 0 &&
+				auth.filterLocations.includes(projectLocation);
+			return isAllTarget || matchesType || matchesLocation;
+		})
+		.map(auth => auth.id);
 
-		if (!isAllTarget && !matchesType && !matchesLocation) continue;
+	if (matchingAuthIds.length === 0) return;
 
-		// まだ Delivery がなければ作成
-		await prisma.noticeDelivery.upsert({
-			where: {
-				noticeAuthorizationId_projectId: {
-					noticeAuthorizationId: auth.id,
-					projectId,
-				},
-			},
-			create: {
-				noticeAuthorizationId: auth.id,
-				projectId,
-			},
-			update: {},
+	// この企画に対して既に Delivery が存在する Authorization を一括取得
+	const existingDeliveries = await prisma.noticeDelivery.findMany({
+		where: {
+			projectId,
+			noticeAuthorizationId: { in: matchingAuthIds },
+		},
+		select: { noticeAuthorizationId: true },
+	});
+
+	const existingAuthIds = new Set(
+		existingDeliveries.map(d => d.noticeAuthorizationId)
+	);
+
+	// 未作成分だけ一括作成
+	const newDeliveries = matchingAuthIds
+		.filter(id => !existingAuthIds.has(id))
+		.map(noticeAuthorizationId => ({ noticeAuthorizationId, projectId }));
+
+	if (newDeliveries.length > 0) {
+		await prisma.noticeDelivery.createMany({
+			data: newDeliveries,
+			skipDuplicates: true,
 		});
 	}
 }
