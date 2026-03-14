@@ -730,13 +730,15 @@ committeeInquiryRoute.post(
 			);
 		}
 
-		// 下書きを正式送信に変換
+		// 下書きを正式送信に変換（送信時刻をコメント時刻として確定）
 		const comment = await prisma.$transaction(async tx => {
+			const publishedAt = new Date();
 			const updated = await tx.inquiryComment.update({
 				where: { id: commentId },
 				data: {
 					isDraft: false,
 					draftCreatedById: null,
+					createdAt: publishedAt,
 				},
 				include: { createdBy: { select: userSelect } },
 			});
@@ -744,7 +746,7 @@ committeeInquiryRoute.post(
 			// 親の updatedAt を更新
 			await tx.inquiry.update({
 				where: { id: inquiryId },
-				data: { updatedAt: new Date() },
+				data: { updatedAt: publishedAt },
 			});
 
 			// 添付ファイルを取得
