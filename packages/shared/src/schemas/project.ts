@@ -4,13 +4,11 @@ import {
 	isValidProjectDisplayName,
 	PROJECT_DISPLAY_NAME_RULE_MESSAGE,
 } from "../lib/project-display-name";
+import { projectLocationSchema, projectTypeSchema } from "./common";
 import { formAnswerInputSchema } from "./form";
 
-export const projectTypeSchema = z.enum(["STAGE", "FOOD", "NORMAL"]);
-export type ProjectType = z.infer<typeof projectTypeSchema>;
-
-export const projectLocationSchema = z.enum(["INDOOR", "OUTDOOR", "STAGE"]);
-export type ProjectLocation = z.infer<typeof projectLocationSchema>;
+export { projectTypeSchema, projectLocationSchema };
+export type { ProjectLocation, ProjectType } from "./common";
 
 export const projectSchema = z.object({
 	id: z.cuid(),

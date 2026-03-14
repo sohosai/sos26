@@ -1,5 +1,14 @@
 import { z } from "zod";
-import { projectLocationSchema, projectTypeSchema } from "./project";
+
+// ─────────────────────────────────────────────────────────────
+// 企画区分・実施場所（循環参照回避のためここで定義）
+// ─────────────────────────────────────────────────────────────
+
+export const projectTypeSchema = z.enum(["STAGE", "FOOD", "NORMAL"]);
+export type ProjectType = z.infer<typeof projectTypeSchema>;
+
+export const projectLocationSchema = z.enum(["INDOOR", "OUTDOOR", "STAGE"]);
+export type ProjectLocation = z.infer<typeof projectLocationSchema>;
 
 // ─────────────────────────────────────────────────────────────
 // 汎用 Enum（複数機能で共用）

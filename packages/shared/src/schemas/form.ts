@@ -3,9 +3,10 @@ import {
 	approvalStatusSchema,
 	deliveryModeSchema,
 	deliveryTargetSchema,
+	projectLocationSchema,
+	projectTypeSchema,
 } from "./common";
 import { fileSchema } from "./file";
-import { projectLocationSchema, projectTypeSchema } from "./project";
 import { userSchema } from "./user";
 
 // ─────────────────────────────────────────────────────────────

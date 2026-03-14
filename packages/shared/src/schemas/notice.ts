@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { deliveryModeSchema, deliveryTargetSchema } from "./common";
+import {
+	deliveryModeSchema,
+	deliveryTargetSchema,
+	projectLocationSchema,
+	projectTypeSchema,
+} from "./common";
 import { userSchema } from "./user";
 
 // ─────────────────────────────────────────────────────────────
@@ -35,8 +40,6 @@ export const noticeAuthorizationStatusSchema = z.enum([
 export type NoticeAuthorizationStatus = z.infer<
 	typeof noticeAuthorizationStatusSchema
 >;
-
-import { projectLocationSchema, projectTypeSchema } from "./project";
 
 export const noticeAuthorizationSchema = z.object({
 	id: z.cuid(),
