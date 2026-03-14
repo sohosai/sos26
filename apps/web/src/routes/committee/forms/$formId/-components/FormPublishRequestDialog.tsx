@@ -173,7 +173,7 @@ export function FormPublishRequestDialog({
 			setAllowLateResponse(false);
 			setIsRequired(true);
 			setOwnerOnly(false);
-			setDeliveryMode("INDIVIDUAL");
+			setDeliveryMode("CATEGORY");
 			setSelectedProjectIds(new Set());
 			setSelectedTypes(new Set());
 			setSelectedLocations(new Set());

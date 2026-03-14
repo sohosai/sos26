@@ -119,7 +119,7 @@ export function PublishRequestDialog({
 			setApproverId("");
 			setDate("");
 			setTime("09:00");
-			setDeliveryMode("INDIVIDUAL");
+			setDeliveryMode("CATEGORY");
 			setSelectedProjectIds(new Set());
 			setSelectedTypes(new Set());
 			setSelectedLocations(new Set());

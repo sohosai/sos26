@@ -469,6 +469,7 @@ model NoticeAuthorization {
   deliveries NoticeDelivery[]
 
   @@index([noticeId, status])
+  @@index([deliveryMode, status, deliveredAt])
 }
 
 //Noticeの配信
@@ -712,6 +713,7 @@ model FormAuthorization {
   deliveries FormDelivery[]
 
   @@index([formId, createdAt(sort: Desc)])
+  @@index([deliveryMode, status, scheduledSendAt])
 }
 
 //フォームの配信
