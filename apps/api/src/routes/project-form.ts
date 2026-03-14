@@ -1,3 +1,4 @@
+import type { ProjectLocation, ProjectType } from "@prisma/client";
 import {
 	type CreateFormResponseRequest,
 	createFormResponseRequestSchema,
@@ -387,12 +388,79 @@ const appendEditHistory = async (
 };
 
 // ─────────────────────────────────────────────────────────────
+// ヘルパー: カテゴリ指定の遅延Delivery同期
+// ─────────────────────────────────────────────────────────────
+async function syncCategoryFormDeliveries(
+	projectId: string,
+	projectType: ProjectType,
+	projectLocation: ProjectLocation
+) {
+	const now = new Date();
+
+	// カテゴリモードで承認済み・配信時刻到来済みの Authorization を取得
+	const categoryAuths = await prisma.formAuthorization.findMany({
+		where: {
+			deliveryMode: "CATEGORY",
+			status: "APPROVED",
+			scheduledSendAt: { lte: now },
+			form: { deletedAt: null },
+		},
+		select: { id: true, filterTypes: true, filterLocations: true },
+	});
+
+	// フィルタ条件に合致する Authorization を絞り込み
+	const matchingAuthIds = categoryAuths
+		.filter(auth => {
+			const isAllTarget =
+				auth.filterTypes.length === 0 && auth.filterLocations.length === 0;
+			const matchesType =
+				auth.filterTypes.length > 0 && auth.filterTypes.includes(projectType);
+			const matchesLocation =
+				auth.filterLocations.length > 0 &&
+				auth.filterLocations.includes(projectLocation);
+			return isAllTarget || matchesType || matchesLocation;
+		})
+		.map(auth => auth.id);
+
+	if (matchingAuthIds.length === 0) return;
+
+	// この企画に対して既に Delivery が存在する Authorization を一括取得
+	const existingDeliveries = await prisma.formDelivery.findMany({
+		where: {
+			projectId,
+			formAuthorizationId: { in: matchingAuthIds },
+		},
+		select: { formAuthorizationId: true },
+	});
+
+	const existingAuthIds = new Set(
+		existingDeliveries.map(d => d.formAuthorizationId)
+	);
+
+	// 未作成分だけ一括作成
+	const newDeliveries = matchingAuthIds
+		.filter(id => !existingAuthIds.has(id))
+		.map(formAuthorizationId => ({ formAuthorizationId, projectId }));
+
+	if (newDeliveries.length > 0) {
+		await prisma.formDelivery.createMany({
+			data: newDeliveries,
+			skipDuplicates: true,
+		});
+	}
+}
+
+// ─────────────────────────────────────────────────────────────
 // GET /project/:projectId/forms
 // ─────────────────────────────────────────────────────────────
 
 projectFormRoute.get("/", requireAuth, requireProjectMember, async c => {
-	const projectId = c.req.param("projectId");
+	const project = c.get("project");
+	const projectId = project.id;
 	const projectRole = c.get("projectRole");
+
+	// カテゴリ指定の遅延Delivery同期
+	await syncCategoryFormDeliveries(projectId, project.type, project.location);
 
 	const now = new Date();
 

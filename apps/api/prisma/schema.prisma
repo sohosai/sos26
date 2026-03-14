@@ -141,6 +141,14 @@ enum ProjectLocation {
   STAGE
 }
 
+enum DeliveryMode {
+  //個別指定
+  INDIVIDUAL
+
+  //カテゴリ指定
+  CATEGORY
+}
+
 model Project {
   id String @id @default(cuid())
 
@@ -446,12 +454,22 @@ model NoticeAuthorization {
   //承認を求める側があらかじめここを埋める
   deliveredAt DateTime
 
+  //配信先指定モード
+  deliveryMode DeliveryMode @default(INDIVIDUAL)
+
+  //カテゴリ指定時のフィルタ: 対象企画区分
+  filterTypes ProjectType[]
+
+  //カテゴリ指定時のフィルタ: 対象実施場所
+  filterLocations ProjectLocation[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   deliveries NoticeDelivery[]
 
   @@index([noticeId, status])
+  @@index([deliveryMode, status, deliveredAt])
 }
 
 //Noticeの配信
@@ -681,11 +699,21 @@ model FormAuthorization {
   //回答の閲覧制限（trueの場合、責任者・副責任者のみ閲覧・回答可能）
   ownerOnly Boolean @default(false)
 
+  //配信先指定モード
+  deliveryMode DeliveryMode @default(INDIVIDUAL)
+
+  //カテゴリ指定時のフィルタ: 対象企画区分
+  filterTypes ProjectType[]
+
+  //カテゴリ指定時のフィルタ: 対象実施場所
+  filterLocations ProjectLocation[]
+
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
   deliveries FormDelivery[]
 
   @@index([formId, createdAt(sort: Desc)])
+  @@index([deliveryMode, status, scheduledSendAt])
 }
 
 //フォームの配信
