@@ -1,15 +1,27 @@
 import { Heading, Table, Text } from "@radix-ui/themes";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { getProjectRegistrationFormResponses } from "@/lib/api/project";
+import { formatDate } from "@/lib/format";
 import {
 	PROJECT_LOCATION_LABELS,
 	PROJECT_TYPE_LABELS,
 } from "@/lib/project/options";
-import { useProject } from "@/lib/project/store";
+import { useProject, useProjectStore } from "@/lib/project/store";
 import styles from "./index.module.scss";
 
 export const Route = createFileRoute("/project/")({
 	component: ProjectIndexPage,
+	loader: async () => {
+		const { selectedProjectId } = useProjectStore.getState();
+		if (!selectedProjectId) {
+			return { registrationFormResponses: [] };
+		}
+
+		const response =
+			await getProjectRegistrationFormResponses(selectedProjectId);
+		return { registrationFormResponses: response.responses };
+	},
 	head: () => ({
 		meta: [
 			{ title: "企画ダッシュボード | 雙峰祭オンラインシステム" },
@@ -21,16 +33,47 @@ export const Route = createFileRoute("/project/")({
 function InfoRow({ label, value }: { label: string; value: ReactNode }) {
 	return (
 		<Table.Row>
-			<Table.RowHeaderCell>{label}</Table.RowHeaderCell>
-			<Table.Cell>{value}</Table.Cell>
+			<Table.RowHeaderCell className={styles.label}>
+				{label}
+			</Table.RowHeaderCell>
+			<Table.Cell className={styles.value}>{value}</Table.Cell>
 		</Table.Row>
 	);
 }
 
+function formatAnswerValue(answer: {
+	type: string;
+	textValue: string | null;
+	numberValue: number | null;
+	fileId: string | null;
+	selectedOptions: { id: string; label: string }[];
+}): string {
+	switch (answer.type) {
+		case "TEXT":
+		case "TEXTAREA":
+			return answer.textValue ?? "未回答";
+		case "NUMBER":
+			return answer.numberValue !== null
+				? String(answer.numberValue)
+				: "未回答";
+		case "SELECT":
+		case "CHECKBOX":
+			return answer.selectedOptions.length > 0
+				? answer.selectedOptions.map(option => option.label).join("、")
+				: "未回答";
+		case "FILE":
+			return answer.fileId ? `ファイルID: ${answer.fileId}` : "未回答";
+		default:
+			return "未回答";
+	}
+}
+
 function ProjectIndexPage() {
 	const project = useProject();
+	const { registrationFormResponses } = Route.useLoaderData();
 	const rows = [
 		{ label: "企画番号", value: project.number },
+		{ label: "登録日", value: formatDate(project.createdAt, "date") },
 		{ label: "企画名", value: project.name },
 		{ label: "企画名（ふりがな）", value: project.namePhonetic },
 		{ label: "企画団体名", value: project.organizationName },
@@ -57,13 +100,39 @@ function ProjectIndexPage() {
 				</Text>
 			</header>
 
-			<Table.Root>
+			<Table.Root className={styles.infoTable}>
 				<Table.Body>
 					{rows.map(row => (
 						<InfoRow key={row.label} label={row.label} value={row.value} />
 					))}
 				</Table.Body>
 			</Table.Root>
+
+			{registrationFormResponses.length > 0 && (
+				<section className={styles.section}>
+					<div className={styles.formResponses}>
+						{registrationFormResponses.map(response => (
+							<div key={response.id} className={styles.formResponseCard}>
+								<Heading size="3">{response.form.title}</Heading>
+								<Table.Root className={styles.infoTable}>
+									<Table.Body>
+										{response.answers.map(answer => (
+											<Table.Row key={answer.formItemId}>
+												<Table.RowHeaderCell className={styles.label}>
+													{answer.formItemLabel}
+												</Table.RowHeaderCell>
+												<Table.Cell className={styles.value}>
+													{formatAnswerValue(answer)}
+												</Table.Cell>
+											</Table.Row>
+										))}
+									</Table.Body>
+								</Table.Root>
+							</div>
+						))}
+					</div>
+				</section>
+			)}
 		</div>
 	);
 }
