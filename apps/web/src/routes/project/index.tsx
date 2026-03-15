@@ -1,4 +1,5 @@
 import { Heading, Table, Text } from "@radix-ui/themes";
+import type { GetProjectRegistrationFormResponsesResponse } from "@sos26/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { getProjectRegistrationFormResponses } from "@/lib/api/project";
@@ -41,13 +42,10 @@ function InfoRow({ label, value }: { label: string; value: ReactNode }) {
 	);
 }
 
-function formatAnswerValue(answer: {
-	type: string;
-	textValue: string | null;
-	numberValue: number | null;
-	fileId: string | null;
-	selectedOptions: { id: string; label: string }[];
-}): string {
+type RegistrationFormResponseAnswer =
+	GetProjectRegistrationFormResponsesResponse["responses"][number]["answers"][number];
+
+function formatAnswerValue(answer: RegistrationFormResponseAnswer): string {
 	switch (answer.type) {
 		case "TEXT":
 		case "TEXTAREA":
@@ -63,8 +61,9 @@ function formatAnswerValue(answer: {
 				: "未回答";
 		case "FILE":
 			return answer.fileId ? `ファイルID: ${answer.fileId}` : "未回答";
-		default:
-			return "未回答";
+		default: {
+			return "不明な回答タイプ";
+		}
 	}
 }
 
