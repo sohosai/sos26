@@ -24,6 +24,15 @@
           "custom_domain": true
         }
       ]
+    },
+    "prod": {
+      "name": "sos26-prod",
+      "routes": [
+        {
+          "pattern": "sos26.sohosai.com",
+          "custom_domain": true
+        }
+      ]
     }
   }
 }
