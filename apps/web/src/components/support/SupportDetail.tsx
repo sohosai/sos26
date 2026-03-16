@@ -3,12 +3,14 @@ import {
 	IconArrowLeft,
 	IconCheck,
 	IconFileDescription,
+	IconPaperclip,
+	IconTrash,
+	IconX,
 } from "@tabler/icons-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { toast } from "sonner";
 import { Button } from "@/components/primitives";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatFileSize } from "@/lib/format";
 import { AssigneeList, AssigneePopover } from "./AssigneeSection";
 import { statusConfig } from "./constants";
 import { ReplySection } from "./ReplySection";
@@ -22,6 +24,9 @@ import type {
 	ViewerDetail,
 	ViewerInput,
 } from "./types";
+import { useAssigneeRemovalConfirmation } from "./useAssigneeRemovalConfirmation";
+import { useDraftInquiryActions } from "./useDraftInquiryActions";
+import { useDraftInquiryState } from "./useDraftInquiryState";
 import { ViewerSettings } from "./ViewerSettings";
 
 type SupportDetailProps = {
@@ -45,9 +50,16 @@ type SupportDetailProps = {
 	onPublishDraft?: (commentId: string) => Promise<void>;
 	onDeleteComment?: (commentId: string) => Promise<void>;
 	onUpdateDraft?: (commentId: string, body: string) => Promise<void>;
+	onPublishDraftInquiry?: () => Promise<void>;
+	onDeleteDraftInquiry?: () => Promise<void>;
+	onUpdateDraftInquiry?: (
+		title: string,
+		body: string,
+		fileIds?: string[]
+	) => Promise<void>;
 	viewers?: ViewerDetail[];
 	onUpdateViewers?: (viewers: ViewerInput[]) => Promise<void>;
-	/** 実委側: 担当者 or 管理者かどうか（編集 UI の出し分け） */
+	/** 権限チェック: 全管理 or 担当者かどうか(編集 UI の出現判定) */
 	isAssigneeOrAdmin?: boolean;
 };
 
@@ -109,9 +121,17 @@ function buildTimelineEntries(
 function InquiryTimeline({
 	inquiry,
 	timelineEntries,
+	currentUserId,
+	onPublishDraft,
+	onDeleteComment,
+	onUpdateDraft,
 }: {
 	inquiry: InquiryDetail;
 	timelineEntries: TimelineEntry[];
+	currentUserId: string;
+	onPublishDraft?: (commentId: string) => Promise<void>;
+	onDeleteComment?: (commentId: string) => Promise<void>;
+	onUpdateDraft?: (commentId: string, body: string) => Promise<void>;
 }) {
 	return (
 		<div className={styles.timeline}>
@@ -125,6 +145,9 @@ function InquiryTimeline({
 
 			{timelineEntries.map(entry => {
 				if (entry.kind === "comment") {
+					const isDraft = isCommitteeDraftComment(entry.data);
+					const isOwnDraft =
+						isDraft && entry.data.createdBy.id === currentUserId;
 					return (
 						<TimelineItem
 							key={entry.data.id}
@@ -133,6 +156,32 @@ function InquiryTimeline({
 							date={getCommentDisplayDate(entry.data)}
 							body={entry.data.body}
 							attachments={entry.data.attachments}
+							isDraft={isDraft}
+							isOwnDraft={isOwnDraft}
+							onPublishDraft={
+								isDraft && isOwnDraft
+									? () =>
+											onPublishDraft
+												? onPublishDraft(entry.data.id)
+												: Promise.resolve()
+									: undefined
+							}
+							onDeleteDraft={
+								isDraft && isOwnDraft
+									? () =>
+											onDeleteComment
+												? onDeleteComment(entry.data.id)
+												: Promise.resolve()
+									: undefined
+							}
+							onUpdateDraft={
+								isDraft && isOwnDraft
+									? (body: string) =>
+											onUpdateDraft
+												? onUpdateDraft(entry.data.id, body)
+												: Promise.resolve()
+									: undefined
+							}
 						/>
 					);
 				}
@@ -156,7 +205,7 @@ function DraftCommentItem({
 	onDeleteComment?: (commentId: string) => Promise<void>;
 	onUpdateDraft?: (commentId: string, body: string) => Promise<void>;
 }) {
-	const isOwnDraft = comment.draftCreatedById === currentUserId;
+	const isOwnDraft = comment.createdBy.id === currentUserId;
 	const handlePublishDraft =
 		isOwnDraft && onPublishDraft ? () => onPublishDraft(comment.id) : undefined;
 	const handleDeleteDraft =
@@ -372,6 +421,16 @@ function SupportSidebar({
 	statusLabel,
 	statusColor,
 	StatusIcon,
+	currentUserId,
+	isDraftEditing,
+	onStartEditDraft,
+	onCancelEditDraft,
+	onSaveDraft,
+	onPublishDraftInquiry,
+	isSavingDraft,
+	isPublishingDraftInquiry,
+	isDeletingDraftInquiry,
+	onRequestDeleteDraftInquiry,
 }: {
 	inquiry: InquiryDetail;
 	viewerRole: "project" | "committee";
@@ -389,8 +448,96 @@ function SupportSidebar({
 	statusLabel: string;
 	statusColor: "orange" | "blue" | "green";
 	StatusIcon: typeof IconCheck;
+	currentUserId: string;
+	isDraftEditing: boolean;
+	onStartEditDraft: () => void;
+	onCancelEditDraft: () => void;
+	onSaveDraft: () => Promise<void>;
+	onPublishDraftInquiry?: () => Promise<void>;
+	isSavingDraft: boolean;
+	isPublishingDraftInquiry: boolean;
+	isDeletingDraftInquiry: boolean;
+	onRequestDeleteDraftInquiry: () => void;
 }) {
 	const canEditProjectAssignee = canEditCommittee || viewerRole === "project";
+	const isDraftInquiry = "isDraft" in inquiry && inquiry.isDraft === true;
+	const isOwnDraftInquiry =
+		isDraftInquiry && inquiry.createdById === currentUserId;
+
+	const renderDraftActions = () => {
+		if (isDraftEditing) {
+			return (
+				<>
+					<Button
+						intent="secondary"
+						size="2"
+						onClick={onCancelEditDraft}
+						disabled={isSavingDraft}
+					>
+						キャンセル
+					</Button>
+					<Button size="2" onClick={onSaveDraft} loading={isSavingDraft}>
+						{isSavingDraft ? "保存中..." : "保存"}
+					</Button>
+				</>
+			);
+		}
+
+		return (
+			<>
+				<Button
+					intent="primary"
+					size="2"
+					onClick={onPublishDraftInquiry}
+					loading={isPublishingDraftInquiry}
+					disabled={isPublishingDraftInquiry || isDeletingDraftInquiry}
+				>
+					{isPublishingDraftInquiry ? "送信中..." : "送信する"}
+				</Button>
+				<Button
+					intent="secondary"
+					size="2"
+					onClick={onStartEditDraft}
+					disabled={isPublishingDraftInquiry || isDeletingDraftInquiry}
+				>
+					編集
+				</Button>
+				<Button
+					intent="ghost"
+					size="2"
+					onClick={onRequestDeleteDraftInquiry}
+					loading={isDeletingDraftInquiry}
+					disabled={isPublishingDraftInquiry || isDeletingDraftInquiry}
+				>
+					<IconTrash size={14} />
+					{isDeletingDraftInquiry ? "削除中..." : "削除"}
+				</Button>
+			</>
+		);
+	};
+
+	const renderStatusActions = () => {
+		if (isDraftInquiry && isOwnDraftInquiry) {
+			return (
+				<div className={styles.draftSidebarActions}>{renderDraftActions()}</div>
+			);
+		}
+
+		if (inquiry.status !== "RESOLVED") {
+			return (
+				<Button intent="secondary" onClick={() => onUpdateStatus("RESOLVED")}>
+					<IconCheck size={16} />
+					解決済みにする
+				</Button>
+			);
+		}
+
+		return (
+			<Button intent="secondary" onClick={() => onUpdateStatus("IN_PROGRESS")}>
+				再オープンする
+			</Button>
+		);
+	};
 
 	return (
 		<aside className={styles.sidebar}>
@@ -475,22 +622,7 @@ function SupportSidebar({
 			{canEditCommittee && (
 				<>
 					<Separator size="4" />
-					{inquiry.status !== "RESOLVED" ? (
-						<Button
-							intent="secondary"
-							onClick={() => onUpdateStatus("RESOLVED")}
-						>
-							<IconCheck size={16} />
-							解決済みにする
-						</Button>
-					) : (
-						<Button
-							intent="secondary"
-							onClick={() => onUpdateStatus("IN_PROGRESS")}
-						>
-							再オープンする
-						</Button>
-					)}
+					{renderStatusActions()}
 				</>
 			)}
 		</aside>
@@ -511,55 +643,45 @@ export function SupportDetail({
 	onPublishDraft,
 	onDeleteComment,
 	onUpdateDraft,
+	onPublishDraftInquiry,
+	onDeleteDraftInquiry,
+	onUpdateDraftInquiry,
 	viewers,
 	onUpdateViewers,
 	isAssigneeOrAdmin = false,
 }: SupportDetailProps) {
 	const navigate = useNavigate();
-	const [selfRemoveConfirmOpen, setSelfRemoveConfirmOpen] = useState(false);
-	const [pendingRemoveAssigneeId, setPendingRemoveAssigneeId] = useState<
-		string | null
-	>(null);
 	const [activeReplyTab, setActiveReplyTab] = useState<"comment" | "draft">(
 		"comment"
 	);
 
-	const config = statusConfig[inquiry.status];
+	// Custom hooks for state management
+	const draftState = useDraftInquiryState(inquiry);
+	const assigneeRemoval = useAssigneeRemovalConfirmation(
+		onRemoveAssignee,
+		basePath
+	);
+	const draftActions = useDraftInquiryActions(
+		onPublishDraftInquiry,
+		onDeleteDraftInquiry
+	);
+
+	const isDraftInquiry = "isDraft" in inquiry && inquiry.isDraft === true;
+	const isOwnDraftInquiry =
+		isDraftInquiry && inquiry.createdById === currentUserId;
+	const config = isDraftInquiry
+		? { label: "下書き", color: "orange" as const, icon: IconFileDescription }
+		: statusConfig[inquiry.status];
 	const StatusIcon = config.icon;
 
-	// 実委側で担当者/管理者の場合のみ編集 UI を表示
+	// 権限チェック: 全管理 or 担当者のみ編集 UI を表示
 	const canEditCommittee = viewerRole === "committee" && isAssigneeOrAdmin;
-	// 担当者/管理者のみコメント可能
+	// 権限チェック: 全管理 or 担当者のみコメント可
 	const canComment = isAssigneeOrAdmin;
 	const regularComments = inquiry.comments.filter(
 		comment => !isCommitteeDraftComment(comment)
 	);
 	const draftComments = getDraftComments(inquiry.comments, viewerRole);
-
-	const handleRemoveAssignee = async (assigneeId: string, userId: string) => {
-		if (userId === currentUserId) {
-			setPendingRemoveAssigneeId(assigneeId);
-			setSelfRemoveConfirmOpen(true);
-			return;
-		}
-		try {
-			await onRemoveAssignee(assigneeId);
-		} catch {
-			toast.error("担当者の削除に失敗しました");
-		}
-	};
-
-	const handleConfirmSelfRemove = async () => {
-		if (!pendingRemoveAssigneeId) return;
-		try {
-			await onRemoveAssignee(pendingRemoveAssigneeId);
-			setSelfRemoveConfirmOpen(false);
-			setPendingRemoveAssigneeId(null);
-			navigate({ to: basePath as string });
-		} catch {
-			toast.error("担当者の削除に失敗しました");
-		}
-	};
 
 	const toggleAssignee = async (
 		userId: string,
@@ -571,9 +693,56 @@ export function SupportDetail({
 				: inquiry.projectAssignees;
 		const existing = assignees.find(a => a.user.id === userId);
 		if (existing) {
-			await handleRemoveAssignee(existing.id, userId);
+			await assigneeRemoval.handleRemoveAssignee(
+				existing.id,
+				userId,
+				currentUserId
+			);
 		} else {
 			await onAddAssignee(userId, side);
+		}
+	};
+
+	// Wrapper for SupportSidebar which needs a different signature
+	const handleSidebarRemoveAssignee = async (
+		assigneeId: string,
+		userId: string
+	) => {
+		await assigneeRemoval.handleRemoveAssignee(
+			assigneeId,
+			userId,
+			currentUserId
+		);
+	};
+
+	const handleSaveDraft = async () => {
+		if (!onUpdateDraftInquiry) return;
+		if (
+			!draftState.validateDraft(draftState.draftTitle, draftState.draftBody)
+		) {
+			return;
+		}
+		if (draftState.isSavingDraft) return;
+		draftState.setIsSavingDraft(true);
+		try {
+			const newFileIds = await draftState.uploadDraftFiles(
+				draftState.draftFiles
+			);
+			const existingFileIds = draftState.draftAttachments.map(
+				att => att.fileId
+			);
+			const fileIds = [...existingFileIds, ...newFileIds];
+			await onUpdateDraftInquiry(
+				draftState.draftTitle.trim(),
+				draftState.draftBody.trim(),
+				fileIds
+			);
+			draftState.setEditingDraft(false);
+			draftState.setDraftFiles([]);
+		} catch {
+			// Error is handled in the hook
+		} finally {
+			draftState.setIsSavingDraft(false);
 		}
 	};
 
@@ -596,10 +765,23 @@ export function SupportDetail({
 
 				<header className={styles.titleSection}>
 					<div className={styles.titleRow}>
-						<span className={styles.statusIcon} data-status={inquiry.status}>
+						<span
+							className={styles.statusIcon}
+							data-status={isDraftInquiry ? "DRAFT" : inquiry.status}
+						>
 							<StatusIcon size={24} />
 						</span>
-						<Heading size="5">{inquiry.title}</Heading>
+						{draftState.editingDraft && isOwnDraftInquiry ? (
+							<input
+								type="text"
+								value={draftState.draftTitle}
+								onChange={e => draftState.setDraftTitle(e.target.value)}
+								className={styles.editTitleInput}
+								placeholder="題目を入力"
+							/>
+						) : (
+							<Heading size="5">{inquiry.title}</Heading>
+						)}
 					</div>
 					<Text size="2" color="gray">
 						{inquiry.createdBy.name} が{" "}
@@ -607,22 +789,108 @@ export function SupportDetail({
 					</Text>
 				</header>
 
-				<InquiryTimeline inquiry={inquiry} timelineEntries={timelineEntries} />
+				{draftState.editingDraft && isOwnDraftInquiry ? (
+					<div className={styles.editBodySection}>
+						<textarea
+							value={draftState.draftBody}
+							onChange={e => draftState.setDraftBody(e.target.value)}
+							className={styles.editBodyTextarea}
+							placeholder="本文を入力"
+							rows={10}
+						/>
+						<div className={styles.editAttachmentSection}>
+							<Text size="2" weight="medium">
+								添付ファイル
+							</Text>
+							{draftState.draftAttachments.length > 0 && (
+								<div className={styles.selectedFiles}>
+									{draftState.draftAttachments.map(att => (
+										<div key={att.id} className={styles.selectedFileItem}>
+											<IconPaperclip size={14} />
+											<Text size="1">{att.fileName}</Text>
+											<Text size="1" color="gray">
+												({formatFileSize(att.size)})
+											</Text>
+											<button
+												type="button"
+												className={styles.selectedFileRemove}
+												onClick={() => draftState.removeDraftAttachment(att.id)}
+											>
+												<IconX size={12} />
+											</button>
+										</div>
+									))}
+								</div>
+							)}
+							{draftState.draftFiles.length > 0 && (
+								<div className={styles.selectedFiles}>
+									{draftState.draftFiles.map((file, index) => (
+										<div
+											key={`${file.name}-${index}`}
+											className={styles.selectedFileItem}
+										>
+											<IconPaperclip size={14} />
+											<Text size="1">{file.name}</Text>
+											<Text size="1" color="gray">
+												({formatFileSize(file.size)})
+											</Text>
+											<button
+												type="button"
+												className={styles.selectedFileRemove}
+												onClick={() => draftState.removeDraftFile(index)}
+											>
+												<IconX size={12} />
+											</button>
+										</div>
+									))}
+								</div>
+							)}
+							<div className={styles.replyFileArea}>
+								<input
+									ref={draftState.draftFileInputRef}
+									type="file"
+									multiple
+									className={styles.fileInput}
+									onChange={draftState.handleDraftFileSelect}
+								/>
+								<button
+									type="button"
+									className={styles.fileSelectButton}
+									onClick={() => draftState.draftFileInputRef.current?.click()}
+								>
+									<IconPaperclip size={16} />
+									<Text size="2">ファイルを選択</Text>
+								</button>
+							</div>
+						</div>
+					</div>
+				) : (
+					<InquiryTimeline
+						inquiry={inquiry}
+						timelineEntries={timelineEntries}
+						currentUserId={currentUserId}
+						onPublishDraft={onPublishDraft}
+						onDeleteComment={onDeleteComment}
+						onUpdateDraft={onUpdateDraft}
+					/>
+				)}
 
-				<InquiryReplyPanel
-					inquiryStatus={inquiry.status}
-					viewerRole={viewerRole}
-					activeReplyTab={activeReplyTab}
-					onChangeReplyTab={setActiveReplyTab}
-					draftComments={draftComments}
-					currentUserId={currentUserId}
-					canComment={canComment}
-					onAddComment={onAddComment}
-					onPublishDraft={onPublishDraft}
-					onDeleteComment={onDeleteComment}
-					onUpdateDraft={onUpdateDraft}
-					onUpdateStatus={onUpdateStatus}
-				/>
+				{!isDraftInquiry && (
+					<InquiryReplyPanel
+						inquiryStatus={inquiry.status}
+						viewerRole={viewerRole}
+						activeReplyTab={activeReplyTab}
+						onChangeReplyTab={setActiveReplyTab}
+						draftComments={draftComments}
+						currentUserId={currentUserId}
+						canComment={canComment}
+						onAddComment={onAddComment}
+						onPublishDraft={onPublishDraft}
+						onDeleteComment={onDeleteComment}
+						onUpdateDraft={onUpdateDraft}
+						onUpdateStatus={onUpdateStatus}
+					/>
+				)}
 			</div>
 
 			<SupportSidebar
@@ -635,15 +903,27 @@ export function SupportDetail({
 				canEditCommittee={canEditCommittee}
 				onUpdateStatus={onUpdateStatus}
 				onToggleAssignee={toggleAssignee}
-				onRemoveAssignee={handleRemoveAssignee}
+				onRemoveAssignee={handleSidebarRemoveAssignee}
 				statusLabel={config.label}
 				statusColor={config.color}
 				StatusIcon={StatusIcon}
+				currentUserId={currentUserId}
+				isDraftEditing={draftState.editingDraft}
+				onStartEditDraft={draftState.handleStartEditDraft}
+				onCancelEditDraft={draftState.handleCancelEditDraft}
+				onSaveDraft={handleSaveDraft}
+				onPublishDraftInquiry={draftActions.handlePublishDraftInquiry}
+				isSavingDraft={draftState.isSavingDraft}
+				isPublishingDraftInquiry={draftActions.isPublishingDraftInquiry}
+				isDeletingDraftInquiry={draftActions.isDeletingDraftInquiry}
+				onRequestDeleteDraftInquiry={
+					draftActions.handleRequestDeleteDraftInquiry
+				}
 			/>
 
 			<AlertDialog.Root
-				open={selfRemoveConfirmOpen}
-				onOpenChange={setSelfRemoveConfirmOpen}
+				open={assigneeRemoval.selfRemoveConfirmOpen}
+				onOpenChange={assigneeRemoval.setSelfRemoveConfirmOpen}
 			>
 				<AlertDialog.Content maxWidth="400px">
 					<AlertDialog.Title>担当者から外す</AlertDialog.Title>
@@ -663,8 +943,39 @@ export function SupportDetail({
 								キャンセル
 							</Button>
 						</AlertDialog.Cancel>
-						<Button intent="danger" size="2" onClick={handleConfirmSelfRemove}>
+						<Button
+							intent="danger"
+							size="2"
+							onClick={assigneeRemoval.handleConfirmSelfRemove}
+						>
 							外す
+						</Button>
+					</div>
+				</AlertDialog.Content>
+			</AlertDialog.Root>
+
+			<AlertDialog.Root
+				open={draftActions.deleteDraftConfirmOpen}
+				onOpenChange={draftActions.setDeleteDraftConfirmOpen}
+			>
+				<AlertDialog.Content maxWidth="400px">
+					<AlertDialog.Title>下書きを削除</AlertDialog.Title>
+					<AlertDialog.Description size="2">
+						本の下書きを削除しますか？削除の操作は戻せません。
+					</AlertDialog.Description>
+					<div className={styles.deleteActions}>
+						<AlertDialog.Cancel>
+							<Button intent="secondary" size="2">
+								キャンセル
+							</Button>
+						</AlertDialog.Cancel>
+						<Button
+							intent="danger"
+							size="2"
+							onClick={draftActions.handleConfirmDeleteDraftInquiry}
+							loading={draftActions.isDeletingDraftInquiry}
+						>
+							削除する
 						</Button>
 					</div>
 				</AlertDialog.Content>

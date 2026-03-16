@@ -1,5 +1,6 @@
 import { Heading, Text } from "@radix-ui/themes";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
 import { SupportDetail } from "@/components/support/SupportDetail";
@@ -7,13 +8,16 @@ import {
 	addCommitteeInquiryAssignee,
 	addCommitteeInquiryComment,
 	deleteCommitteeInquiryComment,
+	deleteDraftInquiry,
 	getCommitteeInquiry,
 	publishDraftComment,
+	publishDraftInquiry,
 	removeCommitteeInquiryAssignee,
 	reopenCommitteeInquiry,
 	updateCommitteeDraftComment,
 	updateCommitteeInquiryStatus,
 	updateCommitteeInquiryViewers,
+	updateDraftInquiry,
 } from "@/lib/api/committee-inquiry";
 import {
 	listCommitteeMemberPermissions,
@@ -74,8 +78,13 @@ function CommitteeSupportDetailPage() {
 		Route.useLoaderData();
 	const router = useRouter();
 	const { user } = useAuthStore();
+	const [currentInquiry, setCurrentInquiry] = useState(inquiry);
 
-	if (!inquiry) {
+	useEffect(() => {
+		setCurrentInquiry(inquiry);
+	}, [inquiry]);
+
+	if (!currentInquiry) {
 		return (
 			<div>
 				<Heading size="5">お問い合わせが見つかりません</Heading>
@@ -91,17 +100,18 @@ function CommitteeSupportDetailPage() {
 
 	const isAssigneeOrAdmin =
 		isAdmin ||
-		(!!user && inquiry.committeeAssignees.some(a => a.user.id === user.id));
+		(!!user &&
+			currentInquiry.committeeAssignees.some(a => a.user.id === user.id));
 
 	return (
 		<SupportDetail
-			inquiry={inquiry}
+			inquiry={currentInquiry}
 			viewerRole="committee"
 			basePath="/committee/support"
 			currentUserId={user?.id ?? ""}
 			committeeMembers={committeeMembers}
 			projectMembers={projectMembers}
-			viewers={inquiry.viewers}
+			viewers={currentInquiry.viewers}
 			isAssigneeOrAdmin={isAssigneeOrAdmin}
 			onUpdateStatus={async status => {
 				try {
@@ -184,6 +194,39 @@ function CommitteeSupportDetailPage() {
 					await router.invalidate();
 				} catch {
 					toast.error("閲覧者設定の更新に失敗しました");
+				}
+			}}
+			onPublishDraftInquiry={async () => {
+				try {
+					await publishDraftInquiry(inquiryId);
+					await router.invalidate();
+					toast.success("お問い合わせを送信しました");
+				} catch {
+					toast.error("お問い合わせの送信に失敗しました");
+				}
+			}}
+			onDeleteDraftInquiry={async () => {
+				try {
+					await deleteDraftInquiry(inquiryId);
+					toast.success("下書きを削除しました");
+					router.navigate({ to: "/committee/support" });
+				} catch {
+					toast.error("下書きの削除に失敗しました");
+				}
+			}}
+			onUpdateDraftInquiry={async (title, body, fileIds) => {
+				try {
+					await updateDraftInquiry(inquiryId, { title, body, fileIds });
+					try {
+						const refreshed = await getCommitteeInquiry(inquiryId);
+						setCurrentInquiry(refreshed.inquiry);
+					} catch (err) {
+						console.error("failed to refresh inquiry after draft update", err);
+						await router.invalidate();
+					}
+					toast.success("下書きを更新しました");
+				} catch {
+					toast.error("下書きの更新に失敗しました");
 				}
 			}}
 		/>

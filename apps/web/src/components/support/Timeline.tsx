@@ -1,5 +1,6 @@
 import { Badge, Text } from "@radix-ui/themes";
 import type { InquiryAttachment } from "@sos26/shared";
+import { IconTrash } from "@tabler/icons-react";
 import Avatar from "boring-avatars";
 import { useEffect, useState } from "react";
 import { AttachmentPreviewButton } from "@/components/filePreview/AttachmentPreviewButton";
@@ -150,16 +151,21 @@ function DraftActionButtons({
 				</Button>
 			)}
 			{onPublishDraft && (
-				<Button onClick={onPublishDraft} disabled={isDraftActionPending}>
+				<Button
+					intent="primary"
+					onClick={onPublishDraft}
+					disabled={isDraftActionPending}
+				>
 					{isPublishingDraft ? "送信中..." : "送信"}
 				</Button>
 			)}
 			{onDeleteDraft && (
 				<Button
-					intent="danger"
+					intent="ghost"
 					onClick={onDeleteDraft}
 					disabled={isDraftActionPending}
 				>
+					<IconTrash size={14} />
 					{isDeletingDraft ? "削除中..." : "削除"}
 				</Button>
 			)}
