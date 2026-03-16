@@ -11,7 +11,6 @@ import {
 	fetchLatestPrfHistoryByCell,
 	formatColumnDef,
 	getAccessibleFormIds,
-	getAccessiblePrfFormIds,
 } from "./helpers";
 
 export const dataRoute = new Hono<AuthEnv>();
@@ -60,15 +59,8 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 	});
 
 	const accessibleFormIds = await getAccessibleFormIds(userId);
-	const accessiblePrfFormIds = await getAccessiblePrfFormIds(userId);
 	const visibleColumns = allColumns.filter(col =>
-		canViewColumn(
-			col as ColumnFull,
-			userId,
-			committeeMember,
-			accessibleFormIds,
-			accessiblePrfFormIds
-		)
+		canViewColumn(col as ColumnFull, userId, committeeMember, accessibleFormIds)
 	);
 
 	const formItemCols = visibleColumns.filter(c => c.type === "FORM_ITEM");

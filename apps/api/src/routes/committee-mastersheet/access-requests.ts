@@ -47,33 +47,6 @@ async function createFormItemAccessRequest(
 	});
 }
 
-/** PROJECT_REGISTRATION_FORM_ITEM カラムへのアクセス申請（PENDING）を作成 */
-async function createPrfItemAccessRequest(
-	columnId: string,
-	formId: string,
-	userId: string
-) {
-	const form = await prisma.projectRegistrationForm.findFirst({
-		where: { id: formId, deletedAt: null },
-		include: { collaborators: { where: { deletedAt: null } } },
-	});
-	if (!form) throw Errors.notFound("企画登録情報が見つかりません");
-
-	const hasAccess =
-		form.ownerId === userId ||
-		form.collaborators.some(c => c.userId === userId);
-	if (hasAccess) throw Errors.alreadyExists("既にアクセス権があります");
-
-	const pending = await prisma.mastersheetAccessRequest.findFirst({
-		where: { columnId, requesterId: userId, status: "PENDING" },
-	});
-	if (pending) throw Errors.alreadyExists("既に申請中です");
-
-	await prisma.mastersheetAccessRequest.create({
-		data: { columnId, requesterId: userId, status: "PENDING" },
-	});
-}
-
 /** 承認時にカラム種別に応じたアクセス権を付与する */
 async function grantAccessOnApproval(
 	tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
@@ -97,24 +70,6 @@ async function grantAccessOnApproval(
 			},
 			create: {
 				formId: request.column.formItem.formId,
-				userId: request.requesterId,
-				isWrite: true,
-			},
-			update: { deletedAt: null },
-		});
-	} else if (
-		request.column.type === "PROJECT_REGISTRATION_FORM_ITEM" &&
-		request.column.projectRegistrationFormItem
-	) {
-		await tx.projectRegistrationFormCollaborator.upsert({
-			where: {
-				formId_userId: {
-					formId: request.column.projectRegistrationFormItem.formId,
-					userId: request.requesterId,
-				},
-			},
-			create: {
-				formId: request.column.projectRegistrationFormItem.formId,
 				userId: request.requesterId,
 				isWrite: true,
 			},
@@ -172,17 +127,15 @@ accessRequestsRoute.post(
 
 		const col = await getColumnFull(columnId);
 
+		if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
+			throw Errors.invalidRequest(
+				"企画登録情報カラムは全実委人がアクセス可能なため申請不要です"
+			);
+		}
+
 		if (col.type === "FORM_ITEM") {
 			if (!col.formItem) throw Errors.notFound("申請項目が見つかりません");
 			await createFormItemAccessRequest(columnId, col.formItem.formId, userId);
-		} else if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
-			if (!col.projectRegistrationFormItem)
-				throw Errors.notFound("企画登録情報項目が見つかりません");
-			await createPrfItemAccessRequest(
-				columnId,
-				col.projectRegistrationFormItem.formId,
-				userId
-			);
 		} else {
 			await createCustomAccessRequest(col, columnId, userId);
 		}
@@ -237,10 +190,7 @@ accessRequestsRoute.patch(
 				const canDecide =
 					request.column.type === "FORM_ITEM"
 						? request.column.formItem?.form.ownerId === userId
-						: request.column.type === "PROJECT_REGISTRATION_FORM_ITEM"
-							? request.column.projectRegistrationFormItem?.form.ownerId ===
-								userId
-							: request.column.createdById === userId;
+						: request.column.createdById === userId;
 				if (!canDecide)
 					throw Errors.forbidden("この申請を操作する権限がありません");
 

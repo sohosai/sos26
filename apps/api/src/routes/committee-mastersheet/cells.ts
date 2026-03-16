@@ -9,12 +9,7 @@ import { Errors } from "../../lib/error";
 import { prisma } from "../../lib/prisma";
 import { requireAuth, requireCommitteeMember } from "../../middlewares/auth";
 import type { AuthEnv } from "../../types/auth-env";
-import {
-	canViewColumn,
-	getAccessibleFormIds,
-	getAccessiblePrfFormIds,
-	getColumnFull,
-} from "./helpers";
+import { canViewColumn, getAccessibleFormIds, getColumnFull } from "./helpers";
 
 // ─────────────────────────────────────────────────────────────
 // ヘルパー: 編集履歴のグループマップ構築
@@ -160,16 +155,7 @@ cellsRoute.put(
 			throw Errors.invalidRequest("CUSTOM カラムのみセル値を編集できます");
 
 		const accessibleFormIds = await getAccessibleFormIds(userId);
-		const accessiblePrfFormIds = await getAccessiblePrfFormIds(userId);
-		if (
-			!canViewColumn(
-				col,
-				userId,
-				committeeMember,
-				accessibleFormIds,
-				accessiblePrfFormIds
-			)
-		)
+		if (!canViewColumn(col, userId, committeeMember, accessibleFormIds))
 			throw Errors.forbidden("このカラムへのアクセス権がありません");
 
 		const project = await prisma.project.findFirst({
@@ -274,16 +260,7 @@ cellsRoute.put(
 			throw Errors.invalidRequest("FORM_ITEM カラムのみ編集できます");
 
 		const accessibleFormIds = await getAccessibleFormIds(userId);
-		const accessiblePrfFormIds = await getAccessiblePrfFormIds(userId);
-		if (
-			!canViewColumn(
-				col,
-				userId,
-				committeeMember,
-				accessibleFormIds,
-				accessiblePrfFormIds
-			)
-		)
+		if (!canViewColumn(col, userId, committeeMember, accessibleFormIds))
 			throw Errors.forbidden("このカラムへのアクセス権がありません");
 
 		const project = await prisma.project.findFirst({
@@ -401,7 +378,6 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 	}
 
 	const accessibleFormIds = await getAccessibleFormIds(userId);
-	const accessiblePrfFormIds = await getAccessiblePrfFormIds(userId);
 
 	// 対象カラムを特定
 	const targetColumnIds = [...new Set(cells.map(c => c.columnId))];
@@ -428,8 +404,7 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 			col as Parameters<typeof canViewColumn>[0],
 			userId,
 			committeeMember,
-			accessibleFormIds,
-			accessiblePrfFormIds
+			accessibleFormIds
 		)
 	);
 

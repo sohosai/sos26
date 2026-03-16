@@ -67,37 +67,19 @@ export const getAccessibleFormIds = async (userId: string) => {
 	return new Set(forms.map(f => f.id));
 };
 
-/** 自分がアクセス可能な企画登録情報 ID セットを返す */
-export const getAccessiblePrfFormIds = async (userId: string) => {
-	const forms = await prisma.projectRegistrationForm.findMany({
-		where: {
-			deletedAt: null,
-			OR: [
-				{ ownerId: userId },
-				{ collaborators: { some: { userId, deletedAt: null } } },
-			],
-		},
-		select: { id: true },
-	});
-	return new Set(forms.map(f => f.id));
-};
-
-/** カラムアクセス権チェック（accessibleFormIds / accessiblePrfFormIds はバッチ取得済みのものを渡す） */
+/** カラムアクセス権チェック（accessibleFormIds はバッチ取得済みのものを渡す） */
 export function canViewColumn(
 	col: ColumnFull,
 	userId: string,
 	committeeMember: CommitteeMember,
-	accessibleFormIds: Set<string>,
-	accessiblePrfFormIds: Set<string>
+	accessibleFormIds: Set<string>
 ): boolean {
 	if (col.type === "FORM_ITEM") {
 		return col.formItem !== null && accessibleFormIds.has(col.formItem.formId);
 	}
 	if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
-		return (
-			col.projectRegistrationFormItem !== null &&
-			accessiblePrfFormIds.has(col.projectRegistrationFormItem.formId)
-		);
+		// 企画登録情報は実委人全員が閲覧可能
+		return col.projectRegistrationFormItem !== null;
 	}
 	// CUSTOM
 	if (col.createdById === userId) return true;

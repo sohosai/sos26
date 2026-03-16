@@ -121,7 +121,7 @@ function ColumnMetaBadges({ col }: { col: ApiColumn }) {
 				</Text>
 			) : col.type === "PROJECT_REGISTRATION_FORM_ITEM" ? (
 				<Text size="1" color="gray">
-					企画登録情報のアクセス権に準ずる
+					全実委人がアクセス可能
 				</Text>
 			) : (
 				<div className={styles.viewerBadges}>

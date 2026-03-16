@@ -15,7 +15,6 @@ import {
 	canViewColumn,
 	formatColumnDef,
 	getAccessibleFormIds,
-	getAccessiblePrfFormIds,
 	requireColumnOwner,
 	syncColumnOptions,
 	syncColumnViewers,
@@ -201,20 +200,10 @@ async function createPrfItemColumn(
 ) {
 	const prfItem = await prisma.projectRegistrationFormItem.findUnique({
 		where: { id: data.projectRegistrationFormItemId },
-		include: {
-			form: {
-				include: { collaborators: { where: { deletedAt: null } } },
-			},
-		},
+		include: { form: { select: { id: true, deletedAt: true } } },
 	});
-	if (!prfItem) throw Errors.notFound("企画登録情報項目が見つかりません");
-
-	const form = prfItem.form;
-	const hasAccess =
-		form.ownerId === userId ||
-		form.collaborators.some(col => col.userId === userId);
-	if (!hasAccess)
-		throw Errors.forbidden("この企画登録情報へのアクセス権がありません");
+	if (!prfItem || prfItem.form.deletedAt)
+		throw Errors.notFound("企画登録情報項目が見つかりません");
 
 	const existing = await prisma.mastersheetColumn.findUnique({
 		where: {
@@ -496,7 +485,6 @@ columnsRoute.get(
 		});
 
 		const accessibleFormIds = await getAccessibleFormIds(userId);
-		const accessiblePrfFormIds = await getAccessiblePrfFormIds(userId);
 
 		return c.json({
 			columns: columns.map(col => {
@@ -504,8 +492,7 @@ columnsRoute.get(
 					col as ColumnFull,
 					userId,
 					committeeMember,
-					accessibleFormIds,
-					accessiblePrfFormIds
+					accessibleFormIds
 				);
 				const pendingRequest = col.accessRequests.length > 0;
 
