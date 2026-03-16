@@ -507,7 +507,7 @@ committeeFormRoute.post(
 		const form = await requireWriteAccess(formId, userId);
 
 		const body = await c.req.json().catch(() => ({}));
-		const { projectIds, requestedToId, ...data } =
+		const { deliveryTarget, requestedToId, ...data } =
 			requestFormAuthorizationRequestSchema.parse(body);
 
 		// 承認依頼先ユーザーの存在確認
@@ -541,12 +541,14 @@ committeeFormRoute.post(
 			throw Errors.invalidRequest("配信希望日時と締め切り日時の順番が不正です");
 		}
 
-		// 配信先企画の存在確認
-		const projects = await prisma.project.findMany({
-			where: { id: { in: projectIds }, deletedAt: null },
-		});
-		if (projects.length !== projectIds.length) {
-			throw Errors.notFound("指定された企画の一部が見つかりません");
+		// 個別指定モードの場合、配信先企画の存在確認
+		if (deliveryTarget.mode === "INDIVIDUAL") {
+			const projects = await prisma.project.findMany({
+				where: { id: { in: deliveryTarget.projectIds }, deletedAt: null },
+			});
+			if (projects.length !== deliveryTarget.projectIds.length) {
+				throw Errors.notFound("指定された企画の一部が見つかりません");
+			}
 		}
 
 		const authorization = await prisma.$transaction(
@@ -562,15 +564,33 @@ committeeFormRoute.post(
 					throw Errors.alreadyExists("既に承認待ちの申請があります");
 				}
 
+				if (deliveryTarget.mode === "INDIVIDUAL") {
+					return tx.formAuthorization.create({
+						data: {
+							formId,
+							requestedById: userId,
+							requestedToId,
+							...data,
+							deliveryMode: "INDIVIDUAL",
+							deliveries: {
+								create: deliveryTarget.projectIds.map(projectId => ({
+									projectId,
+								})),
+							},
+						},
+					});
+				}
+
+				// カテゴリ指定モード: フィルタ条件を保存するのみ
 				return tx.formAuthorization.create({
 					data: {
 						formId,
 						requestedById: userId,
 						requestedToId,
 						...data,
-						deliveries: {
-							create: projectIds.map(projectId => ({ projectId })),
-						},
+						deliveryMode: "CATEGORY",
+						filterTypes: deliveryTarget.projectTypes,
+						filterLocations: deliveryTarget.projectLocations,
 					},
 				});
 			},
