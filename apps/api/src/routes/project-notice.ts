@@ -29,17 +29,15 @@ async function syncCategoryNoticeDeliveries(
 		select: { id: true, filterTypes: true, filterLocations: true },
 	});
 
-	// フィルタ条件に合致する Authorization を絞り込み
+	// フィルタ条件に合致する Authorization を絞り込み（AND条件）
 	const matchingAuthIds = categoryAuths
 		.filter(auth => {
-			const isAllTarget =
-				auth.filterTypes.length === 0 && auth.filterLocations.length === 0;
-			const matchesType =
-				auth.filterTypes.length > 0 && auth.filterTypes.includes(projectType);
-			const matchesLocation =
-				auth.filterLocations.length > 0 &&
+			const typeOk =
+				auth.filterTypes.length === 0 || auth.filterTypes.includes(projectType);
+			const locationOk =
+				auth.filterLocations.length === 0 ||
 				auth.filterLocations.includes(projectLocation);
-			return isAllTarget || matchesType || matchesLocation;
+			return typeOk && locationOk;
 		})
 		.map(auth => auth.id);
 
