@@ -332,6 +332,7 @@ projectInquiryRoute.get(
 			where: {
 				projectId: project.id,
 				deletedAt: null,
+				isDraft: false,
 				assignees: {
 					some: { userId: user.id, side: "PROJECT", deletedAt: null },
 				},
@@ -359,6 +360,7 @@ projectInquiryRoute.get(
 			creatorRole: inq.creatorRole,
 			createdAt: inq.createdAt,
 			updatedAt: inq.updatedAt,
+			isDraft: inq.isDraft,
 			createdBy: inq.createdBy,
 			project: inq.project,
 			projectAssignees: inq.assignees
@@ -394,7 +396,12 @@ projectInquiryRoute.get(
 		await requireProjectAssignee(inquiryId, user.id);
 
 		const inquiry = await prisma.inquiry.findFirst({
-			where: { id: inquiryId, projectId: project.id, deletedAt: null },
+			where: {
+				id: inquiryId,
+				projectId: project.id,
+				deletedAt: null,
+				isDraft: false,
+			},
 			include: {
 				createdBy: { select: userSelect },
 				project: { select: { id: true, name: true } },
@@ -511,6 +518,11 @@ projectInquiryRoute.post(
 		if (!inquiry) {
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
+		if (inquiry.isDraft) {
+			throw Errors.invalidRequest(
+				"下書き状態のお問い合わせにはコメントできません"
+			);
+		}
 		if (inquiry.status === "RESOLVED") {
 			throw Errors.invalidRequest(
 				"解決済みのお問い合わせにはコメントできません"
@@ -599,7 +611,6 @@ projectInquiryRoute.post(
 					body: comment.body,
 					senderRole: comment.senderRole,
 					isDraft: comment.isDraft,
-					draftCreatedById: comment.draftCreatedById,
 					createdAt: comment.createdAt,
 					sentAt: comment.sentAt,
 					createdBy: comment.createdBy,

@@ -9,19 +9,25 @@ import {
 	type CreateCommitteeInquiryResponse,
 	createCommitteeInquiryEndpoint,
 	type DeleteInquiryCommentResponse,
+	type DeleteInquiryResponse,
 	deleteCommitteeInquiryCommentEndpoint,
+	deleteInquiryEndpoint,
 	type GetCommitteeInquiryResponse,
 	getCommitteeInquiryEndpoint,
 	type ListCommitteeInquiriesResponse,
 	listCommitteeInquiriesEndpoint,
 	type PublishDraftCommentResponse,
+	type PublishDraftInquiryResponse,
 	publishDraftCommentEndpoint,
+	publishDraftInquiryEndpoint,
 	type RemoveInquiryAssigneeResponse,
 	type ReopenInquiryResponse,
 	removeCommitteeInquiryAssigneeEndpoint,
 	reopenCommitteeInquiryEndpoint,
 	type UpdateDraftCommentRequest,
 	type UpdateDraftCommentResponse,
+	type UpdateDraftInquiryRequest,
+	type UpdateDraftInquiryResponse,
 	type UpdateInquiryStatusRequest,
 	type UpdateInquiryStatusResponse,
 	type UpdateInquiryViewersRequest,
@@ -29,6 +35,7 @@ import {
 	updateCommitteeDraftCommentEndpoint,
 	updateCommitteeInquiryStatusEndpoint,
 	updateCommitteeInquiryViewersEndpoint,
+	updateDraftInquiryEndpoint,
 } from "@sos26/shared";
 import { callBodyApi, callGetApi, callNoBodyApi } from "./core";
 
@@ -176,5 +183,42 @@ export async function deleteCommitteeInquiryComment(
 ): Promise<DeleteInquiryCommentResponse> {
 	return callNoBodyApi(deleteCommitteeInquiryCommentEndpoint, {
 		pathParams: { inquiryId, commentId },
+	});
+}
+
+/**
+ * PATCH /committee/inquiries/:inquiryId
+ * 下書きお問い合わせを更新
+ */
+export async function updateDraftInquiry(
+	inquiryId: string,
+	body: UpdateDraftInquiryRequest
+): Promise<UpdateDraftInquiryResponse> {
+	return callBodyApi(updateDraftInquiryEndpoint, body, {
+		pathParams: { inquiryId },
+	});
+}
+
+/**
+ * POST /committee/inquiries/:inquiryId/publish
+ * 下書きお問い合わせを正式送信
+ */
+export async function publishDraftInquiry(
+	inquiryId: string
+): Promise<PublishDraftInquiryResponse> {
+	return callNoBodyApi(publishDraftInquiryEndpoint, {
+		pathParams: { inquiryId },
+	});
+}
+
+/**
+ * DELETE /committee/inquiries/:inquiryId
+ * 下書きお問い合わせを削除
+ */
+export async function deleteDraftInquiry(
+	inquiryId: string
+): Promise<DeleteInquiryResponse> {
+	return callNoBodyApi(deleteInquiryEndpoint, {
+		pathParams: { inquiryId },
 	});
 }
