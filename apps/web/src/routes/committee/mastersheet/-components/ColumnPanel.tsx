@@ -652,10 +652,9 @@ function Section({
 // 企画登録情報フォームグループ
 // ─────────────────────────────────────────────────────────────
 
-type PrfFormData = {
+type PrfFormSummary = {
 	id: string;
 	title: string;
-	items: ProjectRegistrationFormItem[];
 };
 
 function PrfFormGroup({
@@ -666,7 +665,7 @@ function PrfFormGroup({
 	onAddAndShow,
 	adding,
 }: {
-	form: PrfFormData;
+	form: PrfFormSummary;
 	addedColumns: Map<string, ApiColumn>;
 	columnVisibility: VisibilityState;
 	onToggleColumn: (columnId: string, visible: boolean) => void;
@@ -674,6 +673,22 @@ function PrfFormGroup({
 	adding: Set<string>;
 }) {
 	const [expanded, setExpanded] = useState(false);
+	const [items, setItems] = useState<ProjectRegistrationFormItem[] | null>(
+		null
+	);
+	const [loading, setLoading] = useState(false);
+
+	function handleToggle() {
+		const next = !expanded;
+		setExpanded(next);
+		if (next && items === null && !loading) {
+			setLoading(true);
+			getProjectRegistrationFormDetail(form.id)
+				.then(res => setItems(res.form.items))
+				.catch(() => toast.error("企画登録情報の詳細取得に失敗しました"))
+				.finally(() => setLoading(false));
+		}
+	}
 
 	return (
 		<div className={styles.columnCard}>
@@ -683,7 +698,7 @@ function PrfFormGroup({
 						<button
 							type="button"
 							className={styles.prfFormHeader}
-							onClick={() => setExpanded(p => !p)}
+							onClick={handleToggle}
 						>
 							<IconChevronDown
 								size={14}
@@ -696,48 +711,53 @@ function PrfFormGroup({
 							<Text size="2" weight="medium" truncate>
 								{form.title}
 							</Text>
-							<Badge size="1" color="gray">
-								{form.items.length}項目
-							</Badge>
 						</button>
 					</div>
 				</div>
 			</div>
 			{expanded && (
 				<div className={styles.prfItemList}>
-					{form.items.map(item => {
-						const col = addedColumns.get(item.id);
-						const isVisible = col ? columnVisibility[col.id] !== false : false;
-						return (
-							<div key={item.id} className={styles.columnCard}>
-								<div className={styles.cardTop}>
-									<div className={styles.cardContent}>
-										<div className={styles.cardTitleRow}>
-											<div className={styles.cardName}>
-												<Text size="2" weight="medium" truncate>
-													{item.label}
-												</Text>
+					{loading ? (
+						<Text size="2" color="gray">
+							読み込み中...
+						</Text>
+					) : (
+						items?.map(item => {
+							const col = addedColumns.get(item.id);
+							const isVisible = col
+								? columnVisibility[col.id] !== false
+								: false;
+							return (
+								<div key={item.id} className={styles.columnCard}>
+									<div className={styles.cardTop}>
+										<div className={styles.cardContent}>
+											<div className={styles.cardTitleRow}>
+												<div className={styles.cardName}>
+													<Text size="2" weight="medium" truncate>
+														{item.label}
+													</Text>
+												</div>
+												<Button
+													size="1"
+													intent={isVisible ? "secondary" : "primary"}
+													loading={adding.has(item.id)}
+													onClick={() => {
+														if (col) {
+															onToggleColumn(col.id, !isVisible);
+														} else {
+															onAddAndShow(item);
+														}
+													}}
+												>
+													{isVisible ? "非表示にする" : "表示する"}
+												</Button>
 											</div>
-											<Button
-												size="1"
-												intent={isVisible ? "secondary" : "primary"}
-												loading={adding.has(item.id)}
-												onClick={() => {
-													if (col) {
-														onToggleColumn(col.id, !isVisible);
-													} else {
-														onAddAndShow(item);
-													}
-												}}
-											>
-												{isVisible ? "非表示にする" : "表示する"}
-											</Button>
 										</div>
 									</div>
 								</div>
-							</div>
-						);
-					})}
+							);
+						})
+					)}
 				</div>
 			)}
 		</div>
@@ -773,7 +793,7 @@ export function ColumnPanel({
 	const [requesting, setRequesting] = useState<Set<string>>(new Set());
 	const [addCustomOpen, setAddCustomOpen] = useState(false);
 	const [addFormItemOpen, setAddFormItemOpen] = useState(false);
-	const [prfForms, setPrfForms] = useState<PrfFormData[]>([]);
+	const [prfForms, setPrfForms] = useState<PrfFormSummary[]>([]);
 	const [prfAdding, setPrfAdding] = useState<Set<string>>(new Set());
 	const [sectionsOpen, setSectionsOpen] = useState({
 		fixed: true,
@@ -797,21 +817,11 @@ export function ColumnPanel({
 			.finally(() => setDiscoverLoading(false));
 
 		listProjectRegistrationForms()
-			.then(async res => {
+			.then(res => {
 				const activeForms = res.forms.filter(f => f.isActive);
-				const forms = await Promise.all(
-					activeForms.map(async f => {
-						const detail = await getProjectRegistrationFormDetail(f.id);
-						return {
-							id: f.id,
-							title: f.title,
-							items: detail.form.items,
-						};
-					})
-				);
-				setPrfForms(forms);
+				setPrfForms(activeForms.map(f => ({ id: f.id, title: f.title })));
 			})
-			.catch(() => {});
+			.catch(() => toast.error("企画登録情報一覧の取得に失敗しました"));
 	}, [open]);
 
 	useEffect(() => {
@@ -888,11 +898,7 @@ export function ColumnPanel({
 		? nonPrfColumns.filter(c => c.name.toLowerCase().includes(query))
 		: nonPrfColumns;
 	const filteredPrfForms = query
-		? prfForms.filter(
-				f =>
-					f.title.toLowerCase().includes(query) ||
-					f.items.some(i => i.label.toLowerCase().includes(query))
-			)
+		? prfForms.filter(f => f.title.toLowerCase().includes(query))
 		: prfForms;
 	const requestable = discoverColumns.filter(
 		c => !c.hasAccess && (!query || c.name.toLowerCase().includes(query))
