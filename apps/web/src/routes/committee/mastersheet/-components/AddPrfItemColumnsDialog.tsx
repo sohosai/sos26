@@ -68,7 +68,7 @@ export function AddPrfItemColumnsDialog({
 				// 全申請を表示し、カラム作成時にバックエンドでアクセス権をチェックする
 				setForms(res.forms);
 			})
-			.catch(() => toast.error("企画登録申請一覧の取得に失敗しました"))
+			.catch(() => toast.error("企画登録情報一覧の取得に失敗しました"))
 			.finally(() => setFormsLoading(false));
 	}, [open]);
 
@@ -82,7 +82,7 @@ export function AddPrfItemColumnsDialog({
 		setSelectedItemIds(new Set());
 		getProjectRegistrationFormDetail(selectedFormId)
 			.then(res => setItems(res.form.items))
-			.catch(() => toast.error("企画登録申請の詳細取得に失敗しました"))
+			.catch(() => toast.error("企画登録情報の詳細取得に失敗しました"))
 			.finally(() => setItemsLoading(false));
 	}, [selectedFormId]);
 
@@ -174,13 +174,13 @@ export function AddPrfItemColumnsDialog({
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
 			<Dialog.Content maxWidth="800px">
-				<Dialog.Title>企画登録申請から情報を作成</Dialog.Title>
+				<Dialog.Title>企画登録情報から情報を作成</Dialog.Title>
 
 				<div className={styles.body}>
 					{/* 左: 申請一覧 */}
 					<div className={styles.left}>
 						<Text size="2" weight="medium" className={styles.panelTitle}>
-							企画登録申請一覧
+							企画登録情報一覧
 						</Text>
 						<div className={styles.formList}>
 							{formsLoading ? (

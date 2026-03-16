@@ -57,7 +57,7 @@ async function createPrfItemAccessRequest(
 		where: { id: formId, deletedAt: null },
 		include: { collaborators: { where: { deletedAt: null } } },
 	});
-	if (!form) throw Errors.notFound("企画登録申請が見つかりません");
+	if (!form) throw Errors.notFound("企画登録情報が見つかりません");
 
 	const hasAccess =
 		form.ownerId === userId ||
@@ -177,7 +177,7 @@ accessRequestsRoute.post(
 			await createFormItemAccessRequest(columnId, col.formItem.formId, userId);
 		} else if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
 			if (!col.projectRegistrationFormItem)
-				throw Errors.notFound("企画登録申請項目が見つかりません");
+				throw Errors.notFound("企画登録情報項目が見つかりません");
 			await createPrfItemAccessRequest(
 				columnId,
 				col.projectRegistrationFormItem.formId,

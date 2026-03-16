@@ -256,7 +256,7 @@ cellsRoute.put(
 
 // ─────────────────────────────────────────────────────────────
 // PUT /committee/mastersheet/edits/:columnId/:projectId
-// 申請由来カラム / 企画登録申請由来カラムの値を編集
+// 申請由来カラム / 企画登録情報由来カラムの値を編集
 // ─────────────────────────────────────────────────────────────
 
 cellsRoute.put(
@@ -391,12 +391,12 @@ cellsRoute.put(
 		// PROJECT_REGISTRATION_FORM_ITEM
 		const prfItemId = col.projectRegistrationFormItemId;
 		if (!prfItemId)
-			throw Errors.invalidRequest("企画登録申請項目が紐づいていません");
+			throw Errors.invalidRequest("企画登録情報項目が紐づいていません");
 
 		// NOT_APPLICABLE（回答なし）は編集不可
 		const prfItem = col.projectRegistrationFormItem;
 		if (!prfItem)
-			throw Errors.invalidRequest("企画登録申請項目が紐づいていません");
+			throw Errors.invalidRequest("企画登録情報項目が紐づいていません");
 
 		const prfResponse = await prisma.projectRegistrationFormResponse.findUnique(
 			{

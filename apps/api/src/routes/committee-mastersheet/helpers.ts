@@ -67,7 +67,7 @@ export const getAccessibleFormIds = async (userId: string) => {
 	return new Set(forms.map(f => f.id));
 };
 
-/** 自分がアクセス可能な企画登録申請 ID セットを返す */
+/** 自分がアクセス可能な企画登録情報 ID セットを返す */
 export const getAccessiblePrfFormIds = async (userId: string) => {
 	const forms = await prisma.projectRegistrationForm.findMany({
 		where: {
@@ -274,7 +274,7 @@ export function buildFormItemCell(
 }
 
 // ─────────────────────────────────────────────────────────────
-// 企画登録申請設問のデータ組み立てヘルパー
+// 企画登録情報設問のデータ組み立てヘルパー
 // ─────────────────────────────────────────────────────────────
 
 export type PrfResponseWithAnswers =

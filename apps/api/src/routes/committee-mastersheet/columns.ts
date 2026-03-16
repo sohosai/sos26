@@ -207,14 +207,14 @@ async function createPrfItemColumn(
 			},
 		},
 	});
-	if (!prfItem) throw Errors.notFound("企画登録申請項目が見つかりません");
+	if (!prfItem) throw Errors.notFound("企画登録情報項目が見つかりません");
 
 	const form = prfItem.form;
 	const hasAccess =
 		form.ownerId === userId ||
 		form.collaborators.some(col => col.userId === userId);
 	if (!hasAccess)
-		throw Errors.forbidden("この企画登録申請へのアクセス権がありません");
+		throw Errors.forbidden("この企画登録情報へのアクセス権がありません");
 
 	const existing = await prisma.mastersheetColumn.findUnique({
 		where: {
@@ -222,7 +222,7 @@ async function createPrfItemColumn(
 		},
 	});
 	if (existing)
-		throw Errors.alreadyExists("この企画登録申請項目のカラムは既に存在します");
+		throw Errors.alreadyExists("この企画登録情報項目のカラムは既に存在します");
 
 	return prisma.mastersheetColumn.create({
 		data: {

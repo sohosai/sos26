@@ -34,7 +34,7 @@ export const mastersheetCellStatusSchema = z.enum([
 	"NOT_ANSWERED", // 未回答
 	"SUBMITTED", // 提出済み
 	"COMMITTEE_EDITED", // 実委編集済み
-	"NOT_APPLICABLE", // 企画登録申請: 対象外または後から追加
+	"NOT_APPLICABLE", // 企画登録情報: 対象外または後から追加
 ]);
 export type MastersheetCellStatus = z.infer<typeof mastersheetCellStatusSchema>;
 

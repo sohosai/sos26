@@ -84,7 +84,7 @@ function ColHeader({ col }: { col: ApiColumn }) {
 		);
 	} else if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
 		icon = (
-			<Tooltip content="企画登録申請由来カラム">
+			<Tooltip content="企画登録情報由来カラム">
 				<IconClipboardText
 					size={12}
 					style={{ color: "var(--gray-8)", flexShrink: 0 }}
