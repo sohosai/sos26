@@ -431,7 +431,7 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 	);
 	const formItemIds = [...formItemToColumn.keys()];
 
-	// PRF_ITEM カラムの履歴
+	// PROJECT_REGISTRATION_FORM_ITEM カラムの履歴
 	const prfItemToColumn = new Map(
 		accessibleColumns
 			.filter(

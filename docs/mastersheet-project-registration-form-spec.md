@@ -17,7 +17,7 @@
 ### 1.2 ゴール
 
 - 新しいカラム種別 `PROJECT_REGISTRATION_FORM_ITEM` を追加
-- 企画登録フォームの owner / collaborator がカラムを作成可能
+- 全実委人がカラムを作成・閲覧可能
 - 回答値をマスターシート上で閲覧可能（読み取り専用）
 - 既存の `FORM_ITEM` / `CUSTOM` と統一的に管理
 
@@ -38,8 +38,8 @@ MastersheetColumnType: FORM_ITEM | CUSTOM | PROJECT_REGISTRATION_FORM_ITEM
 | 項目 | 内容 |
 |------|------|
 | データ型 | 設問の型に準じる（TEXT, TEXTAREA, SELECT, CHECKBOX, NUMBER, FILE） |
-| 作成者 | 企画登録フォームの owner または collaborator |
-| 公開範囲 | フォームの owner / collaborator のみ（FORM_ITEM と同様） |
+| 作成者 | 全実委人 |
+| 公開範囲 | 全実委人（企画登録情報の閲覧は元々全員可のため制限なし） |
 | セル値の保存先 | `ProjectRegistrationFormItemEditHistory`（最新）→ `ProjectRegistrationFormAnswer`（フォールバック） |
 | 1設問1カラム | 同じ `projectRegistrationFormItemId` で複数カラムは作成不可（unique 制約） |
 
@@ -153,15 +153,7 @@ MastersheetCellStatus: NOT_DELIVERED | NOT_ANSWERED | SUBMITTED | COMMITTEE_EDIT
 
 ## 5. カラムの可視性
 
-`FORM_ITEM` と同じ方式:
-
-| 条件 | アクセス可否 |
-|------|----------|
-| 企画登録フォームの owner | アクセス可 |
-| 企画登録フォームの collaborator | アクセス可 |
-| 上記以外 | アクセス不可 |
-
-- アクセス申請の承認で `ProjectRegistrationFormCollaborator(isWrite=true)` が作成され、アクセス可能になる
+企画登録情報の閲覧は元々全実委人に公開されているため、`PROJECT_REGISTRATION_FORM_ITEM` カラムは**全実委人がアクセス可能**。アクセス申請は不要。
 
 ---
 
@@ -180,7 +172,7 @@ MastersheetCellStatus: NOT_DELIVERED | NOT_ANSWERED | SUBMITTED | COMMITTEE_EDIT
 
 ### 7.1 作成条件
 
-- 実委人が企画登録フォームの owner または collaborator であること
+- 実委人であること（全実委人が作成可能）
 - 対象の `ProjectRegistrationFormItem` に対してカラムが未作成であること
 
 ### 7.2 API
@@ -210,15 +202,7 @@ projectRegistrationFormItemType: formItemTypeSchema.nullable(),
 
 ## 8. アクセス申請フロー
 
-```
-申請者 ──→ MastersheetAccessRequest(PENDING) ──→ 企画登録フォーム owner が承認
-                                                       ↓
-                                              ProjectRegistrationFormCollaborator(isWrite=true) 作成
-                                                       ↓
-                                           フォーム回答 + 全関連カラムにアクセス可能に
-```
-
-既存の `FORM_ITEM` のアクセス申請フローと同様。承認時に作成する collaborator のテーブルが異なるのみ。
+`PROJECT_REGISTRATION_FORM_ITEM` カラムは全実委人がアクセス可能なため、アクセス申請フローは**不要**。アクセス申請エンドポイントに `PROJECT_REGISTRATION_FORM_ITEM` カラムが指定された場合はエラーを返す。
 
 ---
 
@@ -231,7 +215,6 @@ projectRegistrationFormItemType: formItemTypeSchema.nullable(),
 | 操作 | trigger | actor |
 |------|---------|-------|
 | 企画登録時にフォーム回答提出 | `PROJECT_SUBMIT` | 企画メンバー |
-| 実委人が値を編集 | `COMMITTEE_EDIT` | 実委人 |
 
 ### 9.2 企画作成時の EditHistory 追加
 
@@ -284,13 +267,13 @@ const mastersheetCellSchema = z.object({
 
 | 操作 | CUSTOM | FORM_ITEM | PROJECT_REGISTRATION_FORM_ITEM |
 |------|--------|-----------|-------------------------------|
-| カラム作成 | 全実委人 | フォーム owner / collaborator | 企画登録フォーム owner / collaborator |
+| カラム作成 | 全実委人 | フォーム owner / collaborator | **全実委人** |
 | カラム編集（名前等） | 作成者のみ | 作成者のみ | 作成者のみ |
 | カラム削除 | 作成者のみ | 作成者のみ | 作成者のみ |
-| カラムへのアクセス | 作成者 + viewer 設定に合致 | フォーム owner / collaborator | 企画登録フォーム owner / collaborator |
+| カラムへのアクセス | 作成者 + viewer 設定に合致 | フォーム owner / collaborator | **全実委人** |
 | セル編集 | アクセス可能な全員 | アクセス可能な全員 | **不可（読み取り専用）** |
-| アクセス申請の承認 | カラム作成者 | フォーム owner | 企画登録フォーム owner |
-| 変更履歴の閲覧 | — | アクセス可能な全員 | アクセス可能な全員 |
+| アクセス申請の承認 | カラム作成者 | フォーム owner | **不要** |
+| 変更履歴の閲覧 | — | アクセス可能な全員 | 全実委人 |
 
 ---
 
@@ -330,7 +313,7 @@ const mastersheetCellSchema = z.object({
 - `POST /committee/mastersheet/columns` で `PROJECT_REGISTRATION_FORM_ITEM` の作成を処理
 - `POST /committee/mastersheet/history` で企画登録フォーム設問の履歴を返す
 - `PUT /committee/mastersheet/edits/:columnId/:projectId` は FORM_ITEM のみ対象（企画登録情報由来カラムは編集不可）
-- アクセス申請の承認時に `ProjectRegistrationFormCollaborator` を作成
+- アクセス申請は `PROJECT_REGISTRATION_FORM_ITEM` カラムに対しては不要（全実委人がアクセス可能）
 - `POST /project/create` で `ProjectRegistrationFormItemEditHistory` に `PROJECT_SUBMIT` を追加
 
 ### 14.4 フロントエンド（apps/web）
