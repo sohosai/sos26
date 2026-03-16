@@ -132,7 +132,7 @@ function ColHeader({ col }: { col: ApiColumn }) {
 	return (
 		<span className={styles.colHeader}>
 			{col.type === "FORM_ITEM" ? (
-				<Tooltip content="フォーム由来カラム">
+				<Tooltip content="申請由来カラム">
 					<IconFileText
 						size={12}
 						style={{ color: "var(--gray-8)", flexShrink: 0 }}

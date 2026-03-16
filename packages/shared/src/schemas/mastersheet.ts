@@ -28,13 +28,13 @@ export type MastersheetColumnVisibility = z.infer<
 	typeof mastersheetColumnVisibilitySchema
 >;
 
-/** フォーム由来カラムのセル状態 */
+/** 申請由来カラムのセル状態 */
 export const mastersheetCellStatusSchema = z.enum([
 	"NOT_DELIVERED", // 未配信
 	"NOT_ANSWERED", // 未回答
 	"SUBMITTED", // 提出済み
 	"COMMITTEE_EDITED", // 実委編集済み
-	"NOT_APPLICABLE", // 企画登録フォーム: 対象外または後から追加
+	"NOT_APPLICABLE", // 企画登録申請: 対象外または後から追加
 ]);
 export type MastersheetCellStatus = z.infer<typeof mastersheetCellStatusSchema>;
 
@@ -119,7 +119,7 @@ const columnViewerSchema = z.object({
 	userName: z.string().nullable(),
 });
 
-/** セル値の共通フィールド（フォーム由来・自由追加・オーバーライド共通） */
+/** セル値の共通フィールド（申請由来・自由追加・オーバーライド共通） */
 const cellValueDataSchema = z.object({
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),

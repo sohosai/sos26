@@ -162,20 +162,19 @@ async function createFormItemColumn(
 			},
 		},
 	});
-	if (!formItem) throw Errors.notFound("フォーム項目が見つかりません");
+	if (!formItem) throw Errors.notFound("申請項目が見つかりません");
 
 	const form = formItem.form;
 	const hasAccess =
 		form.ownerId === userId ||
 		form.collaborators.some(col => col.userId === userId);
-	if (!hasAccess)
-		throw Errors.forbidden("このフォームへのアクセス権がありません");
+	if (!hasAccess) throw Errors.forbidden("この申請へのアクセス権がありません");
 
 	const existing = await prisma.mastersheetColumn.findUnique({
 		where: { formItemId: data.formItemId },
 	});
 	if (existing)
-		throw Errors.alreadyExists("このフォーム項目のカラムは既に存在します");
+		throw Errors.alreadyExists("この申請項目のカラムは既に存在します");
 
 	return prisma.mastersheetColumn.create({
 		data: {
@@ -208,14 +207,14 @@ async function createPrfItemColumn(
 			},
 		},
 	});
-	if (!prfItem) throw Errors.notFound("企画登録フォーム項目が見つかりません");
+	if (!prfItem) throw Errors.notFound("企画登録申請項目が見つかりません");
 
 	const form = prfItem.form;
 	const hasAccess =
 		form.ownerId === userId ||
 		form.collaborators.some(col => col.userId === userId);
 	if (!hasAccess)
-		throw Errors.forbidden("この企画登録フォームへのアクセス権がありません");
+		throw Errors.forbidden("この企画登録申請へのアクセス権がありません");
 
 	const existing = await prisma.mastersheetColumn.findUnique({
 		where: {
@@ -223,9 +222,7 @@ async function createPrfItemColumn(
 		},
 	});
 	if (existing)
-		throw Errors.alreadyExists(
-			"この企画登録フォーム項目のカラムは既に存在します"
-		);
+		throw Errors.alreadyExists("この企画登録申請項目のカラムは既に存在します");
 
 	return prisma.mastersheetColumn.create({
 		data: {

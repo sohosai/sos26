@@ -69,7 +69,7 @@ export function AddFormItemColumnsDialog({
 				);
 				setForms(accessible);
 			})
-			.catch(() => toast.error("フォーム一覧の取得に失敗しました"))
+			.catch(() => toast.error("申請一覧の取得に失敗しました"))
 			.finally(() => setFormsLoading(false));
 	}, [open, userId]);
 
@@ -83,7 +83,7 @@ export function AddFormItemColumnsDialog({
 		setSelectedItemIds(new Set());
 		getFormDetail(selectedFormId)
 			.then(res => setItems(res.form.items))
-			.catch(() => toast.error("フォームの詳細取得に失敗しました"))
+			.catch(() => toast.error("申請の詳細取得に失敗しました"))
 			.finally(() => setItemsLoading(false));
 	}, [selectedFormId]);
 
@@ -173,13 +173,13 @@ export function AddFormItemColumnsDialog({
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
 			<Dialog.Content maxWidth="800px">
-				<Dialog.Title>フォームから情報を作成</Dialog.Title>
+				<Dialog.Title>申請から情報を作成</Dialog.Title>
 
 				<div className={styles.body}>
-					{/* 左: フォーム一覧 */}
+					{/* 左: 申請一覧 */}
 					<div className={styles.left}>
 						<Text size="2" weight="medium" className={styles.panelTitle}>
-							フォーム一覧
+							申請一覧
 						</Text>
 						<div className={styles.formList}>
 							{formsLoading ? (
@@ -188,7 +188,7 @@ export function AddFormItemColumnsDialog({
 								</Text>
 							) : forms.length === 0 ? (
 								<Text size="2" color="gray">
-									フォームがありません
+									申請がありません
 								</Text>
 							) : (
 								forms.map(form => (
@@ -224,7 +224,7 @@ export function AddFormItemColumnsDialog({
 						<div className={styles.itemList}>
 							{!selectedFormId ? (
 								<Text size="2" color="gray">
-									左でフォームを選択してください
+									左で申請を選択してください
 								</Text>
 							) : itemsLoading ? (
 								<Text size="2" color="gray">

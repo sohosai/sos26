@@ -65,10 +65,10 @@ export function AddPrfItemColumnsDialog({
 		listProjectRegistrationForms()
 			.then(res => {
 				// list API には collaborators が含まれないため、
-				// 全フォームを表示し、カラム作成時にバックエンドでアクセス権をチェックする
+				// 全申請を表示し、カラム作成時にバックエンドでアクセス権をチェックする
 				setForms(res.forms);
 			})
-			.catch(() => toast.error("企画登録フォーム一覧の取得に失敗しました"))
+			.catch(() => toast.error("企画登録申請一覧の取得に失敗しました"))
 			.finally(() => setFormsLoading(false));
 	}, [open]);
 
@@ -82,7 +82,7 @@ export function AddPrfItemColumnsDialog({
 		setSelectedItemIds(new Set());
 		getProjectRegistrationFormDetail(selectedFormId)
 			.then(res => setItems(res.form.items))
-			.catch(() => toast.error("企画登録フォームの詳細取得に失敗しました"))
+			.catch(() => toast.error("企画登録申請の詳細取得に失敗しました"))
 			.finally(() => setItemsLoading(false));
 	}, [selectedFormId]);
 
@@ -174,13 +174,13 @@ export function AddPrfItemColumnsDialog({
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
 			<Dialog.Content maxWidth="800px">
-				<Dialog.Title>企画登録フォームから情報を作成</Dialog.Title>
+				<Dialog.Title>企画登録申請から情報を作成</Dialog.Title>
 
 				<div className={styles.body}>
-					{/* 左: フォーム一覧 */}
+					{/* 左: 申請一覧 */}
 					<div className={styles.left}>
 						<Text size="2" weight="medium" className={styles.panelTitle}>
-							企画登録フォーム一覧
+							企画登録申請一覧
 						</Text>
 						<div className={styles.formList}>
 							{formsLoading ? (
@@ -189,7 +189,7 @@ export function AddPrfItemColumnsDialog({
 								</Text>
 							) : forms.length === 0 ? (
 								<Text size="2" color="gray">
-									フォームがありません
+									申請がありません
 								</Text>
 							) : (
 								forms.map(form => (
@@ -225,7 +225,7 @@ export function AddPrfItemColumnsDialog({
 						<div className={styles.itemList}>
 							{!selectedFormId ? (
 								<Text size="2" color="gray">
-									左でフォームを選択してください
+									左で申請を選択してください
 								</Text>
 							) : itemsLoading ? (
 								<Text size="2" color="gray">

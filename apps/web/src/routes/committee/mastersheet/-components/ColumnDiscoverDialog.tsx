@@ -36,7 +36,7 @@ function DiscoverColumnItem({
 						{col.name}
 					</Text>
 					<Badge size="1" color={col.type === "FORM_ITEM" ? "blue" : "gray"}>
-						{col.type === "FORM_ITEM" ? "フォーム" : "カスタム"}
+						{col.type === "FORM_ITEM" ? "申請" : "カスタム"}
 					</Badge>
 				</div>
 				<Text size="1" color="gray">

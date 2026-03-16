@@ -117,11 +117,11 @@ function ColumnMetaBadges({ col }: { col: ApiColumn }) {
 			</Text>
 			{col.type === "FORM_ITEM" ? (
 				<Text size="1" color="gray">
-					フォームのアクセス権に準ずる
+					申請のアクセス権に準ずる
 				</Text>
 			) : col.type === "PROJECT_REGISTRATION_FORM_ITEM" ? (
 				<Text size="1" color="gray">
-					企画登録フォームのアクセス権に準ずる
+					企画登録申請のアクセス権に準ずる
 				</Text>
 			) : (
 				<div className={styles.viewerBadges}>
@@ -314,8 +314,8 @@ function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 // ─────────────────────────────────────────────────────────────
 
 function getColumnTypeLabel(col: { type: string; dataType?: string | null }) {
-	if (col.type === "FORM_ITEM") return "フォーム";
-	if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") return "企画登録フォーム";
+	if (col.type === "FORM_ITEM") return "申請";
+	if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") return "企画登録申請";
 	return DATA_TYPE_LABEL[col.dataType ?? ""] ?? "カスタム";
 }
 
@@ -760,14 +760,14 @@ export function ColumnPanel({
 								size="2"
 								onClick={() => setAddFormItemOpen(true)}
 							>
-								<IconPlus size={16} /> フォームから追加
+								<IconPlus size={16} /> 申請から追加
 							</Button>
 							<Button
 								intent="secondary"
 								size="2"
 								onClick={() => setAddPrfItemOpen(true)}
 							>
-								<IconPlus size={16} /> 企画登録フォームから追加
+								<IconPlus size={16} /> 企画登録申請から追加
 							</Button>
 							<Button
 								intent="secondary"
