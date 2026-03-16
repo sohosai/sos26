@@ -11,8 +11,10 @@ import { committeeMastersheetRoute } from "./routes/committee-mastersheet";
 import { committeeMemberRoute } from "./routes/committee-member";
 import { committeeNoticeRoute } from "./routes/committee-notice";
 import { committeeProjectRoute } from "./routes/committee-project";
+import { committeeProjectRegistrationFormRoute } from "./routes/committee-project-registration-form";
 import { committeeUserRoute } from "./routes/committee-user";
 import { fileRoute } from "./routes/files";
+import { healthRoute } from "./routes/health";
 import { projectRoute } from "./routes/project";
 import { projectFormRoute } from "./routes/project-form";
 import { projectInquiryRoute } from "./routes/project-inquiry";
@@ -51,12 +53,17 @@ app.get("/", c => {
 });
 
 // Mount routes
+app.route("/health", healthRoute);
 app.route("/auth", authRoute);
 app.route("/committee/members", committeeMemberRoute);
 app.route("/committee/projects", committeeProjectRoute);
 app.route("/committee/notices", committeeNoticeRoute);
 app.route("/committee/forms", committeeFormRoute);
 app.route("/committee/inquiries", committeeInquiryRoute);
+app.route(
+	"/committee/project-registration-forms",
+	committeeProjectRegistrationFormRoute
+);
 app.route("/committee/mastersheet", committeeMastersheetRoute);
 app.route("/committee/users", committeeUserRoute);
 app.route("/project/:projectId/forms", projectFormRoute);

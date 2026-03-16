@@ -44,6 +44,7 @@ erDiagram
   String organizationName
   String organizationNamePhonetic
   ProjectType type
+  ProjectLocation location
   String ownerId FK
   String subOwnerId FK "nullable"
   String(6) inviteCode UK
@@ -179,6 +180,15 @@ erDiagram
   DateTime updatedAt
 }
 "FormCollaborator" {
+  String id PK
+  String formId FK
+  String userId FK
+  Boolean isWrite
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormCollaborator" {
   String id PK
   String formId FK
   String userId FK
@@ -381,6 +391,76 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"ProjectRegistrationForm" {
+  String id PK
+  String ownerId FK
+  String title
+  String description "nullable"
+  Boolean isActive
+  Int sortOrder
+  ProjectType filterTypes
+  ProjectLocation filterLocations
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormItem" {
+  String id PK
+  String formId FK
+  String label
+  String description "nullable"
+  FormItemType type
+  Boolean required
+  Int constraintMinLength "nullable"
+  Int constraintMaxLength "nullable"
+  String constraintPattern "nullable"
+  String constraintCustomPattern "nullable"
+  Int sortOrder
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormItemOption" {
+  String id PK
+  String formItemId FK
+  String label
+  Int sortOrder
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormAuthorization" {
+  String id PK
+  String formId FK
+  String requestedById FK
+  String requestedToId FK
+  ProjectRegistrationFormAuthorizationStatus status
+  DateTime decidedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormResponse" {
+  String id PK
+  String formId FK
+  String projectId FK
+  DateTime submittedAt
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormAnswer" {
+  String id PK
+  String responseId FK
+  String formItemId FK
+  String textValue "nullable"
+  Float numberValue "nullable"
+  String fileId FK "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormAnswerSelectedOption" {
+  String id PK
+  String answerId FK
+  String formItemOptionId FK
+  DateTime createdAt
+}
 "Project" }o--|| "User" : owner
 "Project" }o--o| "User" : subOwner
 "ProjectMember" }o--|| "Project" : project
@@ -405,6 +485,8 @@ erDiagram
 "FormItemOption" }o--|| "FormItem" : formItem
 "FormCollaborator" }o--|| "Form" : form
 "FormCollaborator" }o--|| "User" : user
+"ProjectRegistrationFormCollaborator" }o--|| "ProjectRegistrationForm" : form
+"ProjectRegistrationFormCollaborator" }o--|| "User" : user
 "FormAuthorization" }o--|| "Form" : form
 "FormAuthorization" }o--|| "User" : requestedBy
 "FormAuthorization" }o--|| "User" : requestedTo
@@ -453,6 +535,19 @@ erDiagram
 "InquiryAttachment" }o--|| "Inquiry" : inquiry
 "InquiryAttachment" }o--o| "InquiryComment" : comment
 "InquiryAttachment" }o--|| "File" : file
+"ProjectRegistrationForm" }o--|| "User" : owner
+"ProjectRegistrationFormItem" }o--|| "ProjectRegistrationForm" : form
+"ProjectRegistrationFormItemOption" }o--|| "ProjectRegistrationFormItem" : formItem
+"ProjectRegistrationFormAuthorization" }o--|| "ProjectRegistrationForm" : form
+"ProjectRegistrationFormAuthorization" }o--|| "User" : requestedBy
+"ProjectRegistrationFormAuthorization" }o--|| "User" : requestedTo
+"ProjectRegistrationFormResponse" }o--|| "ProjectRegistrationForm" : form
+"ProjectRegistrationFormResponse" }o--|| "Project" : project
+"ProjectRegistrationFormAnswer" }o--|| "ProjectRegistrationFormResponse" : response
+"ProjectRegistrationFormAnswer" }o--|| "ProjectRegistrationFormItem" : formItem
+"ProjectRegistrationFormAnswer" }o--o| "File" : file
+"ProjectRegistrationFormAnswerSelectedOption" }o--|| "ProjectRegistrationFormAnswer" : answer
+"ProjectRegistrationFormAnswerSelectedOption" }o--|| "ProjectRegistrationFormItemOption" : formItemOption
 ```
 
 ### `EmailVerification`
@@ -503,6 +598,7 @@ Properties as follows:
 - `organizationName`:
 - `organizationNamePhonetic`:
 - `type`:
+- `location`:
 - `ownerId`:
 - `subOwnerId`:
 - `inviteCode`:
@@ -680,6 +776,18 @@ Properties as follows:
 - `updatedAt`:
 
 ### `FormCollaborator`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `userId`:
+- `isWrite`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormCollaborator`
 
 Properties as follows:
 
@@ -950,3 +1058,94 @@ Properties as follows:
 - `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
+
+### `ProjectRegistrationForm`
+
+Properties as follows:
+
+- `id`:
+- `ownerId`:
+- `title`:
+- `description`:
+- `isActive`:
+- `sortOrder`:
+- `filterTypes`:
+- `filterLocations`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormItem`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `label`:
+- `description`:
+- `type`:
+- `required`:
+- `constraintMinLength`:
+- `constraintMaxLength`:
+- `constraintPattern`:
+- `constraintCustomPattern`:
+- `sortOrder`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormItemOption`
+
+Properties as follows:
+
+- `id`:
+- `formItemId`:
+- `label`:
+- `sortOrder`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormAuthorization`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `requestedById`:
+- `requestedToId`:
+- `status`:
+- `decidedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormResponse`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `projectId`:
+- `submittedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormAnswer`
+
+Properties as follows:
+
+- `id`:
+- `responseId`:
+- `formItemId`:
+- `textValue`:
+- `numberValue`:
+- `fileId`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormAnswerSelectedOption`
+
+Properties as follows:
+
+- `id`:
+- `answerId`:
+- `formItemOptionId`:
+- `createdAt`:

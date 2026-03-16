@@ -18,6 +18,7 @@ export type MenuItem = {
 	label: string;
 	icon: ReactNode;
 	to: string;
+	exact?: boolean;
 };
 
 type SidebarProps = {
@@ -76,6 +77,13 @@ function getRoleSwitchItem(
 		};
 	}
 	return null;
+}
+
+function normalizePathname(path: string): string {
+	if (path === "/") {
+		return path;
+	}
+	return path.replace(/\/+$/, "");
 }
 
 export function Sidebar({
@@ -144,8 +152,12 @@ export function Sidebar({
 			: menuItems;
 
 	const renderItem = (item: MenuItem) => {
-		const active = location.pathname.startsWith(item.to);
 		const external = item.to.startsWith("http");
+		const active = external
+			? false
+			: item.exact
+				? normalizePathname(location.pathname) === normalizePathname(item.to)
+				: location.pathname.startsWith(item.to);
 
 		const inner = (
 			<div className={`${styles.item} ${active ? styles.active : ""}`}>

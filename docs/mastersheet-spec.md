@@ -69,7 +69,7 @@ FormItemEditHistory
 ├── projectId   String    FK → Project
 ├── textValue   String?   テキスト値
 ├── numberValue Float?    数値
-├── fileUrl     String?   ファイル URL
+├── fileId      String?   ファイル ID
 ├── selectedOptions  FormItemEditHistorySelectedOption[]  選択肢（中間テーブル）
 ├── actorId     String    FK → User（実委人 or 企画メンバー）
 ├── trigger     Enum      変更の種別（下記参照）

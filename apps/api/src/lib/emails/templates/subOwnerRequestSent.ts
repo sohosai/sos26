@@ -1,3 +1,5 @@
+import { textToHtml } from "./textToHtml";
+
 export function subOwnerRequestSentTemplate(params: {
 	ownerName: string;
 	projectName: string;
@@ -16,7 +18,7 @@ ${params.url}
 
 	return {
 		subject: "【雙峰祭オンラインシステム】副責任者リクエスト",
-		html: body.replace(/\n/g, "<br />"),
+		html: textToHtml(body),
 		text: body,
 	};
 }

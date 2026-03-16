@@ -9,6 +9,8 @@ export { sendInquiryCreatedEmail } from "./usecases/sendInquiryCreatedEmail";
 export { sendNoticeAuthorizationDecidedEmail } from "./usecases/sendNoticeAuthorizationDecidedEmail";
 export { sendNoticeAuthorizationRequestedEmail } from "./usecases/sendNoticeAuthorizationRequestedEmail";
 export { sendNoticeDeliveredEmail } from "./usecases/sendNoticeDeliveredEmail";
+export { sendProjectRegistrationFormAuthorizationDecidedEmail } from "./usecases/sendProjectRegistrationFormAuthorizationDecidedEmail";
+export { sendProjectRegistrationFormAuthorizationRequestedEmail } from "./usecases/sendProjectRegistrationFormAuthorizationRequestedEmail";
 export { sendSubOwnerRequestApprovedEmail } from "./usecases/sendSubOwnerRequestApprovedEmail";
 export { sendSubOwnerRequestCancelledEmail } from "./usecases/sendSubOwnerRequestCancelledEmail";
 export { sendSubOwnerRequestRejectedEmail } from "./usecases/sendSubOwnerRequestRejectedEmail";

@@ -1,5 +1,4 @@
 import { createProjectRequestSchema } from "@sos26/shared";
-import type { z } from "zod";
 import type { Form, FormAnswers } from "@/components/form/type";
 
 export const projectRegisterMockForm: Form = {
@@ -45,7 +44,5 @@ export const projectRegisterMockForm: Form = {
 		},
 	],
 };
-export const isCreateProjectFormAnswers = (
-	answers: FormAnswers
-): answers is z.infer<typeof createProjectRequestSchema> =>
+export const isCreateProjectFormAnswers = (answers: FormAnswers): boolean =>
 	createProjectRequestSchema.safeParse(answers).success;

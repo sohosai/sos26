@@ -1,6 +1,8 @@
 import {
 	IconBell,
+	IconClipboardList,
 	IconFileText,
+	IconLayoutDashboard,
 	IconMessageCircleQuestion,
 	IconTable,
 	IconUsers,
@@ -8,6 +10,12 @@ import {
 import type { MenuItem } from "./Sidebar";
 
 export const projectMenuItems: MenuItem[] = [
+	{
+		label: "ダッシュボード",
+		icon: <IconLayoutDashboard size={18} />,
+		to: "/project/",
+		exact: true,
+	},
 	{
 		label: "申請",
 		icon: <IconFileText size={18} />,
@@ -51,5 +59,10 @@ export const committeeMenuItems: MenuItem[] = [
 		label: "メンバー管理",
 		icon: <IconUsers size={18} />,
 		to: "/committee/members",
+	},
+	{
+		label: "企画登録管理",
+		icon: <IconClipboardList size={18} />,
+		to: "/committee/project-registration",
 	},
 ];
