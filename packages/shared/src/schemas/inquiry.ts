@@ -38,6 +38,7 @@ export const inquirySchema = z.object({
 	creatorRole: inquiryCreatorRoleSchema,
 	projectId: z.cuid(),
 	relatedFormId: z.cuid().nullable(),
+	isDraft: z.boolean(),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 });
@@ -142,7 +143,6 @@ const commentWithUserSchema = inquiryCommentSchema
 		body: true,
 		senderRole: true,
 		isDraft: true,
-		draftCreatedById: true,
 		createdAt: true,
 		sentAt: true,
 	})
@@ -188,6 +188,7 @@ const inquirySummarySchema = z.object({
 	creatorRole: inquiryCreatorRoleSchema,
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
+	isDraft: z.boolean(),
 	createdBy: userSummarySchema,
 	project: z.object({ id: z.cuid(), name: z.string() }),
 	projectAssignees: z.array(assigneeWithUserSchema),
@@ -318,6 +319,46 @@ export type DeleteInquiryCommentResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
+// 実委側: PATCH /committee/inquiries/:inquiryId - 下書きのお問い合わせ編集
+// ─────────────────────────────────────────────────────────────
+
+export const updateDraftInquiryRequestSchema = z.object({
+	title: z.string().min(1, "件名を入力してください").optional(),
+	body: z.string().min(1, "内容を入力してください").optional(),
+	fileIds: z.array(z.string()).optional(),
+});
+export type UpdateDraftInquiryRequest = z.infer<
+	typeof updateDraftInquiryRequestSchema
+>;
+
+export const updateDraftInquiryResponseSchema = z.object({
+	inquiry: inquirySchema,
+});
+export type UpdateDraftInquiryResponse = z.infer<
+	typeof updateDraftInquiryResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// 実委側: POST /committee/inquiries/:inquiryId/publish - 下書きのお問い合わせ送信
+// ─────────────────────────────────────────────────────────────
+
+export const publishDraftInquiryResponseSchema = z.object({
+	inquiry: inquirySchema,
+});
+export type PublishDraftInquiryResponse = z.infer<
+	typeof publishDraftInquiryResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// 実委側: DELETE /committee/inquiries/:inquiryId - 下書きのお問い合わせ削除
+// ─────────────────────────────────────────────────────────────
+
+export const deleteInquiryResponseSchema = z.object({
+	success: z.literal(true),
+});
+export type DeleteInquiryResponse = z.infer<typeof deleteInquiryResponseSchema>;
+
+// ─────────────────────────────────────────────────────────────
 // 企画側/実委側共通: PATCH .../reopen
 // ─────────────────────────────────────────────────────────────
 
@@ -399,6 +440,7 @@ export const createCommitteeInquiryRequestSchema = z.object({
 	committeeAssigneeUserIds: z.array(z.cuid()).optional(),
 	fileIds: z.array(z.string()).optional(),
 	viewers: z.array(viewerInputSchema).optional(),
+	isDraft: z.boolean().optional(),
 });
 export type CreateCommitteeInquiryRequest = z.infer<
 	typeof createCommitteeInquiryRequestSchema
