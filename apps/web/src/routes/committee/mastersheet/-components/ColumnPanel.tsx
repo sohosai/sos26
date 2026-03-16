@@ -709,24 +709,32 @@ function PrfFormGroup({
 						const col = addedColumns.get(item.id);
 						const isVisible = col ? columnVisibility[col.id] !== false : false;
 						return (
-							<div key={item.id} className={styles.prfItemRow}>
-								<Text size="2" truncate className={styles.prfItemName}>
-									{item.label}
-								</Text>
-								<Button
-									size="1"
-									intent={isVisible ? "secondary" : "primary"}
-									loading={adding.has(item.id)}
-									onClick={() => {
-										if (col) {
-											onToggleColumn(col.id, !isVisible);
-										} else {
-											onAddAndShow(item);
-										}
-									}}
-								>
-									{isVisible ? "非表示にする" : "表示する"}
-								</Button>
+							<div key={item.id} className={styles.columnCard}>
+								<div className={styles.cardTop}>
+									<div className={styles.cardContent}>
+										<div className={styles.cardTitleRow}>
+											<div className={styles.cardName}>
+												<Text size="2" weight="medium" truncate>
+													{item.label}
+												</Text>
+											</div>
+											<Button
+												size="1"
+												intent={isVisible ? "secondary" : "primary"}
+												loading={adding.has(item.id)}
+												onClick={() => {
+													if (col) {
+														onToggleColumn(col.id, !isVisible);
+													} else {
+														onAddAndShow(item);
+													}
+												}}
+											>
+												{isVisible ? "非表示にする" : "表示する"}
+											</Button>
+										</div>
+									</div>
+								</div>
 							</div>
 						);
 					})}

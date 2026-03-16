@@ -257,22 +257,6 @@
 .prfItemList {
 	display: flex;
 	flex-direction: column;
-	padding: var(--space-1) 0 0 calc(var(--space-2) + 14px);
-}
-
-.prfItemRow {
-	display: flex;
-	align-items: center;
 	gap: var(--space-2);
-	padding: var(--space-2) var(--space-2);
-	border-radius: var(--radius-2);
-
-	&:hover {
-		background: var(--gray-2);
-	}
-}
-
-.prfItemName {
-	flex: 1;
-	min-width: 0;
+	padding: var(--space-2) 0 0 calc(var(--space-2) + 14px);
 }
