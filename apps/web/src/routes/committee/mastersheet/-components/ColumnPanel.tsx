@@ -10,6 +10,7 @@ import type {
 	GetMastersheetDataResponse,
 	ListMastersheetAccessRequestsResponse,
 	MastersheetViewerInput,
+	ProjectRegistrationFormItem,
 } from "@sos26/shared";
 import { bureauLabelMap } from "@sos26/shared";
 import {
@@ -27,6 +28,7 @@ import { toast } from "sonner";
 import { Button, IconButton, TextField } from "@/components/primitives";
 import {
 	createMastersheetAccessRequest,
+	createMastersheetColumn,
 	deleteMastersheetColumn,
 	discoverMastersheetColumns,
 	listMastersheetAccessRequests,
@@ -34,10 +36,13 @@ import {
 	updateMastersheetColumn,
 } from "@/lib/api/committee-mastersheet";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
+import {
+	getProjectRegistrationFormDetail,
+	listProjectRegistrationForms,
+} from "@/lib/api/committee-project-registration-form";
 import { isClientError } from "@/lib/http/error";
 import { AddCustomColumnDialog } from "./AddCustomColumnDialog";
 import { AddFormItemColumnsDialog } from "./AddFormItemColumnsDialog";
-import { AddPrfItemColumnsDialog } from "./AddPrfItemColumnsDialog";
 import styles from "./ColumnPanel.module.scss";
 import { getScopeColor, ViewerSelector } from "./ViewerSelector";
 
@@ -644,6 +649,94 @@ function Section({
 }
 
 // ─────────────────────────────────────────────────────────────
+// 企画登録情報フォームグループ
+// ─────────────────────────────────────────────────────────────
+
+type PrfFormData = {
+	id: string;
+	title: string;
+	items: ProjectRegistrationFormItem[];
+};
+
+function PrfFormGroup({
+	form,
+	addedColumns,
+	columnVisibility,
+	onToggleColumn,
+	onAddAndShow,
+	adding,
+}: {
+	form: PrfFormData;
+	addedColumns: Map<string, ApiColumn>;
+	columnVisibility: VisibilityState;
+	onToggleColumn: (columnId: string, visible: boolean) => void;
+	onAddAndShow: (item: ProjectRegistrationFormItem) => void;
+	adding: Set<string>;
+}) {
+	const [expanded, setExpanded] = useState(false);
+
+	return (
+		<div className={styles.columnCard}>
+			<div className={styles.cardTop}>
+				<div className={styles.cardContent}>
+					<div className={styles.cardTitleRow}>
+						<button
+							type="button"
+							className={styles.prfFormHeader}
+							onClick={() => setExpanded(p => !p)}
+						>
+							<IconChevronDown
+								size={14}
+								style={{
+									flexShrink: 0,
+									transform: expanded ? undefined : "rotate(-90deg)",
+									transition: "transform 0.15s",
+								}}
+							/>
+							<Text size="2" weight="medium" truncate>
+								{form.title}
+							</Text>
+							<Badge size="1" color="gray">
+								{form.items.length}項目
+							</Badge>
+						</button>
+					</div>
+				</div>
+			</div>
+			{expanded && (
+				<div className={styles.prfItemList}>
+					{form.items.map(item => {
+						const col = addedColumns.get(item.id);
+						const isVisible = col ? columnVisibility[col.id] !== false : false;
+						return (
+							<div key={item.id} className={styles.prfItemRow}>
+								<Text size="2" truncate className={styles.prfItemName}>
+									{item.label}
+								</Text>
+								<Button
+									size="1"
+									intent={isVisible ? "secondary" : "primary"}
+									loading={adding.has(item.id)}
+									onClick={() => {
+										if (col) {
+											onToggleColumn(col.id, !isVisible);
+										} else {
+											onAddAndShow(item);
+										}
+									}}
+								>
+									{isVisible ? "非表示にする" : "表示する"}
+								</Button>
+							</div>
+						);
+					})}
+				</div>
+			)}
+		</div>
+	);
+}
+
+// ─────────────────────────────────────────────────────────────
 // メインコンポーネント
 // ─────────────────────────────────────────────────────────────
 
@@ -656,6 +749,7 @@ type Props = {
 	onSuccess: () => void;
 };
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: カラムパネルは複数セクション・状態を管理するUI
 export function ColumnPanel({
 	open,
 	onOpenChange,
@@ -671,9 +765,11 @@ export function ColumnPanel({
 	const [requesting, setRequesting] = useState<Set<string>>(new Set());
 	const [addCustomOpen, setAddCustomOpen] = useState(false);
 	const [addFormItemOpen, setAddFormItemOpen] = useState(false);
-	const [addPrfItemOpen, setAddPrfItemOpen] = useState(false);
+	const [prfForms, setPrfForms] = useState<PrfFormData[]>([]);
+	const [prfAdding, setPrfAdding] = useState<Set<string>>(new Set());
 	const [sectionsOpen, setSectionsOpen] = useState({
 		fixed: true,
+		prf: true,
 		visible: true,
 		hidden: true,
 		requestable: true,
@@ -691,6 +787,23 @@ export function ColumnPanel({
 			.then(res => setDiscoverColumns(res.columns))
 			.catch(() => toast.error("カラム一覧の取得に失敗しました"))
 			.finally(() => setDiscoverLoading(false));
+
+		listProjectRegistrationForms()
+			.then(async res => {
+				const activeForms = res.forms.filter(f => f.isActive);
+				const forms = await Promise.all(
+					activeForms.map(async f => {
+						const detail = await getProjectRegistrationFormDetail(f.id);
+						return {
+							id: f.id,
+							title: f.title,
+							items: detail.form.items,
+						};
+					})
+				);
+				setPrfForms(forms);
+			})
+			.catch(() => {});
 	}, [open]);
 
 	useEffect(() => {
@@ -723,13 +836,56 @@ export function ColumnPanel({
 		}
 	}
 
+	// 企画登録情報: formItemId → カラム のマップ
+	const prfItemToColumn = new Map(
+		columns
+			.filter(
+				c =>
+					c.type === "PROJECT_REGISTRATION_FORM_ITEM" &&
+					c.projectRegistrationFormItemId
+			)
+			.map(c => [c.projectRegistrationFormItemId as string, c] as const)
+	);
+
+	async function handleAddAndShowPrfItem(item: ProjectRegistrationFormItem) {
+		setPrfAdding(prev => new Set(prev).add(item.id));
+		try {
+			await createMastersheetColumn({
+				type: "PROJECT_REGISTRATION_FORM_ITEM",
+				name: item.label,
+				sortOrder: columns.length,
+				projectRegistrationFormItemId: item.id,
+			});
+			onSuccess();
+		} catch (error) {
+			toast.error(isClientError(error) ? error.message : "追加に失敗しました");
+		} finally {
+			setPrfAdding(prev => {
+				const next = new Set(prev);
+				next.delete(item.id);
+				return next;
+			});
+		}
+	}
+
 	const query = searchText.toLowerCase();
 	const filteredFixedColumns = FIXED_COLUMNS.filter(
 		c => !query || c.name.includes(query)
 	);
+	// 企画登録情報カラムは専用セクションに表示するため分離
+	const nonPrfColumns = columns.filter(
+		c => c.type !== "PROJECT_REGISTRATION_FORM_ITEM"
+	);
 	const filteredColumns = query
-		? columns.filter(c => c.name.toLowerCase().includes(query))
-		: columns;
+		? nonPrfColumns.filter(c => c.name.toLowerCase().includes(query))
+		: nonPrfColumns;
+	const filteredPrfForms = query
+		? prfForms.filter(
+				f =>
+					f.title.toLowerCase().includes(query) ||
+					f.items.some(i => i.label.toLowerCase().includes(query))
+			)
+		: prfForms;
 	const requestable = discoverColumns.filter(
 		c => !c.hasAccess && (!query || c.name.toLowerCase().includes(query))
 	);
@@ -744,6 +900,7 @@ export function ColumnPanel({
 	const isEmpty =
 		!discoverLoading &&
 		filteredFixedColumns.length === 0 &&
+		filteredPrfForms.length === 0 &&
 		visibleColumns.length === 0 &&
 		hiddenColumns.length === 0 &&
 		requestable.length === 0;
@@ -761,13 +918,6 @@ export function ColumnPanel({
 								onClick={() => setAddFormItemOpen(true)}
 							>
 								<IconPlus size={16} /> 申請から追加
-							</Button>
-							<Button
-								intent="secondary"
-								size="2"
-								onClick={() => setAddPrfItemOpen(true)}
-							>
-								<IconPlus size={16} /> 企画登録情報から追加
 							</Button>
 							<Button
 								intent="secondary"
@@ -819,6 +969,35 @@ export function ColumnPanel({
 											col={col}
 											isVisible={columnVisibility[col.id] !== false}
 											onToggle={v => onToggleColumn(col.id, v)}
+										/>
+									))}
+								</Section>
+								{(filteredPrfForms.length > 0 ||
+									visibleColumns.length > 0 ||
+									hiddenColumns.length > 0 ||
+									(!discoverLoading && requestable.length > 0)) && (
+									<Separator size="4" className={styles.separator} />
+								)}
+							</>
+						)}
+
+						{filteredPrfForms.length > 0 && (
+							<>
+								<Section
+									label="企画登録情報"
+									count={filteredPrfForms.length}
+									isOpen={sectionsOpen.prf}
+									onToggle={() => toggleSection("prf")}
+								>
+									{filteredPrfForms.map(form => (
+										<PrfFormGroup
+											key={form.id}
+											form={form}
+											addedColumns={prfItemToColumn}
+											columnVisibility={columnVisibility}
+											onToggleColumn={onToggleColumn}
+											onAddAndShow={handleAddAndShowPrfItem}
+											adding={prfAdding}
 										/>
 									))}
 								</Section>
@@ -912,12 +1091,6 @@ export function ColumnPanel({
 			<AddFormItemColumnsDialog
 				open={addFormItemOpen}
 				onOpenChange={setAddFormItemOpen}
-				columns={columns}
-				onSuccess={onSuccess}
-			/>
-			<AddPrfItemColumnsDialog
-				open={addPrfItemOpen}
-				onOpenChange={setAddPrfItemOpen}
 				columns={columns}
 				onSuccess={onSuccess}
 			/>
