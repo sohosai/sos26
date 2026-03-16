@@ -265,6 +265,7 @@ erDiagram
   InquiryCreatorRole creatorRole
   String projectId FK
   String relatedFormId FK "nullable"
+  Boolean isDraft
   DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
@@ -294,7 +295,6 @@ erDiagram
   String createdById FK
   InquiryCreatorRole senderRole
   Boolean isDraft
-  String draftCreatedById "nullable"
   DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime sentAt "nullable"
@@ -891,6 +891,7 @@ Properties as follows:
 - `creatorRole`:
 - `projectId`:
 - `relatedFormId`:
+- `isDraft`:
 - `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
@@ -929,7 +930,6 @@ Properties as follows:
 - `createdById`:
 - `senderRole`:
 - `isDraft`:
-- `draftCreatedById`:
 - `deletedAt`:
 - `createdAt`:
 - `sentAt`:
