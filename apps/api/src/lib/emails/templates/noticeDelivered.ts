@@ -1,3 +1,5 @@
+import { textToHtml } from "./textToHtml";
+
 export function noticeDeliveredTemplate(params: {
 	noticeTitle: string;
 	noticeBodyPreview: string;
@@ -18,7 +20,7 @@ ${params.url}
 
 	return {
 		subject: `【雙峰祭オンラインシステム】${params.noticeTitle}`,
-		html: body.replace(/\n/g, "<br />"),
+		html: textToHtml(body),
 		text: body,
 	};
 }

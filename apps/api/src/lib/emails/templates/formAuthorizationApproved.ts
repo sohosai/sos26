@@ -1,3 +1,5 @@
+import { textToHtml } from "./textToHtml";
+
 export function formAuthorizationApprovedTemplate(params: {
 	formTitle: string;
 	scheduledSendAt: string;
@@ -17,7 +19,7 @@ ${params.url}
 
 	return {
 		subject: "【雙峰祭オンラインシステム】フォーム配信承認が承認されました",
-		html: body.replace(/\n/g, "<br />"),
+		html: textToHtml(body),
 		text: body,
 	};
 }

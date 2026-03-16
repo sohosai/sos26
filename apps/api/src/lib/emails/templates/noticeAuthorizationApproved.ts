@@ -1,3 +1,5 @@
+import { textToHtml } from "./textToHtml";
+
 export function noticeAuthorizationApprovedTemplate(params: {
 	noticeTitle: string;
 	deliveredAt: string;
@@ -17,7 +19,7 @@ ${params.url}
 
 	return {
 		subject: "【雙峰祭オンラインシステム】配信承認が承認されました",
-		html: body.replace(/\n/g, "<br />"),
+		html: textToHtml(body),
 		text: body,
 	};
 }

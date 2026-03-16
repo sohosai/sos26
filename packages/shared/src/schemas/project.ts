@@ -5,7 +5,7 @@ import {
 	PROJECT_DISPLAY_NAME_RULE_MESSAGE,
 } from "../lib/project-display-name";
 import { projectLocationSchema, projectTypeSchema } from "./common";
-import { formAnswerInputSchema } from "./form";
+import { formAnswerInputSchema, formItemTypeSchema } from "./form";
 
 export { projectTypeSchema, projectLocationSchema };
 export type { ProjectLocation, ProjectType } from "./common";
@@ -150,6 +150,49 @@ export const getProjectDetailResponseSchema = z.object({
 
 export type GetProjectDetailResponse = z.infer<
 	typeof getProjectDetailResponseSchema
+>;
+
+// ─────────────────────────────────────────────
+// GET /project/:projectId/registration-form-responses
+// ─────────────────────────────────────────────
+
+export const projectRegistrationFormResponseAnswerViewSchema = z.object({
+	formItemId: z.string(),
+	formItemLabel: z.string(),
+	type: formItemTypeSchema,
+	textValue: z.string().nullable(),
+	numberValue: z.number().nullable(),
+	fileId: z.string().nullable(),
+	selectedOptions: z.array(
+		z.object({
+			id: z.string(),
+			label: z.string(),
+		})
+	),
+});
+export type ProjectRegistrationFormResponseAnswerView = z.infer<
+	typeof projectRegistrationFormResponseAnswerViewSchema
+>;
+
+export const projectRegistrationFormResponseViewSchema = z.object({
+	id: z.string(),
+	submittedAt: z.coerce.date(),
+	form: z.object({
+		id: z.string(),
+		title: z.string(),
+		description: z.string().nullable(),
+	}),
+	answers: z.array(projectRegistrationFormResponseAnswerViewSchema),
+});
+export type ProjectRegistrationFormResponseView = z.infer<
+	typeof projectRegistrationFormResponseViewSchema
+>;
+
+export const getProjectRegistrationFormResponsesResponseSchema = z.object({
+	responses: z.array(projectRegistrationFormResponseViewSchema),
+});
+export type GetProjectRegistrationFormResponsesResponse = z.infer<
+	typeof getProjectRegistrationFormResponsesResponseSchema
 >;
 
 // ─────────────────────────────────────────────

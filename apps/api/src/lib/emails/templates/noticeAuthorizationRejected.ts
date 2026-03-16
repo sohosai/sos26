@@ -1,3 +1,5 @@
+import { textToHtml } from "./textToHtml";
+
 export function noticeAuthorizationRejectedTemplate(params: {
 	noticeTitle: string;
 	url: string;
@@ -17,7 +19,7 @@ ${params.url}
 
 	return {
 		subject: "【雙峰祭オンラインシステム】配信承認が却下されました",
-		html: body.replace(/\n/g, "<br />"),
+		html: textToHtml(body),
 		text: body,
 	};
 }
