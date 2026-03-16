@@ -251,14 +251,6 @@ accessRequestsRoute.get(
 							formItem: { form: { ownerId: userId } },
 						},
 					},
-					{
-						column: {
-							type: "PROJECT_REGISTRATION_FORM_ITEM",
-							projectRegistrationFormItem: {
-								form: { ownerId: userId },
-							},
-						},
-					},
 				],
 			},
 			include: { requester: { select: { id: true, name: true } } },

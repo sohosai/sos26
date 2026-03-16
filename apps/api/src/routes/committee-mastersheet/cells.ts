@@ -338,7 +338,6 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 		},
 		include: {
 			formItem: { select: { id: true, formId: true } },
-			projectRegistrationFormItem: { select: { id: true, formId: true } },
 			createdBy: { select: { name: true } },
 			viewers: { include: { user: { select: { name: true } } } },
 		},
