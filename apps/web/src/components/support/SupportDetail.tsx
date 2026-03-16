@@ -545,10 +545,12 @@ function SupportSidebar({
 				<Text size="2" weight="medium" color="gray">
 					対応状況
 				</Text>
-				<Badge color={statusColor} size="2" variant="soft">
-					<StatusIcon size={14} />
-					{statusLabel}
-				</Badge>
+				<div>
+					<Badge color={statusColor} size="2" variant="soft">
+						<StatusIcon size={14} />
+						{statusLabel}
+					</Badge>
+				</div>
 			</div>
 
 			<Separator size="4" />
