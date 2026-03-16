@@ -29,7 +29,7 @@ export type ApprovalStatus = z.infer<typeof approvalStatusSchema>;
 export const deliveryModeSchema = z.enum(["INDIVIDUAL", "CATEGORY"]);
 export type DeliveryMode = z.infer<typeof deliveryModeSchema>;
 
-/** カテゴリ指定: 企画区分・実施場所で配信先をフィルタ（OR結合、両方空=全企画対象） */
+/** カテゴリ指定: 企画区分・実施場所で配信先をフィルタ（AND結合、両方空=全企画対象） */
 const categoryTargetSchema = z.object({
 	mode: z.literal("CATEGORY"),
 	projectTypes: z.array(projectTypeSchema),
