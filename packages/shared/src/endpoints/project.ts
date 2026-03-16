@@ -6,6 +6,7 @@ import {
 	decideSubOwnerRequestRequestSchema,
 	decideSubOwnerRequestResponseSchema,
 	getProjectDetailResponseSchema,
+	getProjectRegistrationFormResponsesResponseSchema,
 	joinProjectRequestSchema,
 	joinProjectResponseSchema,
 	listMyProjectsResponseSchema,
@@ -116,6 +117,24 @@ export const getProjectDetailEndpoint: GetEndpoint<
 	query: undefined,
 	request: undefined,
 	response: getProjectDetailResponseSchema,
+} as const;
+
+/**
+ * GET /project/:projectId/registration-form-responses
+ * 企画登録フォーム回答一覧を取得
+ */
+export const getProjectRegistrationFormResponsesEndpoint: GetEndpoint<
+	"/project/:projectId/registration-form-responses",
+	typeof projectIdPathParamsSchema,
+	undefined,
+	typeof getProjectRegistrationFormResponsesResponseSchema
+> = {
+	method: "GET",
+	path: "/project/:projectId/registration-form-responses",
+	pathParams: projectIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: getProjectRegistrationFormResponsesResponseSchema,
 } as const;
 
 /**
