@@ -256,7 +256,7 @@ cellsRoute.put(
 
 // ─────────────────────────────────────────────────────────────
 // PUT /committee/mastersheet/edits/:columnId/:projectId
-// 申請由来カラム / 企画登録情報由来カラムの値を編集
+// 申請由来カラムの値を編集
 // ─────────────────────────────────────────────────────────────
 
 cellsRoute.put(
@@ -270,13 +270,8 @@ cellsRoute.put(
 			mastersheetColumnProjectPathParamsSchema.parse(c.req.param());
 
 		const col = await getColumnFull(columnId);
-		if (
-			col.type !== "FORM_ITEM" &&
-			col.type !== "PROJECT_REGISTRATION_FORM_ITEM"
-		)
-			throw Errors.invalidRequest(
-				"FORM_ITEM または PROJECT_REGISTRATION_FORM_ITEM カラムのみ編集できます"
-			);
+		if (col.type !== "FORM_ITEM")
+			throw Errors.invalidRequest("FORM_ITEM カラムのみ編集できます");
 
 		const accessibleFormIds = await getAccessibleFormIds(userId);
 		const accessiblePrfFormIds = await getAccessiblePrfFormIds(userId);
@@ -299,122 +294,41 @@ cellsRoute.put(
 		const body = await c.req.json().catch(() => ({}));
 		const data = editFormItemCellRequestSchema.parse(body);
 
-		if (col.type === "FORM_ITEM") {
-			if (!col.formItemId)
-				throw Errors.invalidRequest("申請項目が紐づいていません");
+		if (!col.formItemId)
+			throw Errors.invalidRequest("申請項目が紐づいていません");
 
-			const formItemId = col.formItemId;
+		const formItemId = col.formItemId;
 
-			// NOT_ANSWERED（未提出 かつ 履歴なし）は編集不可
-			const [response, latestHistory] = await Promise.all([
-				prisma.formResponse.findFirst({
-					where: {
-						formDelivery: {
-							projectId,
-							formAuthorization: {
-								form: { items: { some: { id: formItemId } } },
-							},
-						},
-						submittedAt: { not: null },
-					},
-					select: { id: true },
-				}),
-				prisma.formItemEditHistory.findFirst({
-					where: { formItemId, projectId },
-					select: { id: true },
-				}),
-			]);
-			if (!response && !latestHistory) {
-				throw Errors.invalidRequest(
-					"未回答の企画は編集できません。提出後に編集してください"
-				);
-			}
-
-			const history = await prisma.$transaction(
-				async tx => {
-					const created = await tx.formItemEditHistory.create({
-						data: {
-							formItemId,
-							projectId,
-							textValue: data.textValue ?? null,
-							numberValue: data.numberValue ?? null,
-							fileId: data.fileId ?? null,
-							actorId: userId,
-							trigger: "COMMITTEE_EDIT",
-						},
-					});
-
-					if (data.selectedOptionIds?.length) {
-						const validIds = new Set(
-							col.formItem?.options.map(o => o.id) ?? []
-						);
-						const invalid = data.selectedOptionIds.filter(
-							id => !validIds.has(id)
-						);
-						if (invalid.length > 0)
-							throw Errors.invalidRequest("無効な選択肢が含まれています");
-
-						await tx.formItemEditHistorySelectedOption.createMany({
-							data: data.selectedOptionIds.map(optionId => ({
-								editHistoryId: created.id,
-								formItemOptionId: optionId,
-							})),
-						});
-					}
-
-					return tx.formItemEditHistory.findUniqueOrThrow({
-						where: { id: created.id },
-						include: {
-							selectedOptions: { select: { formItemOptionId: true } },
-						},
-					});
-				},
-				{ isolationLevel: "Serializable" }
-			);
-
-			return c.json({
-				cell: {
-					columnId,
-					status: "COMMITTEE_EDITED" as const,
-					formValue: {
-						textValue: history.textValue,
-						numberValue: history.numberValue,
-						fileId: history.fileId,
-						selectedOptionIds: history.selectedOptions.map(
-							s => s.formItemOptionId
-						),
-					},
-				},
-			});
-		}
-
-		// PROJECT_REGISTRATION_FORM_ITEM
-		const prfItemId = col.projectRegistrationFormItemId;
-		if (!prfItemId)
-			throw Errors.invalidRequest("企画登録情報項目が紐づいていません");
-
-		// NOT_APPLICABLE（回答なし）は編集不可
-		const prfItem = col.projectRegistrationFormItem;
-		if (!prfItem)
-			throw Errors.invalidRequest("企画登録情報項目が紐づいていません");
-
-		const prfResponse = await prisma.projectRegistrationFormResponse.findUnique(
-			{
+		// NOT_ANSWERED（未提出 かつ 履歴なし）は編集不可
+		const [response, latestHistory] = await Promise.all([
+			prisma.formResponse.findFirst({
 				where: {
-					formId_projectId: { formId: prfItem.formId, projectId },
+					formDelivery: {
+						projectId,
+						formAuthorization: {
+							form: { items: { some: { id: formItemId } } },
+						},
+					},
+					submittedAt: { not: null },
 				},
 				select: { id: true },
-			}
-		);
-		if (!prfResponse) {
-			throw Errors.invalidRequest("この企画には回答がないため編集できません");
+			}),
+			prisma.formItemEditHistory.findFirst({
+				where: { formItemId, projectId },
+				select: { id: true },
+			}),
+		]);
+		if (!response && !latestHistory) {
+			throw Errors.invalidRequest(
+				"未回答の企画は編集できません。提出後に編集してください"
+			);
 		}
 
 		const history = await prisma.$transaction(
 			async tx => {
-				const created = await tx.projectRegistrationFormItemEditHistory.create({
+				const created = await tx.formItemEditHistory.create({
 					data: {
-						projectRegistrationFormItemId: prfItemId,
+						formItemId,
 						projectId,
 						textValue: data.textValue ?? null,
 						numberValue: data.numberValue ?? null,
@@ -425,31 +339,25 @@ cellsRoute.put(
 				});
 
 				if (data.selectedOptionIds?.length) {
-					const validIds = new Set(prfItem.options.map(o => o.id));
+					const validIds = new Set(col.formItem?.options.map(o => o.id) ?? []);
 					const invalid = data.selectedOptionIds.filter(
 						id => !validIds.has(id)
 					);
 					if (invalid.length > 0)
 						throw Errors.invalidRequest("無効な選択肢が含まれています");
 
-					await tx.projectRegistrationFormItemEditHistorySelectedOption.createMany(
-						{
-							data: data.selectedOptionIds.map(optionId => ({
-								editHistoryId: created.id,
-								projectRegistrationFormItemOptionId: optionId,
-							})),
-						}
-					);
+					await tx.formItemEditHistorySelectedOption.createMany({
+						data: data.selectedOptionIds.map(optionId => ({
+							editHistoryId: created.id,
+							formItemOptionId: optionId,
+						})),
+					});
 				}
 
-				return tx.projectRegistrationFormItemEditHistory.findUniqueOrThrow({
+				return tx.formItemEditHistory.findUniqueOrThrow({
 					where: { id: created.id },
 					include: {
-						selectedOptions: {
-							select: {
-								projectRegistrationFormItemOptionId: true,
-							},
-						},
+						selectedOptions: { select: { formItemOptionId: true } },
 					},
 				});
 			},
@@ -465,7 +373,7 @@ cellsRoute.put(
 					numberValue: history.numberValue,
 					fileId: history.fileId,
 					selectedOptionIds: history.selectedOptions.map(
-						s => s.projectRegistrationFormItemOptionId
+						s => s.formItemOptionId
 					),
 				},
 			},

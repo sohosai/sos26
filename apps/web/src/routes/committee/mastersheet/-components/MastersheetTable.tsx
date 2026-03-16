@@ -170,7 +170,7 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 	}),
 ];
 
-/** FORM_ITEM / PROJECT_REGISTRATION_FORM_ITEM セルが編集不可かどうか */
+/** FORM_ITEM セルが編集不可かどうか */
 function isFormItemInactive(row: MastersheetRow, colId: string): boolean {
 	const status = row.cells[colId]?.status;
 	return (
@@ -187,13 +187,92 @@ const INACTIVE_PLACEHOLDER = (
 	</Text>
 );
 
+/** 企画登録情報由来カラム（読み取り専用） */
+function buildPrfReadOnlyColumn(
+	col: ApiColumn
+	// biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
+): ColumnDef<MastersheetRow, any> {
+	const itemType = col.projectRegistrationFormItemType;
+	const optionMap = new Map(col.options.map(o => [o.id, o.label]));
+
+	if (itemType === "SELECT" || itemType === "CHECKBOX") {
+		return columnHelper.accessor(
+			row => row.cells[col.id]?.formValue?.selectedOptionIds ?? [],
+			{
+				id: col.id,
+				header: () => <ColHeader col={col} />,
+				cell: props => {
+					const ids = props.getValue() as string[];
+					if (!ids.length) return INACTIVE_PLACEHOLDER;
+					return (
+						<Text size="2">
+							{ids.map(id => optionMap.get(id) ?? id).join(", ")}
+						</Text>
+					);
+				},
+				meta: {
+					filterVariant: "select",
+					selectOptions: col.options.map(o => ({
+						value: o.id,
+						label: o.label,
+					})),
+				},
+			}
+		);
+	}
+
+	if (itemType === "NUMBER") {
+		return columnHelper.accessor(
+			row => row.cells[col.id]?.formValue?.numberValue ?? null,
+			{
+				id: col.id,
+				header: () => <ColHeader col={col} />,
+				cell: props => {
+					const v = props.getValue();
+					return v == null ? INACTIVE_PLACEHOLDER : <Text size="2">{v}</Text>;
+				},
+				meta: { filterVariant: "number" },
+			}
+		);
+	}
+
+	if (itemType === "FILE") {
+		return columnHelper.accessor(
+			row => row.cells[col.id]?.formValue?.fileId ?? null,
+			{
+				id: col.id,
+				header: () => <ColHeader col={col} />,
+				cell: props =>
+					props.getValue() ? <FileCell {...props} /> : INACTIVE_PLACEHOLDER,
+				meta: { filterVariant: "text" },
+			}
+		);
+	}
+
+	// TEXT / TEXTAREA
+	return columnHelper.accessor(
+		row => row.cells[col.id]?.formValue?.textValue ?? "",
+		{
+			id: col.id,
+			header: () => <ColHeader col={col} />,
+			cell: props => {
+				const v = props.getValue();
+				return v ? <Text size="2">{v}</Text> : INACTIVE_PLACEHOLDER;
+			},
+			meta: { filterVariant: "text" },
+		}
+	);
+}
+
 // biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
 function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
-	if (
-		col.type === "FORM_ITEM" ||
-		col.type === "PROJECT_REGISTRATION_FORM_ITEM"
-	) {
-		const itemType = col.formItemType ?? col.projectRegistrationFormItemType;
+	// 企画登録情報由来カラムは読み取り専用
+	if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
+		return buildPrfReadOnlyColumn(col);
+	}
+
+	if (col.type === "FORM_ITEM") {
+		const itemType = col.formItemType;
 		const selectOptions = col.options.map(o => ({
 			value: o.id,
 			label: o.label,
@@ -438,17 +517,14 @@ export function MastersheetTable({
 		if (!col) return;
 
 		try {
-			if (
-				col.type === "FORM_ITEM" ||
-				col.type === "PROJECT_REGISTRATION_FORM_ITEM"
-			) {
-				const itemType =
-					col.formItemType ?? col.projectRegistrationFormItemType;
+			if (col.type === "FORM_ITEM") {
 				await editFormItemCell(
 					columnId,
 					row.project.id,
-					buildEditPayload(itemType, value)
+					buildEditPayload(col.formItemType, value)
 				);
+			} else if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
+				return; // 読み取り専用
 			} else {
 				await upsertMastersheetCell(
 					columnId,

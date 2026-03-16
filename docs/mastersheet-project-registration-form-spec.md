@@ -18,7 +18,7 @@
 
 - 新しいカラム種別 `PROJECT_REGISTRATION_FORM_ITEM` を追加
 - 企画登録フォームの owner / collaborator がカラムを作成可能
-- 回答値をマスターシート上で閲覧・編集可能
+- 回答値をマスターシート上で閲覧可能（読み取り専用）
 - 既存の `FORM_ITEM` / `CUSTOM` と統一的に管理
 
 ---
@@ -89,9 +89,9 @@ ProjectRegistrationFormItemEditHistorySelectedOption
 | trigger | 意味 | 誰が |
 |---------|------|------|
 | `PROJECT_SUBMIT` | 企画登録時にフォーム回答を提出 | 企画メンバー |
-| `COMMITTEE_EDIT` | 実委人がセル値を編集 | 実委人 |
 
 > 企画登録フォームには再提出の概念がないため `PROJECT_RESUBMIT` は不要。
+> 企画登録情報由来カラムは読み取り専用のため `COMMITTEE_EDIT` も不要。
 
 ### 3.4 表示値の導出
 
@@ -122,26 +122,21 @@ ProjectRegistrationFormItemEditHistory にレコードがない場合:
 ```
 NOT_APPLICABLE   企画がフォームの対象外（filter 不一致）、またはフォームが企画作成後に追加された
       ↓ (回答が存在する場合)
-SUBMITTED        最新の変更が企画の提出
-      ↓ (実委が編集)
-COMMITTEE_EDITED 最新の変更が実委による
+SUBMITTED        企画登録時に回答が提出された
 ```
 
-| 状態 | 条件 | 表示 | 実委の編集 |
-|------|------|------|-----------|
-| NOT_APPLICABLE | 回答が存在しない | 「─」（グレー） | **不可** |
-| SUBMITTED | 最新の変更が企画の提出 | フォーム回答値 | 可 |
-| COMMITTEE_EDITED | 最新の変更が実委の編集 | 実委の編集値 | 可 |
+| 状態 | 条件 | 表示 |
+|------|------|------|
+| NOT_APPLICABLE | 回答が存在しない | 「─」（グレー） |
+| SUBMITTED | 企画登録時に回答が提出された | フォーム回答値 |
 
 ### 4.3 状態の導出ロジック
 
 ```typescript
 function computePrfCellStatus(
   response: ProjectRegistrationFormResponse | null,
-  latestHistory: ProjectRegistrationFormItemEditHistory | null,
 ): MastersheetCellStatus {
   if (!response) return "NOT_APPLICABLE";
-  if (latestHistory?.trigger === "COMMITTEE_EDIT") return "COMMITTEE_EDITED";
   return "SUBMITTED";
 }
 ```
@@ -172,17 +167,12 @@ MastersheetCellStatus: NOT_DELIVERED | NOT_ANSWERED | SUBMITTED | COMMITTEE_EDIT
 
 ## 6. セル編集
 
-### 6.1 編集可否
+企画登録情報由来カラムは**読み取り専用**。実委人によるセル値の編集は不可。
 
-| セル状態 | 編集可否 | 操作後の状態 |
-|----------|----------|-------------|
-| NOT_APPLICABLE | **不可** | — |
-| SUBMITTED | 可 | → COMMITTEE_EDITED |
-| COMMITTEE_EDITED | 可 | COMMITTEE_EDITED（値更新） |
-
-### 6.2 内部動作
-
-実委人が編集すると `ProjectRegistrationFormItemEditHistory` に `COMMITTEE_EDIT` レコードを追加。`ProjectRegistrationFormAnswer` は変更しない。
+| セル状態 | 編集可否 |
+|----------|----------|
+| NOT_APPLICABLE | 不可 |
+| SUBMITTED | 不可 |
 
 ---
 
@@ -298,7 +288,7 @@ const mastersheetCellSchema = z.object({
 | カラム編集（名前等） | 作成者のみ | 作成者のみ | 作成者のみ |
 | カラム削除 | 作成者のみ | 作成者のみ | 作成者のみ |
 | カラムへのアクセス | 作成者 + viewer 設定に合致 | フォーム owner / collaborator | 企画登録フォーム owner / collaborator |
-| セル編集 | アクセス可能な全員 | アクセス可能な全員 | アクセス可能な全員 |
+| セル編集 | アクセス可能な全員 | アクセス可能な全員 | **不可（読み取り専用）** |
 | アクセス申請の承認 | カラム作成者 | フォーム owner | 企画登録フォーム owner |
 | 変更履歴の閲覧 | — | アクセス可能な全員 | アクセス可能な全員 |
 
@@ -311,7 +301,7 @@ const mastersheetCellSchema = z.object({
 | 現在値の保存先 | `MastersheetCellValue` | `FormItemEditHistory`（最新）→ `FormAnswer` | `ProjectRegistrationFormItemEditHistory`（最新）→ `ProjectRegistrationFormAnswer` |
 | 変更履歴 | なし | `FormItemEditHistory` | `ProjectRegistrationFormItemEditHistory` |
 | 選択肢テーブル | `MastersheetCellSelectedOption` | `FormItemEditHistorySelectedOption` | `ProjectRegistrationFormItemEditHistorySelectedOption` |
-| 編集者 | 実委人のみ | 企画メンバー + 実委人 | 企画メンバー（登録時のみ）+ 実委人 |
+| 編集者 | 実委人のみ | 企画メンバー + 実委人 | 企画メンバー（登録時のみ、読み取り専用） |
 | 配信の概念 | なし | あり | なし |
 | 回答なしの扱い | — | NOT_DELIVERED / NOT_ANSWERED | NOT_APPLICABLE |
 
@@ -338,8 +328,8 @@ const mastersheetCellSchema = z.object({
 
 - `GET /committee/mastersheet/data` で企画登録フォーム回答を取得・セル値を構築
 - `POST /committee/mastersheet/columns` で `PROJECT_REGISTRATION_FORM_ITEM` の作成を処理
-- `PUT /committee/mastersheet/edits/:columnId/:projectId` で企画登録フォーム設問の編集を処理
 - `POST /committee/mastersheet/history` で企画登録フォーム設問の履歴を返す
+- `PUT /committee/mastersheet/edits/:columnId/:projectId` は FORM_ITEM のみ対象（企画登録情報由来カラムは編集不可）
 - アクセス申請の承認時に `ProjectRegistrationFormCollaborator` を作成
 - `POST /project/create` で `ProjectRegistrationFormItemEditHistory` に `PROJECT_SUBMIT` を追加
 
@@ -353,13 +343,6 @@ const mastersheetCellSchema = z.object({
 
 ## 15. 未決事項
 
-### 15.1 NOT_APPLICABLE でのセル編集
-
-回答が存在しない企画（フォーム対象外 or 後から追加されたフォーム）に対して、実委人がセル値を入力できるようにすべきか。
-
-- **案A**: 編集不可（現仕様書の方針）— 回答がない状態では値を入れない
-- **案B**: 編集可（`COMMITTEE_EDIT` で EditHistory を作成）— 実委人が任意に値を補完できる
-
-### 15.2 企画登録フォーム回答の再編集（企画側）
+### 15.1 企画登録フォーム回答の再編集（企画側）
 
 現状、企画登録フォームの回答は企画作成時のみ提出され、その後の編集はできない。将来的に企画側での再編集を許可する場合は `PROJECT_RESUBMIT` trigger の追加が必要。
