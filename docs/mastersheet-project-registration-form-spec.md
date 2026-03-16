@@ -2,7 +2,9 @@
 
 ## 1. 概要
 
-企画登録フォーム（`ProjectRegistrationForm`）の設問回答を、既存の申請フォーム（`Form`）と同様にマスターシートのカラムとして追加・表示・編集できるようにする。
+企画登録フォーム（`ProjectRegistrationForm`）の設問回答を、マスターシートのカラムとして追加・表示できるようにする。
+
+企画登録フォームの回答は企画の**基本情報**であり、申請フォーム（`Form`）とは性質が異なる。読み取り専用で、編集履歴や変更追跡の仕組みは持たない。
 
 ### 1.1 現状
 
@@ -13,6 +15,8 @@
 | 配信の概念 | あり（`FormDelivery`） | なし（企画登録時に自動回答） |
 | 回答タイミング | 配信後に任意のタイミング | 企画作成時のみ |
 | 再提出 | 可能 | 不可（企画作成は1回のみ） |
+| 編集 | 企画メンバー（再提出）+ 実委人 | **不可（読み取り専用）** |
+| 変更履歴 | `FormItemEditHistory`（append-only） | **なし** |
 
 ### 1.2 ゴール
 
@@ -40,7 +44,7 @@ MastersheetColumnType: FORM_ITEM | CUSTOM | PROJECT_REGISTRATION_FORM_ITEM
 | データ型 | 設問の型に準じる（TEXT, TEXTAREA, SELECT, CHECKBOX, NUMBER, FILE） |
 | 作成者 | 全実委人 |
 | 公開範囲 | 全実委人（企画登録情報の閲覧は元々全員可のため制限なし） |
-| セル値の保存先 | `ProjectRegistrationFormItemEditHistory`（最新）→ `ProjectRegistrationFormAnswer`（フォールバック） |
+| セル値の保存先 | `ProjectRegistrationFormAnswer` |
 | 1設問1カラム | 同じ `projectRegistrationFormItemId` で複数カラムは作成不可（unique 制約） |
 
 ---
@@ -61,48 +65,15 @@ MastersheetColumn
 - `type = PROJECT_REGISTRATION_FORM_ITEM` のとき `projectRegistrationFormItemId` が必須
 - `projectRegistrationFormItemId` には unique 制約を付与（1設問1カラム）
 
-### 3.2 ProjectRegistrationFormItemEditHistory（新規テーブル）
+### 3.2 表示値の導出
 
-申請フォームの `FormItemEditHistory` と同様の append-only 編集履歴テーブル。
-
-```
-ProjectRegistrationFormItemEditHistory
-├── id                                   String    PK
-├── projectRegistrationFormItemId        String    FK → ProjectRegistrationFormItem
-├── projectId                            String    FK → Project
-├── textValue                            String?   テキスト値
-├── numberValue                          Float?    数値
-├── fileId                               String?   ファイル ID
-├── selectedOptions                      ProjectRegistrationFormItemEditHistorySelectedOption[]
-├── actorId                              String    FK → User
-├── trigger                              Enum      変更の種別（下記参照）
-├── createdAt                            DateTime  記録日時
-
-ProjectRegistrationFormItemEditHistorySelectedOption
-├── id                                   String  PK
-├── editHistoryId                        String  FK → ProjectRegistrationFormItemEditHistory
-├── projectRegistrationFormItemOptionId  String  FK → ProjectRegistrationFormItemOption
-```
-
-### 3.3 trigger の定義
-
-| trigger | 意味 | 誰が |
-|---------|------|------|
-| `PROJECT_SUBMIT` | 企画登録時にフォーム回答を提出 | 企画メンバー |
-
-> 企画登録フォームには再提出の概念がないため `PROJECT_RESUBMIT` は不要。
-> 企画登録情報由来カラムは読み取り専用のため `COMMITTEE_EDIT` も不要。
-
-### 3.4 表示値の導出
-
-`FORM_ITEM` と同じロジック:
+`ProjectRegistrationFormAnswer` から直接値を取得する。申請フォーム（FORM_ITEM）のような EditHistory を介した導出は行わない。
 
 ```
-ProjectRegistrationFormItemEditHistory に該当レコード（formItemId × projectId）がある場合:
-  → 最新レコードの value を表示
-
-ProjectRegistrationFormItemEditHistory にレコードがない場合:
-  → ProjectRegistrationFormAnswer の値を表示（なければ null）
+ProjectRegistrationFormResponse が存在する場合:
+  → 該当 ProjectRegistrationFormAnswer の値を表示
+存在しない場合:
+  → NOT_APPLICABLE（回答なし）
 ```
 
 ---
@@ -113,6 +84,8 @@ ProjectRegistrationFormItemEditHistory にレコードがない場合:
 
 申請フォームには「配信」の概念があるため `NOT_DELIVERED` / `NOT_ANSWERED` の状態が存在するが、企画登録フォームは企画作成時に必ず回答が提出されるため、これらの状態は原則発生しない。
 
+また、申請フォームでは実委人による編集があるため `COMMITTEE_EDITED` が発生するが、企画登録情報は読み取り専用のため発生しない。
+
 ただし、以下のケースで回答が存在しないことがある:
 - 企画登録フォームが**企画作成後に**追加・有効化された場合（既存企画には回答がない）
 - 企画の `type` / `location` がフォームの `filterTypes` / `filterLocations` に合致しなかった場合
@@ -121,7 +94,6 @@ ProjectRegistrationFormItemEditHistory にレコードがない場合:
 
 ```
 NOT_APPLICABLE   企画がフォームの対象外（filter 不一致）、またはフォームが企画作成後に追加された
-      ↓ (回答が存在する場合)
 SUBMITTED        企画登録時に回答が提出された
 ```
 
@@ -159,7 +131,7 @@ MastersheetCellStatus: NOT_DELIVERED | NOT_ANSWERED | SUBMITTED | COMMITTEE_EDIT
 
 ## 6. セル編集
 
-企画登録情報由来カラムは**読み取り専用**。実委人によるセル値の編集は不可。
+企画登録情報由来カラムは**読み取り専用**。実委人によるセル値の編集は不可。変更履歴も存在しない。
 
 | セル状態 | 編集可否 |
 |----------|----------|
@@ -206,49 +178,21 @@ projectRegistrationFormItemType: formItemTypeSchema.nullable(),
 
 ---
 
-## 9. 変更履歴
+## 9. GET /committee/mastersheet/data への影響
 
-### 9.1 記録対象
-
-企画登録フォーム設問に対する全変更が `ProjectRegistrationFormItemEditHistory` に append-only で記録される。
-
-| 操作 | trigger | actor |
-|------|---------|-------|
-| 企画登録時にフォーム回答提出 | `PROJECT_SUBMIT` | 企画メンバー |
-
-### 9.2 企画作成時の EditHistory 追加
-
-`POST /project/create` のトランザクション内で、`ProjectRegistrationFormAnswer` の作成と同時に `ProjectRegistrationFormItemEditHistory` に `PROJECT_SUBMIT` レコードを追加する。
-
----
-
-## 10. 表示値の統一
-
-`ProjectRegistrationFormItemEditHistory` の最新レコードに基づく表示値は、以下の全画面で共通:
-
-| 画面 | 表示内容 |
-|------|---------|
-| マスターシート（PROJECT_REGISTRATION_FORM_ITEM カラム） | 最新の値 |
-| 委員会側企画登録フォーム回答一覧 | 最新の値 |
-
----
-
-## 11. GET /committee/mastersheet/data への影響
-
-### 11.1 カラム定義
+### 9.1 カラム定義
 
 `columns` 配列に `PROJECT_REGISTRATION_FORM_ITEM` 型のカラムが含まれるようになる。
 
-### 11.2 セル値の取得
+### 9.2 セル値の取得
 
 企画登録フォームの回答を取得する際は:
 
-1. 全ての `ProjectRegistrationFormResponse` を取得（`submittedAt` が存在するもの）
-2. 対象の `ProjectRegistrationFormAnswer` を取得
-3. 最新の `ProjectRegistrationFormItemEditHistory` を取得
-4. 表示値の導出ロジック（§3.4）に従ってセル値を構築
+1. 全ての `ProjectRegistrationFormResponse` を取得
+2. 対象の `ProjectRegistrationFormAnswer` から値を取得
+3. 回答が存在すれば `SUBMITTED`、存在しなければ `NOT_APPLICABLE`
 
-### 11.3 セルスキーマ
+### 9.3 セルスキーマ
 
 既存の `mastersheetCellSchema` に `formValue` フィールドを共用。`PROJECT_REGISTRATION_FORM_ITEM` と `FORM_ITEM` は同じ構造でセル値を返す。
 
@@ -263,7 +207,7 @@ const mastersheetCellSchema = z.object({
 
 ---
 
-## 12. 権限まとめ
+## 10. 権限まとめ
 
 | 操作 | CUSTOM | FORM_ITEM | PROJECT_REGISTRATION_FORM_ITEM |
 |------|--------|-----------|-------------------------------|
@@ -273,50 +217,46 @@ const mastersheetCellSchema = z.object({
 | カラムへのアクセス | 作成者 + viewer 設定に合致 | フォーム owner / collaborator | **全実委人** |
 | セル編集 | アクセス可能な全員 | アクセス可能な全員 | **不可（読み取り専用）** |
 | アクセス申請の承認 | カラム作成者 | フォーム owner | **不要** |
-| 変更履歴の閲覧 | — | アクセス可能な全員 | 全実委人 |
+| 変更履歴の閲覧 | — | アクセス可能な全員 | **─（なし）** |
 
 ---
 
-## 13. 構造比較（3種カラム）
+## 11. 構造比較（3種カラム）
 
 | 項目 | CUSTOM | FORM_ITEM | PROJECT_REGISTRATION_FORM_ITEM |
 |------|--------|-----------|-------------------------------|
-| 現在値の保存先 | `MastersheetCellValue` | `FormItemEditHistory`（最新）→ `FormAnswer` | `ProjectRegistrationFormItemEditHistory`（最新）→ `ProjectRegistrationFormAnswer` |
-| 変更履歴 | なし | `FormItemEditHistory` | `ProjectRegistrationFormItemEditHistory` |
-| 選択肢テーブル | `MastersheetCellSelectedOption` | `FormItemEditHistorySelectedOption` | `ProjectRegistrationFormItemEditHistorySelectedOption` |
-| 編集者 | 実委人のみ | 企画メンバー + 実委人 | 企画メンバー（登録時のみ、読み取り専用） |
+| 現在値の保存先 | `MastersheetCellValue` | `FormItemEditHistory`（最新）→ `FormAnswer` | `ProjectRegistrationFormAnswer` |
+| 変更履歴 | なし | `FormItemEditHistory` | **なし** |
+| 選択肢テーブル | `MastersheetCellSelectedOption` | `FormItemEditHistorySelectedOption` | `ProjectRegistrationFormAnswerSelectedOption` |
+| 編集者 | 実委人のみ | 企画メンバー + 実委人 | **なし（読み取り専用）** |
 | 配信の概念 | なし | あり | なし |
 | 回答なしの扱い | — | NOT_DELIVERED / NOT_ANSWERED | NOT_APPLICABLE |
 
 ---
 
-## 14. 実装で変更が必要な箇所
+## 12. 実装で変更が必要な箇所
 
-### 14.1 DB スキーマ（Prisma）
+### 12.1 DB スキーマ（Prisma）
 
 - `MastersheetColumnType` enum に `PROJECT_REGISTRATION_FORM_ITEM` を追加
 - `MastersheetColumn` に `projectRegistrationFormItemId` フィールドを追加（optional, unique）
-- `ProjectRegistrationFormItemEditHistory` テーブルを追加
-- `ProjectRegistrationFormItemEditHistorySelectedOption` テーブルを追加
-- `MastersheetCellStatus` enum に `NOT_APPLICABLE` を追加（使用する場合）
+- `MastersheetCellStatus` enum に `NOT_APPLICABLE` を追加
 
-### 14.2 共有スキーマ（packages/shared）
+### 12.2 共有スキーマ（packages/shared）
 
 - `mastersheetColumnTypeSchema` に `PROJECT_REGISTRATION_FORM_ITEM` を追加
 - `mastersheetCellStatusSchema` に `NOT_APPLICABLE` を追加
 - `createMastersheetColumnRequestSchema` に新しいメンバーを追加
 - `mastersheetColumnDefSchema` に `projectRegistrationFormItemId` / `projectRegistrationFormItemType` を追加
 
-### 14.3 バックエンド（apps/api）
+### 12.3 バックエンド（apps/api）
 
 - `GET /committee/mastersheet/data` で企画登録フォーム回答を取得・セル値を構築
 - `POST /committee/mastersheet/columns` で `PROJECT_REGISTRATION_FORM_ITEM` の作成を処理
-- `POST /committee/mastersheet/history` で企画登録フォーム設問の履歴を返す
 - `PUT /committee/mastersheet/edits/:columnId/:projectId` は FORM_ITEM のみ対象（企画登録情報由来カラムは編集不可）
 - アクセス申請は `PROJECT_REGISTRATION_FORM_ITEM` カラムに対しては不要（全実委人がアクセス可能）
-- `POST /project/create` で `ProjectRegistrationFormItemEditHistory` に `PROJECT_SUBMIT` を追加
 
-### 14.4 フロントエンド（apps/web）
+### 12.4 フロントエンド（apps/web）
 
 - `MastersheetTable` のカラムヘッダーに企画登録フォーム設問アイコンを追加
 - `ColumnPanel` のカラム作成ダイアログで企画登録フォーム設問を選択可能にする
@@ -324,8 +264,8 @@ const mastersheetCellSchema = z.object({
 
 ---
 
-## 15. 未決事項
+## 13. 未決事項
 
-### 15.1 企画登録フォーム回答の再編集（企画側）
+### 13.1 企画登録フォーム回答の再編集（企画側）
 
-現状、企画登録フォームの回答は企画作成時のみ提出され、その後の編集はできない。将来的に企画側での再編集を許可する場合は `PROJECT_RESUBMIT` trigger の追加が必要。
+現状、企画登録フォームの回答は企画作成時のみ提出され、その後の編集はできない。将来的に企画側での再編集を許可する場合は、編集履歴テーブルの導入を検討する。

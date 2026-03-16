@@ -82,57 +82,6 @@ async function collectFormItemHistory(
 	}
 }
 
-/** ProjectRegistrationFormItemEditHistory をグループマップに追加する */
-async function collectPrfItemHistory(
-	prfItemIds: string[],
-	targetProjectIds: string[],
-	prfItemToColumn: Map<string, string>,
-	targetCellKeys: Set<string>,
-	groupMap: HistoryGroupMap
-) {
-	const allPrfHistory =
-		await prisma.projectRegistrationFormItemEditHistory.findMany({
-			where: {
-				projectRegistrationFormItemId: { in: prfItemIds },
-				projectId: { in: targetProjectIds },
-			},
-			include: {
-				actor: { select: { id: true, name: true } },
-				selectedOptions: {
-					select: { projectRegistrationFormItemOptionId: true },
-				},
-			},
-			orderBy: { createdAt: "desc" },
-		});
-
-	for (const h of allPrfHistory) {
-		const columnId = prfItemToColumn.get(h.projectRegistrationFormItemId);
-		if (!columnId) continue;
-		if (!targetCellKeys.has(`${columnId}:${h.projectId}`)) continue;
-
-		const key = `${columnId}:${h.projectId}`;
-		let group = groupMap.get(key);
-		if (!group) {
-			group = { columnId, projectId: h.projectId, history: [] };
-			groupMap.set(key, group);
-		}
-		group.history.push({
-			id: h.id,
-			value: {
-				textValue: h.textValue,
-				numberValue: h.numberValue,
-				fileId: h.fileId,
-				selectedOptionIds: h.selectedOptions.map(
-					s => s.projectRegistrationFormItemOptionId
-				),
-			},
-			actor: h.actor,
-			trigger: h.trigger,
-			createdAt: h.createdAt,
-		});
-	}
-}
-
 export const cellsRoute = new Hono<AuthEnv>();
 
 // ─────────────────────────────────────────────────────────────
@@ -385,10 +334,7 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 	const columns = await prisma.mastersheetColumn.findMany({
 		where: {
 			id: { in: targetColumnIds },
-			OR: [
-				{ formItemId: { not: null } },
-				{ projectRegistrationFormItemId: { not: null } },
-			],
+			formItemId: { not: null },
 		},
 		include: {
 			formItem: { select: { id: true, formId: true } },
@@ -431,43 +377,14 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 	);
 	const formItemIds = [...formItemToColumn.keys()];
 
-	// PROJECT_REGISTRATION_FORM_ITEM カラムの履歴
-	const prfItemToColumn = new Map(
-		accessibleColumns
-			.filter(
-				(
-					col
-				): col is typeof col & {
-					projectRegistrationFormItem: NonNullable<
-						typeof col.projectRegistrationFormItem
-					>;
-				} =>
-					col.type === "PROJECT_REGISTRATION_FORM_ITEM" &&
-					col.projectRegistrationFormItem != null
-			)
-			.map(col => [col.projectRegistrationFormItem.id, col.id] as const)
-	);
-	const prfItemIds = [...prfItemToColumn.keys()];
-
 	const groupMap: HistoryGroupMap = new Map();
 
-	// FormItemEditHistory
+	// FormItemEditHistory（FORM_ITEM カラムのみ。PRF カラムは基本情報のため履歴なし）
 	if (formItemIds.length > 0) {
 		await collectFormItemHistory(
 			formItemIds,
 			targetProjectIds,
 			formItemToColumn,
-			targetCellKeys,
-			groupMap
-		);
-	}
-
-	// ProjectRegistrationFormItemEditHistory
-	if (prfItemIds.length > 0) {
-		await collectPrfItemHistory(
-			prfItemIds,
-			targetProjectIds,
-			prfItemToColumn,
 			targetCellKeys,
 			groupMap
 		);

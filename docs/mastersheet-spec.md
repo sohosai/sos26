@@ -40,14 +40,12 @@
 | `FormItemEditHistory` | フォーム設問の全編集履歴（append-only）。企画の提出・実委の編集を統一管理 |
 | `FormItemEditHistorySelectedOption` | `FormItemEditHistory` の SELECT/CHECKBOX 選択値（中間テーブル） |
 
-#### 企画登録フォーム回答とその編集履歴
+#### 企画登録フォーム回答
 
 | テーブル | 役割 |
 |---------|------|
 | `ProjectRegistrationFormResponse` | 企画登録フォーム回答（企画登録時に作成） |
-| `ProjectRegistrationFormAnswer` | 各設問への回答値 |
-| `ProjectRegistrationFormItemEditHistory` | 企画登録フォーム設問の編集履歴（append-only） |
-| `ProjectRegistrationFormItemEditHistorySelectedOption` | `ProjectRegistrationFormItemEditHistory` の SELECT/CHECKBOX 選択値（中間テーブル） |
+| `ProjectRegistrationFormAnswer` | 各設問への回答値。企画の基本情報として読み取り専用 |
 
 #### ビュー
 
@@ -112,11 +110,11 @@ FormItemEditHistorySelectedOption
 
 | 項目 | CUSTOM | FORM_ITEM | PROJECT_REGISTRATION_FORM_ITEM |
 |------|--------|-----------|-------------------------------|
-| 現在値の保存先 | `MastersheetCellValue`（1セル1レコード） | `FormItemEditHistory`（最新）→ `FormAnswer`（フォールバック） | `ProjectRegistrationFormItemEditHistory`（最新）→ `ProjectRegistrationFormAnswer`（フォールバック） |
-| 変更履歴 | なし | `FormItemEditHistory`（append-only） | `ProjectRegistrationFormItemEditHistory`（append-only） |
-| 選択肢の保存 | `MastersheetCellSelectedOption`（中間テーブル） | `FormItemEditHistorySelectedOption`（中間テーブル） | `ProjectRegistrationFormItemEditHistorySelectedOption`（中間テーブル） |
-| 編集者 | 実委人のみ | 企画メンバー（フォーム提出）+ 実委人（編集） | 企画メンバー（登録時のみ、読み取り専用） |
-| 履歴が必要な理由 | — | 企画と実委の双方が関与し、変更の追跡が必要なため | 企画登録時の回答を記録するため |
+| 現在値の保存先 | `MastersheetCellValue`（1セル1レコード） | `FormItemEditHistory`（最新）→ `FormAnswer`（フォールバック） | `ProjectRegistrationFormAnswer` |
+| 変更履歴 | なし | `FormItemEditHistory`（append-only） | **なし** |
+| 選択肢の保存 | `MastersheetCellSelectedOption`（中間テーブル） | `FormItemEditHistorySelectedOption`（中間テーブル） | `ProjectRegistrationFormAnswerSelectedOption`（中間テーブル） |
+| 編集者 | 実委人のみ | 企画メンバー（フォーム提出）+ 実委人（編集） | **なし（読み取り専用）** |
+| 履歴が必要な理由 | — | 企画と実委の双方が関与し、変更の追跡が必要なため | — |
 
 > `PROJECT_REGISTRATION_FORM_ITEM` の詳細仕様は [マスターシート × 企画登録フォーム連携 仕様書](mastersheet-project-registration-form-spec.md) を参照。
 
@@ -157,7 +155,7 @@ FormItemEditHistorySelectedOption
 | データ型 | 設問の型に準じる（TEXT, TEXTAREA, SELECT, CHECKBOX, NUMBER, FILE） |
 | 作成者 | 全実委人 |
 | 公開範囲 | 全実委人（企画登録情報の閲覧は元々全員可のため制限なし） |
-| セル値の保存先 | `ProjectRegistrationFormItemEditHistory`（最新）→ `ProjectRegistrationFormAnswer`（フォールバック） |
+| セル値の保存先 | `ProjectRegistrationFormAnswer` |
 | 1 設問 1 カラム | 同じ projectRegistrationFormItemId で複数カラムは作成不可（unique 制約） |
 | セル編集 | **不可（読み取り専用）** |
 
@@ -419,7 +417,7 @@ FormItemEditHistory:
 | カラムへのアクセス | 作成者 + viewer 設定に合致する実委人 | フォーム owner / collaborator | 全実委人 |
 | セル編集 | カラムにアクセスできる全員 | カラムにアクセスできる全員 | **不可（読み取り専用）** |
 | アクセス申請の承認 | カラム作成者 | フォーム owner | **不要** |
-| 変更履歴の閲覧 | — | カラムにアクセスできる全員 | 全実委人 |
+| 変更履歴の閲覧 | — | カラムにアクセスできる全員 | — |
 
 ---
 
@@ -487,7 +485,7 @@ type ViewState = {
 
 セルの編集履歴（誰がいつ何を変えたか）を確認できる UI。
 
-- FORM_ITEM / PROJECT_REGISTRATION_FORM_ITEM セルのホバー時に履歴アイコンを表示
+- FORM_ITEM セルのホバー時に履歴アイコンを表示
 - アイコンクリックで Popover を開き、`GET /committee/mastersheet/columns/:columnId/history/:projectId` を fetch
 - `trigger` に応じたラベル: `PROJECT_SUBMIT` → 「提出」、`PROJECT_RESUBMIT` → 「再提出」、`COMMITTEE_EDIT` → 「実委編集」
 - API は実装済み

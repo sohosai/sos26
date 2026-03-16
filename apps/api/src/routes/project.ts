@@ -172,7 +172,7 @@ projectRoute.post("/create", requireAuth, async c => {
 		// 企画登録フォームの回答を保存
 		if (registrationFormAnswers?.length) {
 			for (const { formId, answers } of registrationFormAnswers) {
-				const response = await tx.projectRegistrationFormResponse.create({
+				await tx.projectRegistrationFormResponse.create({
 					data: {
 						formId,
 						projectId: created.id,
@@ -180,39 +180,7 @@ projectRoute.post("/create", requireAuth, async c => {
 							create: answers.map(buildPrismaAnswerData),
 						},
 					},
-					include: {
-						answers: {
-							include: { selectedOptions: true },
-						},
-					},
 				});
-
-				// マスターシート用の編集履歴を追加（PROJECT_SUBMIT）
-				for (const answer of response.answers) {
-					const history =
-						await tx.projectRegistrationFormItemEditHistory.create({
-							data: {
-								projectRegistrationFormItemId: answer.formItemId,
-								projectId: created.id,
-								textValue: answer.textValue,
-								numberValue: answer.numberValue,
-								fileId: answer.fileId,
-								actorId: userId,
-								trigger: "PROJECT_SUBMIT",
-							},
-						});
-
-					if (answer.selectedOptions.length > 0) {
-						await tx.projectRegistrationFormItemEditHistorySelectedOption.createMany(
-							{
-								data: answer.selectedOptions.map(so => ({
-									editHistoryId: history.id,
-									projectRegistrationFormItemOptionId: so.formItemOptionId,
-								})),
-							}
-						);
-					}
-				}
 			}
 		}
 

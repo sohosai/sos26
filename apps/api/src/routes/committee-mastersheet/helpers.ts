@@ -272,52 +272,14 @@ export type PrfResponseWithAnswers =
 		};
 	}>;
 
-export type PrfHistoryWithOptions =
-	Prisma.ProjectRegistrationFormItemEditHistoryGetPayload<{
-		include: {
-			selectedOptions: {
-				select: { projectRegistrationFormItemOptionId: true };
-			};
-		};
-	}>;
-
-/** prfItemId × projectId ごとに最新1件の編集履歴を取得 */
-export async function fetchLatestPrfHistoryByCell(
-	prfItemIds: string[]
-): Promise<Map<string, PrfHistoryWithOptions>> {
-	const result = new Map<string, PrfHistoryWithOptions>();
-	if (prfItemIds.length === 0) return result;
-
-	const allHistory =
-		await prisma.projectRegistrationFormItemEditHistory.findMany({
-			where: { projectRegistrationFormItemId: { in: prfItemIds } },
-			orderBy: { createdAt: "desc" },
-			include: {
-				selectedOptions: {
-					select: { projectRegistrationFormItemOptionId: true },
-				},
-			},
-		});
-
-	for (const h of allHistory) {
-		const key = `${h.projectRegistrationFormItemId}:${h.projectId}`;
-		if (!result.has(key)) result.set(key, h);
-	}
-
-	return result;
-}
-
 export function buildPrfItemCell(
 	colId: string,
 	prfItem: { id: string; formId: string },
 	projectId: string,
-	responseByFormProject: Map<string, Map<string, PrfResponseWithAnswers>>,
-	latestPrfHistoryByCell: Map<string, PrfHistoryWithOptions>
+	responseByFormProject: Map<string, Map<string, PrfResponseWithAnswers>>
 ) {
 	const responseMap = responseByFormProject.get(prfItem.formId);
 	const response = responseMap?.get(projectId);
-	const historyKey = `${prfItem.id}:${projectId}`;
-	const latestHistory = latestPrfHistoryByCell.get(historyKey);
 
 	if (!response) {
 		return {
@@ -327,25 +289,6 @@ export function buildPrfItemCell(
 		};
 	}
 
-	if (latestHistory) {
-		return {
-			columnId: colId,
-			status:
-				latestHistory.trigger === "COMMITTEE_EDIT"
-					? ("COMMITTEE_EDITED" as const)
-					: ("SUBMITTED" as const),
-			formValue: {
-				textValue: latestHistory.textValue,
-				numberValue: latestHistory.numberValue,
-				fileId: latestHistory.fileId,
-				selectedOptionIds: latestHistory.selectedOptions.map(
-					s => s.projectRegistrationFormItemOptionId
-				),
-			},
-		};
-	}
-
-	// フォールバック: ProjectRegistrationFormAnswer
 	const answer = response.answers.find(a => a.formItemId === prfItem.id);
 	const formValue = answer
 		? {

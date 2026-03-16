@@ -8,7 +8,6 @@ import {
 	type ColumnFull,
 	canViewColumn,
 	fetchLatestHistoryByCell,
-	fetchLatestPrfHistoryByCell,
 	formatColumnDef,
 	getAccessibleFormIds,
 } from "./helpers";
@@ -174,15 +173,6 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 		prfResponseByFormProject.get(r.formId)?.set(r.projectId, r);
 	}
 
-	const prfItemIds = [
-		...new Set(
-			prfItemCols.flatMap(c =>
-				c.projectRegistrationFormItem ? [c.projectRegistrationFormItem.id] : []
-			)
-		),
-	];
-	const latestPrfHistoryByCell = await fetchLatestPrfHistoryByCell(prfItemIds);
-
 	// 5. CUSTOM: セル値をバッチ取得
 	const customColIds = customCols.map(c => c.id);
 	const cellValues = customColIds.length
@@ -224,8 +214,7 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 					col.id,
 					col.projectRegistrationFormItem,
 					project.id,
-					prfResponseByFormProject,
-					latestPrfHistoryByCell
+					prfResponseByFormProject
 				);
 			}
 			// CUSTOM
