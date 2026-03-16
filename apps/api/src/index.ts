@@ -14,6 +14,7 @@ import { committeeProjectRoute } from "./routes/committee-project";
 import { committeeProjectRegistrationFormRoute } from "./routes/committee-project-registration-form";
 import { committeeUserRoute } from "./routes/committee-user";
 import { fileRoute } from "./routes/files";
+import { healthRoute } from "./routes/health";
 import { projectRoute } from "./routes/project";
 import { projectFormRoute } from "./routes/project-form";
 import { projectInquiryRoute } from "./routes/project-inquiry";
@@ -52,6 +53,7 @@ app.get("/", c => {
 });
 
 // Mount routes
+app.route("/health", healthRoute);
 app.route("/auth", authRoute);
 app.route("/committee/members", committeeMemberRoute);
 app.route("/committee/projects", committeeProjectRoute);

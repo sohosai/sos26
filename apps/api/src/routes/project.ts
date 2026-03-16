@@ -271,6 +271,79 @@ projectRoute.get(
 );
 
 // ─────────────────────────────────────────
+// GET /project/:projectId/registration-form-responses
+// 企画登録フォーム回答一覧を取得
+// ─────────────────────────────────────────
+projectRoute.get(
+	"/:projectId/registration-form-responses",
+	requireAuth,
+	requireProjectMember,
+	async c => {
+		const project = c.get("project");
+		const responses = await prisma.projectRegistrationFormResponse.findMany({
+			where: { projectId: project.id },
+			include: {
+				form: {
+					select: {
+						id: true,
+						title: true,
+						description: true,
+					},
+				},
+				answers: {
+					include: {
+						formItem: {
+							select: {
+								id: true,
+								label: true,
+								type: true,
+							},
+						},
+						selectedOptions: {
+							include: {
+								formItemOption: { select: { id: true, label: true } },
+							},
+						},
+					},
+					orderBy: {
+						formItem: {
+							sortOrder: "asc",
+						},
+					},
+				},
+			},
+			orderBy: {
+				submittedAt: "asc",
+			},
+		});
+
+		return c.json({
+			responses: responses.map(response => ({
+				id: response.id,
+				submittedAt: response.submittedAt,
+				form: {
+					id: response.form.id,
+					title: response.form.title,
+					description: response.form.description,
+				},
+				answers: response.answers.map(answer => ({
+					formItemId: answer.formItem.id,
+					formItemLabel: answer.formItem.label,
+					type: answer.formItem.type,
+					textValue: answer.textValue,
+					numberValue: answer.numberValue,
+					fileId: answer.fileId,
+					selectedOptions: answer.selectedOptions.map(selected => ({
+						id: selected.formItemOption.id,
+						label: selected.formItemOption.label,
+					})),
+				})),
+			})),
+		});
+	}
+);
+
+// ─────────────────────────────────────────
 // PATCH /project/:projectId/detail
 // 企画の設定変更（名前・団体名等）
 // ─────────────────────────────────────────

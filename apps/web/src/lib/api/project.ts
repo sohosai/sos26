@@ -8,7 +8,9 @@ import {
 	createProjectEndpoint,
 	type DecideSubOwnerRequestResponse,
 	type GetProjectDetailResponse,
+	type GetProjectRegistrationFormResponsesResponse,
 	getProjectDetailEndpoint,
+	getProjectRegistrationFormResponsesEndpoint,
 	type JoinProjectRequest,
 	type JoinProjectResponse,
 	joinProjectEndpoint,
@@ -75,6 +77,18 @@ export async function getProjectDetail(
 	projectId: string
 ): Promise<GetProjectDetailResponse> {
 	return callGetApi(getProjectDetailEndpoint, {
+		pathParams: { projectId },
+	});
+}
+
+/**
+ * GET /project/:projectId/registration-form-responses
+ * 企画登録フォーム回答一覧を取得
+ */
+export async function getProjectRegistrationFormResponses(
+	projectId: string
+): Promise<GetProjectRegistrationFormResponsesResponse> {
+	return callGetApi(getProjectRegistrationFormResponsesEndpoint, {
 		pathParams: { projectId },
 	});
 }
