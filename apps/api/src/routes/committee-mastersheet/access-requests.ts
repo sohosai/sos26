@@ -60,6 +60,11 @@ async function grantAccessOnApproval(
 		};
 	}
 ) {
+	if (request.column.type === "PROJECT_REGISTRATION_FORM_ITEM") {
+		// 企画登録情報カラムは全実委人がアクセス可能なため、アクセス権付与は不要
+		return;
+	}
+
 	if (request.column.type === "FORM_ITEM" && request.column.formItem) {
 		await tx.formCollaborator.upsert({
 			where: {
