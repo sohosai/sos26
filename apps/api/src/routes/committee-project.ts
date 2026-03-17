@@ -278,6 +278,28 @@ committeeProjectRoute.get(
 
 		const status = getProjectStatusFields(project);
 
+		const formActions: { id: string; title: string; sentAt: Date }[] = [];
+		for (const d of formDeliveries) {
+			if (d.formAuthorization.form.deletedAt !== null) continue;
+			formActions.push({
+				id: d.id,
+				title: d.formAuthorization.form.title,
+				sentAt: d.createdAt,
+			});
+			if (formActions.length >= 20) break;
+		}
+
+		const noticeActions: { id: string; title: string; sentAt: Date }[] = [];
+		for (const d of noticeDeliveries) {
+			if (d.noticeAuthorization.notice.deletedAt !== null) continue;
+			noticeActions.push({
+				id: d.id,
+				title: d.noticeAuthorization.notice.title,
+				sentAt: d.createdAt,
+			});
+			if (noticeActions.length >= 20) break;
+		}
+
 		const result = {
 			...status,
 			id: project.id,
@@ -312,20 +334,8 @@ committeeProjectRoute.get(
 					}
 				: null,
 			actions: {
-				forms: formDeliveries
-					.filter(d => d.formAuthorization.form.deletedAt === null)
-					.map(d => ({
-						id: d.id,
-						title: d.formAuthorization.form.title,
-						sentAt: d.createdAt,
-					})),
-				notices: noticeDeliveries
-					.filter(d => d.noticeAuthorization.notice.deletedAt === null)
-					.map(d => ({
-						id: d.id,
-						title: d.noticeAuthorization.notice.title,
-						sentAt: d.createdAt,
-					})),
+				forms: formActions,
+				notices: noticeActions,
 				inquiries: inquiries.map(i => ({
 					id: i.id,
 					title: i.title,
