@@ -7,7 +7,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/patterns/RadioGroup";
 import { TextArea, TextField } from "@/components/primitives";
 import { deleteFile } from "@/lib/api/files";
-import { FileUploadFieldWithPreview } from "../EachField/FileUploadFieldWithPreview";
+import { FileUploadField } from "../EachField/FileUploadField";
 import { NumberField } from "../EachField/NumberField";
 import {
 	createEmptyFileAnswerValue,
@@ -96,7 +96,7 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 					? value
 					: createEmptyFileAnswerValue();
 				return (
-					<FileUploadFieldWithPreview
+					<FileUploadField
 						label=""
 						value={fileValue.pendingFiles}
 						uploadedFiles={fileValue.uploadedFiles}
