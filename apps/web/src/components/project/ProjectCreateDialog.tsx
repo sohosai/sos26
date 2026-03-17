@@ -235,48 +235,50 @@ function RegFormStep({
 }: RegFormStepProps) {
 	return (
 		<form className={styles.form} onSubmit={onSubmit} noValidate>
-			<div className={styles.header}>
-				<Text size="5" weight="bold">
-					{form.title}
-				</Text>
-				{form.description && (
-					<Text size="2" color="gray">
-						{form.description}
+			<div className={styles.content}>
+				<div className={styles.header}>
+					<Text size="5" weight="bold">
+						{form.title}
 					</Text>
-				)}
-				{totalSteps > 2 && (
-					<Text size="1" color="gray">
-						ステップ {step} / {totalSteps - 1}
-					</Text>
-				)}
-			</div>
+					{form.description && (
+						<Text size="2" color="gray">
+							{form.description}
+						</Text>
+					)}
+					{totalSteps > 2 && (
+						<Text size="1" color="gray">
+							ステップ {step} / {totalSteps - 1}
+						</Text>
+					)}
+				</div>
 
-			<div className={styles.fields}>
-				{[...form.items]
-					.sort((a, b) => a.sortOrder - b.sortOrder)
-					.map(item => (
-						<div key={item.id} className={styles.field}>
-							<AnswerField
-								item={{
-									id: item.id,
-									label: item.label,
-									description: item.description ?? undefined,
-									type: item.type as Parameters<
-										typeof AnswerField
-									>[0]["item"]["type"],
-									required: item.required,
-									options: item.options,
-								}}
-								value={answers[item.id]}
-								onChange={val => onAnswerChange(item.id, val)}
-							/>
-							{errors[item.id] && (
-								<Text size="1" color="red">
-									{errors[item.id]}
-								</Text>
-							)}
-						</div>
-					))}
+				<div className={styles.fields}>
+					{[...form.items]
+						.sort((a, b) => a.sortOrder - b.sortOrder)
+						.map(item => (
+							<div key={item.id} className={styles.field}>
+								<AnswerField
+									item={{
+										id: item.id,
+										label: item.label,
+										description: item.description ?? undefined,
+										type: item.type as Parameters<
+											typeof AnswerField
+										>[0]["item"]["type"],
+										required: item.required,
+										options: item.options,
+									}}
+									value={answers[item.id]}
+									onChange={val => onAnswerChange(item.id, val)}
+								/>
+								{errors[item.id] && (
+									<Text size="1" color="red">
+										{errors[item.id]}
+									</Text>
+								)}
+							</div>
+						))}
+				</div>
 			</div>
 
 			<div className={styles.footer}>
@@ -319,40 +321,42 @@ function ConsentStep({
 }: ConsentStepProps) {
 	return (
 		<form className={styles.form} onSubmit={onSubmit} noValidate>
-			<div className={styles.header}>
-				<Text size="5" weight="bold">
-					同意事項
-				</Text>
-				<Text size="2" color="gray">
-					以下の事項をご確認の上、同意してください。
-				</Text>
-			</div>
-
-			<div className={styles.fields}>
-				<div className={styles.field}>
-					<Checkbox
-						label="企画登録に回答した方は、別の企画団体の企画責任者または副企画責任者になることはできません。"
-						checked={consented1}
-						onCheckedChange={onConsent1Change}
-					/>
-					{errors.consented1 && (
-						<Text size="1" color="red">
-							{errors.consented1}
-						</Text>
-					)}
+			<div className={styles.content}>
+				<div className={styles.header}>
+					<Text size="5" weight="bold">
+						同意事項
+					</Text>
+					<Text size="2" color="gray">
+						以下の事項をご確認の上、同意してください。
+					</Text>
 				</div>
 
-				<div className={styles.field}>
-					<Checkbox
-						label="ここで回答した内容(企画区分・企画実施場所・企画名・企画団体名)の修正・変更は、企画応募期間が終了すると簡単に行うことができません。"
-						checked={consented2}
-						onCheckedChange={onConsent2Change}
-					/>
-					{errors.consented2 && (
-						<Text size="1" color="red">
-							{errors.consented2}
-						</Text>
-					)}
+				<div className={styles.fields}>
+					<div className={styles.field}>
+						<Checkbox
+							label="企画登録に回答した方は、別の企画団体の企画責任者または副企画責任者になることはできません。"
+							checked={consented1}
+							onCheckedChange={onConsent1Change}
+						/>
+						{errors.consented1 && (
+							<Text size="1" color="red">
+								{errors.consented1}
+							</Text>
+						)}
+					</div>
+
+					<div className={styles.field}>
+						<Checkbox
+							label="ここで回答した内容(企画区分・企画実施場所・企画名・企画団体名)の修正・変更は、企画応募期間が終了すると簡単に行うことができません。"
+							checked={consented2}
+							onCheckedChange={onConsent2Change}
+						/>
+						{errors.consented2 && (
+							<Text size="1" color="red">
+								{errors.consented2}
+							</Text>
+						)}
+					</div>
 				</div>
 			</div>
 
@@ -593,7 +597,7 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 
 	return (
 		<Dialog.Root open={open} onOpenChange={handleClose}>
-			<Dialog.Content maxWidth="520px">
+			<Dialog.Content maxWidth="520px" className={styles.dialogContent}>
 				<VisuallyHidden>
 					<Dialog.Title>企画登録</Dialog.Title>
 				</VisuallyHidden>
@@ -601,137 +605,139 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 				{step === 0 ? (
 					/* ─── ステップ1: 基本情報 ─── */
 					<div className={styles.form}>
-						<div className={styles.header}>
-							<Text size="5" weight="bold">
-								企画登録フォーム
-							</Text>
-							<Text size="2" color="gray">
-								学園祭への企画参加に必要な情報を入力してください。必須項目はすべてご記入ください。
-							</Text>
-						</div>
-
-						<div className={styles.fields}>
-							<Text size="1" color="gray">
-								{PROJECT_DISPLAY_NAME_RULE_MESSAGE}
-							</Text>
-
-							<div className={styles.field}>
-								<TextField
-									label="企画名 *"
-									value={step1.name}
-									onChange={handleStep1Change("name")}
-									placeholder="例：○○研究会"
-									error={step1Errors.name}
-								/>
+						<div className={styles.content}>
+							<div className={styles.header}>
+								<Text size="5" weight="bold">
+									企画登録フォーム
+								</Text>
+								<Text size="2" color="gray">
+									学園祭への企画参加に必要な情報を入力してください。必須項目はすべてご記入ください。
+								</Text>
 							</div>
 
-							<div className={styles.field}>
-								<TextField
-									label="企画名（ふりがな）*"
-									value={step1.namePhonetic}
-									onChange={handleStep1Change("namePhonetic")}
-									placeholder="例：まるまるけんきゅうかい"
-									error={step1Errors.namePhonetic}
-								/>
-							</div>
+							<div className={styles.fields}>
+								<Text size="1" color="gray">
+									{PROJECT_DISPLAY_NAME_RULE_MESSAGE}
+								</Text>
 
-							<div className={styles.field}>
-								<TextField
-									label="企画団体名 *"
-									value={step1.organizationName}
-									onChange={handleStep1Change("organizationName")}
-									placeholder="例：○○サークル"
-									error={step1Errors.organizationName}
-								/>
-							</div>
+								<div className={styles.field}>
+									<TextField
+										label="企画名 *"
+										value={step1.name}
+										onChange={handleStep1Change("name")}
+										placeholder="例：○○研究会"
+										error={step1Errors.name}
+									/>
+								</div>
 
-							<div className={styles.field}>
-								<TextField
-									label="企画団体名（ふりがな）*"
-									value={step1.organizationNamePhonetic}
-									onChange={handleStep1Change("organizationNamePhonetic")}
-									placeholder="例：まるまるさーくる"
-									error={step1Errors.organizationNamePhonetic}
-								/>
-							</div>
+								<div className={styles.field}>
+									<TextField
+										label="企画名（ふりがな）*"
+										value={step1.namePhonetic}
+										onChange={handleStep1Change("namePhonetic")}
+										placeholder="例：まるまるけんきゅうかい"
+										error={step1Errors.namePhonetic}
+									/>
+								</div>
 
-							<div className={styles.field}>
-								<RadioGroup
-									label="企画区分"
-									value={step1.type}
-									onValueChange={handleTypeChange}
-									required
-									name="type"
-								>
-									{PROJECT_TYPE_OPTIONS.map(opt => (
-										<RadioGroupItem key={opt.value} value={opt.value}>
-											{opt.label}
-										</RadioGroupItem>
-									))}
-								</RadioGroup>
-								{step1Errors.type && (
-									<Text size="1" color="red">
-										{step1Errors.type}
-									</Text>
-								)}
-							</div>
+								<div className={styles.field}>
+									<TextField
+										label="企画団体名 *"
+										value={step1.organizationName}
+										onChange={handleStep1Change("organizationName")}
+										placeholder="例：○○サークル"
+										error={step1Errors.organizationName}
+									/>
+								</div>
 
-							<div className={styles.field}>
-								{isStage ? (
-									<>
-										<RadioGroup
-											label="企画実施場所"
-											value="STAGE"
-											required
-											name="location"
-											disabled
-										>
-											<RadioGroupItem value="STAGE">ステージ</RadioGroupItem>
-										</RadioGroup>
-										<Callout.Root size="1" color="blue" variant="soft">
-											<Callout.Icon>
-												<IconInfoCircle size={14} />
-											</Callout.Icon>
-											<Callout.Text>
-												ステージ企画の実施場所はステージに自動設定されます。
-											</Callout.Text>
-										</Callout.Root>
-									</>
-								) : (
-									<>
-										<RadioGroup
-											label="企画実施場所"
-											value={step1.location}
-											onValueChange={handleStep1Change("location")}
-											required
-											name="location"
-											disabled={!step1.type}
-										>
-											{PROJECT_LOCATION_OPTIONS.filter(
-												opt => opt.value !== "STAGE"
-											).map(opt => (
-												<RadioGroupItem key={opt.value} value={opt.value}>
-													<span className={styles.locationLabel}>
-														{opt.label}
-														<Text as="span" size="1" color="gray">
-															{opt.caption}
-														</Text>
-													</span>
-												</RadioGroupItem>
-											))}
-										</RadioGroup>
-										{!step1.type && (
-											<Text size="1" color="gray">
-												企画区分を選択してください。
-											</Text>
-										)}
-									</>
-								)}
-								{step1Errors.location && (
-									<Text size="1" color="red">
-										{step1Errors.location}
-									</Text>
-								)}
+								<div className={styles.field}>
+									<TextField
+										label="企画団体名（ふりがな）*"
+										value={step1.organizationNamePhonetic}
+										onChange={handleStep1Change("organizationNamePhonetic")}
+										placeholder="例：まるまるさーくる"
+										error={step1Errors.organizationNamePhonetic}
+									/>
+								</div>
+
+								<div className={styles.field}>
+									<RadioGroup
+										label="企画区分"
+										value={step1.type}
+										onValueChange={handleTypeChange}
+										required
+										name="type"
+									>
+										{PROJECT_TYPE_OPTIONS.map(opt => (
+											<RadioGroupItem key={opt.value} value={opt.value}>
+												{opt.label}
+											</RadioGroupItem>
+										))}
+									</RadioGroup>
+									{step1Errors.type && (
+										<Text size="1" color="red">
+											{step1Errors.type}
+										</Text>
+									)}
+								</div>
+
+								<div className={styles.field}>
+									{isStage ? (
+										<>
+											<RadioGroup
+												label="企画実施場所"
+												value="STAGE"
+												required
+												name="location"
+												disabled
+											>
+												<RadioGroupItem value="STAGE">ステージ</RadioGroupItem>
+											</RadioGroup>
+											<Callout.Root size="1" color="blue" variant="soft">
+												<Callout.Icon>
+													<IconInfoCircle size={14} />
+												</Callout.Icon>
+												<Callout.Text>
+													ステージ企画の実施場所はステージに自動設定されます。
+												</Callout.Text>
+											</Callout.Root>
+										</>
+									) : (
+										<>
+											<RadioGroup
+												label="企画実施場所"
+												value={step1.location}
+												onValueChange={handleStep1Change("location")}
+												required
+												name="location"
+												disabled={!step1.type}
+											>
+												{PROJECT_LOCATION_OPTIONS.filter(
+													opt => opt.value !== "STAGE"
+												).map(opt => (
+													<RadioGroupItem key={opt.value} value={opt.value}>
+														<span className={styles.locationLabel}>
+															{opt.label}
+															<Text as="span" size="1" color="gray">
+																{opt.caption}
+															</Text>
+														</span>
+													</RadioGroupItem>
+												))}
+											</RadioGroup>
+											{!step1.type && (
+												<Text size="1" color="gray">
+													企画区分を選択してください。
+												</Text>
+											)}
+										</>
+									)}
+									{step1Errors.location && (
+										<Text size="1" color="red">
+											{step1Errors.location}
+										</Text>
+									)}
+								</div>
 							</div>
 						</div>
 
