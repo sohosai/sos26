@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { formAnswerFileSchema } from "./file";
 import {
+	formItemConstraintsSchema,
 	formItemOptionSchema,
 	formItemSchema,
 	formItemTypeSchema,
-	textConstraintsSchema,
-	validateFormItemTypeOptions,
+	validateFormItemTypeConfiguration,
 } from "./form";
 import { projectLocationSchema, projectTypeSchema } from "./project";
 import { userSchema } from "./user";
@@ -120,9 +121,9 @@ export const projectRegistrationFormItemInputSchema = z
 		required: z.boolean().default(false),
 		sortOrder: z.number().int(),
 		options: z.array(projectRegistrationFormItemOptionInputSchema).optional(),
-		constraints: textConstraintsSchema.nullable().optional(),
+		constraints: formItemConstraintsSchema.nullable().optional(),
 	})
-	.superRefine(validateFormItemTypeOptions);
+	.superRefine(validateFormItemTypeConfiguration);
 
 // ─────────────────────────────────────────────────────────────
 // path params
@@ -402,7 +403,7 @@ export const projectRegistrationFormResponseAnswerSchema = z.object({
 	formItemId: z.string(),
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileId: z.string().nullable(),
+	files: z.array(formAnswerFileSchema),
 	selectedOptions: z.array(
 		z.object({
 			id: z.string(),

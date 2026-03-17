@@ -363,9 +363,11 @@ model File {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  noticeAttachments              NoticeAttachment[]
-  inquiryAttachments             InquiryAttachment[]
-  projectRegistrationFormAnswers ProjectRegistrationFormAnswer[]
+  noticeAttachments                  NoticeAttachment[]
+  inquiryAttachments                 InquiryAttachment[]
+  formAnswerFiles                    FormAnswerFile[]
+  formItemEditHistoryFiles           FormItemEditHistoryFile[]
+  projectRegistrationFormAnswerFiles ProjectRegistrationFormAnswerFile[]
 
   @@index([uploadedById])
   @@index([status])
@@ -594,11 +596,13 @@ model FormItem {
   //必須かどうか
   required Boolean @default(false)
 
-  //テキスト制約（TEXT/TEXTAREA のみ使用）
+  //入力制約（TEXT/TEXTAREA/FILE のみ使用）
   constraintMinLength     Int?
   constraintMaxLength     Int?
   constraintPattern       String?
   constraintCustomPattern String?
+  constraintMinFiles      Int?
+  constraintMaxFiles      Int?
 
   //表示順
   sortOrder Int
@@ -802,8 +806,8 @@ model FormAnswer {
   //数値回答（number用）
   numberValue Float?
 
-  //ファイルID（file用）
-  fileId String?
+  //ファイル回答（file用）
+  files FormAnswerFile[]
 
   //選択肢回答（select, checkbox用）
   selectedOptions FormAnswerSelectedOption[]
@@ -814,6 +818,22 @@ model FormAnswer {
   @@unique([formResponseId, formItemId])
   @@index([formResponseId])
   @@index([formItemId])
+}
+
+model FormAnswerFile {
+  id        String @id @default(cuid())
+  answerId  String
+  fileId    String
+  sortOrder Int
+
+  answer FormAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  file   File       @relation(fields: [fileId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([answerId, fileId])
+  @@unique([answerId, sortOrder])
+  @@index([fileId])
 }
 
 //選択肢の回答（select/checkbox用の中間テーブル）
@@ -1161,16 +1181,32 @@ model FormItemEditHistory {
   project     Project                    @relation(fields: [projectId], references: [id])
   textValue   String?
   numberValue Float?
-  fileId      String?
   actorId     String
   actor       User                       @relation("FormItemEditHistoryActor", fields: [actorId], references: [id])
   trigger     FormItemEditHistoryTrigger
   createdAt   DateTime                   @default(now())
 
+  files           FormItemEditHistoryFile[]
   selectedOptions FormItemEditHistorySelectedOption[]
 
   @@index([formItemId, projectId, createdAt(sort: Desc)])
   @@index([actorId])
+}
+
+model FormItemEditHistoryFile {
+  id            String @id @default(cuid())
+  editHistoryId String
+  fileId        String
+  sortOrder     Int
+
+  editHistory FormItemEditHistory @relation(fields: [editHistoryId], references: [id], onDelete: Cascade)
+  file        File                @relation(fields: [fileId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([editHistoryId, fileId])
+  @@unique([editHistoryId, sortOrder])
+  @@index([fileId])
 }
 
 model FormItemEditHistorySelectedOption {
@@ -1329,11 +1365,13 @@ model ProjectRegistrationFormItem {
   // 必須かどうか
   required Boolean @default(false)
 
-  // テキスト制約（TEXT/TEXTAREA のみ使用）
+  // 入力制約（TEXT/TEXTAREA/FILE のみ使用）
   constraintMinLength     Int?
   constraintMaxLength     Int?
   constraintPattern       String?
   constraintCustomPattern String?
+  constraintMinFiles      Int?
+  constraintMaxFiles      Int?
 
   // 表示順
   sortOrder Int
@@ -1434,9 +1472,8 @@ model ProjectRegistrationFormAnswer {
   // 数値回答（NUMBER用）
   numberValue Float?
 
-  // ファイルId（FILE用）
-  fileId String?
-  file   File?   @relation(fields: [fileId], references: [id], onDelete: SetNull)
+  // ファイル回答（FILE用）
+  files ProjectRegistrationFormAnswerFile[]
 
   // 選択肢回答（SELECT/CHECKBOX用）
   selectedOptions ProjectRegistrationFormAnswerSelectedOption[]
@@ -1447,6 +1484,21 @@ model ProjectRegistrationFormAnswer {
   @@unique([responseId, formItemId])
   @@index([responseId])
   @@index([formItemId])
+}
+
+model ProjectRegistrationFormAnswerFile {
+  id        String @id @default(cuid())
+  answerId  String
+  fileId    String
+  sortOrder Int
+
+  answer ProjectRegistrationFormAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  file   File                          @relation(fields: [fileId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([answerId, fileId])
+  @@unique([answerId, sortOrder])
   @@index([fileId])
 }
 

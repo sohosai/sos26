@@ -118,7 +118,10 @@ function buildRegFormAnswer(
 			return {
 				type,
 				formItemId,
-				fileId: value.uploadedFile?.fileId ?? null,
+				fileIds: value.uploadedFiles
+					.slice()
+					.sort((a, b) => a.sortOrder - b.sortOrder)
+					.map(file => file.id),
 			};
 		default: {
 			const _exhaustive: never = type;
@@ -158,16 +161,23 @@ async function prepareRegFormAnswersForSubmit(
 					throw new Error(`FILE回答の型が不正です: ${item.id}`);
 				}
 
-				if (value.pendingFile instanceof File) {
-					const result = await uploadFile(value.pendingFile);
+				if (value.pendingFiles.length > 0) {
+					const uploadedFiles = await Promise.all(
+						value.pendingFiles.map(async (file, sortOrder) => {
+							const result = await uploadFile(file);
+							return {
+								id: result.file.id,
+								fileName: result.file.fileName,
+								mimeType: result.file.mimeType,
+								size: result.file.size,
+								isPublic: result.file.isPublic,
+								sortOrder,
+							};
+						})
+					);
 					answers[item.id] = {
-						pendingFile: null,
-						uploadedFile: {
-							fileId: result.file.id,
-							fileName: result.file.fileName,
-							mimeType: result.file.mimeType,
-							isPublic: result.file.isPublic,
-						},
+						pendingFiles: [],
+						uploadedFiles,
 					};
 				}
 			}
@@ -190,7 +200,7 @@ function validateRegFormAnswers(
 		if (item.type === "FILE") {
 			if (
 				!isFileAnswerValue(val) ||
-				(val.pendingFile === null && val.uploadedFile === null)
+				(val.pendingFiles.length === 0 && val.uploadedFiles.length === 0)
 			) {
 				errors[item.id] = "この項目は必須です";
 			}

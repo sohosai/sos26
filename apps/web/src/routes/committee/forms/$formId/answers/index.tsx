@@ -53,7 +53,9 @@ export const Route = createFileRoute("/committee/forms/$formId/answers/")({
 			const map: Record<string, string | TagValue[]> = {};
 
 			for (const a of r.answers) {
-				if (a.textValue != null) {
+				if (a.files.length > 0) {
+					map[a.formItemId] = `ファイル${a.files.length}件`;
+				} else if (a.textValue != null) {
 					map[a.formItemId] = a.textValue;
 				} else if (a.numberValue != null) {
 					map[a.formItemId] = String(a.numberValue);
@@ -64,8 +66,6 @@ export const Route = createFileRoute("/committee/forms/$formId/answers/")({
 							color: getOptionColor(o.id),
 						};
 					});
-				} else if (a.fileId) {
-					map[a.formItemId] = "ファイル";
 				} else {
 					map[a.formItemId] = "";
 				}
@@ -133,9 +133,9 @@ function RouteComponent() {
 
 					if (item.type === "FILE") {
 						return (
-							<Text size="2" color="gray">
-								ファイルあり
-							</Text>
+							<Badge variant="soft" color="blue">
+								{value as string}
+							</Badge>
 						);
 					}
 

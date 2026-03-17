@@ -147,9 +147,21 @@ export function FormItemEditor({
 							<Switch
 								label="必須"
 								checked={item.required}
-								onCheckedChange={checked =>
-									onUpdate(item.id, { required: checked })
-								}
+								onCheckedChange={checked => {
+									const update: Partial<FormItem> = { required: checked };
+									if (
+										checked &&
+										item.type === "FILE" &&
+										(item.constraints?.minFiles === undefined ||
+											item.constraints.minFiles < 1)
+									) {
+										update.constraints = {
+											...item.constraints,
+											minFiles: 1,
+										};
+									}
+									onUpdate(item.id, update);
+								}}
 							/>
 						</div>
 

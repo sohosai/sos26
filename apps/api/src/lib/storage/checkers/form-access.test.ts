@@ -9,10 +9,10 @@ vi.mock("../../prisma", () => ({
 		form: {
 			findFirst: vi.fn(),
 		},
-		formAnswer: {
+		formAnswerFile: {
 			findMany: vi.fn(),
 		},
-		formItemEditHistory: {
+		formItemEditHistoryFile: {
 			findMany: vi.fn(),
 		},
 	},
@@ -27,8 +27,8 @@ const mockUser = { id: "user-1" } as User;
 describe("canAccessFormFile", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockPrisma.formAnswer.findMany.mockResolvedValue([]);
-		mockPrisma.formItemEditHistory.findMany.mockResolvedValue([]);
+		mockPrisma.formAnswerFile.findMany.mockResolvedValue([]);
+		mockPrisma.formItemEditHistoryFile.findMany.mockResolvedValue([]);
 		mockPrisma.project.findFirst.mockResolvedValue(null);
 		mockPrisma.form.findFirst.mockResolvedValue(null);
 	});
@@ -38,14 +38,16 @@ describe("canAccessFormFile", () => {
 	});
 
 	it("FormAnswer 経由で配信先企画メンバーなら true", async () => {
-		mockPrisma.formAnswer.findMany.mockResolvedValue([
+		mockPrisma.formAnswerFile.findMany.mockResolvedValue([
 			{
-				formResponse: {
-					submittedAt: null,
-					formDelivery: {
-						projectId: "project-1",
-						formAuthorization: {
-							formId: "form-1",
+				answer: {
+					formResponse: {
+						submittedAt: null,
+						formDelivery: {
+							projectId: "project-1",
+							formAuthorization: {
+								formId: "form-1",
+							},
 						},
 					},
 				},
@@ -60,14 +62,16 @@ describe("canAccessFormFile", () => {
 	});
 
 	it("提出済み FormAnswer 経由で form owner / collaborator なら true", async () => {
-		mockPrisma.formAnswer.findMany.mockResolvedValue([
+		mockPrisma.formAnswerFile.findMany.mockResolvedValue([
 			{
-				formResponse: {
-					submittedAt: new Date(),
-					formDelivery: {
-						projectId: "project-1",
-						formAuthorization: {
-							formId: "form-1",
+				answer: {
+					formResponse: {
+						submittedAt: new Date(),
+						formDelivery: {
+							projectId: "project-1",
+							formAuthorization: {
+								formId: "form-1",
+							},
 						},
 					},
 				},
@@ -80,14 +84,16 @@ describe("canAccessFormFile", () => {
 	});
 
 	it("下書き FormAnswer だけなら form owner / collaborator でも false", async () => {
-		mockPrisma.formAnswer.findMany.mockResolvedValue([
+		mockPrisma.formAnswerFile.findMany.mockResolvedValue([
 			{
-				formResponse: {
-					submittedAt: null,
-					formDelivery: {
-						projectId: "project-1",
-						formAuthorization: {
-							formId: "form-1",
+				answer: {
+					formResponse: {
+						submittedAt: null,
+						formDelivery: {
+							projectId: "project-1",
+							formAuthorization: {
+								formId: "form-1",
+							},
 						},
 					},
 				},
@@ -100,11 +106,13 @@ describe("canAccessFormFile", () => {
 	});
 
 	it("FormItemEditHistory 経由で form owner / collaborator なら true", async () => {
-		mockPrisma.formItemEditHistory.findMany.mockResolvedValue([
+		mockPrisma.formItemEditHistoryFile.findMany.mockResolvedValue([
 			{
-				projectId: "project-1",
-				formItem: {
-					formId: "form-1",
+				editHistory: {
+					projectId: "project-1",
+					formItem: {
+						formId: "form-1",
+					},
 				},
 			},
 		] as never);

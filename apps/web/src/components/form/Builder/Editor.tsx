@@ -54,21 +54,42 @@ export function FormEditor({ initialForm, onSubmit, loading }: Props) {
 		return Object.keys(newErrors).length === 0;
 	};
 
+	function validateFileConstraints(item: FormItem): string | null {
+		const minFiles = item.constraints?.minFiles;
+		const maxFiles = item.constraints?.maxFiles;
+		if (
+			minFiles !== undefined &&
+			maxFiles !== undefined &&
+			minFiles > maxFiles
+		) {
+			return "最小ファイル数は最大ファイル数以下にしてください";
+		}
+		return null;
+	}
+
+	function validateSelectionItem(item: FormItem): string | null {
+		if (item.type !== "SELECT" && item.type !== "CHECKBOX") {
+			return null;
+		}
+		if (!item.options || item.options.length === 0) {
+			return "選択肢を1つ以上追加してください";
+		}
+		if (item.options.some(opt => opt.label.trim() === "")) {
+			return "空の選択肢があります";
+		}
+		return null;
+	}
+
 	function validateItem(item: FormItem): string | null {
 		if (item.label.trim() === "") {
 			return "設問名を入力してください";
 		}
 
-		if (item.type === "SELECT" || item.type === "CHECKBOX") {
-			if (!item.options || item.options.length === 0) {
-				return "選択肢を1つ以上追加してください";
-			}
-			if (item.options.some(opt => opt.label.trim() === "")) {
-				return "空の選択肢があります";
-			}
+		if (item.type === "FILE") {
+			return validateFileConstraints(item);
 		}
 
-		return null;
+		return validateSelectionItem(item);
 	}
 
 	const addItem = () => {

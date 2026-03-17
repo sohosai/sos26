@@ -60,7 +60,9 @@ function formatAnswerValue(answer: RegistrationFormResponseAnswer): string {
 				? answer.selectedOptions.map(option => option.label).join("、")
 				: "未回答";
 		case "FILE":
-			return answer.fileId ? `ファイルID: ${answer.fileId}` : "未回答";
+			return answer.files.length > 0
+				? `ファイル${answer.files.length}件`
+				: "未回答";
 		default: {
 			return "不明な回答タイプ";
 		}

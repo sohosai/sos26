@@ -106,8 +106,8 @@ function buildAnswerRows(
 					label: o.label,
 					color: getOptionColor(o.id),
 				}));
-			} else if (a.fileId) {
-				map[a.formItemId] = "ファイル";
+			} else if (a.files.length > 0) {
+				map[a.formItemId] = `ファイル${a.files.length}件`;
 			} else {
 				map[a.formItemId] = "";
 			}
@@ -499,9 +499,9 @@ function AnswersTab({
 
 					if (item.type === "FILE") {
 						return (
-							<Text size="2" color="gray">
-								ファイルあり
-							</Text>
+							<Badge variant="soft" color="blue">
+								{value as string}
+							</Badge>
 						);
 					}
 

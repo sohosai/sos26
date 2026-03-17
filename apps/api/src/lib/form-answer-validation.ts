@@ -105,7 +105,7 @@ export function assertRequiredAnswered(
 					return answer.numberValue == null;
 
 				case "FILE":
-					return !answer.fileId;
+					return !answer.fileIds || answer.fileIds.length === 0;
 
 				case "SELECT":
 				case "CHECKBOX":
@@ -122,6 +122,34 @@ export function assertRequiredAnswered(
 			throw Errors.invalidRequest(
 				`必須項目が未入力です（formItemId: ${item.id}）`
 			);
+		}
+	}
+}
+
+export function assertFileCountConstraints(
+	formItems: FormAnswerValidationItem[],
+	answers: FormAnswerInput[]
+) {
+	const answerMap = new Map(answers.map(a => [a.formItemId, a]));
+
+	for (const item of formItems) {
+		if (item.type !== "FILE") continue;
+
+		const minFiles = item.constraints?.minFiles;
+		const maxFiles = item.constraints?.maxFiles;
+		if (minFiles === undefined && maxFiles === undefined) continue;
+
+		const answer = answerMap.get(item.id);
+		if (!answer || answer.type !== "FILE") continue;
+
+		const fileCount = answer.fileIds.length;
+
+		if (minFiles !== undefined && fileCount < minFiles) {
+			throw Errors.invalidRequest(`${minFiles}個以上添付してください`);
+		}
+
+		if (maxFiles !== undefined && fileCount > maxFiles) {
+			throw Errors.invalidRequest(`${maxFiles}個以内で添付してください`);
 		}
 	}
 }

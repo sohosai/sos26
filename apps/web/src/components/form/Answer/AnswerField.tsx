@@ -1,12 +1,13 @@
 import { Flex, Text } from "@radix-ui/themes";
+import { toast } from "sonner";
 import {
 	CheckboxGroup,
 	CheckboxGroupItem,
 } from "@/components/patterns/CheckboxGroup";
 import { RadioGroup, RadioGroupItem } from "@/components/patterns/RadioGroup";
 import { TextArea, TextField } from "@/components/primitives";
-import { buildFormDownloadFileName } from "@/lib/form/downloadFileName";
-import { FileUploadFieldWithPreview } from "../EachField/FileUploadFieldWithPreview";
+import { deleteFile } from "@/lib/api/files";
+import { FileUploadField } from "../EachField/FileUploadField";
 import { NumberField } from "../EachField/NumberField";
 import {
 	createEmptyFileAnswerValue,
@@ -14,7 +15,6 @@ import {
 	type FormItem,
 	isFileAnswerValue,
 } from "../type";
-import { useDownloadFileNameContext } from "./DownloadFileNameContext";
 
 type FieldProps = {
 	item: FormItem;
@@ -24,7 +24,6 @@ type FieldProps = {
 };
 
 export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
-	const downloadFileNameContext = useDownloadFileNameContext();
 	const label = (
 		<Text size="2" weight="medium">
 			{item.label + (item.required ? " *" : "")}
@@ -96,25 +95,32 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 				const fileValue = isFileAnswerValue(value)
 					? value
 					: createEmptyFileAnswerValue();
-				const downloadFileName =
-					downloadFileNameContext && fileValue.uploadedFile?.fileName
-						? buildFormDownloadFileName({
-								...downloadFileNameContext,
-								originalFileName: fileValue.uploadedFile.fileName,
-							})
-						: undefined;
 				return (
-					<FileUploadFieldWithPreview
+					<FileUploadField
 						label=""
-						value={fileValue.pendingFile}
-						uploadedFile={fileValue.uploadedFile}
-						downloadFileName={downloadFileName}
-						onChange={file =>
+						value={fileValue.pendingFiles}
+						uploadedFiles={fileValue.uploadedFiles}
+						minFiles={constraints?.minFiles}
+						maxFiles={constraints?.maxFiles}
+						onChange={files =>
 							onChange({
-								pendingFile: file,
-								uploadedFile: fileValue.uploadedFile,
+								pendingFiles: files,
+								uploadedFiles: files.length > 0 ? [] : fileValue.uploadedFiles,
 							})
 						}
+						onDeleteUploadedFile={async file => {
+							try {
+								await deleteFile(file.id);
+								onChange({
+									pendingFiles: fileValue.pendingFiles,
+									uploadedFiles: fileValue.uploadedFiles.filter(
+										f => f.id !== file.id
+									),
+								});
+							} catch {
+								toast.error("ファイルの削除に失敗しました");
+							}
+						}}
 						disabled={disabled}
 						aria-label={item.label}
 					/>

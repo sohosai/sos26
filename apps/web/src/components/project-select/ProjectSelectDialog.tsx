@@ -226,15 +226,19 @@ function buildReadOnlyDynamicColumn(
 
 		if (itemType === "FILE") {
 			return columnHelper.accessor(
-				row => row.cells[col.id]?.formValue?.fileId ?? null,
+				row => row.cells[col.id]?.formValue?.files ?? [],
 				{
 					id: col.id,
 					header: () => <ColHeader col={col} />,
 					cell: ctx => {
-						const fileId = ctx.getValue() as string | null;
-						return fileId ? (
+						const files = ctx.getValue() as NonNullable<
+							GetMastersheetDataResponse["rows"][number]["cells"][number]["formValue"]
+						>["files"];
+						const [first, ...rest] = files;
+						return first ? (
 							<Text size="2" color="blue" truncate>
-								ファイル
+								{first.fileName}
+								{rest.length > 0 ? ` +${rest.length}件` : ""}
 							</Text>
 						) : (
 							<Text size="2" color="gray">

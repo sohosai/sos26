@@ -6,10 +6,28 @@ import {
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../../lib/error";
+import {
+	formAnswerFileSelect,
+	mapAnswerFiles,
+	normalizeFileIds,
+} from "../../lib/form-answer-files";
 import { prisma } from "../../lib/prisma";
 import { requireAuth, requireCommitteeMember } from "../../middlewares/auth";
 import type { AuthEnv } from "../../types/auth-env";
 import { canViewColumn, getAccessibleFormIds, getColumnFull } from "./helpers";
+
+const answerFilesInclude = {
+	where: {
+		file: {
+			status: "CONFIRMED" as const,
+			deletedAt: null,
+		},
+	},
+	orderBy: { sortOrder: "asc" as const },
+	include: {
+		file: { select: formAnswerFileSelect },
+	},
+};
 
 // ─────────────────────────────────────────────────────────────
 // ヘルパー: 編集履歴のグループマップ構築
@@ -20,7 +38,7 @@ type HistoryEntry = {
 	value: {
 		textValue: string | null;
 		numberValue: number | null;
-		fileId: string | null;
+		files: ReturnType<typeof mapAnswerFiles>;
 		selectedOptionIds: string[];
 	};
 	actor: { id: string; name: string };
@@ -51,6 +69,7 @@ async function collectFormItemHistory(
 		},
 		include: {
 			actor: { select: { id: true, name: true } },
+			files: answerFilesInclude,
 			selectedOptions: { select: { formItemOptionId: true } },
 		},
 		orderBy: { createdAt: "desc" },
@@ -72,7 +91,7 @@ async function collectFormItemHistory(
 			value: {
 				textValue: h.textValue,
 				numberValue: h.numberValue,
-				fileId: h.fileId,
+				files: mapAnswerFiles(h.files),
 				selectedOptionIds: h.selectedOptions.map(s => s.formItemOptionId),
 			},
 			actor: h.actor,
@@ -181,7 +200,7 @@ cellsRoute.put(
 				cellValue: {
 					textValue: cell.textValue,
 					numberValue: cell.numberValue,
-					fileId: null,
+					files: [],
 					selectedOptionIds: cell.selectedOptions.map(s => s.optionId),
 				},
 			},
@@ -258,11 +277,21 @@ cellsRoute.put(
 						projectId,
 						textValue: data.textValue ?? null,
 						numberValue: data.numberValue ?? null,
-						fileId: data.fileId ?? null,
 						actorId: userId,
 						trigger: "COMMITTEE_EDIT",
 					},
 				});
+
+				const fileIds = normalizeFileIds(data.fileIds);
+				if (fileIds.length > 0) {
+					await tx.formItemEditHistoryFile.createMany({
+						data: fileIds.map((fileId, sortOrder) => ({
+							editHistoryId: created.id,
+							fileId,
+							sortOrder,
+						})),
+					});
+				}
 
 				if (data.selectedOptionIds?.length) {
 					const validIds = new Set(col.formItem?.options.map(o => o.id) ?? []);
@@ -283,6 +312,7 @@ cellsRoute.put(
 				return tx.formItemEditHistory.findUniqueOrThrow({
 					where: { id: created.id },
 					include: {
+						files: answerFilesInclude,
 						selectedOptions: { select: { formItemOptionId: true } },
 					},
 				});
@@ -297,7 +327,7 @@ cellsRoute.put(
 				formValue: {
 					textValue: history.textValue,
 					numberValue: history.numberValue,
-					fileId: history.fileId,
+					files: mapAnswerFiles(history.files),
 					selectedOptionIds: history.selectedOptions.map(
 						s => s.formItemOptionId
 					),
