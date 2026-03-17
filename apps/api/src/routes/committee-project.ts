@@ -22,6 +22,12 @@ type ProjectStatusFields = {
 	deletionStatus: "LOTTERY_LOSS" | "DELETED" | null;
 };
 
+type ProjectActionItem = {
+	id: string;
+	title: string;
+	sentAt: Date;
+};
+
 function getProjectStatusFields(project: object): ProjectStatusFields {
 	const candidate = project as Partial<ProjectStatusFields>;
 
@@ -47,6 +53,145 @@ function shouldNotifyDeletionStatusUpdate(
 		deletionStatus !== null &&
 		(beforeStatus.deletionStatus !== deletionStatus || beforeStatus.isActive)
 	);
+}
+
+function mapFormActions(
+	formDeliveries: Array<{
+		id: string;
+		createdAt: Date;
+		formAuthorization: { form: { title: string; deletedAt: Date | null } };
+	}>
+): ProjectActionItem[] {
+	const actions: ProjectActionItem[] = [];
+	for (const delivery of formDeliveries) {
+		if (delivery.formAuthorization.form.deletedAt !== null) continue;
+		actions.push({
+			id: delivery.id,
+			title: delivery.formAuthorization.form.title,
+			sentAt: delivery.createdAt,
+		});
+		if (actions.length >= 20) break;
+	}
+	return actions;
+}
+
+function mapNoticeActions(
+	noticeDeliveries: Array<{
+		id: string;
+		createdAt: Date;
+		noticeAuthorization: { notice: { title: string; deletedAt: Date | null } };
+	}>
+): ProjectActionItem[] {
+	const actions: ProjectActionItem[] = [];
+	for (const delivery of noticeDeliveries) {
+		if (delivery.noticeAuthorization.notice.deletedAt !== null) continue;
+		actions.push({
+			id: delivery.id,
+			title: delivery.noticeAuthorization.notice.title,
+			sentAt: delivery.createdAt,
+		});
+		if (actions.length >= 20) break;
+	}
+	return actions;
+}
+
+function maskContact<
+	T extends {
+		id: string;
+		name: string;
+		email: string;
+		telephoneNumber: string;
+	},
+>(
+	person: T | null,
+	canViewContacts: boolean
+): {
+	id: string;
+	name: string;
+	email: string | null;
+	telephoneNumber: string | null;
+} | null {
+	if (!person) return null;
+	return {
+		id: person.id,
+		name: person.name,
+		email: canViewContacts ? person.email : null,
+		telephoneNumber: canViewContacts ? person.telephoneNumber : null,
+	};
+}
+
+async function fetchCommitteeProjectDetailData(projectId: string) {
+	const [project, formDeliveries, noticeDeliveries, inquiries] =
+		await Promise.all([
+			prisma.project.findFirst({
+				where: { id: projectId, deletedAt: null },
+				include: {
+					owner: {
+						select: {
+							id: true,
+							name: true,
+							email: true,
+							telephoneNumber: true,
+						},
+					},
+					subOwner: {
+						select: {
+							id: true,
+							name: true,
+							email: true,
+							telephoneNumber: true,
+						},
+					},
+					_count: {
+						select: { projectMembers: { where: { deletedAt: null } } },
+					},
+				},
+			}),
+			prisma.formDelivery.findMany({
+				where: { projectId },
+				select: {
+					id: true,
+					createdAt: true,
+					formAuthorization: {
+						select: {
+							form: {
+								select: { title: true, deletedAt: true },
+							},
+						},
+					},
+				},
+				orderBy: { createdAt: "desc" },
+				take: 20,
+			}),
+			prisma.noticeDelivery.findMany({
+				where: { projectId },
+				select: {
+					id: true,
+					createdAt: true,
+					noticeAuthorization: {
+						select: {
+							notice: {
+								select: { title: true, deletedAt: true },
+							},
+						},
+					},
+				},
+				orderBy: { createdAt: "desc" },
+				take: 20,
+			}),
+			prisma.inquiry.findMany({
+				where: { projectId, deletedAt: null, isDraft: false },
+				select: {
+					id: true,
+					title: true,
+					createdAt: true,
+				},
+				orderBy: { createdAt: "desc" },
+				take: 20,
+			}),
+		]);
+
+	return { project, formDeliveries, noticeDeliveries, inquiries };
 }
 
 async function resolveProjectPermissions(userId: string): Promise<{
@@ -202,103 +347,16 @@ committeeProjectRoute.get(
 		const user = c.get("user");
 		const permissions = await resolveProjectPermissions(user.id);
 
-		const [project, formDeliveries, noticeDeliveries, inquiries] =
-			await Promise.all([
-				prisma.project.findFirst({
-					where: { id: projectId, deletedAt: null },
-					include: {
-						owner: {
-							select: {
-								id: true,
-								name: true,
-								email: true,
-								telephoneNumber: true,
-							},
-						},
-						subOwner: {
-							select: {
-								id: true,
-								name: true,
-								email: true,
-								telephoneNumber: true,
-							},
-						},
-						_count: {
-							select: { projectMembers: { where: { deletedAt: null } } },
-						},
-					},
-				}),
-				prisma.formDelivery.findMany({
-					where: { projectId },
-					select: {
-						id: true,
-						createdAt: true,
-						formAuthorization: {
-							select: {
-								form: {
-									select: { title: true, deletedAt: true },
-								},
-							},
-						},
-					},
-					orderBy: { createdAt: "desc" },
-					take: 20,
-				}),
-				prisma.noticeDelivery.findMany({
-					where: { projectId },
-					select: {
-						id: true,
-						createdAt: true,
-						noticeAuthorization: {
-							select: {
-								notice: {
-									select: { title: true, deletedAt: true },
-								},
-							},
-						},
-					},
-					orderBy: { createdAt: "desc" },
-					take: 20,
-				}),
-				prisma.inquiry.findMany({
-					where: { projectId, deletedAt: null, isDraft: false },
-					select: {
-						id: true,
-						title: true,
-						createdAt: true,
-					},
-					orderBy: { createdAt: "desc" },
-					take: 20,
-				}),
-			]);
+		const { project, formDeliveries, noticeDeliveries, inquiries } =
+			await fetchCommitteeProjectDetailData(projectId);
 
 		if (!project) {
 			throw Errors.notFound("企画が見つかりません");
 		}
 
 		const status = getProjectStatusFields(project);
-
-		const formActions: { id: string; title: string; sentAt: Date }[] = [];
-		for (const d of formDeliveries) {
-			if (d.formAuthorization.form.deletedAt !== null) continue;
-			formActions.push({
-				id: d.id,
-				title: d.formAuthorization.form.title,
-				sentAt: d.createdAt,
-			});
-			if (formActions.length >= 20) break;
-		}
-
-		const noticeActions: { id: string; title: string; sentAt: Date }[] = [];
-		for (const d of noticeDeliveries) {
-			if (d.noticeAuthorization.notice.deletedAt !== null) continue;
-			noticeActions.push({
-				id: d.id,
-				title: d.noticeAuthorization.notice.title,
-				sentAt: d.createdAt,
-			});
-			if (noticeActions.length >= 20) break;
-		}
+		const formActions = mapFormActions(formDeliveries);
+		const noticeActions = mapNoticeActions(noticeDeliveries);
 
 		const result = {
 			...status,
@@ -315,24 +373,8 @@ committeeProjectRoute.get(
 			createdAt: project.createdAt,
 			updatedAt: project.updatedAt,
 			memberCount: project._count.projectMembers,
-			owner: {
-				id: project.owner.id,
-				name: project.owner.name,
-				email: permissions.canViewContacts ? project.owner.email : null,
-				telephoneNumber: permissions.canViewContacts
-					? project.owner.telephoneNumber
-					: null,
-			},
-			subOwner: project.subOwner
-				? {
-						id: project.subOwner.id,
-						name: project.subOwner.name,
-						email: permissions.canViewContacts ? project.subOwner.email : null,
-						telephoneNumber: permissions.canViewContacts
-							? project.subOwner.telephoneNumber
-							: null,
-					}
-				: null,
+			owner: maskContact(project.owner, permissions.canViewContacts),
+			subOwner: maskContact(project.subOwner, permissions.canViewContacts),
 			actions: {
 				forms: formActions,
 				notices: noticeActions,
