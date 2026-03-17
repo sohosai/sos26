@@ -177,6 +177,18 @@ async function processNoticeAuthorizations(
 			continue;
 		}
 
+		// Claim this authorization for processing to avoid duplicate notifications
+		const claimedCount = await prisma.$executeRaw(Prisma.sql`
+			UPDATE "NoticeAuthorization"
+			SET "deliveryNotifiedAt" = NOW()
+			WHERE "id" = ${auth.id}
+				AND "deliveryNotifiedAt" IS NULL
+		`);
+		if (Number(claimedCount) === 0) {
+			// Another worker has already processed (or is processing) this authorization
+			continue;
+		}
+
 		const ok = await notifyNoticeDelivered({
 			noticeTitle: auth.notice.title,
 			noticeBodyPreview: createNoticeBodyPreview(auth.notice.body),
@@ -184,12 +196,6 @@ async function processNoticeAuthorizations(
 		});
 
 		if (ok) {
-			await prisma.$executeRaw(Prisma.sql`
-				UPDATE "NoticeAuthorization"
-				SET "deliveryNotifiedAt" = NOW()
-				WHERE "id" = ${auth.id}
-					AND "deliveryNotifiedAt" IS NULL
-			`);
 			noticeNotified += 1;
 		}
 	}
