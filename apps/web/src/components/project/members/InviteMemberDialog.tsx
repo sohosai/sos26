@@ -35,7 +35,7 @@ export function InviteMemberDialog({ open, onOpenChange }: Props) {
 
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
-			<Dialog.Content>
+			<Dialog.Content className={styles.dialogContent}>
 				<Dialog.Title>メンバーを招待</Dialog.Title>
 				<Dialog.Description>
 					このコードを共有して、メンバーを招待できます

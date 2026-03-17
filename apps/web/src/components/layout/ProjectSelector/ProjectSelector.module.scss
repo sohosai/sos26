@@ -123,6 +123,11 @@
 	}
 }
 
+.mobileContent {
+	width: min(66vw, 260px);
+	max-width: 260px;
+}
+
 .joinInput {
 	display: flex;
 	flex-direction: column;
@@ -134,4 +139,20 @@
 	display: flex;
 	justify-content: flex-end;
 	gap: var(--space-2);
+}
+
+@media (max-width: 900px) {
+	.mobileContent {
+		width: min(86vw, 320px);
+		max-width: 320px;
+	}
+
+	.joinActions {
+		flex-direction: column;
+	}
+
+	.joinActions :global(button) {
+		width: 100%;
+		justify-content: center;
+	}
 }

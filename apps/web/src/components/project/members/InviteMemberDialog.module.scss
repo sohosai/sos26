@@ -1,18 +1,40 @@
+.dialogContent {
+	width: min(92vw, 540px);
+}
+
 .content {
 	display: flex;
 	justify-content: center;
 	align-items: center;
+	flex-wrap: wrap;
 	gap: var(--space-4);
 	padding: var(--space-7);
 	position: relative;
 }
 
 .closeButton {
-	position:absolute;
+	position: absolute;
 	top: var(--space-5);
 	right: var(--space-5);
 }
 
 .inviteCode {
 	letter-spacing: 2px;
+	max-width: 100%;
+	word-break: break-all;
+	font-size: clamp(1.8rem, 7vw, 3.2rem);
+	line-height: 1.2;
+	text-align: center;
+}
+
+@media (max-width: 768px) {
+	.content {
+		padding: var(--space-4);
+		gap: var(--space-3);
+	}
+
+	.closeButton {
+		top: var(--space-3);
+		right: var(--space-3);
+	}
 }

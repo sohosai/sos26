@@ -1,4 +1,5 @@
 .content {
+	width: min(92vw, 560px);
 	max-width: 560px;
 }
 
@@ -29,4 +30,15 @@
 	display: flex;
 	justify-content: flex-end;
 	margin-top: var(--space-4);
+}
+
+@media (max-width: 768px) {
+	.actions {
+		justify-content: stretch;
+	}
+
+	.actions :global(button) {
+		width: 100%;
+		justify-content: center;
+	}
 }
