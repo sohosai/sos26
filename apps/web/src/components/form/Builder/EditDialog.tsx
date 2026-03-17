@@ -11,6 +11,7 @@ type Props = {
 	form: Form | null;
 	onSubmit?: (form: Form) => void;
 	loading: boolean;
+	children?: React.ReactNode;
 };
 
 export function FormEditDialog({
@@ -19,6 +20,7 @@ export function FormEditDialog({
 	form,
 	onSubmit,
 	loading,
+	children,
 }: Props) {
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const [isDirty, setIsDirty] = useState(false);
@@ -61,7 +63,9 @@ export function FormEditDialog({
 						onSubmit={onSubmit}
 						loading={loading}
 						onDirtyChange={setIsDirty}
-					/>
+					>
+						{children}
+					</FormEditor>
 				</div>
 			</Dialog.Content>
 			<DiscardChangesDialog

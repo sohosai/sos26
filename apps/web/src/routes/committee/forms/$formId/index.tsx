@@ -25,6 +25,7 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { AttachmentPreviewButton } from "@/components/filePreview/AttachmentPreviewButton";
 import { DataTable, DateCell, NameCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import {
@@ -441,6 +442,21 @@ function ContentTab({
 					</Text>
 				</span>
 			</div>
+			{form.attachments.length > 0 && (
+				<div className={styles.attachmentSection}>
+					<Text size="2" weight="medium" color="gray">
+						添付ファイル
+					</Text>
+					<div className={styles.attachmentList}>
+						{form.attachments.map(attachment => (
+							<AttachmentPreviewButton
+								key={attachment.id}
+								attachment={attachment}
+							/>
+						))}
+					</div>
+				</div>
+			)}
 			<FormItemsPreview items={previewForm.items} />
 		</div>
 	);

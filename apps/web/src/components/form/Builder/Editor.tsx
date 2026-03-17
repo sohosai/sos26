@@ -12,6 +12,7 @@ type Props = {
 	onSubmit?: (form: Form) => void;
 	loading: boolean;
 	onDirtyChange?: (dirty: boolean) => void;
+	children?: React.ReactNode;
 };
 
 export function FormEditor({
@@ -19,6 +20,7 @@ export function FormEditor({
 	onSubmit,
 	loading,
 	onDirtyChange,
+	children,
 }: Props) {
 	const initialState = useMemo(() => {
 		const initialItems =
@@ -191,6 +193,7 @@ export function FormEditor({
 				resize="none"
 				autoGrow
 			/>
+			{children}
 			<div className={styles.items}>
 				<FormItemList
 					items={items}
