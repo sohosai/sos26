@@ -1,3 +1,4 @@
+import type { CommitteeMember } from "@prisma/client";
 import {
 	addFormCollaboratorRequestSchema,
 	createFormRequestSchema,
@@ -7,6 +8,7 @@ import {
 	requestFormAuthorizationRequestSchema,
 	updateFormAuthorizationRequestSchema,
 	updateFormDetailRequestSchema,
+	updateFormViewersRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { requireDeliverPermission } from "../lib/committee-permission";
@@ -60,6 +62,51 @@ const requireOwner = async (formId: string, userId: string) => {
 		throw Errors.forbidden("この操作は作成者のみ行えます");
 	return form;
 };
+
+const userSelect = { id: true, name: true } as const;
+
+/**
+ * 回答閲覧権限チェック:
+ * 1. owner → 閲覧可
+ * 2. 共同編集者 → 閲覧可
+ * 3. 閲覧者（FormViewer）にマッチ → 閲覧可
+ */
+async function canViewFormResponses(
+	formId: string,
+	userId: string,
+	committeeMember: CommitteeMember
+): Promise<boolean> {
+	const form = await prisma.form.findFirst({
+		where: { id: formId, deletedAt: null },
+		include: {
+			collaborators: { where: { deletedAt: null } },
+		},
+	});
+	if (!form) return false;
+
+	const viewers = await prisma.formViewer.findMany({
+		where: { formId, deletedAt: null },
+	});
+
+	// 1. owner
+	if (form.ownerId === userId) return true;
+
+	// 2. collaborator
+	if (form.collaborators.some(c => c.userId === userId)) return true;
+
+	// 3. viewer
+	for (const viewer of viewers) {
+		if (viewer.scope === "ALL") return true;
+		if (
+			viewer.scope === "BUREAU" &&
+			viewer.bureauValue === committeeMember.Bureau
+		)
+			return true;
+		if (viewer.scope === "INDIVIDUAL" && viewer.userId === userId) return true;
+	}
+
+	return false;
+}
 
 // 承認時の配信スケジュール日時バリデーション
 const validateApprovalSchedule = (
@@ -215,12 +262,24 @@ committeeFormRoute.get(
 			throw Errors.notFound("フォームが見つかりません");
 		}
 
+		const viewers = await prisma.formViewer.findMany({
+			where: { formId, deletedAt: null },
+			include: { user: { select: userSelect } },
+		});
+
 		return c.json({
 			form: {
 				...form,
 				items: form.items.map(mapItemToApiShape),
 				authorizationDetail: form.authorizations[0] ?? null,
 				authorizations: undefined,
+				viewers: viewers.map(v => ({
+					id: v.id,
+					scope: v.scope,
+					bureauValue: v.bureauValue,
+					createdAt: v.createdAt,
+					user: v.user,
+				})),
 			},
 		});
 	}
@@ -507,7 +566,7 @@ committeeFormRoute.post(
 		const form = await requireWriteAccess(formId, userId);
 
 		const body = await c.req.json().catch(() => ({}));
-		const { projectIds, requestedToId, ...data } =
+		const { deliveryTarget, requestedToId, ...data } =
 			requestFormAuthorizationRequestSchema.parse(body);
 
 		// 承認依頼先ユーザーの存在確認
@@ -541,12 +600,14 @@ committeeFormRoute.post(
 			throw Errors.invalidRequest("配信希望日時と締め切り日時の順番が不正です");
 		}
 
-		// 配信先企画の存在確認
-		const projects = await prisma.project.findMany({
-			where: { id: { in: projectIds }, deletedAt: null },
-		});
-		if (projects.length !== projectIds.length) {
-			throw Errors.notFound("指定された企画の一部が見つかりません");
+		// 個別指定モードの場合、配信先企画の存在確認
+		if (deliveryTarget.mode === "INDIVIDUAL") {
+			const projects = await prisma.project.findMany({
+				where: { id: { in: deliveryTarget.projectIds }, deletedAt: null },
+			});
+			if (projects.length !== deliveryTarget.projectIds.length) {
+				throw Errors.notFound("指定された企画の一部が見つかりません");
+			}
 		}
 
 		const authorization = await prisma.$transaction(
@@ -562,15 +623,33 @@ committeeFormRoute.post(
 					throw Errors.alreadyExists("既に承認待ちの申請があります");
 				}
 
+				if (deliveryTarget.mode === "INDIVIDUAL") {
+					return tx.formAuthorization.create({
+						data: {
+							formId,
+							requestedById: userId,
+							requestedToId,
+							...data,
+							deliveryMode: "INDIVIDUAL",
+							deliveries: {
+								create: deliveryTarget.projectIds.map(projectId => ({
+									projectId,
+								})),
+							},
+						},
+					});
+				}
+
+				// カテゴリ指定モード: フィルタ条件を保存するのみ
 				return tx.formAuthorization.create({
 					data: {
 						formId,
 						requestedById: userId,
 						requestedToId,
 						...data,
-						deliveries: {
-							create: projectIds.map(projectId => ({ projectId })),
-						},
+						deliveryMode: "CATEGORY",
+						filterTypes: deliveryTarget.projectTypes,
+						filterLocations: deliveryTarget.projectLocations,
 					},
 				});
 			},
@@ -674,20 +753,11 @@ committeeFormRoute.get(
 	async c => {
 		const { formId } = formIdPathParamsSchema.parse(c.req.param());
 		const userId = c.get("user").id;
+		const committeeMember = c.get("committeeMember");
 
-		// owner または共同編集者のみ閲覧可
-		const form = await prisma.form.findFirst({
-			where: { id: formId, deletedAt: null },
-			include: {
-				collaborators: { where: { deletedAt: null } },
-			},
-		});
-		if (!form) throw Errors.notFound("フォームが見つかりません");
-
-		const isOwner = form.ownerId === userId;
-		const isCollaborator = form.collaborators.some(c => c.userId === userId);
-		if (!isOwner && !isCollaborator) {
-			throw Errors.forbidden("回答の閲覧は作成者・共同編集者のみ可能です");
+		// owner, 共同編集者, または閲覧者のみ閲覧可
+		if (!(await canViewFormResponses(formId, userId, committeeMember))) {
+			throw Errors.forbidden("回答の閲覧権限がありません");
 		}
 
 		const responses = await prisma.formResponse.findMany({
@@ -809,20 +879,11 @@ committeeFormRoute.get(
 			c.req.param()
 		);
 		const userId = c.get("user").id;
+		const committeeMember = c.get("committeeMember");
 
-		// owner または共同編集者のみ閲覧可
-		const form = await prisma.form.findFirst({
-			where: { id: formId, deletedAt: null },
-			include: {
-				collaborators: { where: { deletedAt: null } },
-			},
-		});
-		if (!form) throw Errors.notFound("フォームが見つかりません");
-
-		const isOwner = form.ownerId === userId;
-		const isCollaborator = form.collaborators.some(c => c.userId === userId);
-		if (!isOwner && !isCollaborator) {
-			throw Errors.forbidden("回答の閲覧は作成者・共同編集者のみ可能です");
+		// owner, 共同編集者, または閲覧者のみ閲覧可
+		if (!(await canViewFormResponses(formId, userId, committeeMember))) {
+			throw Errors.forbidden("回答の閲覧権限がありません");
 		}
 
 		const r = await prisma.formResponse.findFirst({
@@ -939,6 +1000,58 @@ committeeFormRoute.get(
 					};
 				}),
 			},
+		});
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// PUT /committee/forms/:formId/viewers
+// 閲覧者設定（作成者 or 書き込み権限付き共同編集者のみ）
+// 既存の閲覧者を全削除して新規作成
+// ─────────────────────────────────────────────────────────────
+committeeFormRoute.put(
+	"/:formId/viewers",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
+		const userId = c.get("user").id;
+
+		await requireWriteAccess(formId, userId);
+
+		const body = await c.req.json().catch(() => ({}));
+		const { viewers: viewerInputs } =
+			updateFormViewersRequestSchema.parse(body);
+
+		// トランザクションで全削除→新規作成
+		const viewers = await prisma.$transaction(async tx => {
+			await tx.formViewer.deleteMany({ where: { formId } });
+
+			const created = await Promise.all(
+				viewerInputs.map(input =>
+					tx.formViewer.create({
+						data: {
+							formId,
+							scope: input.scope,
+							bureauValue: input.bureauValue ?? null,
+							userId: input.userId ?? null,
+						},
+						include: { user: { select: userSelect } },
+					})
+				)
+			);
+
+			return created;
+		});
+
+		return c.json({
+			viewers: viewers.map(v => ({
+				id: v.id,
+				scope: v.scope,
+				bureauValue: v.bureauValue,
+				createdAt: v.createdAt,
+				user: v.user,
+			})),
 		});
 	}
 );

@@ -1,6 +1,15 @@
 import { z } from "zod";
-import { approvalStatusSchema } from "./common";
+import { bureauSchema } from "./committee-member";
+import {
+	approvalStatusSchema,
+	deliveryModeSchema,
+	deliveryTargetSchema,
+	projectLocationSchema,
+	projectTypeSchema,
+	viewerScopeSchema,
+} from "./common";
 import { fileSchema } from "./file";
+import { viewerInputSchema } from "./inquiry";
 import { userSchema } from "./user";
 
 // ─────────────────────────────────────────────────────────────
@@ -133,6 +142,9 @@ export const formAuthorizationSchema = z.object({
 	allowLateResponse: z.boolean(),
 	required: z.boolean(),
 	ownerOnly: z.boolean(),
+	deliveryMode: deliveryModeSchema,
+	filterTypes: z.array(projectTypeSchema),
+	filterLocations: z.array(projectLocationSchema),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 });
@@ -331,14 +343,42 @@ export type ListMyFormsResponse = z.infer<typeof listMyFormsResponseSchema>;
 // GET /committee/forms/:formId/detail
 // ─────────────────────────────────────────────────────────────
 
+/** 閲覧者情報 */
+const formViewerDetailSchema = z.object({
+	id: z.string(),
+	scope: viewerScopeSchema,
+	bureauValue: bureauSchema.nullable(),
+	createdAt: z.coerce.date(),
+	user: userSummarySchema.nullable(),
+});
+
 export const getFormDetailResponseSchema = z.object({
 	form: formSchema.extend({
 		owner: userSummarySchema,
 		collaborators: z.array(collaboratorWithUserSchema),
 		authorizationDetail: authorizationDetailSchema.nullable(),
+		viewers: z.array(formViewerDetailSchema),
 	}),
 });
 export type GetFormDetailResponse = z.infer<typeof getFormDetailResponseSchema>;
+
+// ─────────────────────────────────────────────────────────────
+// PUT /committee/forms/:formId/viewers
+// ─────────────────────────────────────────────────────────────
+
+export const updateFormViewersRequestSchema = z.object({
+	viewers: z.array(viewerInputSchema),
+});
+export type UpdateFormViewersRequest = z.infer<
+	typeof updateFormViewersRequestSchema
+>;
+
+export const updateFormViewersResponseSchema = z.object({
+	viewers: z.array(formViewerDetailSchema),
+});
+export type UpdateFormViewersResponse = z.infer<
+	typeof updateFormViewersResponseSchema
+>;
 
 // ─────────────────────────────────────────────────────────────
 // PATCH /committee/forms/:formId/detail
@@ -414,7 +454,7 @@ export const requestFormAuthorizationRequestSchema = z.object({
 	allowLateResponse: z.boolean().default(false),
 	required: z.boolean().default(true),
 	ownerOnly: z.boolean().default(false),
-	projectIds: z.array(z.string().min(1)).min(1),
+	deliveryTarget: deliveryTargetSchema,
 });
 export type RequestFormAuthorizationRequest = z.infer<
 	typeof requestFormAuthorizationRequestSchema

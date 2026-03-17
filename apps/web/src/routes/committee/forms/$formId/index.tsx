@@ -1,53 +1,155 @@
-import { AlertDialog, Badge, Heading, Separator, Text } from "@radix-ui/themes";
-import type { GetFormDetailResponse } from "@sos26/shared";
-import { IconArrowLeft, IconCalendar, IconClock } from "@tabler/icons-react";
+import {
+	AlertDialog,
+	Badge,
+	type BadgeProps,
+	Heading,
+	Text,
+} from "@radix-ui/themes";
+import type {
+	GetFormDetailResponse,
+	ListFormResponsesResponse,
+} from "@sos26/shared";
+import {
+	IconArrowLeft,
+	IconCalendar,
+	IconClock,
+	IconEye,
+} from "@tabler/icons-react";
 import {
 	createFileRoute,
 	Link,
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
+import { createColumnHelper } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { DataTable, DateCell, NameCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import {
 	addFormCollaborator,
 	approveFormAuthorization,
 	deleteForm,
 	getFormDetail,
+	listFormResponses,
 	rejectFormAuthorization,
 	removeFormCollaborator,
+	updateFormViewers,
 } from "@/lib/api/committee-form";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { useAuthStore } from "@/lib/auth";
 import { formDetailToForm } from "@/lib/form/convert";
 import { getFormStatusFromAuth } from "@/lib/form/form-status";
 import { formatDate } from "@/lib/format";
+import { AnswerDetailDialog } from "./-components/AnswerDetailDialog";
 import { EditFormDialog } from "./-components/EditFormDialog";
 import { FormDetailSidebar } from "./-components/FormDetailSidebar";
 import { FormItemsPreview } from "./-components/FormItemsPreview";
 import styles from "./index.module.scss";
+
+/* ─── 検索パラメータ ─── */
+
+const searchSchema = z.object({
+	tab: z.enum(["content", "answers"]).optional().default("content"),
+});
+
+/* ─── 回答テーブル用の型 ─── */
+
+type AnswerRow = {
+	id: string;
+	projectName: string;
+	submittedAt: Date | null;
+	answers: Record<string, string | TagValue[]>;
+};
+
+type TagValue = {
+	label: string;
+	color: BadgeProps["color"];
+};
+
+const TAG_COLORS = [
+	"gray",
+	"blue",
+	"green",
+	"orange",
+	"purple",
+	"teal",
+	"red",
+] as const;
+
+function hashString(str: string): number {
+	let hash = 5381;
+	for (let i = 0; i < str.length; i++) {
+		hash = (hash * 33) ^ str.charCodeAt(i);
+	}
+	return Math.abs(hash);
+}
+
+function getOptionColor(optionId: string): BadgeProps["color"] {
+	return TAG_COLORS[hashString(optionId) % TAG_COLORS.length];
+}
+
+function buildAnswerRows(
+	responses: ListFormResponsesResponse["responses"]
+): AnswerRow[] {
+	return responses.map(r => {
+		const map: Record<string, string | TagValue[]> = {};
+
+		for (const a of r.answers) {
+			if (a.textValue != null) {
+				map[a.formItemId] = a.textValue;
+			} else if (a.numberValue != null) {
+				map[a.formItemId] = String(a.numberValue);
+			} else if (a.selectedOptions.length > 0) {
+				map[a.formItemId] = a.selectedOptions.map(o => ({
+					label: o.label,
+					color: getOptionColor(o.id),
+				}));
+			} else if (a.fileId) {
+				map[a.formItemId] = "ファイル";
+			} else {
+				map[a.formItemId] = "";
+			}
+		}
+
+		return {
+			id: r.id,
+			projectName: r.project.name,
+			submittedAt: r.submittedAt,
+			answers: map,
+		};
+	});
+}
+
+/* ─── Route ─── */
 
 export const Route = createFileRoute("/committee/forms/$formId/")({
 	component: RouteComponent,
 	head: () => ({
 		meta: [{ title: "申請詳細 | 雙峰祭オンラインシステム" }],
 	}),
+	validateSearch: searchSchema,
 	loader: async ({ params }) => {
-		const [formRes, membersRes] = await Promise.all([
+		const [formRes, membersRes, responsesRes] = await Promise.all([
 			getFormDetail(params.formId),
 			listCommitteeMembers(),
+			listFormResponses(params.formId).catch(() => ({ responses: [] })),
 		]);
 		return {
 			form: formRes.form,
 			committeeMembers: membersRes.committeeMembers,
+			responses: responsesRes.responses,
 		};
 	},
 });
 
+type TabName = "content" | "answers";
+
 function RouteComponent() {
 	const { formId } = Route.useParams();
-	const { form, committeeMembers } = Route.useLoaderData();
+	const { form, committeeMembers, responses } = Route.useLoaderData();
+	const { tab } = Route.useSearch();
 	const navigate = useNavigate();
 	const router = useRouter();
 	const { user } = useAuthStore();
@@ -57,9 +159,23 @@ function RouteComponent() {
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [removingId, setRemovingId] = useState<string | null>(null);
 
+	// 回答詳細ダイアログ
+	const [answerDialogResponseId, setAnswerDialogResponseId] = useState<
+		string | null
+	>(null);
+
 	const isOwner = form.ownerId === user?.id;
 	const isCollaborator = form.collaborators.some(c => c.user.id === user?.id);
 	const canEdit = isOwner || isCollaborator;
+
+	const currentMember = committeeMembers.find(m => m.user.id === user?.id);
+	const isViewer = form.viewers.some(v => {
+		if (v.scope === "ALL") return true;
+		if (v.scope === "BUREAU" && currentMember)
+			return v.bureauValue === currentMember.Bureau;
+		if (v.scope === "INDIVIDUAL") return v.user?.id === user?.id;
+		return false;
+	});
 
 	const collaboratorUserIds = new Set(form.collaborators.map(c => c.user.id));
 	const availableMembers = committeeMembers
@@ -73,6 +189,36 @@ function RouteComponent() {
 		.map(m => ({ userId: m.user.id, name: m.user.name }));
 
 	const previewForm = useMemo(() => formDetailToForm({ form: form }), [form]);
+
+	// ステータス判定
+	const latestAuth = form.authorizationDetail;
+	const statusInfo = getFormStatusFromAuth(
+		latestAuth
+			? {
+					status: latestAuth.status,
+					deliveredAt: latestAuth.scheduledSendAt,
+					deadlineAt: latestAuth.deadlineAt,
+				}
+			: null
+	);
+	const canViewAnswers =
+		canEdit &&
+		(statusInfo.code === "PUBLISHED" || statusInfo.code === "EXPIRED");
+
+	// 回答データ
+	const answerRows = useMemo(() => buildAnswerRows(responses), [responses]);
+
+	const activeTab: TabName =
+		tab === "answers" && canViewAnswers ? "answers" : "content";
+
+	const setActiveTab = (t: TabName) => {
+		navigate({
+			to: "/committee/forms/$formId",
+			params: { formId },
+			search: { tab: t },
+			replace: true,
+		});
+	};
 
 	const handleAddCollaborator = async (userId: string) => {
 		try {
@@ -92,6 +238,19 @@ function RouteComponent() {
 			toast.error("共同編集者の削除に失敗しました");
 		} finally {
 			setRemovingId(null);
+		}
+	};
+
+	const handleUpdateViewers = async (
+		viewers: { scope: string; bureauValue?: string; userId?: string }[]
+	) => {
+		try {
+			await updateFormViewers(form.id, {
+				viewers: viewers as Parameters<typeof updateFormViewers>[1]["viewers"],
+			});
+			await router.invalidate();
+		} catch {
+			toast.error("閲覧者の更新に失敗しました");
 		}
 	};
 
@@ -125,6 +284,31 @@ function RouteComponent() {
 		}
 	};
 
+	const formDetailSidebar = (
+		<FormDetailSidebar
+			form={form}
+			userId={user?.id ?? ""}
+			isOwner={isOwner}
+			canEdit={canEdit}
+			isViewer={isViewer}
+			availableMembers={availableMembers}
+			approvers={approvers}
+			committeeMembers={committeeMembers.map(m => ({
+				id: m.user.id,
+				name: m.user.name,
+			}))}
+			removingId={removingId}
+			onAddCollaborator={handleAddCollaborator}
+			onRemoveCollaborator={handleRemoveCollaborator}
+			onApprove={handleApprove}
+			onReject={handleReject}
+			onUpdateViewers={handleUpdateViewers}
+			onPublishSuccess={() => router.invalidate()}
+			onEdit={() => setEditDialogOpen(true)}
+			onDelete={() => setDeleteConfirmOpen(true)}
+		/>
+	);
+
 	return (
 		<div className={styles.layout}>
 			<div className={styles.main}>
@@ -141,44 +325,45 @@ function RouteComponent() {
 							{form.description}
 						</Text>
 					)}
-					<div className={styles.meta}>
-						<span className={styles.metaItem}>
-							<IconCalendar size={14} />
-							<Text size="2" color="gray">
-								作成: {formatDate(form.createdAt, "datetime")}
-							</Text>
-						</span>
-						<span className={styles.metaItem}>
-							<IconClock size={14} />
-							<Text size="2" color="gray">
-								更新: {formatDate(form.updatedAt, "datetime")}
-							</Text>
-						</span>
-					</div>
 				</header>
 
-				<Separator size="4" />
+				{/* タブ */}
+				<nav className={styles.tabs} aria-label="フォーム詳細タブ">
+					<button
+						type="button"
+						className={`${styles.tab} ${activeTab === "content" ? styles.tabActive : ""}`}
+						onClick={() => setActiveTab("content")}
+					>
+						内容
+					</button>
+					{canViewAnswers && (
+						<button
+							type="button"
+							className={`${styles.tab} ${activeTab === "answers" ? styles.tabActive : ""}`}
+							onClick={() => setActiveTab("answers")}
+						>
+							回答
+							{responses.length > 0 && (
+								<span className={styles.tabBadge}>{responses.length}</span>
+							)}
+						</button>
+					)}
+				</nav>
 
-				{/* 申請項目プレビュー */}
-				<FormItemsPreview items={previewForm.items} />
+				{/* タブコンテンツ */}
+				{activeTab === "content" ? (
+					<div className={styles.contentLayout}>
+						<ContentTab form={form} previewForm={previewForm} />
+						{formDetailSidebar}
+					</div>
+				) : (
+					<AnswersTab
+						items={form.items}
+						rows={answerRows}
+						onViewDetail={setAnswerDialogResponseId}
+					/>
+				)}
 			</div>
-
-			<FormDetailSidebar
-				form={form}
-				userId={user?.id ?? ""}
-				isOwner={isOwner}
-				canEdit={canEdit}
-				availableMembers={availableMembers}
-				approvers={approvers}
-				removingId={removingId}
-				onAddCollaborator={handleAddCollaborator}
-				onRemoveCollaborator={handleRemoveCollaborator}
-				onApprove={handleApprove}
-				onReject={handleReject}
-				onPublishSuccess={() => router.invalidate()}
-				onEdit={() => setEditDialogOpen(true)}
-				onDelete={() => setDeleteConfirmOpen(true)}
-			/>
 
 			{/* 編集ダイアログ */}
 			<EditFormDialog
@@ -216,9 +401,162 @@ function RouteComponent() {
 					</div>
 				</AlertDialog.Content>
 			</AlertDialog.Root>
+
+			{/* 回答詳細ダイアログ */}
+			<AnswerDetailDialog
+				open={answerDialogResponseId !== null}
+				onOpenChange={open => {
+					if (!open) setAnswerDialogResponseId(null);
+				}}
+				formId={formId}
+				responseId={answerDialogResponseId}
+				form={previewForm}
+			/>
 		</div>
 	);
 }
+
+/* ─── 内容タブ ─── */
+
+function ContentTab({
+	form,
+	previewForm,
+}: {
+	form: GetFormDetailResponse["form"];
+	previewForm: ReturnType<typeof formDetailToForm>;
+}) {
+	return (
+		<div className={styles.tabContent}>
+			<div className={styles.meta}>
+				<span className={styles.metaItem}>
+					<IconCalendar size={14} />
+					<Text size="2" color="gray">
+						作成: {formatDate(form.createdAt, "datetime")}
+					</Text>
+				</span>
+				<span className={styles.metaItem}>
+					<IconClock size={14} />
+					<Text size="2" color="gray">
+						更新: {formatDate(form.updatedAt, "datetime")}
+					</Text>
+				</span>
+			</div>
+			<FormItemsPreview items={previewForm.items} />
+		</div>
+	);
+}
+
+/* ─── 回答タブ ─── */
+
+function AnswersTab({
+	items,
+	rows,
+	onViewDetail,
+}: {
+	items: GetFormDetailResponse["form"]["items"];
+	rows: AnswerRow[];
+	onViewDetail: (responseId: string) => void;
+}) {
+	const columnHelper = createColumnHelper<AnswerRow>();
+
+	const columns = [
+		columnHelper.accessor("projectName", {
+			header: "企画",
+			cell: NameCell,
+		}),
+		columnHelper.accessor("submittedAt", {
+			header: "提出日時",
+			cell: DateCell,
+			meta: { dateFormat: "datetime" },
+		}),
+
+		// 設問ごとの動的カラム
+		...items.map(item =>
+			columnHelper.accessor(row => row.answers[item.id] ?? "", {
+				id: item.id,
+				header: item.label,
+				cell: ctx => {
+					const value = ctx.getValue();
+					if (!value || (Array.isArray(value) && value.length === 0)) {
+						return (
+							<Text size="2" color="gray">
+								—
+							</Text>
+						);
+					}
+
+					if (Array.isArray(value)) {
+						return (
+							<div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+								{value.map(v => (
+									<Badge key={v.label} variant="soft" color={v.color}>
+										{v.label}
+									</Badge>
+								))}
+							</div>
+						);
+					}
+
+					if (item.type === "FILE") {
+						return (
+							<Text size="2" color="gray">
+								ファイルあり
+							</Text>
+						);
+					}
+
+					return (
+						<Text size="2" truncate>
+							{value as string}
+						</Text>
+					);
+				},
+			})
+		),
+
+		columnHelper.display({
+			id: "actions",
+			header: "操作",
+			cell: ({ row }) => (
+				<Button
+					intent="ghost"
+					size="1"
+					onClick={() => onViewDetail(row.original.id)}
+				>
+					<IconEye size={16} />
+					詳細
+				</Button>
+			),
+		}),
+	];
+
+	if (rows.length === 0) {
+		return (
+			<div className={styles.emptyState}>
+				<Text size="2" color="gray">
+					まだ回答がありません。
+				</Text>
+			</div>
+		);
+	}
+
+	return (
+		<DataTable<AnswerRow>
+			data={rows}
+			columns={columns}
+			features={{
+				sorting: true,
+				globalFilter: true,
+				columnVisibility: false,
+				selection: false,
+				copy: false,
+				csvExport: true,
+			}}
+		/>
+	);
+}
+
+/* ─── ステータスバッジ ─── */
 
 function FormStatusBadge({ form }: { form: GetFormDetailResponse["form"] }) {
 	const latestAuth = form.authorizationDetail;

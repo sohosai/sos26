@@ -4,7 +4,7 @@ import { prisma } from "../prisma";
 import { sendAccessRequestReceivedPush } from "../push";
 
 /**
- * アクセス申請が作成されたとき、カラム管理者（CUSTOM: 作成者 / FORM_ITEM: フォームオーナー）に通知
+ * アクセス申請が作成されたとき、カラム管理者（CUSTOM: 作成者 / FORM_ITEM: 申請オーナー）に通知
  */
 export async function notifyAccessRequestReceived(input: {
 	columnId: string;

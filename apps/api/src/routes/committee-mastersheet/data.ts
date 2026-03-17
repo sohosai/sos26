@@ -4,6 +4,7 @@ import { requireAuth, requireCommitteeMember } from "../../middlewares/auth";
 import type { AuthEnv } from "../../types/auth-env";
 import {
 	buildFormItemCell,
+	buildPrfItemCell,
 	type ColumnFull,
 	canViewColumn,
 	fetchLatestHistoryByCell,
@@ -35,6 +36,17 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 					},
 				},
 			},
+			projectRegistrationFormItem: {
+				select: {
+					id: true,
+					formId: true,
+					type: true,
+					options: {
+						orderBy: { sortOrder: "asc" as const },
+						select: { id: true, label: true, sortOrder: true },
+					},
+				},
+			},
 			options: {
 				orderBy: { sortOrder: "asc" },
 				select: { id: true, label: true, sortOrder: true },
@@ -52,6 +64,9 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 
 	const formItemCols = visibleColumns.filter(c => c.type === "FORM_ITEM");
 	const customCols = visibleColumns.filter(c => c.type === "CUSTOM");
+	const prfItemCols = visibleColumns.filter(
+		c => c.type === "PROJECT_REGISTRATION_FORM_ITEM"
+	);
 
 	// 2. 企画一覧
 	const projects = await prisma.project.findMany({
@@ -123,7 +138,42 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 	];
 	const latestHistoryByCell = await fetchLatestHistoryByCell(formItemIds);
 
-	// 4. CUSTOM: セル値をバッチ取得
+	// 4. PROJECT_REGISTRATION_FORM_ITEM: 回答・編集履歴をバッチ取得
+	const visiblePrfFormIds = [
+		...new Set(
+			prfItemCols.flatMap(c =>
+				c.projectRegistrationFormItem
+					? [c.projectRegistrationFormItem.formId]
+					: []
+			)
+		),
+	];
+
+	const prfResponses = visiblePrfFormIds.length
+		? await prisma.projectRegistrationFormResponse.findMany({
+				where: { formId: { in: visiblePrfFormIds } },
+				include: {
+					answers: {
+						include: {
+							selectedOptions: { select: { formItemOptionId: true } },
+						},
+					},
+				},
+			})
+		: [];
+
+	// responseByFormProject: formId → projectId → response
+	const prfResponseByFormProject = new Map<
+		string,
+		Map<string, (typeof prfResponses)[0]>
+	>();
+	for (const r of prfResponses) {
+		if (!prfResponseByFormProject.has(r.formId))
+			prfResponseByFormProject.set(r.formId, new Map());
+		prfResponseByFormProject.get(r.formId)?.set(r.projectId, r);
+	}
+
+	// 5. CUSTOM: セル値をバッチ取得
 	const customColIds = customCols.map(c => c.id);
 	const cellValues = customColIds.length
 		? await prisma.mastersheetCellValue.findMany({
@@ -142,7 +192,7 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 		cellByColProject.get(cv.columnId)?.set(cv.projectId, cv);
 	}
 
-	// 5. レスポンス組み立て
+	// 6. レスポンス組み立て
 	const rows = projects.map(project => {
 		const cells = visibleColumns.map(col => {
 			if (col.type === "FORM_ITEM" && col.formItem) {
@@ -154,6 +204,17 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 					responseByDelivery,
 					answerByResponseItem,
 					latestHistoryByCell
+				);
+			}
+			if (
+				col.type === "PROJECT_REGISTRATION_FORM_ITEM" &&
+				col.projectRegistrationFormItem
+			) {
+				return buildPrfItemCell(
+					col.id,
+					col.projectRegistrationFormItem,
+					project.id,
+					prfResponseByFormProject
 				);
 			}
 			// CUSTOM

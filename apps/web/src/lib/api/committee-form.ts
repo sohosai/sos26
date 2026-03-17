@@ -23,8 +23,11 @@ import {
 	type UpdateFormAuthorizationResponse,
 	type UpdateFormDetailRequest,
 	type UpdateFormDetailResponse,
+	type UpdateFormViewersRequest,
+	type UpdateFormViewersResponse,
 	updateFormAuthorizationEndpoint,
 	updateFormDetailEndpoint,
+	updateFormViewersEndpoint,
 } from "@sos26/shared";
 import { callBodyApi, callGetApi, callNoBodyApi } from "./core";
 
@@ -175,6 +178,19 @@ export async function listFormResponses(
 	formId: string
 ): Promise<ListFormResponsesResponse> {
 	return callGetApi(listFormResponsesEndpoint, { pathParams: { formId } });
+}
+
+/**
+ * PUT /form/:formId/viewers
+ * 閲覧者を設定
+ */
+export async function updateFormViewers(
+	formId: string,
+	body: UpdateFormViewersRequest
+): Promise<UpdateFormViewersResponse> {
+	return callBodyApi(updateFormViewersEndpoint, body, {
+		pathParams: { formId },
+	});
 }
 
 /**

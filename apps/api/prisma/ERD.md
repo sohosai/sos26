@@ -138,6 +138,9 @@ erDiagram
   NoticeAuthorizationStatus status
   DateTime decidedAt "nullable"
   DateTime deliveredAt
+  DeliveryMode deliveryMode
+  ProjectType filterTypes
+  ProjectLocation filterLocations
   DateTime createdAt
   DateTime updatedAt
 }
@@ -155,6 +158,15 @@ erDiagram
   DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
+}
+"FormViewer" {
+  String id PK
+  String formId FK
+  ViewerScope scope
+  Bureau bureauValue "nullable"
+  String userId FK "nullable"
+  DateTime deletedAt "nullable"
+  DateTime createdAt
 }
 "FormItem" {
   String id PK
@@ -209,6 +221,9 @@ erDiagram
   Boolean allowLateResponse
   Boolean required
   Boolean ownerOnly
+  DeliveryMode deliveryMode
+  ProjectType filterTypes
+  ProjectLocation filterLocations
   DateTime createdAt
   DateTime updatedAt
 }
@@ -316,6 +331,7 @@ erDiagram
   Int sortOrder
   String createdById FK
   String formItemId FK,UK "nullable"
+  String projectRegistrationFormItemId FK,UK "nullable"
   MastersheetDataType dataType "nullable"
   MastersheetColumnVisibility visibility "nullable"
   DateTime createdAt
@@ -481,6 +497,8 @@ erDiagram
 "NoticeDelivery" }o--|| "NoticeAuthorization" : noticeAuthorization
 "NoticeDelivery" }o--|| "Project" : project
 "Form" }o--|| "User" : owner
+"FormViewer" }o--|| "Form" : form
+"FormViewer" }o--o| "User" : user
 "FormItem" }o--|| "Form" : form
 "FormItemOption" }o--|| "FormItem" : formItem
 "FormCollaborator" }o--|| "Form" : form
@@ -516,6 +534,7 @@ erDiagram
 "InquiryActivity" }o--o| "User" : target
 "MastersheetColumn" }o--|| "User" : createdBy
 "MastersheetColumn" |o--o| "FormItem" : formItem
+"MastersheetColumn" |o--o| "ProjectRegistrationFormItem" : projectRegistrationFormItem
 "MastersheetColumnOption" }o--|| "MastersheetColumn" : column
 "MastersheetCellValue" }o--|| "MastersheetColumn" : column
 "MastersheetCellValue" }o--|| "Project" : project
@@ -722,6 +741,9 @@ Properties as follows:
 - `status`:
 - `decidedAt`:
 - `deliveredAt`:
+- `deliveryMode`:
+- `filterTypes`:
+- `filterLocations`:
 - `createdAt`:
 - `updatedAt`:
 
@@ -745,6 +767,18 @@ Properties as follows:
 - `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
+
+### `FormViewer`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `scope`:
+- `bureauValue`:
+- `userId`:
+- `deletedAt`:
+- `createdAt`:
 
 ### `FormItem`
 
@@ -814,6 +848,9 @@ Properties as follows:
 - `allowLateResponse`:
 - `required`:
 - `ownerOnly`:
+- `deliveryMode`:
+- `filterTypes`:
+- `filterLocations`:
 - `createdAt`:
 - `updatedAt`:
 
@@ -957,6 +994,7 @@ Properties as follows:
 - `sortOrder`:
 - `createdById`:
 - `formItemId`:
+- `projectRegistrationFormItemId`:
 - `dataType`:
 - `visibility`:
 - `createdAt`:

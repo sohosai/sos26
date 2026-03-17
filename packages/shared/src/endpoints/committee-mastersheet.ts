@@ -59,7 +59,7 @@ export const getMastersheetDataEndpoint: GetEndpoint<
  * POST /committee/mastersheet/columns
  * カラムを追加（FORM_ITEM / CUSTOM）
  *
- * - FORM_ITEM: 対象フォームへのアクセス権必須
+ * - FORM_ITEM: 対象申請へのアクセス権必須
  */
 export const createMastersheetColumnEndpoint: BodyEndpoint<
 	"POST",
@@ -146,7 +146,7 @@ export const upsertMastersheetCellEndpoint: BodyEndpoint<
 
 /**
  * PUT /committee/mastersheet/edits/:columnId/:projectId
- * フォーム由来カラムの値を編集（FormItemEditHistory に COMMITTEE_EDIT を追加）
+ * 申請由来カラムの値を編集（FormItemEditHistory に COMMITTEE_EDIT を追加）
  */
 export const editFormItemCellEndpoint: BodyEndpoint<
 	"PUT",
@@ -237,7 +237,7 @@ export const createMastersheetAccessRequestEndpoint: NoBodyEndpoint<
  * 自分が承認権限を持つ PENDING 申請一覧
  *
  * - CUSTOM: カラム作成者
- * - FORM_ITEM: フォームオーナー
+ * - FORM_ITEM: 申請オーナー
  */
 export const listMastersheetAccessRequestsEndpoint: GetEndpoint<
 	"/committee/mastersheet/access-requests",
@@ -258,7 +258,7 @@ export const listMastersheetAccessRequestsEndpoint: GetEndpoint<
  * アクセス申請を承認・却下
  *
  * - CUSTOM: カラム作成者のみ
- * - FORM_ITEM: フォームオーナーのみ
+ * - FORM_ITEM: 申請オーナーのみ
  * - APPROVED 時は種別に応じて MastersheetColumnViewer または FormCollaborator を作成
  */
 export const updateMastersheetAccessRequestEndpoint: BodyEndpoint<

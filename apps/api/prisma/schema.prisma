@@ -78,6 +78,7 @@ model User {
   collaboratingForms          FormCollaborator[]
   requestedFormAuthorizations FormAuthorization[] @relation("FormRequestedBy")
   receivedFormAuthorizations  FormAuthorization[] @relation("FormRequestedTo")
+  formViewerEntries           FormViewer[]        @relation("FormViewer")
   formResponses               FormResponse[]      @relation("FormRespondent")
   noticeReadStatuses          NoticeReadStatus[]
 
@@ -139,6 +140,14 @@ enum ProjectLocation {
 
   //ステージ
   STAGE
+}
+
+enum DeliveryMode {
+  //個別指定
+  INDIVIDUAL
+
+  //カテゴリ指定
+  CATEGORY
 }
 
 model Project {
@@ -446,12 +455,22 @@ model NoticeAuthorization {
   //承認を求める側があらかじめここを埋める
   deliveredAt DateTime
 
+  //配信先指定モード
+  deliveryMode DeliveryMode @default(INDIVIDUAL)
+
+  //カテゴリ指定時のフィルタ: 対象企画区分
+  filterTypes ProjectType[]
+
+  //カテゴリ指定時のフィルタ: 対象実施場所
+  filterLocations ProjectLocation[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   deliveries NoticeDelivery[]
 
   @@index([noticeId, status])
+  @@index([deliveryMode, status, deliveredAt])
 }
 
 //Noticeの配信
@@ -524,9 +543,36 @@ model Form {
   // お問い合わせ関連
   inquiries Inquiry[]
 
+  // 閲覧者
+  viewers FormViewer[]
+
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+}
+
+model FormViewer {
+  id String @id @default(cuid())
+
+  formId String
+  form   Form   @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  // 閲覧者スコープ
+  scope ViewerScope
+
+  // scope = BUREAU の場合の局
+  bureauValue Bureau?
+
+  // scope = INDIVIDUAL の場合のユーザー
+  userId String?
+  user   User?   @relation("FormViewer", fields: [userId], references: [id])
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([formId])
+  @@index([userId])
+  @@index([deletedAt])
 }
 
 //フォームの質問項目
@@ -681,11 +727,21 @@ model FormAuthorization {
   //回答の閲覧制限（trueの場合、責任者・副責任者のみ閲覧・回答可能）
   ownerOnly Boolean @default(false)
 
+  //配信先指定モード
+  deliveryMode DeliveryMode @default(INDIVIDUAL)
+
+  //カテゴリ指定時のフィルタ: 対象企画区分
+  filterTypes ProjectType[]
+
+  //カテゴリ指定時のフィルタ: 対象実施場所
+  filterLocations ProjectLocation[]
+
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
   deliveries FormDelivery[]
 
   @@index([formId, createdAt(sort: Desc)])
+  @@index([deliveryMode, status, scheduledSendAt])
 }
 
 //フォームの配信
@@ -994,6 +1050,7 @@ model InquiryActivity {
 enum MastersheetColumnType {
   FORM_ITEM // フォーム由来
   CUSTOM // 自由追加
+  PROJECT_REGISTRATION_FORM_ITEM // 企画登録フォーム由来
 }
 
 enum MastersheetDataType {
@@ -1022,6 +1079,10 @@ model MastersheetColumn {
   // フォーム由来カラムの場合（同一フォーム項目のカラムは1つのみ）
   formItemId String?   @unique
   formItem   FormItem? @relation(fields: [formItemId], references: [id])
+
+  // 企画登録フォーム由来カラムの場合（同一フォーム項目のカラムは1つのみ）
+  projectRegistrationFormItemId String?                      @unique
+  projectRegistrationFormItem   ProjectRegistrationFormItem? @relation(fields: [projectRegistrationFormItemId], references: [id])
 
   // 自由追加カラムの場合
   dataType   MastersheetDataType?
@@ -1282,6 +1343,9 @@ model ProjectRegistrationFormItem {
 
   // 回答
   answers ProjectRegistrationFormAnswer[]
+
+  // マスターシートカラム
+  mastersheetColumn MastersheetColumn?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

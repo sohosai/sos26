@@ -37,7 +37,7 @@ export const projectRegisterMockForm: Form = {
 			type: "SELECT",
 			required: true,
 			options: [
-				{ id: "NORMAL", label: "通常企画" },
+				{ id: "NORMAL", label: "普通企画" },
 				{ id: "STAGE", label: "ステージ企画" },
 				{ id: "FOOD", label: "食品企画" },
 			],
