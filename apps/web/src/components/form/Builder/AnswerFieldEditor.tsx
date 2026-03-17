@@ -140,11 +140,13 @@ function TextConstraintEditor({
 
 type FileConstraintEditorProps = {
 	constraints: FormItemConstraints | null | undefined;
+	required: boolean;
 	onUpdate: (constraints: FileConstraints | null) => void;
 };
 
 function FileConstraintEditor({
 	constraints,
+	required,
 	onUpdate,
 }: FileConstraintEditorProps) {
 	const fileConstraints = pickFileConstraints(constraints);
@@ -162,6 +164,12 @@ function FileConstraintEditor({
 			? "最小ファイル数は最大ファイル数以下にしてください"
 			: undefined;
 
+	const requiredMinFilesError =
+		required &&
+		(fileConstraints?.minFiles === undefined || fileConstraints.minFiles < 1)
+			? "必須のファイル設問には最小ファイル数を1以上に設定してください"
+			: undefined;
+
 	return (
 		<div className={styles.constraints}>
 			<Text size="2" weight="medium">
@@ -173,7 +181,7 @@ function FileConstraintEditor({
 					value={fileConstraints?.minFiles ?? null}
 					onChange={n => update({ minFiles: n ?? undefined })}
 					placeholder="例: 1"
-					error={minMaxError}
+					error={minMaxError ?? requiredMinFilesError}
 				/>
 				<NumberField
 					label="最大ファイル数"
@@ -255,6 +263,7 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 					</div>
 					<FileConstraintEditor
 						constraints={item.constraints}
+						required={item.required}
 						onUpdate={constraints => onUpdate({ constraints })}
 					/>
 				</div>

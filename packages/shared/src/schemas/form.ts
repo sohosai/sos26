@@ -406,6 +406,7 @@ export const validateFormItemTypeConstraints = (
 export const validateFormItemTypeConfiguration = (
 	data: {
 		type: string;
+		required?: boolean;
 		options?: unknown[];
 		constraints?: FormItemConstraints | null;
 	},
@@ -413,6 +414,19 @@ export const validateFormItemTypeConfiguration = (
 ) => {
 	validateFormItemTypeOptions(data, ctx);
 	validateFormItemTypeConstraints(data, ctx);
+
+	// 必須FILEは minFiles >= 1 を強制
+	if (data.type === "FILE" && data.required) {
+		const minFiles = data.constraints?.minFiles;
+		if (minFiles === undefined || minFiles < 1) {
+			ctx.addIssue({
+				code: "custom",
+				message:
+					"必須のファイル設問には最小ファイル数を1以上に設定してください",
+				path: ["constraints"],
+			});
+		}
+	}
 };
 
 // .extend() を使うため superRefine なしのベーススキーマ（内部利用）
