@@ -8,6 +8,7 @@ import type { Bureau, ViewerScope } from "@sos26/shared";
 import { IconCheck, IconChevronDown, IconSearch } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { DiscardChangesDialog } from "@/components/patterns/DiscardChangesDialog";
 import { Button, Select, TextArea, TextField } from "@/components/primitives";
 import { FileAttachmentArea } from "./FileAttachmentArea";
 import { FormViewerSelector } from "./FormViewerSelector";
@@ -84,6 +85,7 @@ export function NewInquiryForm({
 	const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [confirmClose, setConfirmClose] = useState(false);
 
 	const reset = () => {
 		setTitle("");
@@ -119,45 +121,23 @@ export function NewInquiryForm({
 		return results.map(r => r.file.id);
 	};
 
-	const buildParams = (fileIds?: string[]) => {
-		const formId = selectedForm?.id;
-		if (viewerRole === "committee") {
-			if (!selectedProject || selectedProjectAssignees.length === 0)
-				return null;
-			return {
-				title: title.trim(),
-				body: body.trim(),
-				relatedFormId: formId,
-				projectId: selectedProject.id,
-				projectAssigneeUserIds: selectedProjectAssignees.map(p => p.id),
-				committeeAssigneeUserIds:
-					selectedCommitteeAssignees.length > 0
-						? selectedCommitteeAssignees.map(p => p.id)
-						: undefined,
-				fileIds,
-				viewers: selectedViewers.length > 0 ? selectedViewers : undefined,
-			};
-		}
-		return {
-			title: title.trim(),
-			body: body.trim(),
-			relatedFormId: formId,
-			coAssigneeUserIds:
-				selectedCoAssignees.length > 0
-					? selectedCoAssignees.map(p => p.id)
-					: undefined,
-			fileIds,
-		};
-	};
-
 	const handleSubmit = async () => {
-		if (!canSubmit) return;
-
 		setIsSubmitting(true);
 		try {
 			const fileIds =
 				selectedFiles.length > 0 ? await uploadFiles(selectedFiles) : undefined;
-			const params = buildParams(fileIds);
+			const params = buildInquiryParams({
+				title,
+				body,
+				viewerRole,
+				formId: selectedForm?.id,
+				selectedProject,
+				selectedProjectAssignees,
+				selectedCommitteeAssignees,
+				selectedCoAssignees,
+				selectedViewers,
+				fileIds,
+			});
 			if (!params) return;
 
 			await onSubmit(params);
@@ -183,27 +163,45 @@ export function NewInquiryForm({
 	};
 
 	const toggleProjectAssignee = (person: UserSummary) => {
-		setSelectedProjectAssignees(prev =>
-			prev.some(p => p.id === person.id)
-				? prev.filter(p => p.id !== person.id)
-				: [...prev, person]
-		);
+		setSelectedProjectAssignees(prev => toggleItem(prev, person));
 	};
 
 	const toggleCoAssignee = (person: UserSummary) => {
-		setSelectedCoAssignees(prev =>
-			prev.some(p => p.id === person.id)
-				? prev.filter(p => p.id !== person.id)
-				: [...prev, person]
-		);
+		setSelectedCoAssignees(prev => toggleItem(prev, person));
 	};
 
 	const toggleCommitteeAssignee = (person: UserSummary) => {
-		setSelectedCommitteeAssignees(prev =>
-			prev.some(p => p.id === person.id)
-				? prev.filter(p => p.id !== person.id)
-				: [...prev, person]
-		);
+		setSelectedCommitteeAssignees(prev => toggleItem(prev, person));
+	};
+
+	const isDirty =
+		title !== "" ||
+		body !== "" ||
+		selectedForm !== null ||
+		selectedProject !== null ||
+		selectedProjectAssignees.length > 0 ||
+		selectedCoAssignees.length > 0 ||
+		selectedCommitteeAssignees.length > 0 ||
+		selectedViewers.length > 0 ||
+		selectedFiles.length > 0;
+
+	const handleOpenChange = (nextOpen: boolean) => {
+		if (nextOpen) {
+			onOpenChange(true);
+			return;
+		}
+		if (isDirty) {
+			setConfirmClose(true);
+			return;
+		}
+		reset();
+		onOpenChange(false);
+	};
+
+	const handleDiscard = () => {
+		setConfirmClose(false);
+		reset();
+		onOpenChange(false);
 	};
 
 	const canSubmit =
@@ -213,13 +211,7 @@ export function NewInquiryForm({
 			(selectedProject && selectedProjectAssignees.length > 0));
 
 	return (
-		<Dialog.Root
-			open={open}
-			onOpenChange={o => {
-				if (!o) reset();
-				onOpenChange(o);
-			}}
-		>
+		<Dialog.Root open={open} onOpenChange={handleOpenChange}>
 			<Dialog.Content maxWidth="640px">
 				<Dialog.Title>新しいお問い合わせを作成</Dialog.Title>
 				<Dialog.Description size="2" color="gray">
@@ -361,16 +353,14 @@ export function NewInquiryForm({
 						onRemoveFile={removeFile}
 					/>
 
-					{viewerRole === "project" && (
+					{viewerRole === "project" ? (
 						<div className={styles.infoBox}>
 							<Text size="1" color="gray">
 								あなた（{currentUser.name}
 								）が企画側の担当者になります。実行委員側の担当者は実行委員会によって割り当てられます。
 							</Text>
 						</div>
-					)}
-
-					{viewerRole === "committee" && (
+					) : (
 						<div className={styles.infoBox}>
 							<Text size="1" color="gray">
 								あなた（{currentUser.name}
@@ -381,7 +371,7 @@ export function NewInquiryForm({
 				</div>
 
 				<div className={styles.actions}>
-					<Button intent="ghost" onClick={() => onOpenChange(false)}>
+					<Button intent="ghost" onClick={() => handleOpenChange(false)}>
 						キャンセル
 					</Button>
 					<Button
@@ -393,8 +383,72 @@ export function NewInquiryForm({
 					</Button>
 				</div>
 			</Dialog.Content>
+			<DiscardChangesDialog
+				open={confirmClose}
+				onOpenChange={setConfirmClose}
+				onConfirm={handleDiscard}
+			/>
 		</Dialog.Root>
 	);
+}
+
+/* ─── ユーティリティ ─── */
+
+function buildInquiryParams({
+	title,
+	body,
+	viewerRole,
+	formId,
+	selectedProject,
+	selectedProjectAssignees,
+	selectedCommitteeAssignees,
+	selectedCoAssignees,
+	selectedViewers,
+	fileIds,
+}: {
+	title: string;
+	body: string;
+	viewerRole: "project" | "committee";
+	formId: string | undefined;
+	selectedProject: { id: string; name: string } | null;
+	selectedProjectAssignees: UserSummary[];
+	selectedCommitteeAssignees: UserSummary[];
+	selectedCoAssignees: UserSummary[];
+	selectedViewers: ViewerInput[];
+	fileIds?: string[];
+}) {
+	if (viewerRole === "committee") {
+		if (!selectedProject || selectedProjectAssignees.length === 0) return null;
+		return {
+			title: title.trim(),
+			body: body.trim(),
+			relatedFormId: formId,
+			projectId: selectedProject.id,
+			projectAssigneeUserIds: selectedProjectAssignees.map(p => p.id),
+			committeeAssigneeUserIds:
+				selectedCommitteeAssignees.length > 0
+					? selectedCommitteeAssignees.map(p => p.id)
+					: undefined,
+			fileIds,
+			viewers: selectedViewers.length > 0 ? selectedViewers : undefined,
+		};
+	}
+	return {
+		title: title.trim(),
+		body: body.trim(),
+		relatedFormId: formId,
+		coAssigneeUserIds:
+			selectedCoAssignees.length > 0
+				? selectedCoAssignees.map(p => p.id)
+				: undefined,
+		fileIds,
+	};
+}
+
+function toggleItem<T extends { id: string }>(prev: T[], item: T): T[] {
+	return prev.some(p => p.id === item.id)
+		? prev.filter(p => p.id !== item.id)
+		: [...prev, item];
 }
 
 /* ─── 関連申請選択 ─── */
