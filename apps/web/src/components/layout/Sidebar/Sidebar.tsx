@@ -191,7 +191,10 @@ export function Sidebar({
 	const { location } = useRouterState();
 	const pathname = location.pathname;
 	const navigate = useNavigate();
-	const [isMobile, setIsMobile] = useState(false);
+	const [isMobile, setIsMobile] = useState(() => {
+		if (typeof window === "undefined") return false;
+		return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches;
+	});
 	const [mobileOpen, setMobileOpen] = useState(false);
 	const { isCommitteeMember, hasMemberEditPermission, signOut } =
 		useAuthStore();
