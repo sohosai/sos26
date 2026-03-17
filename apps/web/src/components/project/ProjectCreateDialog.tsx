@@ -1,4 +1,10 @@
-import { Callout, Dialog, Text, VisuallyHidden } from "@radix-ui/themes";
+import {
+	AlertDialog,
+	Callout,
+	Dialog,
+	Text,
+	VisuallyHidden,
+} from "@radix-ui/themes";
 import type {
 	GetActiveProjectRegistrationFormsResponse,
 	Project,
@@ -14,7 +20,7 @@ import {
 	projectTypeSchema,
 } from "@sos26/shared";
 import { IconInfoCircle } from "@tabler/icons-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AnswerField } from "@/components/form/Answer/AnswerField";
 import {
@@ -206,6 +212,19 @@ function validateRegFormAnswers(
 		}
 	}
 	return errors;
+}
+
+function hasAnyInputInAnswers(answers: FormAnswers): boolean {
+	return Object.values(answers).some(value => {
+		if (value === null || value === undefined) return false;
+		if (typeof value === "string") return value.trim() !== "";
+		if (typeof value === "number") return true;
+		if (Array.isArray(value)) return value.length > 0;
+		if (isFileAnswerValue(value)) {
+			return value.pendingFile !== null || value.uploadedFile !== null;
+		}
+		return false;
+	});
 }
 
 type RegFormStepProps = {
@@ -422,12 +441,13 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 	}>({});
 	const [isFetching, setIsFetching] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [confirmOpen, setConfirmOpen] = useState(false);
 
 	const isStage = step1.type === "STAGE";
 	const totalSteps = 1 + regForms.length; // step0 + regForms (同意ステップは含まない)
 	const isConsentStep = step > 0 && step === 1 + regForms.length;
 
-	const handleClose = () => {
+	const closeAndReset = () => {
 		onOpenChange(false);
 		// リセット
 		setStep(0);
@@ -439,6 +459,24 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 		setConsented1(false);
 		setConsented2(false);
 		setConsentErrors({});
+		setConfirmOpen(false);
+	};
+
+	const hasUnsavedChanges = useMemo(() => {
+		const hasStep1Input = Object.entries(step1).some(
+			([key, value]) => value !== EMPTY_STEP1[key as keyof Step1State]
+		);
+		const hasRegInput = regFormAnswers.some(hasAnyInputInAnswers);
+		return hasStep1Input || hasRegInput || consented1 || consented2;
+	}, [step1, regFormAnswers, consented1, consented2]);
+
+	const requestClose = () => {
+		if (isSubmitting || isFetching) return;
+		if (hasUnsavedChanges) {
+			setConfirmOpen(true);
+			return;
+		}
+		closeAndReset();
 	};
 
 	// ─── Step 1 ───
@@ -561,7 +599,7 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 				agreedToInfoImmutability: true,
 			});
 			onCreated(res.project);
-			handleClose();
+			closeAndReset();
 		} catch {
 			toast.error("企画の作成に失敗しました");
 		} finally {
@@ -596,7 +634,16 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 	const currentRegErrors = step > 0 ? (regFormErrors[step - 1] ?? {}) : {};
 
 	return (
-		<Dialog.Root open={open} onOpenChange={handleClose}>
+		<Dialog.Root
+			open={open}
+			onOpenChange={nextOpen => {
+				if (nextOpen) {
+					onOpenChange(true);
+					return;
+				}
+				requestClose();
+			}}
+		>
 			<Dialog.Content maxWidth="520px" className={styles.dialogContent}>
 				<VisuallyHidden>
 					<Dialog.Title>企画登録</Dialog.Title>
@@ -745,7 +792,7 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 							<Button
 								type="button"
 								intent="secondary"
-								onClick={handleClose}
+								onClick={requestClose}
 								disabled={isFetching}
 							>
 								キャンセル
@@ -793,6 +840,22 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 					)
 				)}
 			</Dialog.Content>
+			<AlertDialog.Root open={confirmOpen} onOpenChange={setConfirmOpen}>
+				<AlertDialog.Content maxWidth="440px">
+					<AlertDialog.Title>入力内容を破棄しますか？</AlertDialog.Title>
+					<AlertDialog.Description size="2">
+						保存していない入力内容は失われます。
+					</AlertDialog.Description>
+					<div className={styles.confirmActions}>
+						<Button intent="secondary" onClick={() => setConfirmOpen(false)}>
+							戻る
+						</Button>
+						<Button intent="primary" onClick={closeAndReset}>
+							破棄して閉じる
+						</Button>
+					</div>
+				</AlertDialog.Content>
+			</AlertDialog.Root>
 		</Dialog.Root>
 	);
 }

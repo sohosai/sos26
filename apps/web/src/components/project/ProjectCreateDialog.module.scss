@@ -58,3 +58,10 @@
 	align-items: center;
 	gap: var(--space-4);
 }
+
+.confirmActions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--space-3);
+	margin-top: var(--space-4);
+}
