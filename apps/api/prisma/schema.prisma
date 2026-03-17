@@ -476,6 +476,7 @@ model NoticeAuthorization {
 
   @@index([noticeId, status])
   @@index([deliveryMode, status, deliveredAt])
+  @@index([status, deliveredAt, deliveryNotifiedAt])
 }
 
 //Noticeの配信
