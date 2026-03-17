@@ -51,14 +51,24 @@ export const Route = createFileRoute("/project")({
 			};
 		}
 
-		const [formsRes, noticesRes, inquiriesRes] = await Promise.all([
-			listProjectForms(selectedProjectId),
-			listProjectNotices(selectedProjectId),
-			listProjectInquiries(selectedProjectId),
-		]);
+		const [formsResult, noticesResult, inquiriesResult] =
+			await Promise.allSettled([
+				listProjectForms(selectedProjectId),
+				listProjectNotices(selectedProjectId),
+				listProjectInquiries(selectedProjectId),
+			]);
+
+		const forms =
+			formsResult.status === "fulfilled" ? formsResult.value.forms : [];
+		const notices =
+			noticesResult.status === "fulfilled" ? noticesResult.value.notices : [];
+		const inquiries =
+			inquiriesResult.status === "fulfilled"
+				? inquiriesResult.value.inquiries
+				: [];
 
 		const now = new Date();
-		const hasUnansweredForms = formsRes.forms.some(form => {
+		const hasUnansweredForms = forms.some(form => {
 			if (form.restricted) return false;
 			if (form.response?.submittedAt) return false;
 
@@ -69,10 +79,8 @@ export const Route = createFileRoute("/project")({
 			return !form.response;
 		});
 
-		const hasUncheckedNotices = noticesRes.notices.some(
-			notice => !notice.isRead
-		);
-		const hasPendingInquiries = inquiriesRes.inquiries.some(
+		const hasUncheckedNotices = notices.some(notice => !notice.isRead);
+		const hasPendingInquiries = inquiries.some(
 			inquiry => !inquiry.isDraft && inquiry.status !== "RESOLVED"
 		);
 
