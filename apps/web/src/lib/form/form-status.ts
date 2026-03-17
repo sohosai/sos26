@@ -25,7 +25,7 @@ type AuthorizationSummary = {
 } | null;
 
 /**
- * 承認情報と有効期間からフォームの表示ステータスを判定する。
+ * 承認情報と有効期間から申請の表示ステータスを判定する。
  * 一覧・詳細で共通して使用する。
  */
 export function getFormStatusFromAuth(

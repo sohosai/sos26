@@ -328,7 +328,7 @@ function RouteComponent() {
 				</header>
 
 				{/* タブ */}
-				<nav className={styles.tabs} aria-label="フォーム詳細タブ">
+				<nav className={styles.tabs} aria-label="申請詳細タブ">
 					<button
 						type="button"
 						className={`${styles.tab} ${activeTab === "content" ? styles.tabActive : ""}`}

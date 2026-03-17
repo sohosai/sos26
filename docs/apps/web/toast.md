@@ -91,11 +91,11 @@ toast.promise(saveData(), {
 | 補足的な情報を伝える | `toast.info()` / `toast.warning()` |
 | 非同期処理の進捗を見せる | `toast.promise()` |
 | ユーザーの確認が必要な操作 | **ConfirmDialog**（トーストではない） |
-| フォームのバリデーションエラー | **TextField の error prop**（トーストではない） |
+| 申請のバリデーションエラー | **TextField の error prop**（トーストではない） |
 
 ## 禁止事項
 
 - `alert()` や `window.confirm()` をユーザー向けフィードバックに使わない
 - `console.error()` だけでエラーを握りつぶさない（ユーザーに見えるフィードバックを返す）
-- フォームのバリデーションエラーをトーストで表示しない（フィールドの `error` prop を使う）
+- 申請のバリデーションエラーをトーストで表示しない（フィールドの `error` prop を使う）
 - トーストに長文を入れない（1〜2文で簡潔に）

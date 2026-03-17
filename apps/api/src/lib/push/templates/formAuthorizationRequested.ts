@@ -5,7 +5,7 @@ export function formAuthorizationRequestedTemplate(params: {
 	url: string;
 }): PushPayload {
 	return {
-		title: "フォーム承認依頼が届きました",
+		title: "申請承認依頼が届きました",
 		body: params.formTitle,
 		icon: "/sos.svg",
 		badge: "/sos.svg",

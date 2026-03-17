@@ -2,7 +2,7 @@
 
 ## 1. 概要
 
-お知らせ・フォームの配信先を指定する方法として、従来の「個別指定」に加え「カテゴリ指定」モードを追加した。カテゴリ指定では企画区分（ProjectType）と実施場所（ProjectLocation）を条件として指定し、条件に合致する企画に動的に配信する。
+お知らせ・申請の配信先を指定する方法として、従来の「個別指定」に加え「カテゴリ指定」モードを追加した。カテゴリ指定では企画区分（ProjectType）と実施場所（ProjectLocation）を条件として指定し、条件に合致する企画に動的に配信する。
 
 ---
 
@@ -92,7 +92,7 @@ z.discriminatedUnion("mode", [
 
 ### 5.2 企画側のアクセス時（遅延 Delivery 生成）
 
-企画がお知らせ一覧・詳細・既読、フォーム一覧にアクセスした際:
+企画がお知らせ一覧・詳細・既読、申請一覧にアクセスした際:
 
 1. カテゴリモード × APPROVED × 配信時刻到来済み × 未削除の Authorization を検索
 2. 企画の `type` / `location` が条件に合致するかチェック（AND 結合）
@@ -101,7 +101,7 @@ z.discriminatedUnion("mode", [
 
 これにより:
 - **承認後に登録された企画**も、初回アクセス時に Delivery が生成され配信される
-- 既存の既読管理・フォーム回答のロジックは変更不要
+- 既存の既読管理・申請回答のロジックは変更不要
 
 ---
 
@@ -109,7 +109,7 @@ z.discriminatedUnion("mode", [
 
 ### 6.1 UI
 
-公開申請ダイアログ（お知らせ・フォーム共通）に `SegmentedControl` でモード切替を追加:
+公開申請ダイアログ（お知らせ・申請共通）に `SegmentedControl` でモード切替を追加:
 
 - **カテゴリ指定**（デフォルト・左タブ）: 企画区分と実施場所のチェックボックス群を表示
 - **個別指定**（右タブ）: 従来のマスターシートUI（`ProjectSelectDialog`）
@@ -134,7 +134,7 @@ z.discriminatedUnion("mode", [
 | API | `apps/api/src/routes/project-notice.ts` | 遅延 Delivery 同期（`syncCategoryNoticeDeliveries`） |
 | API | `apps/api/src/routes/project-form.ts` | 遅延 Delivery 同期（`syncCategoryFormDeliveries`） |
 | Web | `apps/web/.../PublishRequestDialog.tsx` | お知らせ公開申請ダイアログ |
-| Web | `apps/web/.../FormPublishRequestDialog.tsx` | フォーム公開申請ダイアログ |
+| Web | `apps/web/.../FormPublishRequestDialog.tsx` | 申請公開申請ダイアログ |
 
 ---
 

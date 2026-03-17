@@ -34,7 +34,7 @@ export function assertNoExtraAnswers(
 }
 
 // ─────────────────────────────────────────────────────────────
-// 型チェック: 回答の type がフォーム設問の type と一致するか
+// 型チェック: 回答の type が申請設問の type と一致するか
 // ─────────────────────────────────────────────────────────────
 export function assertAnswerTypes(
 	formItems: FormAnswerValidationItem[],

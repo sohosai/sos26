@@ -32,12 +32,12 @@ import {
 import { callBodyApi, callGetApi, callNoBodyApi } from "./core";
 
 // ─────────────────────────────────────────────────────────────
-// フォーム基本操作
+// 申請基本操作
 // ─────────────────────────────────────────────────────────────
 
 /**
  * POST /form/create
- * フォームを作成
+ * 申請を作成
  */
 export async function createForm(
 	body: CreateFormRequest
@@ -47,7 +47,7 @@ export async function createForm(
 
 /**
  * GET /form/list
- * 自分が作成・共同編集しているフォーム一覧を取得
+ * 自分が作成・共同編集している申請一覧を取得
  */
 export async function listMyForms(): Promise<ListMyFormsResponse> {
 	return callGetApi(listMyFormsEndpoint);
@@ -55,7 +55,7 @@ export async function listMyForms(): Promise<ListMyFormsResponse> {
 
 /**
  * GET /form/:formId/detail
- * フォームの詳細を取得（項目含む）
+ * 申請の詳細を取得（項目含む）
  */
 export async function getFormDetail(
 	formId: string
@@ -67,7 +67,7 @@ export async function getFormDetail(
 
 /**
  * PATCH /form/:formId/detail
- * フォームのタイトル・説明を更新
+ * 申請のタイトル・説明を更新
  */
 export async function updateFormDetail(
 	formId: string,
@@ -80,7 +80,7 @@ export async function updateFormDetail(
 
 /**
  * DELETE /form/:formId
- * フォームを論理削除
+ * 申請を論理削除
  */
 export async function deleteForm(formId: string): Promise<DeleteFormResponse> {
 	return callNoBodyApi(deleteFormEndpoint, {

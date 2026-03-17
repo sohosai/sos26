@@ -398,7 +398,7 @@ function buildStep1Errors(step1: Step1State): Step1Errors {
 	return errs;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: 企画登録マルチステップフォームのロジック
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: 企画登録マルチステップ申請のロジック
 export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 	// ステップ: 0 = 基本情報, 1〜N = 企画登録フォーム, N+1 = 同意事項
 	const [step, setStep] = useState(0);
@@ -476,7 +476,7 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 			setRegFormErrors(forms.map(() => ({})));
 			setStep(1);
 		} catch {
-			toast.error("追加フォームの取得に失敗しました");
+			toast.error("追加申請の取得に失敗しました");
 		} finally {
 			setIsFetching(false);
 		}

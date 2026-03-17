@@ -41,7 +41,7 @@ bun run make-committee-member --email user@example.com --permissions NOTICE_DELI
 |---|------|
 | `MEMBER_EDIT` | メンバー編集 |
 | `NOTICE_DELIVER` | お知らせ配信・承認 |
-| `FORM_DELIVER` | フォーム配信 |
+| `FORM_DELIVER` | 申請配信 |
 | `INQUIRY_ADMIN` | お問い合わせ管理 |
 
 ## 動作

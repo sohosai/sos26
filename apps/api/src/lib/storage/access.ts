@@ -20,7 +20,7 @@ const checkers: FileAccessChecker[] = [];
 /**
  * アクセスチェッカーを登録する
  *
- * 各機能モジュール（お知らせ、フォーム等）の初期化時に呼び出す。
+ * 各機能モジュール（お知らせ、申請等）の初期化時に呼び出す。
  * 登録順にチェックされ、最初に true を返したチェッカーでアクセスが許可される。
  */
 export function registerFileAccessChecker(checker: FileAccessChecker): void {

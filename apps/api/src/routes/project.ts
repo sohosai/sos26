@@ -70,14 +70,14 @@ function validateRegistrationFormAnswers(
 		id => !submittedFormIds.has(id)
 	);
 	if (missingFormIds.length > 0) {
-		throw Errors.invalidRequest("必要な申請フォームへの回答が不足しています");
+		throw Errors.invalidRequest("必要な申請への回答が不足しています");
 	}
 
 	const extraFormIds = [...submittedFormIds].filter(
 		id => !applicableFormIds.has(id)
 	);
 	if (extraFormIds.length > 0) {
-		throw Errors.invalidRequest("対象外の申請フォームへの回答が含まれています");
+		throw Errors.invalidRequest("対象外の申請への回答が含まれています");
 	}
 
 	if (registrationFormAnswers?.length) {
@@ -125,7 +125,7 @@ projectRoute.post("/create", requireAuth, async c => {
 		inviteCode = generateInviteCode();
 	}
 	const project = await prisma.$transaction(async tx => {
-		// ── 対象フォームの過不足チェック（トランザクション内で取得しTOCTOU防止）──
+		// ── 対象申請の過不足チェック（トランザクション内で取得しTOCTOU防止）──
 		const applicableForms = await tx.projectRegistrationForm.findMany({
 			where: {
 				isActive: true,

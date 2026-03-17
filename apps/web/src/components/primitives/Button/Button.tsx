@@ -18,7 +18,7 @@ import styles from "./Button.module.scss";
  * - highContrast, radius: 指定不可（デザイン統一）
  *
  * ## 付加している振る舞い
- * - type: デフォルト "button"（フォーム誤送信防止）
+ * - type: デフォルト "button"（申請誤送信防止）
  * - ref 転送対応（Radix の Popover.Trigger 等と合成可能）
  *
  * ## 例外を許す場合

@@ -207,7 +207,7 @@ export type ListProjectInquiriesResponse = z.infer<
 // 企画側: GET /project/:projectId/inquiries/:inquiryId
 // ─────────────────────────────────────────────────────────────
 
-/** 関連フォーム情報 */
+/** 関連申請情報 */
 const relatedFormSummarySchema = z
 	.object({
 		id: z.cuid(),

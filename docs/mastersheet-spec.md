@@ -31,13 +31,13 @@
 | `MastersheetCellValue` | セルの現在値。1セル1レコード（upsert） |
 | `MastersheetCellSelectedOption` | SELECT/MULTI_SELECT の選択値（中間テーブル） |
 
-#### フォーム回答とその編集履歴
+#### 申請回答とその編集履歴
 
 | テーブル | 役割 |
 |---------|------|
-| `FormResponse` | フォーム回答（1配信1件）。`submittedAt` で下書き/提出済みを判別 |
+| `FormResponse` | 申請回答（1配信1件）。`submittedAt` で下書き/提出済みを判別 |
 | `FormAnswer` | 各設問への回答値。**企画者の提出時のみ**作成・上書きされる |
-| `FormItemEditHistory` | フォーム設問の全編集履歴（append-only）。企画の提出・実委の編集を統一管理 |
+| `FormItemEditHistory` | 申請設問の全編集履歴（append-only）。企画の提出・実委の編集を統一管理 |
 | `FormItemEditHistorySelectedOption` | `FormItemEditHistory` の SELECT/CHECKBOX 選択値（中間テーブル） |
 
 #### 企画登録フォーム回答
@@ -55,7 +55,7 @@
 
 ### 2.2 FORM_ITEM の表示値の導出
 
-FORM_ITEM に関連するセルの表示値は `FormItemEditHistory` と `FormAnswer` から導出される。この導出はマスターシートだけでなく、委員会側のフォーム回答画面、企画側の回答確認画面など**全ての画面で共通**。
+FORM_ITEM に関連するセルの表示値は `FormItemEditHistory` と `FormAnswer` から導出される。この導出はマスターシートだけでなく、委員会側の申請回答画面、企画側の回答確認画面など**全ての画面で共通**。
 
 ```
 FormItemEditHistory に該当レコード（formItemId × projectId）がある場合:
@@ -90,8 +90,8 @@ FormItemEditHistorySelectedOption
 
 | trigger | 意味 | 誰が |
 |---------|------|------|
-| `PROJECT_SUBMIT` | 企画がフォーム回答を初回提出 | 企画メンバー |
-| `PROJECT_RESUBMIT` | 企画がフォーム回答を再提出 | 企画メンバー |
+| `PROJECT_SUBMIT` | 企画が申請回答を初回提出 | 企画メンバー |
+| `PROJECT_RESUBMIT` | 企画が申請回答を再提出 | 企画メンバー |
 | `COMMITTEE_EDIT` | 実委人がセル値を編集 | 実委人 |
 
 ### 2.4 FormAnswer との関係
@@ -102,7 +102,7 @@ FormItemEditHistorySelectedOption
 | 企画者が再提出 | 上書き | `PROJECT_RESUBMIT` を追加 |
 | 実委人が編集 | **変更しない** | `COMMITTEE_EDIT` を追加 |
 
-- `FormAnswer` は企画者が「フォームで提出した値」を保持する記録
+- `FormAnswer` は企画者が「申請で提出した値」を保持する記録
 - 実委人の編集は `FormItemEditHistory` のみに記録される
 - 表示には常に §2.2 のロジックを用いる
 
@@ -113,7 +113,7 @@ FormItemEditHistorySelectedOption
 | 現在値の保存先 | `MastersheetCellValue`（1セル1レコード） | `FormItemEditHistory`（最新）→ `FormAnswer`（フォールバック） | `ProjectRegistrationFormAnswer` |
 | 変更履歴 | なし | `FormItemEditHistory`（append-only） | **なし** |
 | 選択肢の保存 | `MastersheetCellSelectedOption`（中間テーブル） | `FormItemEditHistorySelectedOption`（中間テーブル） | `ProjectRegistrationFormAnswerSelectedOption`（中間テーブル） |
-| 編集者 | 実委人のみ | 企画メンバー（フォーム提出）+ 実委人（編集） | **なし（読み取り専用）** |
+| 編集者 | 実委人のみ | 企画メンバー（申請提出）+ 実委人（編集） | **なし（読み取り専用）** |
 | 履歴が必要な理由 | — | 企画と実委の双方が関与し、変更の追跡が必要なため | — |
 
 > `PROJECT_REGISTRATION_FORM_ITEM` の詳細仕様は [マスターシート × 企画登録フォーム連携 仕様書](mastersheet-project-registration-form-spec.md) を参照。
@@ -136,13 +136,13 @@ FormItemEditHistorySelectedOption
 
 ### 3.2 FORM_ITEM カラム
 
-フォームの設問と連動する列。フォーム回答が自動的にセル値となる。
+申請の設問と連動する列。申請回答が自動的にセル値となる。
 
 | 項目 | 内容 |
 |------|------|
-| データ型 | フォーム設問の型に準じる（TEXT, TEXTAREA, SELECT, CHECKBOX, NUMBER, FILE） |
-| 作成者 | フォームの owner または collaborator |
-| 公開範囲 | フォームの owner / collaborator のみ（viewer 設定なし） |
+| データ型 | 申請設問の型に準じる（TEXT, TEXTAREA, SELECT, CHECKBOX, NUMBER, FILE） |
+| 作成者 | 申請の owner または collaborator |
+| 公開範囲 | 申請の owner / collaborator のみ（viewer 設定なし） |
 | セル値の保存先 | `FormItemEditHistory`（最新）→ `FormAnswer`（フォールバック） |
 | 1 設問 1 カラム | 同じ formItemId で複数カラムは作成不可（unique 制約） |
 
@@ -182,8 +182,8 @@ FormItemEditHistorySelectedOption
 
 | 条件 | アクセス可否 |
 |------|----------|
-| フォームの owner | アクセス可 |
-| フォームの collaborator（isWrite 不問） | アクセス可 |
+| 申請の owner | アクセス可 |
+| 申請の collaborator（isWrite 不問） | アクセス可 |
 | 上記以外 | アクセス不可 |
 
 - アクセス申請の承認で `FormCollaborator(isWrite=true)` が作成され、アクセス可能になる
@@ -203,7 +203,7 @@ FormItemEditHistorySelectedOption
 セル状態は `FormItemEditHistory` の最新レコードの trigger で決まる。
 
 ```
-NOT_DELIVERED    フォーム未配信
+NOT_DELIVERED    申請未配信
       ↓ (配信)
 NOT_ANSWERED     配信済み・未提出（実委の編集不可）
       ↓ (企画が提出)
@@ -219,7 +219,7 @@ SUBMITTED と COMMITTEE_EDITED は相互に行き来する:
 #### PROJECT_REGISTRATION_FORM_ITEM カラム
 
 ```
-NOT_APPLICABLE   企画がフォームの対象外、またはフォームが企画作成後に追加された
+NOT_APPLICABLE   企画が申請の対象外、または申請が企画作成後に追加された
 SUBMITTED        企画登録時に回答が提出された
 ```
 
@@ -228,9 +228,9 @@ SUBMITTED        企画登録時に回答が提出された
 
 | 状態 | 条件 | 表示 | 実委の編集 |
 |------|------|------|-----------|
-| NOT_DELIVERED | フォーム配信が企画に届いていない | 「─」（グレー） | **不可** |
+| NOT_DELIVERED | 申請配信が企画に届いていない | 「─」（グレー） | **不可** |
 | NOT_ANSWERED | 配信済みだが未提出（下書きを含む） | 「─」 | **不可** |
-| SUBMITTED | 最新の変更が企画の提出 | フォーム回答値 | 可 |
+| SUBMITTED | 最新の変更が企画の提出 | 申請回答値 | 可 |
 | COMMITTEE_EDITED | 最新の変更が実委の編集（`COMMITTEE_EDIT`） | 実委の編集値 | 可 |
 
 **NOT_ANSWERED で編集不可の理由**: 企画が回答を提出していない段階で実委が値を入れると、企画側からは「自分が何も書いていないのに値がある」状態になる。旧 SOS でも提出前は編集不可だったため、同じ方針を踏襲する。
@@ -248,14 +248,14 @@ function computeCellStatus(deliveryId, response, latestHistory) {
 
 ### 5.3 NOT_DELIVERED の扱い
 
-- フォーム配信がその企画に届いていない状態
+- 申請配信がその企画に届いていない状態
 - セルは「─」（グレー）を表示し、**編集 UI を表示しない**
 
 ### 5.4 NOT_ANSWERED の扱い
 
 - 配信済みだが企画が回答を提出していない状態（下書き保存中を含む）
 - セルは「─」を表示し、**編集 UI を表示しない**
-- 企画がフォーム回答を提出すると `SUBMITTED` に遷移し、実委も編集可能になる
+- 企画が申請回答を提出すると `SUBMITTED` に遷移し、実委も編集可能になる
 
 ### 5.5 下書き回答の扱い
 
@@ -286,7 +286,7 @@ function computeCellStatus(deliveryId, response, latestHistory) {
 
 #### 編集可否（データ型別）
 
-| フォーム設問型 | UI での編集 | API での編集 |
+| 申請設問型 | UI での編集 | API での編集 |
 |---------------|-------------|-------------|
 | TEXT | 可（ダブルクリック→入力） | 可 |
 | TEXTAREA | 可（ダブルクリック→入力） | 可 |
@@ -315,9 +315,9 @@ FormItemEditHistory にレコードがない場合:
 
 ---
 
-## 7. フォーム提出時の挙動
+## 7. 申請提出時の挙動
 
-企画がフォーム回答を提出すると（初回・再提出とも同じ挙動）:
+企画が申請回答を提出すると（初回・再提出とも同じ挙動）:
 
 1. `FormAnswer` が回答値で作成（初回）または上書き（再提出）される
 2. `FormItemEditHistory` に提出の記録が追加される（trigger: `PROJECT_SUBMIT` or `PROJECT_RESUBMIT`）
@@ -347,8 +347,8 @@ FormItemEditHistory:
 | 画面 | 表示内容 |
 |------|---------|
 | マスターシート（FORM_ITEM カラム） | 最新の値 |
-| 委員会側フォーム回答一覧 | 最新の値 |
-| 企画側フォーム回答確認画面 | 最新の値 |
+| 委員会側申請回答一覧 | 最新の値 |
+| 企画側申請回答確認画面 | 最新の値 |
 
 どの画面で見ても同じ値が表示される。「誰が最後に編集したか」は画面によらず統一される。
 
@@ -358,21 +358,21 @@ FormItemEditHistory:
 
 ### 9.1 記録対象
 
-フォーム設問に対する全変更が `FormItemEditHistory` に append-only で記録される。
+申請設問に対する全変更が `FormItemEditHistory` に append-only で記録される。
 
-フォーム回答は企画メンバーと実委人の双方が関与するため、「誰がいつ何を変えたか」を追跡できる必要がある。CUSTOM カラムは実委人のみが編集するため履歴は記録しない。
+申請回答は企画メンバーと実委人の双方が関与するため、「誰がいつ何を変えたか」を追跡できる必要がある。CUSTOM カラムは実委人のみが編集するため履歴は記録しない。
 
 | 操作 | trigger | actor |
 |------|---------|-------|
-| 企画がフォーム初回提出 | `PROJECT_SUBMIT` | 企画メンバー |
-| 企画がフォーム再提出 | `PROJECT_RESUBMIT` | 企画メンバー |
+| 企画が申請初回提出 | `PROJECT_SUBMIT` | 企画メンバー |
+| 企画が申請再提出 | `PROJECT_RESUBMIT` | 企画メンバー |
 | 実委人が値を編集 | `COMMITTEE_EDIT` | 実委人 |
 
 ### 9.2 監査シート（将来）
 
 - `FormItemEditHistory` を時系列で表示する画面
-- フォーム設問 × 企画ごとに、誰がいつ何を変えたかを一覧できる
-- フォーム回答の変更と実委人の編集が統一的に見える
+- 申請設問 × 企画ごとに、誰がいつ何を変えたかを一覧できる
+- 申請回答の変更と実委人の編集が統一的に見える
 
 ---
 
@@ -391,11 +391,11 @@ FormItemEditHistory:
 ### 10.2 FORM_ITEM カラム
 
 ```
-申請者 ──→ MastersheetAccessRequest(PENDING) ──→ フォーム owner が承認
+申請者 ──→ MastersheetAccessRequest(PENDING) ──→ 申請 owner が承認
                                                        ↓
                                               FormCollaborator(isWrite=true) 作成
                                                        ↓
-                                           フォーム回答 + 全関連カラムにアクセス可能に
+                                           申請回答 + 全関連カラムにアクセス可能に
 ```
 
 - 重複申請は不可（PENDING の申請が既にある場合は 409）
@@ -411,12 +411,12 @@ FormItemEditHistory:
 
 | 操作 | CUSTOM | FORM_ITEM | PROJECT_REGISTRATION_FORM_ITEM |
 |------|--------|-----------|-------------------------------|
-| カラム作成 | 全実委人 | フォーム owner / collaborator | 全実委人 |
+| カラム作成 | 全実委人 | 申請 owner / collaborator | 全実委人 |
 | カラム編集（名前等） | 作成者のみ | 作成者のみ | 作成者のみ |
 | カラム削除 | 作成者のみ | 作成者のみ | 作成者のみ |
-| カラムへのアクセス | 作成者 + viewer 設定に合致する実委人 | フォーム owner / collaborator | 全実委人 |
+| カラムへのアクセス | 作成者 + viewer 設定に合致する実委人 | 申請 owner / collaborator | 全実委人 |
 | セル編集 | カラムにアクセスできる全員 | カラムにアクセスできる全員 | **不可（読み取り専用）** |
-| アクセス申請の承認 | カラム作成者 | フォーム owner | **不要** |
+| アクセス申請の承認 | カラム作成者 | 申請 owner | **不要** |
 | 変更履歴の閲覧 | — | カラムにアクセスできる全員 | — |
 
 ---
@@ -459,14 +459,14 @@ type ViewState = {
 
 ## 13. アクセス申請関連のメール通知
 
-- アクセス申請が届いたとき → カラム作成者（CUSTOM）/ フォームオーナー（FORM_ITEM）へ通知（PROJECT_REGISTRATION_FORM_ITEM はアクセス申請不要のため対象外）
+- アクセス申請が届いたとき → カラム作成者（CUSTOM）/ 申請オーナー（FORM_ITEM）へ通知（PROJECT_REGISTRATION_FORM_ITEM はアクセス申請不要のため対象外）
 - アクセス申請が承認・却下されたとき → 申請者へ通知
 
 ### 13.1 送信タイミング
 
 | イベント | 送信先 | トリガー |
 |---------|--------|---------|
-| アクセス申請の作成 | カラム管理者（CUSTOM: 作成者 / FORM_ITEM: フォームオーナー） | `POST /committee/mastersheet/columns/:columnId/access-request` |
+| アクセス申請の作成 | カラム管理者（CUSTOM: 作成者 / FORM_ITEM: 申請オーナー） | `POST /committee/mastersheet/columns/:columnId/access-request` |
 | アクセス申請の承認 | 申請者 | `PATCH /committee/mastersheet/access-requests/:requestId` (status=APPROVED) |
 | アクセス申請の却下 | 申請者 | `PATCH /committee/mastersheet/access-requests/:requestId` (status=REJECTED) |
 
@@ -492,9 +492,9 @@ type ViewState = {
 
 ### 14.2 配信設定モーダル統合
 
-お知らせ・フォームの配信先選択 UI をマスターシートで実現する。
+お知らせ・申請の配信先選択 UI をマスターシートで実現する。
 
 - 既存の企画選択 UI を `rowSelection: true` のマスターシート UI に置き換える
-- 対象: お知らせ配信申請フロー、フォーム配信申請フロー
+- 対象: お知らせ配信申請フロー、申請配信申請フロー
 - DataTable の `rowSelection` 機能は実装済み
 
