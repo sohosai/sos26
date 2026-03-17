@@ -1,4 +1,4 @@
-import type { FormItemType, TextConstraints } from "@sos26/shared";
+import type { FormItemConstraints, FormItemType } from "@sos26/shared";
 
 export type UploadedFileValue = {
 	id: string;
@@ -62,7 +62,7 @@ export type FormItem = {
 	type: FormItemType;
 	required: boolean;
 	options?: FormItemOption[];
-	constraints?: TextConstraints | null;
+	constraints?: FormItemConstraints | null;
 };
 
 export type Form = {

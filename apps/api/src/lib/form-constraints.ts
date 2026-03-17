@@ -1,20 +1,24 @@
-import type { TextConstraintPattern, TextConstraints } from "@sos26/shared";
+import type { FormItemConstraints, TextConstraintPattern } from "@sos26/shared";
 
 export type PrismaConstraintFields = {
 	constraintMinLength: number | null;
 	constraintMaxLength: number | null;
 	constraintPattern: string | null;
 	constraintCustomPattern: string | null;
+	constraintMinFiles: number | null;
+	constraintMaxFiles: number | null;
 };
 
 export function constraintsToPrisma(
-	constraints: TextConstraints | null | undefined
+	constraints: FormItemConstraints | null | undefined
 ): PrismaConstraintFields {
 	return {
 		constraintMinLength: constraints?.minLength ?? null,
 		constraintMaxLength: constraints?.maxLength ?? null,
 		constraintPattern: constraints?.pattern ?? null,
 		constraintCustomPattern: constraints?.customPattern ?? null,
+		constraintMinFiles: constraints?.minFiles ?? null,
+		constraintMaxFiles: constraints?.maxFiles ?? null,
 	};
 }
 
@@ -23,11 +27,15 @@ export function constraintsFromPrisma({
 	constraintMaxLength,
 	constraintPattern,
 	constraintCustomPattern,
-}: PrismaConstraintFields): TextConstraints | null {
+	constraintMinFiles,
+	constraintMaxFiles,
+}: PrismaConstraintFields): FormItemConstraints | null {
 	if (
 		constraintMinLength === null &&
 		constraintMaxLength === null &&
-		constraintPattern === null
+		constraintPattern === null &&
+		constraintMinFiles === null &&
+		constraintMaxFiles === null
 	) {
 		return null;
 	}
@@ -40,6 +48,8 @@ export function constraintsFromPrisma({
 		...(constraintCustomPattern !== null && {
 			customPattern: constraintCustomPattern,
 		}),
+		...(constraintMinFiles !== null && { minFiles: constraintMinFiles }),
+		...(constraintMaxFiles !== null && { maxFiles: constraintMaxFiles }),
 	};
 }
 
@@ -49,6 +59,8 @@ export function mapItemToApiShape<T extends PrismaConstraintFields>(item: T) {
 		constraintMaxLength,
 		constraintPattern,
 		constraintCustomPattern,
+		constraintMinFiles,
+		constraintMaxFiles,
 		...rest
 	} = item;
 	return {
@@ -58,6 +70,8 @@ export function mapItemToApiShape<T extends PrismaConstraintFields>(item: T) {
 			constraintMaxLength,
 			constraintPattern,
 			constraintCustomPattern,
+			constraintMinFiles,
+			constraintMaxFiles,
 		}),
 	};
 }

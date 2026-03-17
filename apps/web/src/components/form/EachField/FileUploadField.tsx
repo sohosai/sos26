@@ -1,5 +1,5 @@
 import { Text } from "@radix-ui/themes";
-import { useId, useRef } from "react";
+import { useId, useRef, useState } from "react";
 import { Button } from "@/components/primitives";
 import styles from "./FileUploadField.module.scss";
 
@@ -10,6 +10,10 @@ type FileUploadProps = {
 	required?: boolean;
 	disabled?: boolean;
 	uploadedFileNames?: string[];
+	minFiles?: number;
+	maxFiles?: number;
+	helperText?: string;
+	error?: string;
 };
 
 export function FileUploadField({
@@ -17,9 +21,13 @@ export function FileUploadField({
 	onChange,
 	required,
 	disabled,
+	helperText,
+	error,
+	maxFiles,
 }: FileUploadProps) {
 	const id = useId();
 	const inputRef = useRef<HTMLInputElement>(null);
+	const [selectionError, setSelectionError] = useState<string | null>(null);
 
 	const handleButtonClick = (e: React.MouseEvent) => {
 		e.preventDefault();
@@ -47,7 +55,14 @@ export function FileUploadField({
 					className={styles.fileInput}
 					required={required}
 					onChange={e => {
-						onChange(Array.from(e.target.files ?? []));
+						const nextFiles = Array.from(e.target.files ?? []);
+						if (maxFiles !== undefined && nextFiles.length > maxFiles) {
+							onChange(nextFiles.slice(0, maxFiles));
+							setSelectionError(`${maxFiles}個以内で添付してください`);
+						} else {
+							onChange(nextFiles);
+							setSelectionError(null);
+						}
 						e.currentTarget.value = "";
 					}}
 					disabled={disabled}
@@ -60,6 +75,16 @@ export function FileUploadField({
 					ファイルを選択
 				</Button>
 			</div>
+			{helperText && (
+				<Text size="2" color="gray">
+					{helperText}
+				</Text>
+			)}
+			{(selectionError ?? error) && (
+				<Text size="2" color="red">
+					{selectionError ?? error}
+				</Text>
+			)}
 		</div>
 	);
 }

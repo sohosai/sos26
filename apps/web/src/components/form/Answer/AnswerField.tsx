@@ -98,6 +98,8 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 						label=""
 						value={fileValue.pendingFiles}
 						uploadedFiles={fileValue.uploadedFiles}
+						minFiles={constraints?.minFiles}
+						maxFiles={constraints?.maxFiles}
 						onChange={files =>
 							onChange({
 								pendingFiles: files,

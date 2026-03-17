@@ -16,10 +16,14 @@ import {
 	normalizeFileIds,
 } from "../lib/form-answer-files";
 import {
+	assertFileCountConstraints,
 	assertFormAnswersValid,
 	assertRequiredAnswered,
 } from "../lib/form-answer-validation";
-import { constraintsFromPrisma } from "../lib/form-constraints";
+import {
+	constraintsFromPrisma,
+	mapItemToApiShape,
+} from "../lib/form-constraints";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -65,6 +69,8 @@ const getDeliveryOrThrow = async (
 									constraintMaxLength: true,
 									constraintPattern: true,
 									constraintCustomPattern: true,
+									constraintMinFiles: true,
+									constraintMaxFiles: true,
 								},
 								orderBy: { sortOrder: "asc" },
 							},
@@ -605,13 +611,16 @@ projectFormRoute.post(
 
 		const body = await c.req.json().catch(() => ({}));
 		const { answers, submit } = createFormResponseRequestSchema.parse(body);
+		const validationItems =
+			delivery.formAuthorization.form.items.map(mapItemToApiShape);
 
-		assertFormAnswersValid(delivery.formAuthorization.form.items, answers);
+		assertFormAnswersValid(validationItems, answers);
 
 		checkDeadline(delivery.formAuthorization);
 
 		if (submit) {
-			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
+			assertRequiredAnswered(validationItems, answers);
+			assertFileCountConstraints(validationItems, answers);
 			assertTextConstraints(delivery.formAuthorization.form.items, answers);
 		}
 
@@ -682,15 +691,18 @@ projectFormRoute.patch(
 
 		const body = await c.req.json().catch(() => ({}));
 		const { answers, submit } = updateFormResponseRequestSchema.parse(body);
+		const validationItems =
+			delivery.formAuthorization.form.items.map(mapItemToApiShape);
 
-		assertFormAnswersValid(delivery.formAuthorization.form.items, answers);
+		assertFormAnswersValid(validationItems, answers);
 
 		const isAlreadySubmitted = existing.submittedAt !== null;
 
 		checkDeadline(delivery.formAuthorization);
 
 		if (submit || isAlreadySubmitted) {
-			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
+			assertRequiredAnswered(validationItems, answers);
+			assertFileCountConstraints(validationItems, answers);
 			assertTextConstraints(delivery.formAuthorization.form.items, answers);
 		}
 

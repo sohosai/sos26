@@ -16,8 +16,28 @@ type FileUploadProps = {
 	onChange: (files: File[]) => void;
 	required?: boolean;
 	disabled?: boolean;
+	minFiles?: number;
+	maxFiles?: number;
+	error?: string;
 	"aria-label"?: string;
 };
+
+function buildHelperText(
+	selectedCount: number,
+	minFiles?: number,
+	maxFiles?: number
+): string | null {
+	if (minFiles !== undefined && maxFiles !== undefined) {
+		return `選択中 ${selectedCount}個 (${minFiles}〜${maxFiles}個)`;
+	}
+	if (maxFiles !== undefined) {
+		return `選択中 ${selectedCount}個 / 最大${maxFiles}個`;
+	}
+	if (minFiles !== undefined) {
+		return `選択中 ${selectedCount}個 / 最低${minFiles}個`;
+	}
+	return null;
+}
 
 export function FileUploadFieldWithPreview({
 	label,
@@ -26,6 +46,9 @@ export function FileUploadFieldWithPreview({
 	onChange,
 	required,
 	disabled,
+	minFiles,
+	maxFiles,
+	error,
 	"aria-label": ariaLabel,
 }: FileUploadProps) {
 	const [previewFile, setPreviewFile] = useState<File | null>(null);
@@ -93,6 +116,7 @@ export function FileUploadFieldWithPreview({
 			},
 		})),
 	];
+	const helperText = buildHelperText(previewItems.length, minFiles, maxFiles);
 
 	return (
 		<div className={styles.container}>
@@ -103,6 +127,10 @@ export function FileUploadFieldWithPreview({
 				required={required}
 				disabled={disabled}
 				uploadedFileNames={uploadedFiles.map(file => file.fileName)}
+				minFiles={minFiles}
+				maxFiles={maxFiles}
+				helperText={helperText ?? undefined}
+				error={error}
 			/>
 			{previewItems.length > 0 ? (
 				<Flex direction="column">

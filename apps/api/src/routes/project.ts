@@ -11,6 +11,7 @@ import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import { normalizeFileIds } from "../lib/form-answer-files";
 import {
+	assertFileCountConstraints,
 	assertFormAnswersValid,
 	assertRequiredAnswered,
 } from "../lib/form-answer-validation";
@@ -98,6 +99,7 @@ function validateRegistrationFormAnswers(
 			if (!items) continue;
 			assertFormAnswersValid(items, answers);
 			assertRequiredAnswered(items, answers);
+			assertFileCountConstraints(items, answers);
 		}
 	}
 }
@@ -153,13 +155,23 @@ projectRoute.post("/create", requireAuth, async c => {
 						type: true,
 						required: true,
 						options: { select: { id: true } },
+						constraintMinLength: true,
+						constraintMaxLength: true,
+						constraintPattern: true,
+						constraintCustomPattern: true,
+						constraintMinFiles: true,
+						constraintMaxFiles: true,
 					},
 					orderBy: { sortOrder: "asc" },
 				},
 			},
 		});
+		const applicableFormsWithConstraints = applicableForms.map(form => ({
+			...form,
+			items: form.items.map(mapItemToApiShape),
+		}));
 		validateRegistrationFormAnswers(
-			applicableForms,
+			applicableFormsWithConstraints,
 			data.location,
 			registrationFormAnswers
 		);

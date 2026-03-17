@@ -179,6 +179,8 @@ erDiagram
   Int constraintMaxLength "nullable"
   String constraintPattern "nullable"
   String constraintCustomPattern "nullable"
+  Int constraintMinFiles "nullable"
+  Int constraintMaxFiles "nullable"
   Int sortOrder
   DateTime createdAt
   DateTime updatedAt
@@ -440,6 +442,8 @@ erDiagram
   Int constraintMaxLength "nullable"
   String constraintPattern "nullable"
   String constraintCustomPattern "nullable"
+  Int constraintMinFiles "nullable"
+  Int constraintMaxFiles "nullable"
   Int sortOrder
   DateTime createdAt
   DateTime updatedAt
@@ -814,6 +818,8 @@ Properties as follows:
 - `constraintMaxLength`:
 - `constraintPattern`:
 - `constraintCustomPattern`:
+- `constraintMinFiles`:
+- `constraintMaxFiles`:
 - `sortOrder`:
 - `createdAt`:
 - `updatedAt`:
@@ -1162,6 +1168,8 @@ Properties as follows:
 - `constraintMaxLength`:
 - `constraintPattern`:
 - `constraintCustomPattern`:
+- `constraintMinFiles`:
+- `constraintMaxFiles`:
 - `sortOrder`:
 - `createdAt`:
 - `updatedAt`:
