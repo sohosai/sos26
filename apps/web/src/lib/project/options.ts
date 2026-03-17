@@ -1,7 +1,7 @@
 import type { ProjectLocation, ProjectType } from "@sos26/shared";
 
 export const PROJECT_TYPE_OPTIONS: { value: ProjectType; label: string }[] = [
-	{ value: "NORMAL", label: "通常企画" },
+	{ value: "NORMAL", label: "普通企画" },
 	{ value: "FOOD", label: "食品企画" },
 	{ value: "STAGE", label: "ステージ企画" },
 ];
@@ -25,7 +25,7 @@ export const PROJECT_LOCATION_OPTIONS: {
 ];
 
 export const PROJECT_TYPE_LABELS: Record<string, string> = {
-	NORMAL: "通常",
+	NORMAL: "普通",
 	FOOD: "食品",
 	STAGE: "ステージ",
 };
