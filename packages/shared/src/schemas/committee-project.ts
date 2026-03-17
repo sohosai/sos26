@@ -26,8 +26,9 @@ const userSummarySchema = userSchema
 		telephoneNumber: true,
 	})
 	.extend({
-		email: z.email().nullable(),
-		telephoneNumber: z.string().nullable(),
+		// マスキングのために nullable にするが、userSchema と同じ制約を維持する
+		email: userSchema.shape.email.nullable(),
+		telephoneNumber: userSchema.shape.telephoneNumber.nullable(),
 	});
 
 const committeeProjectActionSchema = z.object({
