@@ -1,6 +1,6 @@
 import { Text } from "@radix-ui/themes";
 import { PATTERN_LABELS, PATTERN_REGEXES } from "@sos26/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
 import {
@@ -23,7 +23,51 @@ type Props = {
 	onSaveDraft?: (answers: FormAnswers) => Promise<void>;
 	disableSubmit?: boolean;
 	disableSaveDraft?: boolean;
+	onDirtyChange?: (dirty: boolean) => void;
 };
+
+function isSameFileValue(
+	a: FormAnswerValue | undefined,
+	b: FormAnswerValue | undefined
+): boolean {
+	if (!isFileAnswerValue(a) || !isFileAnswerValue(b)) return false;
+
+	const samePending =
+		a.pendingFile === null && b.pendingFile === null
+			? true
+			: a.pendingFile !== null &&
+				b.pendingFile !== null &&
+				a.pendingFile.name === b.pendingFile.name &&
+				a.pendingFile.size === b.pendingFile.size &&
+				a.pendingFile.type === b.pendingFile.type &&
+				a.pendingFile.lastModified === b.pendingFile.lastModified;
+
+	const sameUploaded =
+		a.uploadedFile === null && b.uploadedFile === null
+			? true
+			: a.uploadedFile !== null &&
+				b.uploadedFile !== null &&
+				a.uploadedFile.fileId === b.uploadedFile.fileId;
+
+	return samePending && sameUploaded;
+}
+
+function isSameAnswerValue(
+	a: FormAnswerValue | undefined,
+	b: FormAnswerValue | undefined
+): boolean {
+	if (Array.isArray(a) || Array.isArray(b)) {
+		if (!Array.isArray(a) || !Array.isArray(b)) return false;
+		if (a.length !== b.length) return false;
+		return a.every((val, idx) => val === b[idx]);
+	}
+
+	if (isFileAnswerValue(a) || isFileAnswerValue(b)) {
+		return isSameFileValue(a, b);
+	}
+
+	return a === b;
+}
 
 function getDefaultValue(type: Form["items"][number]["type"]): FormAnswerValue {
 	switch (type) {
@@ -130,8 +174,12 @@ export function FormViewer({
 	onSaveDraft,
 	disableSubmit = false,
 	disableSaveDraft = false,
+	onDirtyChange,
 }: Props) {
 	const [answers, setAnswers] = useState<FormAnswers>(() =>
+		buildInitialAnswers(form, initialAnswers)
+	);
+	const [baselineAnswers, setBaselineAnswers] = useState<FormAnswers>(() =>
 		buildInitialAnswers(form, initialAnswers)
 	);
 	const [errors, setErrors] = useState<Record<string, string>>({});
@@ -139,9 +187,23 @@ export function FormViewer({
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	useEffect(() => {
-		setAnswers(buildInitialAnswers(form, initialAnswers));
+		const nextInitialAnswers = buildInitialAnswers(form, initialAnswers);
+		setAnswers(nextInitialAnswers);
+		setBaselineAnswers(nextInitialAnswers);
 		setErrors({});
 	}, [form, initialAnswers]);
+
+	const isDirty = useMemo(
+		() =>
+			form.items.some(
+				item => !isSameAnswerValue(answers[item.id], baselineAnswers[item.id])
+			),
+		[form.items, answers, baselineAnswers]
+	);
+
+	useEffect(() => {
+		onDirtyChange?.(isDirty);
+	}, [isDirty, onDirtyChange]);
 
 	const updateAnswer = (itemId: string, value: FormAnswerValue) => {
 		setAnswers(prev => ({ ...prev, [itemId]: value }));
@@ -169,6 +231,7 @@ export function FormViewer({
 		setIsSavingDraft(true);
 		try {
 			await onSaveDraft(answers);
+			setBaselineAnswers(answers);
 			toast.success("下書きを保存しました");
 		} catch {
 			toast.error("下書きの保存に失敗しました");
@@ -184,6 +247,7 @@ export function FormViewer({
 		setIsSubmitting(true);
 		try {
 			await onSubmit(answers);
+			setBaselineAnswers(answers);
 			toast.success("送信しました");
 		} catch {
 			toast.error("送信に失敗しました");
