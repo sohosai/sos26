@@ -257,27 +257,7 @@ export function FormDetailSidebar({
 					</aside>
 				)}
 
-				{/* ボックス3: 回答確認 */}
-				{/* {canViewAnswers && (
-					<aside className={styles.sidebar}>
-						<div className={styles.section}>
-							<Button
-								intent="primary"
-								size="2"
-								onClick={() =>
-									navigate({
-										to: "/committee/forms/$formId/answers",
-										params: { formId: form.id },
-									})
-								}
-							>
-								回答を確認する
-							</Button>
-						</div>
-					</aside>
-				)} */}
-
-				{/* ボックス4: 閲覧者設定 */}
+				{/* ボックス3: 閲覧者設定 */}
 				<aside className={styles.sidebar}>
 					<ViewerSettings
 						viewers={form.viewers as ViewerDetail[]}
