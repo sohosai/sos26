@@ -205,12 +205,13 @@ export function FileUploadField({
 					className={styles.fileInput}
 					required={required}
 					onChange={e => {
-						const nextFiles = Array.from(e.target.files ?? []);
-						if (maxFiles !== undefined && nextFiles.length > maxFiles) {
-							onChange(nextFiles.slice(0, maxFiles));
+						const addedFiles = Array.from(e.target.files ?? []);
+						const merged = [...value, ...addedFiles];
+						if (maxFiles !== undefined && merged.length > maxFiles) {
+							onChange(merged.slice(0, maxFiles));
 							setSelectionError(`${maxFiles}個以内で添付してください`);
 						} else {
-							onChange(nextFiles);
+							onChange(merged);
 							setSelectionError(null);
 						}
 						e.currentTarget.value = "";
