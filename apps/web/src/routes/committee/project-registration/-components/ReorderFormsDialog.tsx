@@ -23,6 +23,74 @@ type FormPreview = {
 	filterLocations: string[];
 };
 
+type FormCardProps = {
+	form: FormPreview;
+	index: number;
+	provided: import("@hello-pangea/dnd").DraggableProvided;
+	snapshot: import("@hello-pangea/dnd").DraggableStateSnapshot;
+};
+
+function FormCardTags({
+	form,
+	isPlaceholder,
+}: {
+	form: FormPreview;
+	isPlaceholder: boolean;
+}) {
+	if (form.filterTypes.length === 0 && form.filterLocations.length === 0) {
+		if (isPlaceholder) return null;
+		return (
+			<Badge variant="soft" color="gray" size="1">
+				全対象
+			</Badge>
+		);
+	}
+	return (
+		<>
+			{form.filterTypes.map(t => (
+				<Badge key={t} variant="soft" color="blue" size="1">
+					{PROJECT_TYPE_LABELS[t] ?? t}
+				</Badge>
+			))}
+			{form.filterLocations.map(l => (
+				<Badge key={l} variant="soft" color="green" size="1">
+					{PROJECT_LOCATION_LABELS[l] ?? l}
+				</Badge>
+			))}
+		</>
+	);
+}
+
+function FormCard({ form, index, provided, snapshot }: FormCardProps) {
+	const isPlaceholder = form.id === PLACEHOLDER_ID;
+	return (
+		<li
+			ref={provided.innerRef}
+			{...provided.draggableProps}
+			{...(isPlaceholder ? provided.dragHandleProps : {})}
+			className={`${styles.card} ${snapshot.isDragging ? styles.dragging : ""} ${isPlaceholder ? styles.placeholder : ""}`}
+		>
+			{isPlaceholder && (
+				<span className={styles.dragHandle} {...provided.dragHandleProps}>
+					<IconGripVertical size={16} />
+				</span>
+			)}
+			<span className={styles.cardOrder}>{index + 1}</span>
+			<span className={styles.cardTitle}>
+				{form.title}
+				{isPlaceholder && (
+					<Badge variant="soft" color="orange" size="1" ml="1">
+						新規
+					</Badge>
+				)}
+			</span>
+			<span className={styles.cardTags}>
+				<FormCardTags form={form} isPlaceholder={isPlaceholder} />
+			</span>
+		</li>
+	);
+}
+
 type Props = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -60,6 +128,7 @@ export function ReorderFormsDialog({
 	const handleDragEnd = (result: DropResult) => {
 		if (!result.destination) return;
 		if (result.destination.index === result.source.index) return;
+		if (result.draggableId !== PLACEHOLDER_ID) return;
 
 		const next = [...orderedForms];
 		const [moved] = next.splice(result.source.index, 1);
@@ -100,80 +169,23 @@ export function ReorderFormsDialog({
 									ref={provided.innerRef}
 									{...provided.droppableProps}
 								>
-									{orderedForms.map((form, index) => {
-										const isPlaceholder = form.id === PLACEHOLDER_ID;
-										return (
-											<Draggable
-												key={form.id}
-												draggableId={form.id}
-												index={index}
-											>
-												{(provided, snapshot) => (
-													<li
-														ref={provided.innerRef}
-														{...provided.draggableProps}
-														className={`${styles.card} ${snapshot.isDragging ? styles.dragging : ""} ${isPlaceholder ? styles.placeholder : ""}`}
-													>
-														<span
-															className={styles.dragHandle}
-															{...provided.dragHandleProps}
-														>
-															<IconGripVertical size={16} />
-														</span>
-														<span className={styles.cardOrder}>
-															{index + 1}
-														</span>
-														<span className={styles.cardTitle}>
-															{form.title}
-															{isPlaceholder && (
-																<Badge
-																	variant="soft"
-																	color="orange"
-																	size="1"
-																	ml="1"
-																>
-																	新規
-																</Badge>
-															)}
-														</span>
-														<span className={styles.cardTags}>
-															{form.filterTypes.length === 0 &&
-															form.filterLocations.length === 0 ? (
-																!isPlaceholder && (
-																	<Badge variant="soft" color="gray" size="1">
-																		全対象
-																	</Badge>
-																)
-															) : (
-																<>
-																	{form.filterTypes.map(t => (
-																		<Badge
-																			key={t}
-																			variant="soft"
-																			color="blue"
-																			size="1"
-																		>
-																			{PROJECT_TYPE_LABELS[t] ?? t}
-																		</Badge>
-																	))}
-																	{form.filterLocations.map(l => (
-																		<Badge
-																			key={l}
-																			variant="soft"
-																			color="green"
-																			size="1"
-																		>
-																			{PROJECT_LOCATION_LABELS[l] ?? l}
-																		</Badge>
-																	))}
-																</>
-															)}
-														</span>
-													</li>
-												)}
-											</Draggable>
-										);
-									})}
+									{orderedForms.map((form, index) => (
+										<Draggable
+											key={form.id}
+											draggableId={form.id}
+											index={index}
+											isDragDisabled={form.id !== PLACEHOLDER_ID}
+										>
+											{(provided, snapshot) => (
+												<FormCard
+													form={form}
+													index={index}
+													provided={provided}
+													snapshot={snapshot}
+												/>
+											)}
+										</Draggable>
+									))}
 									{provided.placeholder}
 								</ul>
 							)}

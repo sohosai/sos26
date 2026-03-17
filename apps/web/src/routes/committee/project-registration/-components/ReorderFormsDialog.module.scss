@@ -95,6 +95,11 @@
 	background: var(--orange-2);
 }
 
+.card:not(.placeholder) {
+	// ドラッグできる目印のアイコンの大きさ16px + paddingのスペースを確保
+  padding-left: calc(var(--space-3)*2 + 16px);
+}
+
 .dialogFooter {
 	display: flex;
 	justify-content: flex-end;
