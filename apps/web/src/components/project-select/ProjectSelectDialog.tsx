@@ -51,7 +51,7 @@ type ViewState = {
 const PROJECT_TYPE_LABEL = {
 	STAGE: "ステージ企画",
 	FOOD: "食品企画",
-	NORMAL: "通常企画",
+	NORMAL: "普通企画",
 } satisfies Record<ProjectType, string>;
 
 const FIXED_COLUMN_IDS = [
