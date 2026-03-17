@@ -126,6 +126,10 @@ export function Sidebar({
 				? normalizePathname(location.pathname) === normalizePathname(item.to)
 				: location.pathname.startsWith(item.to);
 
+		const linkAriaLabel = item.showNotificationDot
+			? `${item.label} (has notifications)`
+			: item.label;
+
 		const inner = (
 			<div className={`${styles.item} ${active ? styles.active : ""}`}>
 				<span className={styles.icon}>
@@ -145,11 +149,17 @@ export function Sidebar({
 				target="_blank"
 				rel="noopener noreferrer"
 				className={styles.link}
+				aria-label={linkAriaLabel}
 			>
 				{inner}
 			</a>
 		) : (
-			<Link key={item.to} to={item.to} className={styles.link}>
+			<Link
+				key={item.to}
+				to={item.to}
+				className={styles.link}
+				aria-label={linkAriaLabel}
+			>
 				{inner}
 			</Link>
 		);
