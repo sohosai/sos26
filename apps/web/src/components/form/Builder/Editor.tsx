@@ -28,7 +28,7 @@ export function FormEditor({
 						{
 							id: crypto.randomUUID(),
 							label: "",
-							type: "TEXT",
+							type: "TEXT" as const,
 							required: false,
 						},
 					];

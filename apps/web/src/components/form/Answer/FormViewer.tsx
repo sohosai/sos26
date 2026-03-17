@@ -33,21 +33,18 @@ function isSameFileValue(
 	if (!isFileAnswerValue(a) || !isFileAnswerValue(b)) return false;
 
 	const samePending =
-		a.pendingFile === null && b.pendingFile === null
-			? true
-			: a.pendingFile !== null &&
-				b.pendingFile !== null &&
-				a.pendingFile.name === b.pendingFile.name &&
-				a.pendingFile.size === b.pendingFile.size &&
-				a.pendingFile.type === b.pendingFile.type &&
-				a.pendingFile.lastModified === b.pendingFile.lastModified;
+		a.pendingFiles.length === b.pendingFiles.length &&
+		a.pendingFiles.every(
+			(f, i) =>
+				f.name === b.pendingFiles[i]?.name &&
+				f.size === b.pendingFiles[i]?.size &&
+				f.type === b.pendingFiles[i]?.type &&
+				f.lastModified === b.pendingFiles[i]?.lastModified
+		);
 
 	const sameUploaded =
-		a.uploadedFile === null && b.uploadedFile === null
-			? true
-			: a.uploadedFile !== null &&
-				b.uploadedFile !== null &&
-				a.uploadedFile.fileId === b.uploadedFile.fileId;
+		a.uploadedFiles.length === b.uploadedFiles.length &&
+		a.uploadedFiles.every((f, i) => f.id === b.uploadedFiles[i]?.id);
 
 	return samePending && sameUploaded;
 }

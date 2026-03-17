@@ -229,7 +229,7 @@ function hasAnyInputInAnswers(answers: FormAnswers): boolean {
 		if (typeof value === "number") return true;
 		if (Array.isArray(value)) return value.length > 0;
 		if (isFileAnswerValue(value)) {
-			return value.pendingFile !== null || value.uploadedFile !== null;
+			return value.pendingFiles.length > 0 || value.uploadedFiles.length > 0;
 		}
 		return false;
 	});
