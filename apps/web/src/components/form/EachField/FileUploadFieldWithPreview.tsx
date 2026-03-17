@@ -1,5 +1,5 @@
 import { Flex, Text } from "@radix-ui/themes";
-import { IconFileSearch } from "@tabler/icons-react";
+import { IconFileSearch, IconX } from "@tabler/icons-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import FilePreviewDialog from "@/components/filePreview/FilePreviewDialog";
@@ -20,6 +20,7 @@ type FileUploadProps = {
 	maxFiles?: number;
 	error?: string;
 	"aria-label"?: string;
+	onDeleteUploadedFile?: (file: UploadedFileValue) => void;
 };
 
 function buildHelperText(
@@ -50,6 +51,7 @@ export function FileUploadFieldWithPreview({
 	maxFiles,
 	error,
 	"aria-label": ariaLabel,
+	onDeleteUploadedFile,
 }: FileUploadProps) {
 	const [previewFile, setPreviewFile] = useState<File | null>(null);
 	const [previewedUploadedFile, setPreviewedUploadedFile] =
@@ -101,11 +103,15 @@ export function FileUploadFieldWithPreview({
 	}, [previewedUploadedFile]);
 
 	const previewItems = [
-		...value.map(file => ({
+		...value.map((file, index) => ({
 			key: `${file.name}:${file.size}:${file.lastModified}`,
 			name: file.name,
 			disabled: false,
 			onClick: () => handlePendingFilePreview(file),
+			onDelete: () => {
+				const newFiles = value.filter((_, i) => i !== index);
+				onChange(newFiles);
+			},
 		})),
 		...sortedUploadedFiles.map(file => ({
 			key: file.id,
@@ -114,6 +120,9 @@ export function FileUploadFieldWithPreview({
 			onClick: () => {
 				void handleUploadedFilePreview(file);
 			},
+			onDelete: onDeleteUploadedFile
+				? () => onDeleteUploadedFile(file)
+				: undefined,
 		})),
 	];
 	const helperText = buildHelperText(previewItems.length, minFiles, maxFiles);
@@ -145,6 +154,17 @@ export function FileUploadFieldWithPreview({
 							>
 								<IconFileSearch size={16} />
 							</IconButton>
+							{item.onDelete && (
+								<IconButton
+									size="1"
+									intent="danger"
+									aria-label={`${previewLabel}「${item.name}」を削除`}
+									disabled={item.disabled || !!disabled}
+									onClick={item.onDelete}
+								>
+									<IconX size={16} />
+								</IconButton>
+							)}
 						</div>
 					))}
 				</Flex>

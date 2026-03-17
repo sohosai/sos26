@@ -1,10 +1,12 @@
 import { Flex, Text } from "@radix-ui/themes";
+import { toast } from "sonner";
 import {
 	CheckboxGroup,
 	CheckboxGroupItem,
 } from "@/components/patterns/CheckboxGroup";
 import { RadioGroup, RadioGroupItem } from "@/components/patterns/RadioGroup";
 import { TextArea, TextField } from "@/components/primitives";
+import { deleteFile } from "@/lib/api/files";
 import { FileUploadFieldWithPreview } from "../EachField/FileUploadFieldWithPreview";
 import { NumberField } from "../EachField/NumberField";
 import {
@@ -106,6 +108,19 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 								uploadedFiles: files.length > 0 ? [] : fileValue.uploadedFiles,
 							})
 						}
+						onDeleteUploadedFile={async file => {
+							try {
+								await deleteFile(file.id);
+								onChange({
+									pendingFiles: fileValue.pendingFiles,
+									uploadedFiles: fileValue.uploadedFiles.filter(
+										f => f.id !== file.id
+									),
+								});
+							} catch {
+								toast.error("ファイルの削除に失敗しました");
+							}
+						}}
 						disabled={disabled}
 						aria-label={item.label}
 					/>
