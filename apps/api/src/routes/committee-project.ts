@@ -443,7 +443,7 @@ committeeProjectRoute.patch(
 			throw Errors.forbidden("企画削除権限がありません");
 		}
 
-		const body = await c.req.json();
+		const body = await c.req.json().catch(() => ({}));
 		const { deletionStatus } =
 			updateCommitteeProjectDeletionStatusRequestSchema.parse(body);
 
