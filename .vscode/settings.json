@@ -54,8 +54,5 @@
     "**/build": true,
     "**/.turbo": true,
     "**/bun.lock": true
-  },
-  "[typescriptreact]": {
-    "editor.defaultFormatter": "vscode.typescript-language-features"
   }
 }
