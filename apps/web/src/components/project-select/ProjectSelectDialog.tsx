@@ -132,7 +132,7 @@ function ColHeader({ col }: { col: ApiColumn }) {
 	return (
 		<span className={styles.colHeader}>
 			{col.type === "FORM_ITEM" ? (
-				<Tooltip content="フォーム由来カラム">
+				<Tooltip content="申請由来カラム">
 					<IconFileText
 						size={12}
 						style={{ color: "var(--gray-8)", flexShrink: 0 }}
@@ -159,13 +159,17 @@ function getOptionLabel(col: ApiColumn, optionId: string): string {
 function buildReadOnlyDynamicColumn(
 	col: ApiColumn
 ): ColumnDef<MastersheetRow, unknown> {
-	if (col.type === "FORM_ITEM") {
+	if (
+		col.type === "FORM_ITEM" ||
+		col.type === "PROJECT_REGISTRATION_FORM_ITEM"
+	) {
+		const itemType = col.formItemType ?? col.projectRegistrationFormItemType;
 		const selectOptions = col.options.map(o => ({
 			value: o.id,
 			label: o.label,
 		}));
 
-		if (col.formItemType === "SELECT") {
+		if (itemType === "SELECT") {
 			return columnHelper.accessor(
 				row => row.cells[col.id]?.formValue?.selectedOptionIds?.[0] ?? "",
 				{
@@ -180,7 +184,7 @@ function buildReadOnlyDynamicColumn(
 			);
 		}
 
-		if (col.formItemType === "CHECKBOX") {
+		if (itemType === "CHECKBOX") {
 			return columnHelper.accessor(
 				row => row.cells[col.id]?.formValue?.selectedOptionIds ?? [],
 				{
@@ -205,7 +209,7 @@ function buildReadOnlyDynamicColumn(
 			);
 		}
 
-		if (col.formItemType === "NUMBER") {
+		if (itemType === "NUMBER") {
 			return columnHelper.accessor(
 				row => row.cells[col.id]?.formValue?.numberValue ?? null,
 				{
@@ -220,7 +224,7 @@ function buildReadOnlyDynamicColumn(
 			);
 		}
 
-		if (col.formItemType === "FILE") {
+		if (itemType === "FILE") {
 			return columnHelper.accessor(
 				row => row.cells[col.id]?.formValue?.fileId ?? null,
 				{

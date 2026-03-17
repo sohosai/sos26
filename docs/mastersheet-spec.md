@@ -5,7 +5,7 @@
 | 用語 | 説明 |
 |------|------|
 | マスターシート | 実委人が企画横断で情報を管理するスプレッドシート風の画面 |
-| カラム | マスターシートの列。CUSTOM または FORM_ITEM の2種類がある |
+| カラム | マスターシートの列。CUSTOM / FORM_ITEM / PROJECT_REGISTRATION_FORM_ITEM の3種類がある |
 | セル | カラムと企画の交差点。カラム種別に応じて値の管理方法が異なる |
 | ビュー | ユーザーごとに保存されるテーブルの表示状態（ソート・フィルター・カラム表示/非表示） |
 
@@ -19,7 +19,7 @@
 
 | テーブル | 役割 |
 |---------|------|
-| `MastersheetColumn` | カラムの定義（型・名前・ソート順・作成者）。FORM_ITEM と CUSTOM の共通テーブル |
+| `MastersheetColumn` | カラムの定義（型・名前・ソート順・作成者）。FORM_ITEM / CUSTOM / PROJECT_REGISTRATION_FORM_ITEM の共通テーブル |
 | `MastersheetColumnOption` | CUSTOM カラムの SELECT/MULTI_SELECT 用選択肢 |
 | `MastersheetColumnViewer` | CUSTOM カラムの公開範囲設定（scope: ALL / BUREAU / INDIVIDUAL） |
 | `MastersheetAccessRequest` | カラムへのアクセス申請（PENDING → APPROVED / REJECTED） |
@@ -39,6 +39,13 @@
 | `FormAnswer` | 各設問への回答値。**企画者の提出時のみ**作成・上書きされる |
 | `FormItemEditHistory` | フォーム設問の全編集履歴（append-only）。企画の提出・実委の編集を統一管理 |
 | `FormItemEditHistorySelectedOption` | `FormItemEditHistory` の SELECT/CHECKBOX 選択値（中間テーブル） |
+
+#### 企画登録フォーム回答
+
+| テーブル | 役割 |
+|---------|------|
+| `ProjectRegistrationFormResponse` | 企画登録フォーム回答（企画登録時に作成） |
+| `ProjectRegistrationFormAnswer` | 各設問への回答値。企画の基本情報として読み取り専用 |
 
 #### ビュー
 
@@ -99,15 +106,17 @@ FormItemEditHistorySelectedOption
 - 実委人の編集は `FormItemEditHistory` のみに記録される
 - 表示には常に §2.2 のロジックを用いる
 
-### 2.5 CUSTOM カラムと FORM_ITEM カラムの構造比較
+### 2.5 カラム種別の構造比較
 
-| 項目 | CUSTOM | FORM_ITEM |
-|------|--------|-----------|
-| 現在値の保存先 | `MastersheetCellValue`（1セル1レコード） | `FormItemEditHistory`（最新）→ `FormAnswer`（フォールバック） |
-| 変更履歴 | なし | `FormItemEditHistory`（append-only） |
-| 選択肢の保存 | `MastersheetCellSelectedOption`（中間テーブル） | `FormItemEditHistorySelectedOption`（中間テーブル） |
-| 編集者 | 実委人のみ | 企画メンバー（フォーム提出）+ 実委人（編集） |
-| 履歴が必要な理由 | — | 企画と実委の双方が関与し、変更の追跡が必要なため |
+| 項目 | CUSTOM | FORM_ITEM | PROJECT_REGISTRATION_FORM_ITEM |
+|------|--------|-----------|-------------------------------|
+| 現在値の保存先 | `MastersheetCellValue`（1セル1レコード） | `FormItemEditHistory`（最新）→ `FormAnswer`（フォールバック） | `ProjectRegistrationFormAnswer` |
+| 変更履歴 | なし | `FormItemEditHistory`（append-only） | **なし** |
+| 選択肢の保存 | `MastersheetCellSelectedOption`（中間テーブル） | `FormItemEditHistorySelectedOption`（中間テーブル） | `ProjectRegistrationFormAnswerSelectedOption`（中間テーブル） |
+| 編集者 | 実委人のみ | 企画メンバー（フォーム提出）+ 実委人（編集） | **なし（読み取り専用）** |
+| 履歴が必要な理由 | — | 企画と実委の双方が関与し、変更の追跡が必要なため | — |
+
+> `PROJECT_REGISTRATION_FORM_ITEM` の詳細仕様は [マスターシート × 企画登録フォーム連携 仕様書](mastersheet-project-registration-form-spec.md) を参照。
 
 ---
 
@@ -137,6 +146,21 @@ FormItemEditHistorySelectedOption
 | セル値の保存先 | `FormItemEditHistory`（最新）→ `FormAnswer`（フォールバック） |
 | 1 設問 1 カラム | 同じ formItemId で複数カラムは作成不可（unique 制約） |
 
+### 3.3 PROJECT_REGISTRATION_FORM_ITEM カラム
+
+企画登録フォームの設問と連動する列。企画登録時の回答が自動的にセル値となる。読み取り専用。
+
+| 項目 | 内容 |
+|------|------|
+| データ型 | 設問の型に準じる（TEXT, TEXTAREA, SELECT, CHECKBOX, NUMBER, FILE） |
+| 作成者 | 全実委人 |
+| 公開範囲 | 全実委人（企画登録情報の閲覧は元々全員可のため制限なし） |
+| セル値の保存先 | `ProjectRegistrationFormAnswer` |
+| 1 設問 1 カラム | 同じ projectRegistrationFormItemId で複数カラムは作成不可（unique 制約） |
+| セル編集 | **不可（読み取り専用）** |
+
+> 詳細は [マスターシート × 企画登録フォーム連携 仕様書](mastersheet-project-registration-form-spec.md) を参照。
+
 ---
 
 ## 4. カラムの可視性
@@ -164,11 +188,17 @@ FormItemEditHistorySelectedOption
 
 - アクセス申請の承認で `FormCollaborator(isWrite=true)` が作成され、アクセス可能になる
 
+### 4.3 PROJECT_REGISTRATION_FORM_ITEM カラム
+
+全実委人がアクセス可能。アクセス申請は不要。
+
 ---
 
-## 5. セル状態（FORM_ITEM カラムのみ）
+## 5. セル状態（FORM_ITEM / PROJECT_REGISTRATION_FORM_ITEM カラム）
 
 ### 5.1 状態一覧
+
+#### FORM_ITEM カラム
 
 セル状態は `FormItemEditHistory` の最新レコードの trigger で決まる。
 
@@ -185,6 +215,16 @@ COMMITTEE_EDITED 最新の変更が実委による
 SUBMITTED と COMMITTEE_EDITED は相互に行き来する:
 - 実委が編集すれば COMMITTEE_EDITED になる
 - 企画が再提出すれば SUBMITTED になる
+
+#### PROJECT_REGISTRATION_FORM_ITEM カラム
+
+```
+NOT_APPLICABLE   企画がフォームの対象外、またはフォームが企画作成後に追加された
+SUBMITTED        企画登録時に回答が提出された
+```
+
+- 配信の概念がないため `NOT_DELIVERED` / `NOT_ANSWERED` は発生しない
+- 読み取り専用のため `COMMITTEE_EDITED` は発生しない
 
 | 状態 | 条件 | 表示 | 実委の編集 |
 |------|------|------|-----------|
@@ -361,19 +401,23 @@ FormItemEditHistory:
 - 重複申請は不可（PENDING の申請が既にある場合は 409）
 - 却下された場合はステータスが REJECTED に更新されるのみ
 
+### 10.3 PROJECT_REGISTRATION_FORM_ITEM カラム
+
+全実委人がアクセス可能なため、アクセス申請フローは**不要**。アクセス申請エンドポイントに指定された場合はエラーを返す。
+
 ---
 
 ## 11. 権限まとめ
 
-| 操作 | CUSTOM カラム | FORM_ITEM カラム |
-|------|--------------|-----------------|
-| カラム作成 | 全実委人 | フォーム owner / collaborator |
-| カラム編集（名前等） | 作成者のみ | 作成者のみ |
-| カラム削除 | 作成者のみ | 作成者のみ |
-| カラムへのアクセス | 作成者 + viewer 設定に合致する実委人 | フォーム owner / collaborator |
-| セル編集 | カラムにアクセスできる全員 | カラムにアクセスできる全員 |
-| アクセス申請の承認 | カラム作成者 | フォーム owner |
-| 変更履歴の閲覧 | — | カラムにアクセスできる全員 |
+| 操作 | CUSTOM | FORM_ITEM | PROJECT_REGISTRATION_FORM_ITEM |
+|------|--------|-----------|-------------------------------|
+| カラム作成 | 全実委人 | フォーム owner / collaborator | 全実委人 |
+| カラム編集（名前等） | 作成者のみ | 作成者のみ | 作成者のみ |
+| カラム削除 | 作成者のみ | 作成者のみ | 作成者のみ |
+| カラムへのアクセス | 作成者 + viewer 設定に合致する実委人 | フォーム owner / collaborator | 全実委人 |
+| セル編集 | カラムにアクセスできる全員 | カラムにアクセスできる全員 | **不可（読み取り専用）** |
+| アクセス申請の承認 | カラム作成者 | フォーム owner | **不要** |
+| 変更履歴の閲覧 | — | カラムにアクセスできる全員 | — |
 
 ---
 
@@ -415,7 +459,7 @@ type ViewState = {
 
 ## 13. アクセス申請関連のメール通知
 
-- アクセス申請が届いたとき → カラム作成者（CUSTOM）/ フォームオーナー（FORM_ITEM）へ通知
+- アクセス申請が届いたとき → カラム作成者（CUSTOM）/ フォームオーナー（FORM_ITEM）へ通知（PROJECT_REGISTRATION_FORM_ITEM はアクセス申請不要のため対象外）
 - アクセス申請が承認・却下されたとき → 申請者へ通知
 
 ### 13.1 送信タイミング

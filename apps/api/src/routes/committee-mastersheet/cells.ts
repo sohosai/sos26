@@ -11,6 +11,77 @@ import { requireAuth, requireCommitteeMember } from "../../middlewares/auth";
 import type { AuthEnv } from "../../types/auth-env";
 import { canViewColumn, getAccessibleFormIds, getColumnFull } from "./helpers";
 
+// ─────────────────────────────────────────────────────────────
+// ヘルパー: 編集履歴のグループマップ構築
+// ─────────────────────────────────────────────────────────────
+
+type HistoryEntry = {
+	id: string;
+	value: {
+		textValue: string | null;
+		numberValue: number | null;
+		fileId: string | null;
+		selectedOptionIds: string[];
+	};
+	actor: { id: string; name: string };
+	trigger: string;
+	createdAt: Date;
+};
+
+type HistoryGroup = {
+	columnId: string;
+	projectId: string;
+	history: HistoryEntry[];
+};
+
+type HistoryGroupMap = Map<string, HistoryGroup>;
+
+/** FormItemEditHistory をグループマップに追加する */
+async function collectFormItemHistory(
+	formItemIds: string[],
+	targetProjectIds: string[],
+	formItemToColumn: Map<string, string>,
+	targetCellKeys: Set<string>,
+	groupMap: HistoryGroupMap
+) {
+	const allHistory = await prisma.formItemEditHistory.findMany({
+		where: {
+			formItemId: { in: formItemIds },
+			projectId: { in: targetProjectIds },
+		},
+		include: {
+			actor: { select: { id: true, name: true } },
+			selectedOptions: { select: { formItemOptionId: true } },
+		},
+		orderBy: { createdAt: "desc" },
+	});
+
+	for (const h of allHistory) {
+		const columnId = formItemToColumn.get(h.formItemId);
+		if (!columnId) continue;
+		if (!targetCellKeys.has(`${columnId}:${h.projectId}`)) continue;
+
+		const key = `${columnId}:${h.projectId}`;
+		let group = groupMap.get(key);
+		if (!group) {
+			group = { columnId, projectId: h.projectId, history: [] };
+			groupMap.set(key, group);
+		}
+		group.history.push({
+			id: h.id,
+			value: {
+				textValue: h.textValue,
+				numberValue: h.numberValue,
+				fileId: h.fileId,
+				selectedOptionIds: h.selectedOptions.map(s => s.formItemOptionId),
+			},
+			actor: h.actor,
+			trigger: h.trigger,
+			createdAt: h.createdAt,
+		});
+	}
+}
+
 export const cellsRoute = new Hono<AuthEnv>();
 
 // ─────────────────────────────────────────────────────────────
@@ -120,7 +191,7 @@ cellsRoute.put(
 
 // ─────────────────────────────────────────────────────────────
 // PUT /committee/mastersheet/edits/:columnId/:projectId
-// フォーム由来カラムの値を編集（FormItemEditHistory に COMMITTEE_EDIT を追加）
+// 申請由来カラムの値を編集
 // ─────────────────────────────────────────────────────────────
 
 cellsRoute.put(
@@ -136,8 +207,6 @@ cellsRoute.put(
 		const col = await getColumnFull(columnId);
 		if (col.type !== "FORM_ITEM")
 			throw Errors.invalidRequest("FORM_ITEM カラムのみ編集できます");
-		if (!col.formItemId)
-			throw Errors.invalidRequest("フォーム項目が紐づいていません");
 
 		const accessibleFormIds = await getAccessibleFormIds(userId);
 		if (!canViewColumn(col, userId, committeeMember, accessibleFormIds))
@@ -147,6 +216,12 @@ cellsRoute.put(
 			where: { id: projectId, deletedAt: null },
 		});
 		if (!project) throw Errors.notFound("企画が見つかりません");
+
+		const body = await c.req.json().catch(() => ({}));
+		const data = editFormItemCellRequestSchema.parse(body);
+
+		if (!col.formItemId)
+			throw Errors.invalidRequest("申請項目が紐づいていません");
 
 		const formItemId = col.formItemId;
 
@@ -174,9 +249,6 @@ cellsRoute.put(
 				"未回答の企画は編集できません。提出後に編集してください"
 			);
 		}
-
-		const body = await c.req.json().catch(() => ({}));
-		const data = editFormItemCellRequestSchema.parse(body);
 
 		const history = await prisma.$transaction(
 			async tx => {
@@ -285,77 +357,43 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 		return c.json({ groups: [] });
 	}
 
-	// formItemId → columnId のマップ
+	const targetProjectIds = [...new Set(cells.map(c => c.projectId))];
+	const targetCellKeys = new Set(
+		cells.map(c => `${c.columnId}:${c.projectId}`)
+	);
+
+	// FORM_ITEM カラムの履歴
 	const formItemToColumn = new Map(
 		accessibleColumns
 			.filter(
 				(
 					col
-				): col is typeof col & { formItem: NonNullable<typeof col.formItem> } =>
-					col.formItem != null
+				): col is typeof col & {
+					formItem: NonNullable<typeof col.formItem>;
+				} => col.type === "FORM_ITEM" && col.formItem != null
 			)
 			.map(col => [col.formItem.id, col.id] as const)
 	);
 	const formItemIds = [...formItemToColumn.keys()];
 
-	const targetProjectIds = [...new Set(cells.map(c => c.projectId))];
+	const groupMap: HistoryGroupMap = new Map();
 
-	// 対象セルの高速ルックアップ用 Set
-	const targetCellKeys = new Set(
-		cells.map(c => `${c.columnId}:${c.projectId}`)
-	);
-
-	// バッチクエリ
-	const allHistory = await prisma.formItemEditHistory.findMany({
-		where: {
-			formItemId: { in: formItemIds },
-			projectId: { in: targetProjectIds },
-		},
-		include: {
-			actor: { select: { id: true, name: true } },
-			selectedOptions: { select: { formItemOptionId: true } },
-		},
-		orderBy: { createdAt: "desc" },
-	});
-
-	// (columnId, projectId) でグルーピング
-	const groupMap = new Map<
-		string,
-		{ columnId: string; projectId: string; history: typeof allHistory }
-	>();
-
-	for (const h of allHistory) {
-		const columnId = formItemToColumn.get(h.formItemId);
-		if (!columnId) continue;
-
-		// 対象セルのみに絞り込む
-		if (!targetCellKeys.has(`${columnId}:${h.projectId}`)) continue;
-
-		const key = `${columnId}:${h.projectId}`;
-		let group = groupMap.get(key);
-		if (!group) {
-			group = { columnId, projectId: h.projectId, history: [] };
-			groupMap.set(key, group);
-		}
-		group.history.push(h);
+	// FormItemEditHistory（FORM_ITEM カラムのみ。PRF カラムは基本情報のため履歴なし）
+	if (formItemIds.length > 0) {
+		await collectFormItemHistory(
+			formItemIds,
+			targetProjectIds,
+			formItemToColumn,
+			targetCellKeys,
+			groupMap
+		);
 	}
 
 	return c.json({
 		groups: [...groupMap.values()].map(g => ({
 			columnId: g.columnId,
 			projectId: g.projectId,
-			history: g.history.map(h => ({
-				id: h.id,
-				value: {
-					textValue: h.textValue,
-					numberValue: h.numberValue,
-					fileId: h.fileId,
-					selectedOptionIds: h.selectedOptions.map(s => s.formItemOptionId),
-				},
-				actor: h.actor,
-				trigger: h.trigger,
-				createdAt: h.createdAt,
-			})),
+			history: g.history,
 		})),
 	});
 });

@@ -30,7 +30,7 @@ async function createFormItemAccessRequest(
 		where: { id: formId, deletedAt: null },
 		include: { collaborators: { where: { deletedAt: null } } },
 	});
-	if (!form) throw Errors.notFound("フォームが見つかりません");
+	if (!form) throw Errors.notFound("申請が見つかりません");
 
 	const hasAccess =
 		form.ownerId === userId ||
@@ -45,6 +45,50 @@ async function createFormItemAccessRequest(
 	await prisma.mastersheetAccessRequest.create({
 		data: { columnId, requesterId: userId, status: "PENDING" },
 	});
+}
+
+/** 承認時にカラム種別に応じたアクセス権を付与する */
+async function grantAccessOnApproval(
+	tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+	request: {
+		requesterId: string;
+		columnId: string;
+		column: {
+			type: string;
+			formItem: { formId: string } | null;
+			projectRegistrationFormItem: { formId: string } | null;
+		};
+	}
+) {
+	if (request.column.type === "PROJECT_REGISTRATION_FORM_ITEM") {
+		// 企画登録情報カラムは全実委人がアクセス可能なため、アクセス権付与は不要
+		return;
+	}
+
+	if (request.column.type === "FORM_ITEM" && request.column.formItem) {
+		await tx.formCollaborator.upsert({
+			where: {
+				formId_userId: {
+					formId: request.column.formItem.formId,
+					userId: request.requesterId,
+				},
+			},
+			create: {
+				formId: request.column.formItem.formId,
+				userId: request.requesterId,
+				isWrite: true,
+			},
+			update: { deletedAt: null },
+		});
+	} else {
+		await tx.mastersheetColumnViewer.create({
+			data: {
+				columnId: request.columnId,
+				scope: "INDIVIDUAL",
+				userId: request.requesterId,
+			},
+		});
+	}
 }
 
 /** CUSTOM カラムへのアクセス申請（PENDING）を作成 */
@@ -88,8 +132,14 @@ accessRequestsRoute.post(
 
 		const col = await getColumnFull(columnId);
 
+		if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
+			throw Errors.invalidRequest(
+				"企画登録情報カラムは全実委人がアクセス可能なため申請不要です"
+			);
+		}
+
 		if (col.type === "FORM_ITEM") {
-			if (!col.formItem) throw Errors.notFound("フォーム項目が見つかりません");
+			if (!col.formItem) throw Errors.notFound("申請項目が見つかりません");
 			await createFormItemAccessRequest(columnId, col.formItem.formId, userId);
 		} else {
 			await createCustomAccessRequest(col, columnId, userId);
@@ -132,6 +182,9 @@ accessRequestsRoute.patch(
 								formItem: {
 									include: { form: { select: { ownerId: true } } },
 								},
+								projectRegistrationFormItem: {
+									include: { form: { select: { ownerId: true } } },
+								},
 							},
 						},
 					},
@@ -155,32 +208,7 @@ accessRequestsRoute.patch(
 				});
 
 				if (status === "APPROVED") {
-					if (request.column.type === "FORM_ITEM" && request.column.formItem) {
-						// FORM_ITEM: FormCollaborator を作成
-						await tx.formCollaborator.upsert({
-							where: {
-								formId_userId: {
-									formId: request.column.formItem.formId,
-									userId: request.requesterId,
-								},
-							},
-							create: {
-								formId: request.column.formItem.formId,
-								userId: request.requesterId,
-								isWrite: true,
-							},
-							update: { deletedAt: null },
-						});
-					} else {
-						// CUSTOM: MastersheetColumnViewer を作成
-						await tx.mastersheetColumnViewer.create({
-							data: {
-								columnId: request.columnId,
-								scope: "INDIVIDUAL",
-								userId: request.requesterId,
-							},
-						});
-					}
+					await grantAccessOnApproval(tx, request);
 				}
 
 				return {

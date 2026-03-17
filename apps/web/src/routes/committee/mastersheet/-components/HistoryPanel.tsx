@@ -222,7 +222,7 @@ export function HistoryPanel({
 								marginRight: 2,
 							}}
 						/>
-						フォーム由来カラムの変更履歴を表示
+						申請由来カラムの変更履歴を表示
 					</Text>
 				</div>
 				<IconButton
@@ -255,7 +255,7 @@ export function HistoryPanel({
 						<IconHistory size={32} style={{ color: "var(--gray-7)" }} />
 						<Text size="2" color="gray">
 							{hasSelection
-								? "選択中のフォーム由来セルに履歴がありません"
+								? "選択中の申請由来セルに履歴がありません"
 								: "セルを選択すると履歴が表示されます"}
 						</Text>
 					</div>

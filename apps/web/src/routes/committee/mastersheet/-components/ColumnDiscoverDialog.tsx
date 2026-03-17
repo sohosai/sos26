@@ -35,8 +35,21 @@ function DiscoverColumnItem({
 					<Text size="2" weight="medium" truncate>
 						{col.name}
 					</Text>
-					<Badge size="1" color={col.type === "FORM_ITEM" ? "blue" : "gray"}>
-						{col.type === "FORM_ITEM" ? "フォーム" : "カスタム"}
+					<Badge
+						size="1"
+						color={
+							col.type === "FORM_ITEM"
+								? "blue"
+								: col.type === "PROJECT_REGISTRATION_FORM_ITEM"
+									? "teal"
+									: "gray"
+						}
+					>
+						{col.type === "FORM_ITEM"
+							? "申請"
+							: col.type === "PROJECT_REGISTRATION_FORM_ITEM"
+								? "企画登録情報"
+								: "カスタム"}
 					</Badge>
 				</div>
 				<Text size="1" color="gray">

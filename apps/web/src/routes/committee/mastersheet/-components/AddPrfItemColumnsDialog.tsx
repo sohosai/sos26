@@ -5,21 +5,23 @@ import {
 	Text,
 } from "@radix-ui/themes";
 import type {
-	FormItem,
 	GetMastersheetDataResponse,
-	ListMyFormsResponse,
+	ListProjectRegistrationFormsResponse,
+	ProjectRegistrationFormItem,
 } from "@sos26/shared";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
-import { getFormDetail, listMyForms } from "@/lib/api/committee-form";
 import { createMastersheetColumn } from "@/lib/api/committee-mastersheet";
-import { useAuthStore } from "@/lib/auth";
+import {
+	getProjectRegistrationFormDetail,
+	listProjectRegistrationForms,
+} from "@/lib/api/committee-project-registration-form";
 import { isClientError } from "@/lib/http/error";
 import styles from "./AddFormItemColumnsDialog.module.scss";
 
 type ApiColumn = GetMastersheetDataResponse["columns"][number];
-type Form = ListMyFormsResponse["forms"][number];
+type PrfForm = ListProjectRegistrationFormsResponse["forms"][number];
 
 const FORM_ITEM_TYPE_LABEL: Record<string, string> = {
 	TEXT: "テキスト",
@@ -37,17 +39,16 @@ type Props = {
 	onSuccess: () => void;
 };
 
-export function AddFormItemColumnsDialog({
+export function AddPrfItemColumnsDialog({
 	open,
 	onOpenChange,
 	columns,
 	onSuccess,
 }: Props) {
-	const userId = useAuthStore().user?.id;
-	const [forms, setForms] = useState<Form[]>([]);
+	const [forms, setForms] = useState<PrfForm[]>([]);
 	const [formsLoading, setFormsLoading] = useState(true);
 	const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
-	const [items, setItems] = useState<FormItem[]>([]);
+	const [items, setItems] = useState<ProjectRegistrationFormItem[]>([]);
 	const [itemsLoading, setItemsLoading] = useState(false);
 	const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(
 		new Set()
@@ -61,17 +62,15 @@ export function AddFormItemColumnsDialog({
 		setSelectedFormId(null);
 		setItems([]);
 		setSelectedItemIds(new Set());
-		listMyForms()
+		listProjectRegistrationForms()
 			.then(res => {
-				const accessible = res.forms.filter(
-					f =>
-						f.owner.id === userId || f.collaborators.some(c => c.id === userId)
-				);
-				setForms(accessible);
+				// list API には collaborators が含まれないため、
+				// 全申請を表示し、カラム作成時にバックエンドでアクセス権をチェックする
+				setForms(res.forms);
 			})
-			.catch(() => toast.error("申請一覧の取得に失敗しました"))
+			.catch(() => toast.error("企画登録情報一覧の取得に失敗しました"))
 			.finally(() => setFormsLoading(false));
-	}, [open, userId]);
+	}, [open]);
 
 	useEffect(() => {
 		if (!selectedFormId) {
@@ -81,9 +80,9 @@ export function AddFormItemColumnsDialog({
 		setItemsLoading(true);
 		setItems([]);
 		setSelectedItemIds(new Set());
-		getFormDetail(selectedFormId)
+		getProjectRegistrationFormDetail(selectedFormId)
 			.then(res => setItems(res.form.items))
-			.catch(() => toast.error("申請の詳細取得に失敗しました"))
+			.catch(() => toast.error("企画登録情報の詳細取得に失敗しました"))
 			.finally(() => setItemsLoading(false));
 	}, [selectedFormId]);
 
@@ -107,10 +106,10 @@ export function AddFormItemColumnsDialog({
 			await Promise.all(
 				selected.map((item, i) =>
 					createMastersheetColumn({
-						type: "FORM_ITEM",
+						type: "PROJECT_REGISTRATION_FORM_ITEM",
 						name: item.label,
 						sortOrder: columns.length + i,
-						formItemId: item.id,
+						projectRegistrationFormItemId: item.id,
 					})
 				)
 			);
@@ -124,13 +123,15 @@ export function AddFormItemColumnsDialog({
 		}
 	}
 
-	const existingFormItemIds = new Set(
-		columns.flatMap(c => (c.formItemId ? [c.formItemId] : []))
+	const existingPrfItemIds = new Set(
+		columns.flatMap(c =>
+			c.projectRegistrationFormItemId ? [c.projectRegistrationFormItemId] : []
+		)
 	);
 
-	function renderItemRow(item: FormItem) {
+	function renderItemRow(item: ProjectRegistrationFormItem) {
 		const selected = selectedItemIds.has(item.id);
-		const alreadyAdded = existingFormItemIds.has(item.id);
+		const alreadyAdded = existingPrfItemIds.has(item.id);
 		return (
 			// biome-ignore lint/a11y/useSemanticElements: button cannot nest RadixCheckbox (which renders as button)
 			<div
@@ -173,13 +174,13 @@ export function AddFormItemColumnsDialog({
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
 			<Dialog.Content maxWidth="800px">
-				<Dialog.Title>申請から情報を作成</Dialog.Title>
+				<Dialog.Title>企画登録情報から情報を作成</Dialog.Title>
 
 				<div className={styles.body}>
 					{/* 左: 申請一覧 */}
 					<div className={styles.left}>
 						<Text size="2" weight="medium" className={styles.panelTitle}>
-							申請一覧
+							企画登録情報一覧
 						</Text>
 						<div className={styles.formList}>
 							{formsLoading ? (

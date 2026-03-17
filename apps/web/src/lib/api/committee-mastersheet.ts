@@ -99,7 +99,7 @@ export async function upsertMastersheetCell(
 
 /**
  * PUT /committee/mastersheet/edits/:columnId/:projectId
- * フォーム由来カラムの値を編集
+ * 申請由来カラムの値を編集
  */
 export async function editFormItemCell(
 	columnId: string,

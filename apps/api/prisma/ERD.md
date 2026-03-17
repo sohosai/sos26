@@ -319,6 +319,7 @@ erDiagram
   Int sortOrder
   String createdById FK
   String formItemId FK,UK "nullable"
+  String projectRegistrationFormItemId FK,UK "nullable"
   MastersheetDataType dataType "nullable"
   MastersheetColumnVisibility visibility "nullable"
   DateTime createdAt
@@ -519,6 +520,7 @@ erDiagram
 "InquiryActivity" }o--o| "User" : target
 "MastersheetColumn" }o--|| "User" : createdBy
 "MastersheetColumn" |o--o| "FormItem" : formItem
+"MastersheetColumn" |o--o| "ProjectRegistrationFormItem" : projectRegistrationFormItem
 "MastersheetColumnOption" }o--|| "MastersheetColumn" : column
 "MastersheetCellValue" }o--|| "MastersheetColumn" : column
 "MastersheetCellValue" }o--|| "Project" : project
@@ -963,6 +965,7 @@ Properties as follows:
 - `sortOrder`:
 - `createdById`:
 - `formItemId`:
+- `projectRegistrationFormItemId`:
 - `dataType`:
 - `visibility`:
 - `createdAt`:
