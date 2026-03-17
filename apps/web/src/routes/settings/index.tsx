@@ -128,9 +128,13 @@ function SettingsPage() {
 	// };
 
 	return (
-		<div className={styles.container}>
-			<Heading size="7">設定</Heading>
-			<Text color="gray">アカウントやアプリの設定を管理できます。</Text>
+		<div className={styles.page}>
+			<div className={styles.header}>
+				<Heading size="6">設定</Heading>
+				<Text size="2" color="gray">
+					アカウントやアプリの設定を管理できます。
+				</Text>
+			</div>
 
 			{/* アイコン設定 */}
 			<Card className={styles.card}>
