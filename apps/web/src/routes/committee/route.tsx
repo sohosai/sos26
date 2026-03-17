@@ -2,13 +2,20 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useState } from "react";
 import { ForbiddenErrorBoundary } from "@/components/layout/ForbiddenContent";
 import { committeeMenuItems, Sidebar } from "@/components/layout/Sidebar";
-import { requireAuth, requireCommitteeMember } from "@/lib/auth";
+import {
+	preloadMemberEditPermission,
+	requireAuth,
+	requireCommitteeMember,
+	useAuthStore,
+} from "@/lib/auth";
 import styles from "./route.module.scss";
 
 export const Route = createFileRoute("/committee")({
 	beforeLoad: async ({ location }) => {
 		await requireAuth(location.pathname);
 		await requireCommitteeMember();
+		useAuthStore.getState().setActivePortal("committee");
+		await preloadMemberEditPermission();
 	},
 	errorComponent: ForbiddenErrorBoundary,
 	component: CommitteeLayout,

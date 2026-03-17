@@ -11,13 +11,19 @@ import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
 import { joinProject, listMyProjects } from "@/lib/api/project";
-import { requireAuth, useAuthStore } from "@/lib/auth";
+import {
+	preloadMemberEditPermission,
+	requireAuth,
+	useAuthStore,
+} from "@/lib/auth";
 import { useProjectStore } from "@/lib/project/store";
 import styles from "./route.module.scss";
 
 export const Route = createFileRoute("/project")({
 	beforeLoad: async ({ location }) => {
 		await requireAuth(location.pathname);
+		useAuthStore.getState().setActivePortal("project");
+		await preloadMemberEditPermission();
 
 		const res = await listMyProjects();
 
