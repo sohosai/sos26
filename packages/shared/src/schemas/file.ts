@@ -24,6 +24,12 @@ export const allowedMimeTypes = [
 export const mimeTypeSchema = z.enum(allowedMimeTypes);
 export type AllowedMimeType = z.infer<typeof mimeTypeSchema>;
 
+/** HTML input accept 属性用の文字列 */
+export const fileAcceptAttribute = allowedMimeTypes.join(",");
+
+/** 人間が読めるファイル形式一覧 */
+export const allowedFileExtensions = "JPEG, PNG, GIF, WebP, PDF, DOCX, XLSX";
+
 /**
  * ファイル情報（レスポンス用）
  */

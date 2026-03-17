@@ -5,6 +5,8 @@ import type {
 	ListFilesResponse,
 } from "@sos26/shared";
 import {
+	allowedFileExtensions,
+	allowedMimeTypes,
 	confirmUploadEndpoint,
 	deleteFileEndpoint,
 	getFileTokenEndpoint,
@@ -136,6 +138,13 @@ export async function uploadFile(
 	file: File,
 	options?: { isPublic?: boolean }
 ): Promise<ConfirmUploadResponse> {
+	// 0. クライアントサイドで MIME タイプをチェック
+	if (!allowedMimeTypes.includes(file.type as AllowedMimeType)) {
+		throw new Error(
+			`対応していないファイル形式です。アップロードできるファイル形式: ${allowedFileExtensions}`
+		);
+	}
+
 	// 1. Presigned URL を要求
 	const { fileId, uploadUrl } = await requestUploadUrl({
 		fileName: file.name,

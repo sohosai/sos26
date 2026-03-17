@@ -1,4 +1,10 @@
 import { Heading, Text } from "@radix-ui/themes";
+import {
+	type AllowedMimeType,
+	allowedFileExtensions,
+	allowedMimeTypes,
+	fileAcceptAttribute,
+} from "@sos26/shared";
 import { IconPaperclip, IconX } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -65,10 +71,12 @@ function ReplyFilePicker({
 	inputRef,
 	onChange,
 	disabled,
+	error,
 }: {
 	inputRef: React.RefObject<HTMLInputElement | null>;
 	onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 	disabled: boolean;
+	error?: string | null;
 }) {
 	return (
 		<div className={styles.replyFileArea}>
@@ -76,6 +84,7 @@ function ReplyFilePicker({
 				ref={inputRef}
 				type="file"
 				multiple
+				accept={fileAcceptAttribute}
 				className={styles.fileInput}
 				onChange={onChange}
 			/>
@@ -88,6 +97,11 @@ function ReplyFilePicker({
 				<IconPaperclip size={16} />
 				<Text size="2">ファイルを添付</Text>
 			</button>
+			{error && (
+				<Text size="2" color="red" m="3">
+					{error}
+				</Text>
+			)}
 		</div>
 	);
 }
@@ -143,6 +157,7 @@ export function ReplySection({
 }) {
 	const [replyText, setReplyText] = useState("");
 	const [replyFiles, setReplyFiles] = useState<File[]>([]);
+	const [replyFileError, setReplyFileError] = useState<string | null>(null);
 	const [replySending, setReplySending] = useState(false);
 	const [replyAction, setReplyAction] = useState<ReplyAction | null>(null);
 	const replyFileInputRef = useRef<HTMLInputElement>(null);
@@ -169,7 +184,23 @@ export function ReplySection({
 	const handleReplyFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const { files } = e.target;
 		if (files) {
-			setReplyFiles(prev => [...prev, ...Array.from(files)]);
+			const added = Array.from(files);
+			const invalid = added.filter(
+				f => !allowedMimeTypes.includes(f.type as AllowedMimeType)
+			);
+			const valid = added.filter(f =>
+				allowedMimeTypes.includes(f.type as AllowedMimeType)
+			);
+			if (invalid.length > 0) {
+				setReplyFileError(
+					`対応していないファイル形式です（${allowedFileExtensions}）`
+				);
+			} else {
+				setReplyFileError(null);
+			}
+			if (valid.length > 0) {
+				setReplyFiles(prev => [...prev, ...valid]);
+			}
 		}
 		e.target.value = "";
 	};
@@ -202,6 +233,7 @@ export function ReplySection({
 					inputRef={replyFileInputRef}
 					onChange={handleReplyFileSelect}
 					disabled={replySending}
+					error={replyFileError}
 				/>
 			)}
 			<div className={styles.replyActions}>

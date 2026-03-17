@@ -1,4 +1,10 @@
 import { Flex, Text } from "@radix-ui/themes";
+import {
+	type AllowedMimeType,
+	allowedFileExtensions,
+	allowedMimeTypes,
+	fileAcceptAttribute,
+} from "@sos26/shared";
 import { IconFileSearch, IconX } from "@tabler/icons-react";
 import { useCallback, useId, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -51,6 +57,43 @@ function buildHelperText(
 	return null;
 }
 
+function isAllowedMimeType(file: File): boolean {
+	return allowedMimeTypes.includes(file.type as AllowedMimeType);
+}
+
+function processFileSelection(
+	addedFiles: File[],
+	currentFiles: File[],
+	maxFiles?: number
+): { filesToSet: File[] | null; error: string | null } {
+	const valid = addedFiles.filter(isAllowedMimeType);
+	const hasInvalid = valid.length < addedFiles.length;
+
+	if (hasInvalid && valid.length === 0) {
+		return {
+			filesToSet: null,
+			error: `対応していないファイル形式です（${allowedFileExtensions}）`,
+		};
+	}
+
+	const merged = [...currentFiles, ...valid];
+	if (maxFiles !== undefined && merged.length > maxFiles) {
+		return {
+			filesToSet: merged.slice(0, maxFiles),
+			error: hasInvalid
+				? `対応していないファイル形式です（${allowedFileExtensions}）`
+				: `${maxFiles}個以内で添付してください`,
+		};
+	}
+
+	return {
+		filesToSet: merged,
+		error: hasInvalid
+			? `対応していないファイル形式です（${allowedFileExtensions}）`
+			: null,
+	};
+}
+
 export function FileUploadField({
 	label,
 	value = [],
@@ -78,6 +121,16 @@ export function FileUploadField({
 		[uploadedFiles]
 	);
 	const previewLabel = ariaLabel ?? (label || "ファイル");
+
+	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const addedFiles = Array.from(e.target.files ?? []);
+		const result = processFileSelection(addedFiles, value, maxFiles);
+		setSelectionError(result.error);
+		if (result.filesToSet) {
+			onChange(result.filesToSet);
+		}
+		e.currentTarget.value = "";
+	};
 
 	const handleButtonClick = (e: React.MouseEvent) => {
 		e.preventDefault();
@@ -202,20 +255,10 @@ export function FileUploadField({
 					ref={inputRef}
 					type="file"
 					multiple
+					accept={fileAcceptAttribute}
 					className={styles.fileInput}
 					required={required}
-					onChange={e => {
-						const addedFiles = Array.from(e.target.files ?? []);
-						const merged = [...value, ...addedFiles];
-						if (maxFiles !== undefined && merged.length > maxFiles) {
-							onChange(merged.slice(0, maxFiles));
-							setSelectionError(`${maxFiles}個以内で添付してください`);
-						} else {
-							onChange(merged);
-							setSelectionError(null);
-						}
-						e.currentTarget.value = "";
-					}}
+					onChange={handleFileChange}
 					disabled={disabled}
 				/>
 				<Button
