@@ -1,0 +1,42 @@
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: var(--space-3);
+}
+
+.listItem {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-2);
+	padding: var(--space-2) 0;
+	border-bottom: 1px solid var(--gray-4);
+
+	&:last-child {
+		border-bottom: none;
+	}
+}
+
+.listItemInfo {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	flex: 1;
+	min-width: 0;
+}
+
+.listItemName {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.listItemStatus {
+	flex-shrink: 0;
+}
+
+.emptyState {
+	text-align: center;
+	padding: var(--space-6) 0;
+}

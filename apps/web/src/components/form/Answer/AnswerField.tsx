@@ -5,9 +5,16 @@ import {
 } from "@/components/patterns/CheckboxGroup";
 import { RadioGroup, RadioGroupItem } from "@/components/patterns/RadioGroup";
 import { TextArea, TextField } from "@/components/primitives";
+import { buildFormDownloadFileName } from "@/lib/form/downloadFileName";
 import { FileUploadFieldWithPreview } from "../EachField/FileUploadFieldWithPreview";
 import { NumberField } from "../EachField/NumberField";
-import type { FormAnswerValue, FormItem } from "../type";
+import {
+	createEmptyFileAnswerValue,
+	type FormAnswerValue,
+	type FormItem,
+	isFileAnswerValue,
+} from "../type";
+import { useDownloadFileNameContext } from "./DownloadFileNameContext";
 
 type FieldProps = {
 	item: FormItem;
@@ -17,6 +24,7 @@ type FieldProps = {
 };
 
 export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
+	const downloadFileNameContext = useDownloadFileNameContext();
 	const label = (
 		<Text size="2" weight="medium">
 			{item.label + (item.required ? " *" : "")}
@@ -27,6 +35,22 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 			{item.description}
 		</Text>
 	) : null;
+
+	const constraints = item.constraints;
+	const textValue = typeof value === "string" ? value : "";
+	const charCount = textValue.length;
+	const maxLength = constraints?.maxLength;
+
+	const charCounter =
+		(item.type === "TEXT" || item.type === "TEXTAREA") && maxLength ? (
+			<Text
+				size="1"
+				color={charCount > maxLength ? "red" : "gray"}
+				style={{ textAlign: "right" }}
+			>
+				{charCount} / {maxLength}
+			</Text>
+		) : null;
 
 	const field = (() => {
 		switch (item.type) {
@@ -68,16 +92,34 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 					/>
 				);
 
-			case "FILE":
+			case "FILE": {
+				const fileValue = isFileAnswerValue(value)
+					? value
+					: createEmptyFileAnswerValue();
+				const downloadFileName =
+					downloadFileNameContext && fileValue.uploadedFile?.fileName
+						? buildFormDownloadFileName({
+								...downloadFileNameContext,
+								originalFileName: fileValue.uploadedFile.fileName,
+							})
+						: undefined;
 				return (
 					<FileUploadFieldWithPreview
 						label=""
-						value={value as File | null}
-						onChange={onChange}
+						value={fileValue.pendingFile}
+						uploadedFile={fileValue.uploadedFile}
+						downloadFileName={downloadFileName}
+						onChange={file =>
+							onChange({
+								pendingFile: file,
+								uploadedFile: fileValue.uploadedFile,
+							})
+						}
 						disabled={disabled}
 						aria-label={item.label}
 					/>
 				);
+			}
 
 			case "SELECT":
 				return (
@@ -125,6 +167,7 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 			{label}
 			{description}
 			{field}
+			{charCounter}
 		</Flex>
 	);
 }

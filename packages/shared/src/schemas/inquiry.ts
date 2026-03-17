@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { bureauSchema } from "./committee-member";
+import { viewerScopeSchema } from "./common";
 import { userSchema } from "./user";
 
 // ─────────────────────────────────────────────────────────────
@@ -18,9 +19,6 @@ export type InquiryCreatorRole = z.infer<typeof inquiryCreatorRoleSchema>;
 
 export const inquiryAssigneeSideSchema = z.enum(["PROJECT", "COMMITTEE"]);
 export type InquiryAssigneeSide = z.infer<typeof inquiryAssigneeSideSchema>;
-
-export const inquiryViewerScopeSchema = z.enum(["ALL", "BUREAU", "INDIVIDUAL"]);
-export type InquiryViewerScope = z.infer<typeof inquiryViewerScopeSchema>;
 
 export const inquiryActivityTypeSchema = z.enum([
 	"ASSIGNEE_ADDED",
@@ -58,7 +56,7 @@ export type InquiryAssignee = z.infer<typeof inquiryAssigneeSchema>;
 export const inquiryViewerSchema = z.object({
 	id: z.cuid(),
 	inquiryId: z.cuid(),
-	scope: inquiryViewerScopeSchema,
+	scope: viewerScopeSchema,
 	bureauValue: bureauSchema.nullable(),
 	userId: z.cuid().nullable(),
 	createdAt: z.coerce.date(),
@@ -179,6 +177,7 @@ const inquirySummarySchema = z.object({
 export const createProjectInquiryRequestSchema = z.object({
 	title: z.string().min(1, "件名を入力してください"),
 	body: z.string().min(1, "内容を入力してください"),
+	relatedFormId: z.cuid().optional(),
 	coAssigneeUserIds: z.array(z.cuid()).optional(),
 	fileIds: z.array(z.string()).optional(),
 });
@@ -208,10 +207,19 @@ export type ListProjectInquiriesResponse = z.infer<
 // 企画側: GET /project/:projectId/inquiries/:inquiryId
 // ─────────────────────────────────────────────────────────────
 
+/** 関連フォーム情報 */
+const relatedFormSummarySchema = z
+	.object({
+		id: z.cuid(),
+		title: z.string(),
+	})
+	.nullable();
+
 export const getProjectInquiryResponseSchema = z.object({
 	inquiry: inquirySchema.extend({
 		createdBy: userSummarySchema,
 		project: z.object({ id: z.cuid(), name: z.string() }),
+		relatedForm: relatedFormSummarySchema,
 		projectAssignees: z.array(assigneeWithUserSchema),
 		committeeAssignees: z.array(assigneeWithUserSchema),
 		comments: z.array(commentWithUserSchema),
@@ -287,7 +295,7 @@ export type RemoveInquiryAssigneeResponse = z.infer<
 
 export const viewerInputSchema = z
 	.object({
-		scope: inquiryViewerScopeSchema,
+		scope: viewerScopeSchema,
 		bureauValue: bureauSchema.optional(),
 		userId: z.cuid().optional(),
 	})
@@ -316,6 +324,7 @@ export type ViewerInput = z.infer<typeof viewerInputSchema>;
 export const createCommitteeInquiryRequestSchema = z.object({
 	title: z.string().min(1, "件名を入力してください"),
 	body: z.string().min(1, "内容を入力してください"),
+	relatedFormId: z.cuid().optional(),
 	projectId: z.cuid(),
 	projectAssigneeUserIds: z
 		.array(z.cuid())
@@ -354,6 +363,7 @@ export const getCommitteeInquiryResponseSchema = z.object({
 	inquiry: inquirySchema.extend({
 		createdBy: userSummarySchema,
 		project: z.object({ id: z.cuid(), name: z.string() }),
+		relatedForm: relatedFormSummarySchema,
 		projectAssignees: z.array(assigneeWithUserSchema),
 		committeeAssignees: z.array(assigneeWithUserSchema),
 		viewers: z.array(viewerDetailSchema),

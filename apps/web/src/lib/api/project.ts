@@ -1,11 +1,16 @@
 import {
 	type AssignSubOwnerResponse,
+	approveSubOwnerRequestEndpoint,
 	assignSubOwnerEndpoint,
 	type CreateProjectRequest,
 	type CreateProjectResponse,
+	cancelSubOwnerRequestEndpoint,
 	createProjectEndpoint,
+	type DecideSubOwnerRequestResponse,
 	type GetProjectDetailResponse,
+	type GetProjectRegistrationFormResponsesResponse,
 	getProjectDetailEndpoint,
+	getProjectRegistrationFormResponsesEndpoint,
 	type JoinProjectRequest,
 	type JoinProjectResponse,
 	joinProjectEndpoint,
@@ -16,6 +21,7 @@ import {
 	type RegenerateInviteCodeResponse,
 	type RemoveProjectMemberResponse,
 	regenerateInviteCodeEndpoint,
+	rejectSubOwnerRequestEndpoint,
 	removeProjectMemberEndpoint,
 	type UpdateProjectDetailRequest,
 	type UpdateProjectDetailResponse,
@@ -76,6 +82,18 @@ export async function getProjectDetail(
 }
 
 /**
+ * GET /project/:projectId/registration-form-responses
+ * 企画登録フォーム回答一覧を取得
+ */
+export async function getProjectRegistrationFormResponses(
+	projectId: string
+): Promise<GetProjectRegistrationFormResponsesResponse> {
+	return callGetApi(getProjectRegistrationFormResponsesEndpoint, {
+		pathParams: { projectId },
+	});
+}
+
+/**
  * PATCH /project/:projectId/detail
  * 企画の設定変更（名前・団体名等）
  */
@@ -115,7 +133,7 @@ export async function removeProjectMember(
 
 /**
  * POST /project/:projectId/members/:userId/assign
- * プロジェクトメンバーを副責任者に任命
+ * プロジェクトメンバーに副責任者リクエストを送る
  */
 export async function assignSubOwner(
 	projectId: string,
@@ -123,5 +141,41 @@ export async function assignSubOwner(
 ): Promise<AssignSubOwnerResponse> {
 	return callBodyApi(assignSubOwnerEndpoint, undefined, {
 		pathParams: { projectId, userId },
+	});
+}
+
+/**
+ * POST /project/:projectId/sub-owner-request/approve
+ * 副責任者リクエストを承認
+ */
+export async function approveSubOwnerRequest(
+	projectId: string
+): Promise<DecideSubOwnerRequestResponse> {
+	return callBodyApi(approveSubOwnerRequestEndpoint, undefined, {
+		pathParams: { projectId },
+	});
+}
+
+/**
+ * POST /project/:projectId/sub-owner-request/cancel
+ * 副責任者リクエストを取り消し
+ */
+export async function cancelSubOwnerRequest(
+	projectId: string
+): Promise<DecideSubOwnerRequestResponse> {
+	return callBodyApi(cancelSubOwnerRequestEndpoint, undefined, {
+		pathParams: { projectId },
+	});
+}
+
+/**
+ * POST /project/:projectId/sub-owner-request/reject
+ * 副責任者リクエストを辞退
+ */
+export async function rejectSubOwnerRequest(
+	projectId: string
+): Promise<DecideSubOwnerRequestResponse> {
+	return callBodyApi(rejectSubOwnerRequestEndpoint, undefined, {
+		pathParams: { projectId },
 	});
 }

@@ -30,6 +30,8 @@ erDiagram
   String name
   String namePhonetic
   String telephoneNumber
+  String avatarFileId "nullable"
+  SendKey sendKey
   DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
@@ -42,6 +44,7 @@ erDiagram
   String organizationName
   String organizationNamePhonetic
   ProjectType type
+  ProjectLocation location
   String ownerId FK
   String subOwnerId FK "nullable"
   String(6) inviteCode UK
@@ -55,6 +58,16 @@ erDiagram
   String userId FK
   DateTime joinedAt
   DateTime deletedAt "nullable"
+}
+"ProjectSubOwnerRequest" {
+  String id PK
+  String projectId FK
+  String userId FK
+  SubOwnerRequestStatus status
+  String pendingProjectId UK "nullable"
+  DateTime decidedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
 }
 "CommitteeMember" {
   String id PK
@@ -125,6 +138,9 @@ erDiagram
   NoticeAuthorizationStatus status
   DateTime decidedAt "nullable"
   DateTime deliveredAt
+  DeliveryMode deliveryMode
+  ProjectType filterTypes
+  ProjectLocation filterLocations
   DateTime createdAt
   DateTime updatedAt
 }
@@ -143,6 +159,15 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"FormViewer" {
+  String id PK
+  String formId FK
+  ViewerScope scope
+  Bureau bureauValue "nullable"
+  String userId FK "nullable"
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+}
 "FormItem" {
   String id PK
   String formId FK
@@ -150,6 +175,10 @@ erDiagram
   String description "nullable"
   FormItemType type
   Boolean required
+  Int constraintMinLength "nullable"
+  Int constraintMaxLength "nullable"
+  String constraintPattern "nullable"
+  String constraintCustomPattern "nullable"
   Int sortOrder
   DateTime createdAt
   DateTime updatedAt
@@ -171,17 +200,30 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"ProjectRegistrationFormCollaborator" {
+  String id PK
+  String formId FK
+  String userId FK
+  Boolean isWrite
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
 "FormAuthorization" {
   String id PK
   String formId FK
   String requestedById FK
   String requestedToId FK
-  FormAuthorizationStatus status
+  ApprovalStatus status
   DateTime decidedAt "nullable"
   DateTime scheduledSendAt
   DateTime deadlineAt "nullable"
   Boolean allowLateResponse
   Boolean required
+  Boolean ownerOnly
+  DeliveryMode deliveryMode
+  ProjectType filterTypes
+  ProjectLocation filterLocations
   DateTime createdAt
   DateTime updatedAt
 }
@@ -205,7 +247,7 @@ erDiagram
   String formItemId FK
   String textValue "nullable"
   Float numberValue "nullable"
-  String fileUrl "nullable"
+  String fileId "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -254,7 +296,7 @@ erDiagram
 "InquiryViewer" {
   String id PK
   String inquiryId FK
-  InquiryViewerScope scope
+  ViewerScope scope
   Bureau bureauValue "nullable"
   String userId FK "nullable"
   DateTime deletedAt "nullable"
@@ -278,6 +320,81 @@ erDiagram
   DateTime deletedAt "nullable"
   DateTime createdAt
 }
+"MastersheetColumn" {
+  String id PK
+  MastersheetColumnType type
+  String name
+  String description "nullable"
+  Int sortOrder
+  String createdById FK
+  String formItemId FK,UK "nullable"
+  String projectRegistrationFormItemId FK,UK "nullable"
+  MastersheetDataType dataType "nullable"
+  MastersheetColumnVisibility visibility "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"MastersheetColumnOption" {
+  String id PK
+  String columnId FK
+  String label
+  Int sortOrder
+}
+"MastersheetCellValue" {
+  String id PK
+  String columnId FK
+  String projectId FK
+  String textValue "nullable"
+  Float numberValue "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"MastersheetCellSelectedOption" {
+  String id PK
+  String cellId FK
+  String optionId FK
+}
+"FormItemEditHistory" {
+  String id PK
+  String formItemId FK
+  String projectId FK
+  String textValue "nullable"
+  Float numberValue "nullable"
+  String fileId "nullable"
+  String actorId FK
+  FormItemEditHistoryTrigger trigger
+  DateTime createdAt
+}
+"FormItemEditHistorySelectedOption" {
+  String id PK
+  String editHistoryId FK
+  String formItemOptionId FK
+}
+"MastersheetColumnViewer" {
+  String id PK
+  String columnId FK
+  ViewerScope scope
+  Bureau bureauValue "nullable"
+  String userId FK "nullable"
+}
+"MastersheetAccessRequest" {
+  String id PK
+  String columnId FK
+  String requesterId FK
+  String decidedById FK "nullable"
+  ApprovalStatus status
+  DateTime decidedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"MastersheetView" {
+  String id PK
+  String name
+  String createdById FK
+  String state
+  DateTime createdAt
+  DateTime updatedAt
+}
 "InquiryAttachment" {
   String id PK
   String inquiryId FK
@@ -287,10 +404,82 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"ProjectRegistrationForm" {
+  String id PK
+  String ownerId FK
+  String title
+  String description "nullable"
+  Boolean isActive
+  Int sortOrder
+  ProjectType filterTypes
+  ProjectLocation filterLocations
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormItem" {
+  String id PK
+  String formId FK
+  String label
+  String description "nullable"
+  FormItemType type
+  Boolean required
+  Int constraintMinLength "nullable"
+  Int constraintMaxLength "nullable"
+  String constraintPattern "nullable"
+  String constraintCustomPattern "nullable"
+  Int sortOrder
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormItemOption" {
+  String id PK
+  String formItemId FK
+  String label
+  Int sortOrder
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormAuthorization" {
+  String id PK
+  String formId FK
+  String requestedById FK
+  String requestedToId FK
+  ProjectRegistrationFormAuthorizationStatus status
+  DateTime decidedAt "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormResponse" {
+  String id PK
+  String formId FK
+  String projectId FK
+  DateTime submittedAt
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormAnswer" {
+  String id PK
+  String responseId FK
+  String formItemId FK
+  String textValue "nullable"
+  Float numberValue "nullable"
+  String fileId FK "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectRegistrationFormAnswerSelectedOption" {
+  String id PK
+  String answerId FK
+  String formItemOptionId FK
+  DateTime createdAt
+}
 "Project" }o--|| "User" : owner
 "Project" }o--o| "User" : subOwner
 "ProjectMember" }o--|| "Project" : project
 "ProjectMember" }o--|| "User" : user
+"ProjectSubOwnerRequest" }o--|| "Project" : project
+"ProjectSubOwnerRequest" }o--|| "User" : user
 "CommitteeMember" |o--|| "User" : user
 "CommitteeMemberPermission" }o--|| "CommitteeMember" : committeeMember
 "UserPushSubscription" }o--|| "User" : user
@@ -305,10 +494,14 @@ erDiagram
 "NoticeDelivery" }o--|| "NoticeAuthorization" : noticeAuthorization
 "NoticeDelivery" }o--|| "Project" : project
 "Form" }o--|| "User" : owner
+"FormViewer" }o--|| "Form" : form
+"FormViewer" }o--o| "User" : user
 "FormItem" }o--|| "Form" : form
 "FormItemOption" }o--|| "FormItem" : formItem
 "FormCollaborator" }o--|| "Form" : form
 "FormCollaborator" }o--|| "User" : user
+"ProjectRegistrationFormCollaborator" }o--|| "ProjectRegistrationForm" : form
+"ProjectRegistrationFormCollaborator" }o--|| "User" : user
 "FormAuthorization" }o--|| "Form" : form
 "FormAuthorization" }o--|| "User" : requestedBy
 "FormAuthorization" }o--|| "User" : requestedTo
@@ -336,9 +529,41 @@ erDiagram
 "InquiryActivity" }o--|| "Inquiry" : inquiry
 "InquiryActivity" }o--|| "User" : actor
 "InquiryActivity" }o--o| "User" : target
+"MastersheetColumn" }o--|| "User" : createdBy
+"MastersheetColumn" |o--o| "FormItem" : formItem
+"MastersheetColumn" |o--o| "ProjectRegistrationFormItem" : projectRegistrationFormItem
+"MastersheetColumnOption" }o--|| "MastersheetColumn" : column
+"MastersheetCellValue" }o--|| "MastersheetColumn" : column
+"MastersheetCellValue" }o--|| "Project" : project
+"MastersheetCellSelectedOption" }o--|| "MastersheetCellValue" : cell
+"MastersheetCellSelectedOption" }o--|| "MastersheetColumnOption" : option
+"FormItemEditHistory" }o--|| "FormItem" : formItem
+"FormItemEditHistory" }o--|| "Project" : project
+"FormItemEditHistory" }o--|| "User" : actor
+"FormItemEditHistorySelectedOption" }o--|| "FormItemEditHistory" : editHistory
+"FormItemEditHistorySelectedOption" }o--|| "FormItemOption" : formItemOption
+"MastersheetColumnViewer" }o--|| "MastersheetColumn" : column
+"MastersheetColumnViewer" }o--o| "User" : user
+"MastersheetAccessRequest" }o--|| "MastersheetColumn" : column
+"MastersheetAccessRequest" }o--|| "User" : requester
+"MastersheetAccessRequest" }o--o| "User" : decidedBy
+"MastersheetView" }o--|| "User" : createdBy
 "InquiryAttachment" }o--|| "Inquiry" : inquiry
 "InquiryAttachment" }o--o| "InquiryComment" : comment
 "InquiryAttachment" }o--|| "File" : file
+"ProjectRegistrationForm" }o--|| "User" : owner
+"ProjectRegistrationFormItem" }o--|| "ProjectRegistrationForm" : form
+"ProjectRegistrationFormItemOption" }o--|| "ProjectRegistrationFormItem" : formItem
+"ProjectRegistrationFormAuthorization" }o--|| "ProjectRegistrationForm" : form
+"ProjectRegistrationFormAuthorization" }o--|| "User" : requestedBy
+"ProjectRegistrationFormAuthorization" }o--|| "User" : requestedTo
+"ProjectRegistrationFormResponse" }o--|| "ProjectRegistrationForm" : form
+"ProjectRegistrationFormResponse" }o--|| "Project" : project
+"ProjectRegistrationFormAnswer" }o--|| "ProjectRegistrationFormResponse" : response
+"ProjectRegistrationFormAnswer" }o--|| "ProjectRegistrationFormItem" : formItem
+"ProjectRegistrationFormAnswer" }o--o| "File" : file
+"ProjectRegistrationFormAnswerSelectedOption" }o--|| "ProjectRegistrationFormAnswer" : answer
+"ProjectRegistrationFormAnswerSelectedOption" }o--|| "ProjectRegistrationFormItemOption" : formItemOption
 ```
 
 ### `EmailVerification`
@@ -372,6 +597,8 @@ Properties as follows:
 - `name`:
 - `namePhonetic`:
 - `telephoneNumber`:
+- `avatarFileId`:
+- `sendKey`:
 - `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
@@ -387,6 +614,7 @@ Properties as follows:
 - `organizationName`:
 - `organizationNamePhonetic`:
 - `type`:
+- `location`:
 - `ownerId`:
 - `subOwnerId`:
 - `inviteCode`:
@@ -403,6 +631,19 @@ Properties as follows:
 - `userId`:
 - `joinedAt`:
 - `deletedAt`:
+
+### `ProjectSubOwnerRequest`
+
+Properties as follows:
+
+- `id`:
+- `projectId`:
+- `userId`:
+- `status`:
+- `pendingProjectId`:
+- `decidedAt`:
+- `createdAt`:
+- `updatedAt`:
 
 ### `CommitteeMember`
 
@@ -497,6 +738,9 @@ Properties as follows:
 - `status`:
 - `decidedAt`:
 - `deliveredAt`:
+- `deliveryMode`:
+- `filterTypes`:
+- `filterLocations`:
 - `createdAt`:
 - `updatedAt`:
 
@@ -521,6 +765,18 @@ Properties as follows:
 - `createdAt`:
 - `updatedAt`:
 
+### `FormViewer`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `scope`:
+- `bureauValue`:
+- `userId`:
+- `deletedAt`:
+- `createdAt`:
+
 ### `FormItem`
 
 Properties as follows:
@@ -531,6 +787,10 @@ Properties as follows:
 - `description`:
 - `type`:
 - `required`:
+- `constraintMinLength`:
+- `constraintMaxLength`:
+- `constraintPattern`:
+- `constraintCustomPattern`:
 - `sortOrder`:
 - `createdAt`:
 - `updatedAt`:
@@ -558,6 +818,18 @@ Properties as follows:
 - `createdAt`:
 - `updatedAt`:
 
+### `ProjectRegistrationFormCollaborator`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `userId`:
+- `isWrite`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
 ### `FormAuthorization`
 
 Properties as follows:
@@ -572,6 +844,10 @@ Properties as follows:
 - `deadlineAt`:
 - `allowLateResponse`:
 - `required`:
+- `ownerOnly`:
+- `deliveryMode`:
+- `filterTypes`:
+- `filterLocations`:
 - `createdAt`:
 - `updatedAt`:
 
@@ -604,7 +880,7 @@ Properties as follows:
 - `formItemId`:
 - `textValue`:
 - `numberValue`:
-- `fileUrl`:
+- `fileId`:
 - `createdAt`:
 - `updatedAt`:
 
@@ -701,6 +977,108 @@ Properties as follows:
 - `deletedAt`:
 - `createdAt`:
 
+### `MastersheetColumn`
+
+Properties as follows:
+
+- `id`:
+- `type`:
+- `name`:
+- `description`:
+- `sortOrder`:
+- `createdById`:
+- `formItemId`:
+- `projectRegistrationFormItemId`:
+- `dataType`:
+- `visibility`:
+- `createdAt`:
+- `updatedAt`:
+
+### `MastersheetColumnOption`
+
+Properties as follows:
+
+- `id`:
+- `columnId`:
+- `label`:
+- `sortOrder`:
+
+### `MastersheetCellValue`
+
+Properties as follows:
+
+- `id`:
+- `columnId`:
+- `projectId`:
+- `textValue`:
+- `numberValue`:
+- `createdAt`:
+- `updatedAt`:
+
+### `MastersheetCellSelectedOption`
+
+Properties as follows:
+
+- `id`:
+- `cellId`:
+- `optionId`:
+
+### `FormItemEditHistory`
+
+Properties as follows:
+
+- `id`:
+- `formItemId`:
+- `projectId`:
+- `textValue`:
+- `numberValue`:
+- `fileId`:
+- `actorId`:
+- `trigger`:
+- `createdAt`:
+
+### `FormItemEditHistorySelectedOption`
+
+Properties as follows:
+
+- `id`:
+- `editHistoryId`:
+- `formItemOptionId`:
+
+### `MastersheetColumnViewer`
+
+Properties as follows:
+
+- `id`:
+- `columnId`:
+- `scope`:
+- `bureauValue`:
+- `userId`:
+
+### `MastersheetAccessRequest`
+
+Properties as follows:
+
+- `id`:
+- `columnId`:
+- `requesterId`:
+- `decidedById`:
+- `status`:
+- `decidedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `MastersheetView`
+
+Properties as follows:
+
+- `id`:
+- `name`:
+- `createdById`:
+- `state`:
+- `createdAt`:
+- `updatedAt`:
+
 ### `InquiryAttachment`
 
 Properties as follows:
@@ -712,3 +1090,94 @@ Properties as follows:
 - `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
+
+### `ProjectRegistrationForm`
+
+Properties as follows:
+
+- `id`:
+- `ownerId`:
+- `title`:
+- `description`:
+- `isActive`:
+- `sortOrder`:
+- `filterTypes`:
+- `filterLocations`:
+- `deletedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormItem`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `label`:
+- `description`:
+- `type`:
+- `required`:
+- `constraintMinLength`:
+- `constraintMaxLength`:
+- `constraintPattern`:
+- `constraintCustomPattern`:
+- `sortOrder`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormItemOption`
+
+Properties as follows:
+
+- `id`:
+- `formItemId`:
+- `label`:
+- `sortOrder`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormAuthorization`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `requestedById`:
+- `requestedToId`:
+- `status`:
+- `decidedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormResponse`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `projectId`:
+- `submittedAt`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormAnswer`
+
+Properties as follows:
+
+- `id`:
+- `responseId`:
+- `formItemId`:
+- `textValue`:
+- `numberValue`:
+- `fileId`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectRegistrationFormAnswerSelectedOption`
+
+Properties as follows:
+
+- `id`:
+- `answerId`:
+- `formItemOptionId`:
+- `createdAt`:

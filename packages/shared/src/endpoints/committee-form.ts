@@ -19,6 +19,8 @@ import {
 	updateFormAuthorizationResponseSchema,
 	updateFormDetailRequestSchema,
 	updateFormDetailResponseSchema,
+	updateFormViewersRequestSchema,
+	updateFormViewersResponseSchema,
 } from "../schemas/form";
 import type { BodyEndpoint, GetEndpoint, NoBodyEndpoint } from "./types";
 
@@ -245,4 +247,29 @@ export const listFormResponsesEndpoint: GetEndpoint<
 	query: undefined,
 	request: undefined,
 	response: listFormResponsesResponseSchema,
+} as const;
+
+// ─────────────────────────────────────────────────────────────
+// 閲覧者
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * PUT /committee/forms/:formId/viewers
+ * 閲覧者を設定（作成者 or 書き込み権限付き共同編集者のみ）
+ * 既存の閲覧者を全削除して新規作成
+ */
+export const updateFormViewersEndpoint: BodyEndpoint<
+	"PUT",
+	"/committee/forms/:formId/viewers",
+	typeof formIdPathParamsSchema,
+	undefined,
+	typeof updateFormViewersRequestSchema,
+	typeof updateFormViewersResponseSchema
+> = {
+	method: "PUT",
+	path: "/committee/forms/:formId/viewers",
+	pathParams: formIdPathParamsSchema,
+	query: undefined,
+	request: updateFormViewersRequestSchema,
+	response: updateFormViewersResponseSchema,
 } as const;

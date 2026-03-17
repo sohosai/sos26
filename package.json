@@ -31,6 +31,7 @@
     "db:pull": "bun run --cwd apps/api db:pull",
     "db:studio": "bun run --cwd apps/api db:studio",
     "db:format": "bun run --cwd apps/api db:format",
+    "db:seed": "bun run --cwd apps/api db:seed",
     "make-committee-member": "bun run --cwd apps/api make-committee-member"
   },
   "devDependencies": {
@@ -40,7 +41,8 @@
     "sass-embedded": "^1.97.2",
     "turbo": "^2.8.9",
     "typescript": "~5.9.3",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.16",
+    "wrangler": "^4.70.0"
   },
   "dependencies": {
     "zod": "^4.3.5"

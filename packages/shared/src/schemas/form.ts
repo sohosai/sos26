@@ -1,4 +1,15 @@
 import { z } from "zod";
+import { bureauSchema } from "./committee-member";
+import {
+	approvalStatusSchema,
+	deliveryModeSchema,
+	deliveryTargetSchema,
+	projectLocationSchema,
+	projectTypeSchema,
+	viewerScopeSchema,
+} from "./common";
+import { fileSchema } from "./file";
+import { viewerInputSchema } from "./inquiry";
 import { userSchema } from "./user";
 
 // ─────────────────────────────────────────────────────────────
@@ -15,14 +26,57 @@ export const formItemTypeSchema = z.enum([
 ]);
 export type FormItemType = z.infer<typeof formItemTypeSchema>;
 
-export const formAuthorizationStatusSchema = z.enum([
-	"PENDING",
-	"APPROVED",
-	"REJECTED",
-]);
-export type FormAuthorizationStatus = z.infer<
-	typeof formAuthorizationStatusSchema
+// ─────────────────────────────────────────────────────────────
+// 回答バリデーション用の最小フォームアイテム型
+// ─────────────────────────────────────────────────────────────
+
+export const formAnswerValidationItemSchema = z.object({
+	id: z.string(),
+	type: formItemTypeSchema,
+	required: z.boolean(),
+	options: z.array(z.object({ id: z.string() })),
+});
+export type FormAnswerValidationItem = z.infer<
+	typeof formAnswerValidationItemSchema
 >;
+
+// ─────────────────────────────────────────────────────────────
+// テキスト制約スキーマ
+// ─────────────────────────────────────────────────────────────
+
+export const textConstraintPatternSchema = z.enum([
+	"katakana",
+	"hiragana",
+	"alphanumeric",
+	"custom",
+]);
+export type TextConstraintPattern = z.infer<typeof textConstraintPatternSchema>;
+
+export const textConstraintsSchema = z
+	.object({
+		minLength: z.number().int().nonnegative().optional(),
+		maxLength: z.number().int().positive().optional(),
+		pattern: textConstraintPatternSchema.optional(),
+		customPattern: z
+			.string()
+			.refine(val => {
+				try {
+					new RegExp(val);
+					return true;
+				} catch {
+					return false;
+				}
+			}, "正規表現の形式が不正です")
+			.optional(),
+	})
+	.refine(
+		({ minLength, maxLength }) =>
+			minLength === undefined ||
+			maxLength === undefined ||
+			minLength <= maxLength,
+		{ message: "最小文字数は最大文字数以下にしてください", path: ["minLength"] }
+	);
+export type TextConstraints = z.infer<typeof textConstraintsSchema>;
 
 // ─────────────────────────────────────────────────────────────
 // 基本モデルスキーマ
@@ -47,6 +101,7 @@ export const formItemSchema = z.object({
 	required: z.boolean().default(false),
 	sortOrder: z.number().int(),
 	options: z.array(formItemOptionSchema),
+	constraints: textConstraintsSchema.nullable(),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 });
@@ -80,12 +135,16 @@ export const formAuthorizationSchema = z.object({
 	formId: z.string(),
 	requestedById: z.string(),
 	requestedToId: z.string(),
-	status: formAuthorizationStatusSchema,
+	status: approvalStatusSchema,
 	decidedAt: z.coerce.date().nullable(),
 	scheduledSendAt: z.coerce.date(),
 	deadlineAt: z.coerce.date().nullable(),
 	allowLateResponse: z.boolean(),
 	required: z.boolean(),
+	ownerOnly: z.boolean(),
+	deliveryMode: deliveryModeSchema,
+	filterTypes: z.array(projectTypeSchema),
+	filterLocations: z.array(projectLocationSchema),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 });
@@ -139,6 +198,7 @@ const authorizationSummarySchema = formAuthorizationSchema
 		scheduledSendAt: true,
 		deadlineAt: true,
 		allowLateResponse: true,
+		ownerOnly: true,
 	})
 	.extend({
 		requestedTo: userSummarySchema,
@@ -181,7 +241,7 @@ const numberAnswerSchema = z.object({
 const fileAnswerSchema = z.object({
 	...baseAnswerSchema,
 	type: z.literal("FILE"),
-	fileUrl: z.string().nullable(),
+	fileId: z.string().nullable(),
 });
 
 const selectAnswerSchema = z.object({
@@ -205,7 +265,32 @@ export const createFormItemOptionInputSchema = z.object({
 	sortOrder: z.number().int(),
 });
 
-export const createFormItemInputSchema = formItemSchema
+/**
+ * SELECT/CHECKBOX は options 必須、それ以外は options 不可のバリデーション。
+ */
+export const validateFormItemTypeOptions = (
+	data: { type: string; options?: unknown[] },
+	ctx: z.RefinementCtx
+) => {
+	const needsOptions = data.type === "SELECT" || data.type === "CHECKBOX";
+	if (needsOptions && (!data.options || data.options.length === 0)) {
+		ctx.addIssue({
+			code: "custom",
+			message: "SELECT/CHECKBOXタイプの設問には選択肢を1つ以上設定してください",
+			path: ["options"],
+		});
+	}
+	if (!needsOptions && data.options && data.options.length > 0) {
+		ctx.addIssue({
+			code: "custom",
+			message: "このタイプの設問には選択肢を設定できません",
+			path: ["options"],
+		});
+	}
+};
+
+// .extend() を使うため superRefine なしのベーススキーマ（内部利用）
+const formItemInputObjectSchema = formItemSchema
 	.pick({
 		label: true,
 		description: true,
@@ -213,7 +298,14 @@ export const createFormItemInputSchema = formItemSchema
 		required: true,
 		sortOrder: true,
 	})
-	.extend({ options: z.array(createFormItemOptionInputSchema).optional() });
+	.extend({
+		options: z.array(createFormItemOptionInputSchema).optional(),
+		constraints: textConstraintsSchema.nullable().optional(),
+	});
+
+export const createFormItemInputSchema = formItemInputObjectSchema.superRefine(
+	validateFormItemTypeOptions
+);
 
 export const createFormRequestSchema = z.object({
 	title: z.string().min(1).default("無題のフォーム"),
@@ -251,23 +343,51 @@ export type ListMyFormsResponse = z.infer<typeof listMyFormsResponseSchema>;
 // GET /committee/forms/:formId/detail
 // ─────────────────────────────────────────────────────────────
 
+/** 閲覧者情報 */
+const formViewerDetailSchema = z.object({
+	id: z.string(),
+	scope: viewerScopeSchema,
+	bureauValue: bureauSchema.nullable(),
+	createdAt: z.coerce.date(),
+	user: userSummarySchema.nullable(),
+});
+
 export const getFormDetailResponseSchema = z.object({
 	form: formSchema.extend({
 		owner: userSummarySchema,
 		collaborators: z.array(collaboratorWithUserSchema),
 		authorizationDetail: authorizationDetailSchema.nullable(),
+		viewers: z.array(formViewerDetailSchema),
 	}),
 });
 export type GetFormDetailResponse = z.infer<typeof getFormDetailResponseSchema>;
+
+// ─────────────────────────────────────────────────────────────
+// PUT /committee/forms/:formId/viewers
+// ─────────────────────────────────────────────────────────────
+
+export const updateFormViewersRequestSchema = z.object({
+	viewers: z.array(viewerInputSchema),
+});
+export type UpdateFormViewersRequest = z.infer<
+	typeof updateFormViewersRequestSchema
+>;
+
+export const updateFormViewersResponseSchema = z.object({
+	viewers: z.array(formViewerDetailSchema),
+});
+export type UpdateFormViewersResponse = z.infer<
+	typeof updateFormViewersResponseSchema
+>;
 
 // ─────────────────────────────────────────────────────────────
 // PATCH /committee/forms/:formId/detail
 // ─────────────────────────────────────────────────────────────
 
 // 更新リクエスト用のitem入力スキーマ
-export const updateFormItemInputSchema = createFormItemInputSchema.extend({
-	id: z.string().min(1).optional(),
-});
+export const updateFormItemInputSchema = formItemInputObjectSchema
+	.extend({ id: z.string().min(1).optional() })
+	.superRefine(validateFormItemTypeOptions);
 
 export const updateFormDetailRequestSchema = z.object({
 	title: z.string().min(1).optional(),
@@ -333,7 +453,8 @@ export const requestFormAuthorizationRequestSchema = z.object({
 	deadlineAt: z.coerce.date().nullable().optional(),
 	allowLateResponse: z.boolean().default(false),
 	required: z.boolean().default(true),
-	projectIds: z.array(z.string().min(1)).min(1),
+	ownerOnly: z.boolean().default(false),
+	deliveryTarget: deliveryTargetSchema,
 });
 export type RequestFormAuthorizationRequest = z.infer<
 	typeof requestFormAuthorizationRequestSchema
@@ -373,7 +494,17 @@ export const formResponseAnswerSchema = z.object({
 	formItemId: z.string(),
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileUrl: z.string().nullable(),
+	fileId: z.string().nullable(),
+	fileMetadata: fileSchema
+		.pick({
+			id: true,
+			fileName: true,
+			mimeType: true,
+			size: true,
+			isPublic: true,
+		})
+		.nullable()
+		.optional(),
 	selectedOptions: z.array(
 		z.object({
 			id: z.string(),
@@ -412,7 +543,13 @@ export const formResponsePathParamsSchema = z.object({
 });
 
 export const getFormResponseResponseSchema = z.object({
-	response: formResponseSummarySchema,
+	response: formResponseSummarySchema.extend({
+		project: z.object({
+			id: z.string(),
+			number: z.number().int().positive(),
+			name: z.string(),
+		}),
+	}),
 });
 export type GetFormResponseResponse = z.infer<
 	typeof getFormResponseResponseSchema
@@ -447,6 +584,8 @@ export const listProjectFormsResponseSchema = z.object({
 			deadlineAt: z.coerce.date().nullable(),
 			required: z.boolean(),
 			allowLateResponse: z.boolean(),
+			ownerOnly: z.boolean(),
+			restricted: z.boolean(),
 			// 自分の回答状況
 			response: z
 				.object({
@@ -473,6 +612,13 @@ const projectFormItemOptionSchema = z.object({
 	sortOrder: z.number().int(),
 });
 
+const projectFormFileMetadataSchema = fileSchema.pick({
+	id: true,
+	fileName: true,
+	mimeType: true,
+	isPublic: true,
+});
+
 const projectFormItemSchema = z.object({
 	id: z.string(),
 	label: z.string(),
@@ -481,6 +627,7 @@ const projectFormItemSchema = z.object({
 	required: z.boolean(),
 	sortOrder: z.number().int(),
 	options: z.array(projectFormItemOptionSchema),
+	constraints: textConstraintsSchema.nullable(),
 });
 
 // 回答値スキーマ
@@ -488,7 +635,8 @@ const formAnswerSchema = z.object({
 	formItemId: z.string(),
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileUrl: z.string().nullable(),
+	fileId: z.string().nullable(),
+	fileMetadata: projectFormFileMetadataSchema.nullable(),
 	selectedOptionIds: z.array(z.string()),
 });
 
@@ -502,6 +650,7 @@ export const getProjectFormResponseSchema = z.object({
 		deadlineAt: z.coerce.date().nullable(),
 		allowLateResponse: z.boolean(),
 		required: z.boolean(),
+		ownerOnly: z.boolean(),
 		items: z.array(projectFormItemSchema),
 		// 既存の回答（下書き含む）
 		response: z
@@ -530,6 +679,15 @@ export const formAnswerInputSchema = z.discriminatedUnion("type", [
 	selectAnswerSchema,
 	checkboxAnswerSchema,
 ]);
+export type FormAnswerInput = z.infer<typeof formAnswerInputSchema>;
+
+export const registrationFormAnswersInputSchema = z.object({
+	formId: z.string().min(1),
+	answers: z.array(formAnswerInputSchema),
+});
+export type RegistrationFormAnswersInput = z.infer<
+	typeof registrationFormAnswersInputSchema
+>;
 
 export const createFormResponseRequestSchema = z.object({
 	answers: z.array(formAnswerInputSchema),

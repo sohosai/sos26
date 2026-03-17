@@ -1,6 +1,7 @@
 import { sendFormAuthorizationRequestedEmail } from "../emails";
 import { env } from "../env";
 import { prisma } from "../prisma";
+import { sendFormAuthorizationRequestedPush } from "../push";
 
 export async function notifyFormAuthorizationRequested(input: {
 	approverUserId: string;
@@ -23,6 +24,11 @@ export async function notifyFormAuthorizationRequested(input: {
 			scheduledSendAt: input.scheduledSendAt.toLocaleString("ja-JP", {
 				timeZone: "Asia/Tokyo",
 			}),
+			url: `${env.APP_URL}/committee/forms/${input.formId}/`,
+		});
+		await sendFormAuthorizationRequestedPush({
+			userId: input.approverUserId,
+			formTitle: input.formTitle,
 			url: `${env.APP_URL}/committee/forms/${input.formId}/`,
 		});
 	} catch (err) {

@@ -28,7 +28,7 @@ export function FormAnswerDialog({
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
 			<Dialog.Content className={styles.dialogContent}>
 				<VisuallyHidden>
-					<Dialog.Title>フォーム回答</Dialog.Title>
+					<Dialog.Title>申請回答</Dialog.Title>
 				</VisuallyHidden>
 				<div className={styles.dialogInner}>
 					{form ? (

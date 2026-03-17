@@ -1,5 +1,8 @@
 import type { BadgeProps } from "@radix-ui/themes";
-import type { FormAuthorizationStatus } from "@sos26/shared";
+import type {
+	ApprovalStatus,
+	ProjectRegistrationFormAuthorizationStatus,
+} from "@sos26/shared";
 
 export type FormDisplayStatus =
 	| "DRAFT" // 公開申請前
@@ -16,7 +19,7 @@ export type FormStatusInfo = {
 };
 
 type AuthorizationSummary = {
-	status: FormAuthorizationStatus;
+	status: ApprovalStatus;
 	deliveredAt: Date;
 	deadlineAt: Date | null;
 } | null;
@@ -57,4 +60,20 @@ export function getFormStatusFromAuth(
 			return { label: "公開済み", color: "green", code: "PUBLISHED" };
 		}
 	}
+}
+
+/**
+ * isActive フラグと最新承認ステータスから企画登録フォームの表示ステータスを判定する。
+ * 一覧・詳細で共通して使用する。
+ */
+export function getProjectRegistrationFormStatus(
+	isActive: boolean,
+	latestAuthStatus: ProjectRegistrationFormAuthorizationStatus | null
+): FormStatusInfo {
+	if (isActive) return { label: "公開済み", color: "green", code: "PUBLISHED" };
+	if (latestAuthStatus === "PENDING")
+		return { label: "承認待機中", color: "orange", code: "PENDING_APPROVAL" };
+	if (latestAuthStatus === "REJECTED")
+		return { label: "却下", color: "red", code: "REJECTED" };
+	return { label: "下書き", color: "gray", code: "DRAFT" };
 }

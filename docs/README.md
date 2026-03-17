@@ -35,6 +35,9 @@
 - 機能仕様書
   - お知らせ機能: `docs/notice-spec.md`
   - お問い合わせ機能: `docs/support-spec.md`
+  - 企画登録フォーム機能: `docs/project-registration-form-spec.md`
+  - マスターシート × 企画登録フォーム連携: `docs/mastersheet-project-registration-form-spec.md`
+  - 配信先指定モード（カテゴリ指定）: `docs/delivery-target-spec.md`
 - 共有仕様
   - Shared パッケージ: `packages/shared/README.md`
 - テスト全般: `docs/testing.md`
@@ -45,6 +48,7 @@
   - エンドポイント追加手順: `docs/how-to/add-endpoint.md`
   - エラーハンドリング: `docs/how-to/error-handling.md`
   - 実委人の初期登録: `docs/how-to/make-committee-member.md`
+  - シードデータ投入: `docs/how-to/seed.md`
   - ドキュメント記事追加: `docs/how-to/add-docs-article.md`
 - 設定・運用
   - Web 設定: `docs/apps/web/configuration.md`

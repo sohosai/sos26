@@ -60,9 +60,9 @@
     {
       "id": "clxxx...",
       "name": "企画名",
-      "namePhonetic": "キカクメイ",
+      "namePhonetic": "きかくめい",
       "organizationName": "団体名",
-      "organizationNamePhonetic": "ダンタイメイ",
+      "organizationNamePhonetic": "だんたいめい",
       "type": "NORMAL",
       "ownerId": "clxxx...",
       "subOwnerId": "clyyy...",  // null の場合あり
@@ -104,9 +104,9 @@
   "project": {
     "id": "clxxx...",
     "name": "企画名",
-    "namePhonetic": "キカクメイ",
+    "namePhonetic": "きかくめい",
     "organizationName": "団体名",
-    "organizationNamePhonetic": "ダンタイメイ",
+    "organizationNamePhonetic": "だんたいめい",
     "type": "NORMAL",
     "ownerId": "clxxx...",
     "subOwnerId": "clyyy...",  // null の場合あり

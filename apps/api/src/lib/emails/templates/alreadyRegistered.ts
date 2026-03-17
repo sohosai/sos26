@@ -1,3 +1,5 @@
+import { textToHtml } from "./textToHtml";
+
 export function alreadyRegisteredTemplate(params: { loginUrl: string }) {
 	const body = `このメールアドレスは既にアカウント登録済みです。
 以下のURLからログインしてください。
@@ -11,7 +13,7 @@ ${params.loginUrl}
 
 	return {
 		subject: "【雙峰祭オンラインシステム】アカウント登録のご案内",
-		html: body.replace(/\n/g, "<br />"),
+		html: textToHtml(body),
 		text: body,
 	};
 }

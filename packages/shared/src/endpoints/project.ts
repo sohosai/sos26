@@ -3,7 +3,10 @@ import {
 	assignSubOwnerResponseSchema,
 	createProjectRequestSchema,
 	createProjectResponseSchema,
+	decideSubOwnerRequestRequestSchema,
+	decideSubOwnerRequestResponseSchema,
 	getProjectDetailResponseSchema,
+	getProjectRegistrationFormResponsesResponseSchema,
 	joinProjectRequestSchema,
 	joinProjectResponseSchema,
 	listMyProjectsResponseSchema,
@@ -117,6 +120,24 @@ export const getProjectDetailEndpoint: GetEndpoint<
 } as const;
 
 /**
+ * GET /project/:projectId/registration-form-responses
+ * 企画登録フォーム回答一覧を取得
+ */
+export const getProjectRegistrationFormResponsesEndpoint: GetEndpoint<
+	"/project/:projectId/registration-form-responses",
+	typeof projectIdPathParamsSchema,
+	undefined,
+	typeof getProjectRegistrationFormResponsesResponseSchema
+> = {
+	method: "GET",
+	path: "/project/:projectId/registration-form-responses",
+	pathParams: projectIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: getProjectRegistrationFormResponsesResponseSchema,
+} as const;
+
+/**
  * PATCH /project/:projectId/detail
  * 企画の設定変更（名前・団体名等）
  *
@@ -182,7 +203,7 @@ export const removeProjectMemberEndpoint: BodyEndpoint<
 
 /**
  * POST /project/:projectId/members/:userId/assign
- * プロジェクトメンバーを副責任者に任命
+ * プロジェクトメンバーに副責任者リクエストを送信
  */
 export const assignSubOwnerEndpoint: BodyEndpoint<
 	"POST",
@@ -198,4 +219,64 @@ export const assignSubOwnerEndpoint: BodyEndpoint<
 	query: undefined,
 	request: assignSubOwnerRequestSchema,
 	response: assignSubOwnerResponseSchema,
+} as const;
+
+/**
+ * POST /project/:projectId/sub-owner-request/approve
+ * 指名されたユーザーが副責任者リクエストを承認する
+ */
+export const approveSubOwnerRequestEndpoint: BodyEndpoint<
+	"POST",
+	"/project/:projectId/sub-owner-request/approve",
+	typeof projectIdPathParamsSchema,
+	undefined,
+	typeof decideSubOwnerRequestRequestSchema,
+	typeof decideSubOwnerRequestResponseSchema
+> = {
+	method: "POST",
+	path: "/project/:projectId/sub-owner-request/approve",
+	pathParams: projectIdPathParamsSchema,
+	query: undefined,
+	request: decideSubOwnerRequestRequestSchema,
+	response: decideSubOwnerRequestResponseSchema,
+} as const;
+
+/**
+ * POST /project/:projectId/sub-owner-request/cancel
+ * 責任者が副責任者リクエストを取り消す
+ */
+export const cancelSubOwnerRequestEndpoint: BodyEndpoint<
+	"POST",
+	"/project/:projectId/sub-owner-request/cancel",
+	typeof projectIdPathParamsSchema,
+	undefined,
+	typeof decideSubOwnerRequestRequestSchema,
+	typeof decideSubOwnerRequestResponseSchema
+> = {
+	method: "POST",
+	path: "/project/:projectId/sub-owner-request/cancel",
+	pathParams: projectIdPathParamsSchema,
+	query: undefined,
+	request: decideSubOwnerRequestRequestSchema,
+	response: decideSubOwnerRequestResponseSchema,
+} as const;
+
+/**
+ * POST /project/:projectId/sub-owner-request/reject
+ * 指名されたユーザーが副責任者リクエストを辞退する
+ */
+export const rejectSubOwnerRequestEndpoint: BodyEndpoint<
+	"POST",
+	"/project/:projectId/sub-owner-request/reject",
+	typeof projectIdPathParamsSchema,
+	undefined,
+	typeof decideSubOwnerRequestRequestSchema,
+	typeof decideSubOwnerRequestResponseSchema
+> = {
+	method: "POST",
+	path: "/project/:projectId/sub-owner-request/reject",
+	pathParams: projectIdPathParamsSchema,
+	query: undefined,
+	request: decideSubOwnerRequestRequestSchema,
+	response: decideSubOwnerRequestResponseSchema,
 } as const;

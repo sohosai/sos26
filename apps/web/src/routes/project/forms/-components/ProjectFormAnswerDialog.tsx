@@ -2,6 +2,7 @@ import type { GetProjectFormResponse } from "@sos26/shared";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { FormAnswerDialog } from "@/components/form/Answer/AnswerDialog";
+import { DownloadFileNameProvider } from "@/components/form/Answer/DownloadFileNameContext";
 import type { Form, FormAnswers } from "@/components/form/type";
 import {
 	createFormResponse,
@@ -9,7 +10,12 @@ import {
 	updateFormResponse,
 } from "@/lib/api/project-form";
 import { ProjectFormToForm } from "@/lib/form/convert";
-import { buildAnswerBody, responseToAnswers } from "@/lib/form/utils";
+import {
+	buildAnswerBody,
+	prepareAnswersForSubmit,
+	responseToAnswers,
+} from "@/lib/form/utils";
+import { useProjectStore } from "@/lib/project/store";
 
 type Props = {
 	open: boolean;
@@ -37,6 +43,9 @@ export function ProjectFormAnswerDialog({
 	const [fetchState, setFetchState] = useState<FetchState>({ status: "idle" });
 	const [draftResponseId, setDraftResponseId] = useState<string | null>(null);
 	const [isDeadlineExpired, setIsDeadlineExpired] = useState(false);
+	const project = useProjectStore(state =>
+		state.projects.find(candidate => candidate.id === projectId)
+	);
 
 	// 締切の瞬間に1回だけ発火するタイマー
 	useEffect(() => {
@@ -71,7 +80,7 @@ export function ProjectFormAnswerDialog({
 			.catch(() => {
 				if (controller.signal.aborted) return;
 				setFetchState({ status: "error" });
-				toast.error("フォームの取得に失敗しました");
+				toast.error("申請の取得に失敗しました");
 			});
 
 		return () => controller.abort();
@@ -99,9 +108,19 @@ export function ProjectFormAnswerDialog({
 		fetchState.status === "success" &&
 		fetchState.data.form.response?.submittedAt != null;
 
+	const downloadFileNameContext =
+		project && form
+			? {
+					projectNumber: project.number,
+					formTitle: form.name,
+					projectName: project.name,
+				}
+			: undefined;
+
 	const handleSaveDraft = async (answers: FormAnswers) => {
 		if (!form || isDeadlineExpired) return;
-		const body = buildAnswerBody(answers, form, false);
+		const preparedAnswers = await prepareAnswersForSubmit(answers, form);
+		const body = buildAnswerBody(preparedAnswers, form, false);
 		if (responseId) {
 			await updateFormResponse(projectId, formDeliveryId, body);
 		} else {
@@ -113,7 +132,8 @@ export function ProjectFormAnswerDialog({
 
 	const handleSubmit = async (answers: FormAnswers) => {
 		if (!form) return;
-		const body = buildAnswerBody(answers, form, true);
+		const preparedAnswers = await prepareAnswersForSubmit(answers, form);
+		const body = buildAnswerBody(preparedAnswers, form, true);
 		const response = responseId
 			? await updateFormResponse(projectId, formDeliveryId, body).then(
 					r => r.response
@@ -125,22 +145,24 @@ export function ProjectFormAnswerDialog({
 	};
 
 	return (
-		<FormAnswerDialog
-			open={open}
-			onOpenChange={open => {
-				if (!open) {
-					setFetchState({ status: "idle" });
-					setDraftResponseId(null);
-					setIsDeadlineExpired(false);
-				}
-				onOpenChange(open);
-			}}
-			form={fetchState.status === "loading" ? null : form}
-			initialAnswers={initialAnswers}
-			onSubmit={handleSubmit}
-			onSaveDraft={isSubmitted ? undefined : handleSaveDraft}
-			disableSubmit={isDeadlineExpired}
-			disableSaveDraft={isDeadlineExpired || isSubmitted}
-		/>
+		<DownloadFileNameProvider value={downloadFileNameContext}>
+			<FormAnswerDialog
+				open={open}
+				onOpenChange={open => {
+					if (!open) {
+						setFetchState({ status: "idle" });
+						setDraftResponseId(null);
+						setIsDeadlineExpired(false);
+					}
+					onOpenChange(open);
+				}}
+				form={fetchState.status === "loading" ? null : form}
+				initialAnswers={initialAnswers}
+				onSubmit={handleSubmit}
+				onSaveDraft={isSubmitted ? undefined : handleSaveDraft}
+				disableSubmit={isDeadlineExpired}
+				disableSaveDraft={isDeadlineExpired || isSubmitted}
+			/>
+		</DownloadFileNameProvider>
 	);
 }

@@ -1,3 +1,5 @@
+import { textToHtml } from "./textToHtml";
+
 export function inquiryCreatedForCommitteeTemplate(params: {
 	projectName: string;
 	creatorName: string;
@@ -19,7 +21,7 @@ ${params.url}
 
 	return {
 		subject: "【雙峰祭オンラインシステム】企画からのお問い合わせ",
-		html: body.replace(/\n/g, "<br />"),
+		html: textToHtml(body),
 		text: body,
 	};
 }

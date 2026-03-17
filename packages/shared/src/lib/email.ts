@@ -2,9 +2,9 @@ import { z } from "zod";
 
 /**
  * 筑波大学ドメインの正規表現（ドメイン部分のみ検証）
- * 形式: ...@{サブドメイン}.tsukuba.ac.jp
+ * 形式: ...@tsukuba.ac.jp または ...@{サブドメイン}.tsukuba.ac.jp
  */
-export const TSUKUBA_DOMAIN_REGEX = /@[a-z0-9-]+\.tsukuba\.ac\.jp$/;
+export const TSUKUBA_DOMAIN_REGEX = /@([a-z0-9-]+\.)?tsukuba\.ac\.jp$/;
 
 /**
  * 筑波大学メールアドレススキーマ
@@ -21,7 +21,7 @@ export const tsukubaEmailSchema = z
 			.email("有効なメールアドレスを入力してください")
 			.regex(TSUKUBA_DOMAIN_REGEX, {
 				message:
-					"筑波大学のメールアドレス（例: xxx@xxx.tsukuba.ac.jp）を入力してください",
+					"筑波大学のメールアドレス（例: s0000000@u.tsukuba.ac.jp）を入力してください",
 			})
 	);
 

@@ -104,7 +104,8 @@ export async function fetchFile(
 export async function downloadFile(
 	fileId: string,
 	fileName: string,
-	isPublic: boolean
+	isPublic: boolean,
+	downloadFileName?: string
 ): Promise<void> {
 	const url = isPublic
 		? getFileContentUrl(fileId)
@@ -117,7 +118,7 @@ export async function downloadFile(
 	const objectUrl = URL.createObjectURL(blob);
 	const a = document.createElement("a");
 	a.href = objectUrl;
-	a.download = fileName;
+	a.download = downloadFileName ?? fileName;
 	document.body.appendChild(a);
 	a.click();
 	document.body.removeChild(a);

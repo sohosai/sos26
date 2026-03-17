@@ -35,6 +35,7 @@ import {
 	listFormResponses,
 	rejectFormAuthorization,
 	removeFormCollaborator,
+	updateFormViewers,
 } from "@/lib/api/committee-form";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { useAuthStore } from "@/lib/auth";
@@ -126,7 +127,7 @@ function buildAnswerRows(
 export const Route = createFileRoute("/committee/forms/$formId/")({
 	component: RouteComponent,
 	head: () => ({
-		meta: [{ title: "フォーム詳細 | 雙峰祭オンラインシステム" }],
+		meta: [{ title: "申請詳細 | 雙峰祭オンラインシステム" }],
 	}),
 	validateSearch: searchSchema,
 	loader: async ({ params }) => {
@@ -166,6 +167,15 @@ function RouteComponent() {
 	const isOwner = form.ownerId === user?.id;
 	const isCollaborator = form.collaborators.some(c => c.user.id === user?.id);
 	const canEdit = isOwner || isCollaborator;
+
+	const currentMember = committeeMembers.find(m => m.user.id === user?.id);
+	const isViewer = form.viewers.some(v => {
+		if (v.scope === "ALL") return true;
+		if (v.scope === "BUREAU" && currentMember)
+			return v.bureauValue === currentMember.Bureau;
+		if (v.scope === "INDIVIDUAL") return v.user?.id === user?.id;
+		return false;
+	});
 
 	const collaboratorUserIds = new Set(form.collaborators.map(c => c.user.id));
 	const availableMembers = committeeMembers
@@ -231,13 +241,26 @@ function RouteComponent() {
 		}
 	};
 
+	const handleUpdateViewers = async (
+		viewers: { scope: string; bureauValue?: string; userId?: string }[]
+	) => {
+		try {
+			await updateFormViewers(form.id, {
+				viewers: viewers as Parameters<typeof updateFormViewers>[1]["viewers"],
+			});
+			await router.invalidate();
+		} catch {
+			toast.error("閲覧者の更新に失敗しました");
+		}
+	};
+
 	const handleDelete = async () => {
 		setIsDeleting(true);
 		try {
 			await deleteForm(formId);
 			navigate({ to: "/committee/forms" });
 		} catch {
-			toast.error("フォームの削除に失敗しました");
+			toast.error("申請の削除に失敗しました");
 		} finally {
 			setIsDeleting(false);
 		}
@@ -266,7 +289,7 @@ function RouteComponent() {
 			<div className={styles.main}>
 				<Link to="/committee/forms" className={styles.backLink}>
 					<IconArrowLeft size={16} />
-					<Text size="2">フォーム一覧に戻る</Text>
+					<Text size="2">申請一覧に戻る</Text>
 				</Link>
 
 				<header className={styles.titleSection}>
@@ -319,13 +342,19 @@ function RouteComponent() {
 				userId={user?.id ?? ""}
 				isOwner={isOwner}
 				canEdit={canEdit}
+				isViewer={isViewer}
 				availableMembers={availableMembers}
 				approvers={approvers}
+				committeeMembers={committeeMembers.map(m => ({
+					id: m.user.id,
+					name: m.user.name,
+				}))}
 				removingId={removingId}
 				onAddCollaborator={handleAddCollaborator}
 				onRemoveCollaborator={handleRemoveCollaborator}
 				onApprove={handleApprove}
 				onReject={handleReject}
+				onUpdateViewers={handleUpdateViewers}
 				onPublishSuccess={() => router.invalidate()}
 				onEdit={() => setEditDialogOpen(true)}
 				onDelete={() => setDeleteConfirmOpen(true)}
@@ -346,9 +375,9 @@ function RouteComponent() {
 				onOpenChange={setDeleteConfirmOpen}
 			>
 				<AlertDialog.Content maxWidth="400px">
-					<AlertDialog.Title>フォームを削除</AlertDialog.Title>
+					<AlertDialog.Title>申請を削除</AlertDialog.Title>
 					<AlertDialog.Description size="2">
-						このフォームを削除しますか？この操作は取り消せません。
+						この申請を削除しますか？この操作は取り消せません。
 					</AlertDialog.Description>
 					<div className={styles.deleteActions}>
 						<AlertDialog.Cancel>

@@ -35,7 +35,10 @@ export function useSelection() {
 	);
 
 	const clearSelection = useCallback(() => {
-		setSelected(new Set());
+		setSelected(prev => {
+			if (prev.size === 0) return prev;
+			return new Set();
+		});
 		anchorRef.current = null;
 	}, []);
 

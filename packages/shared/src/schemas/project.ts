@@ -1,16 +1,24 @@
 import { z } from "zod";
+import { toHiragana } from "../lib/phonetic";
+import {
+	isValidProjectDisplayName,
+	PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+} from "../lib/project-display-name";
+import { projectLocationSchema, projectTypeSchema } from "./common";
+import { formAnswerInputSchema, formItemTypeSchema } from "./form";
 
-export const projectTypeSchema = z.enum(["STAGE", "FOOD", "NORMAL"]);
-export type ProjectType = z.infer<typeof projectTypeSchema>;
+export { projectTypeSchema, projectLocationSchema };
+export type { ProjectLocation, ProjectType } from "./common";
 
 export const projectSchema = z.object({
 	id: z.cuid(),
 	number: z.number().int().positive(),
 	name: z.string().min(1),
-	namePhonetic: z.string().min(1),
+	namePhonetic: z.string().min(1).transform(toHiragana),
 	organizationName: z.string().min(1),
-	organizationNamePhonetic: z.string().min(1),
+	organizationNamePhonetic: z.string().min(1).transform(toHiragana),
 	type: projectTypeSchema,
+	location: projectLocationSchema,
 	ownerId: z.string().min(1),
 	subOwnerId: z.string().nullable(),
 	inviteCode: z.string().length(6),
@@ -43,13 +51,45 @@ export type ProjectMember = z.infer<typeof projectMemberSchema>;
 // POST /project/create
 // ─────────────────────────────────────────────────────────────
 
-export const createProjectRequestSchema = z.object({
-	name: z.string().min(1),
-	namePhonetic: z.string().min(1),
-	organizationName: z.string().min(1),
-	organizationNamePhonetic: z.string().min(1),
-	type: projectTypeSchema,
-});
+export const createProjectRequestSchema = z
+	.object({
+		name: z.string().min(1).refine(isValidProjectDisplayName, {
+			message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+		}),
+		namePhonetic: z.string().min(1).transform(toHiragana),
+		organizationName: z.string().min(1).refine(isValidProjectDisplayName, {
+			message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+		}),
+		organizationNamePhonetic: z.string().min(1).transform(toHiragana),
+		type: projectTypeSchema,
+		location: projectLocationSchema,
+		registrationFormAnswers: z
+			.array(
+				z.object({
+					formId: z.string().min(1),
+					answers: z.array(formAnswerInputSchema),
+				})
+			)
+			.optional(),
+		agreedToRegistrationConstraints: z.literal(true),
+		agreedToInfoImmutability: z.literal(true),
+	})
+	.superRefine((data, ctx) => {
+		if (data.type === "STAGE" && data.location !== "STAGE") {
+			ctx.addIssue({
+				code: "custom",
+				message: "ステージ企画の実施場所はステージのみ指定できます",
+				path: ["location"],
+			});
+		}
+		if (data.type !== "STAGE" && data.location === "STAGE") {
+			ctx.addIssue({
+				code: "custom",
+				message: "ステージ以外の企画の実施場所にステージは指定できません",
+				path: ["location"],
+			});
+		}
+	});
 
 export type CreateProjectRequest = z.infer<typeof createProjectRequestSchema>;
 
@@ -77,6 +117,7 @@ export type ListMyProjectsResponse = z.infer<
 
 export const listProjectMembersResponseSchema = z.object({
 	members: z.array(projectMemberSchema),
+	pendingSubOwnerRequestUserId: z.string().nullable(),
 });
 
 export type ListProjectMembersResponse = z.infer<
@@ -112,16 +153,94 @@ export type GetProjectDetailResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────
+// GET /project/:projectId/registration-form-responses
+// ─────────────────────────────────────────────
+
+export const projectRegistrationFormResponseAnswerViewSchema = z.object({
+	formItemId: z.string(),
+	formItemLabel: z.string(),
+	type: formItemTypeSchema,
+	textValue: z.string().nullable(),
+	numberValue: z.number().nullable(),
+	fileId: z.string().nullable(),
+	selectedOptions: z.array(
+		z.object({
+			id: z.string(),
+			label: z.string(),
+		})
+	),
+});
+export type ProjectRegistrationFormResponseAnswerView = z.infer<
+	typeof projectRegistrationFormResponseAnswerViewSchema
+>;
+
+export const projectRegistrationFormResponseViewSchema = z.object({
+	id: z.string(),
+	submittedAt: z.coerce.date(),
+	form: z.object({
+		id: z.string(),
+		title: z.string(),
+		description: z.string().nullable(),
+	}),
+	answers: z.array(projectRegistrationFormResponseAnswerViewSchema),
+});
+export type ProjectRegistrationFormResponseView = z.infer<
+	typeof projectRegistrationFormResponseViewSchema
+>;
+
+export const getProjectRegistrationFormResponsesResponseSchema = z.object({
+	responses: z.array(projectRegistrationFormResponseViewSchema),
+});
+export type GetProjectRegistrationFormResponsesResponse = z.infer<
+	typeof getProjectRegistrationFormResponsesResponseSchema
+>;
+
+// ─────────────────────────────────────────────
 // PATCH /project/:projectId/detail
 // ─────────────────────────────────────────────
 
-export const updateProjectDetailRequestSchema = z.object({
-	name: z.string().min(1).optional(),
-	namePhonetic: z.string().min(1).optional(),
-	organizationName: z.string().min(1).optional(),
-	organizationNamePhonetic: z.string().min(1).optional(),
-	type: projectTypeSchema.optional(),
-});
+export const updateProjectDetailRequestSchema = z
+	.object({
+		name: z
+			.string()
+			.min(1)
+			.refine(isValidProjectDisplayName, {
+				message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+			})
+			.optional(),
+		namePhonetic: z.string().min(1).transform(toHiragana).optional(),
+		organizationName: z
+			.string()
+			.min(1)
+			.refine(isValidProjectDisplayName, {
+				message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+			})
+			.optional(),
+		organizationNamePhonetic: z
+			.string()
+			.min(1)
+			.transform(toHiragana)
+			.optional(),
+		type: projectTypeSchema.optional(),
+		location: projectLocationSchema.optional(),
+	})
+	.superRefine((data, ctx) => {
+		if (data.type === undefined || data.location === undefined) return;
+		if (data.type === "STAGE" && data.location !== "STAGE") {
+			ctx.addIssue({
+				code: "custom",
+				message: "ステージ企画の実施場所はステージのみ指定できます",
+				path: ["location"],
+			});
+		}
+		if (data.type !== "STAGE" && data.location === "STAGE") {
+			ctx.addIssue({
+				code: "custom",
+				message: "ステージ以外の企画の実施場所にステージは指定できません",
+				path: ["location"],
+			});
+		}
+	});
 
 export type UpdateProjectDetailRequest = z.infer<
 	typeof updateProjectDetailRequestSchema
@@ -180,9 +299,25 @@ export const assignSubOwnerRequestSchema = z.undefined();
 
 export const assignSubOwnerResponseSchema = z.object({
 	success: z.literal(true),
-	subOwnerId: z.string(),
+	requestId: z.string(),
+	status: z.literal("PENDING"),
 });
 
 export type AssignSubOwnerResponse = z.infer<
 	typeof assignSubOwnerResponseSchema
+>;
+
+// ─────────────────────────────────────────────
+// POST /project/:projectId/sub-owner-request/approve
+// POST /project/:projectId/sub-owner-request/reject
+// ─────────────────────────────────────────────
+
+export const decideSubOwnerRequestRequestSchema = z.undefined();
+
+export const decideSubOwnerRequestResponseSchema = z.object({
+	success: z.literal(true),
+});
+
+export type DecideSubOwnerRequestResponse = z.infer<
+	typeof decideSubOwnerRequestResponseSchema
 >;

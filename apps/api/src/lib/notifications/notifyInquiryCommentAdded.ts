@@ -1,6 +1,7 @@
 import { sendInquiryCommentAddedEmail } from "../emails";
 import { env } from "../env";
 import { prisma } from "../prisma";
+import { sendInquiryCommentAddedPush } from "../push";
 
 export async function notifyInquiryCommentAdded(input: {
 	inquiryId: string;
@@ -19,6 +20,7 @@ export async function notifyInquiryCommentAdded(input: {
 			},
 			select: {
 				side: true,
+				userId: true,
 				user: { select: { email: true } },
 			},
 		});
@@ -39,6 +41,26 @@ export async function notifyInquiryCommentAdded(input: {
 				});
 			})
 		);
+
+		const committeeUserIds = assignees
+			.filter(assignee => assignee.side === "COMMITTEE")
+			.map(assignee => assignee.userId);
+		const projectUserIds = assignees
+			.filter(assignee => assignee.side === "PROJECT")
+			.map(assignee => assignee.userId);
+
+		await Promise.all([
+			sendInquiryCommentAddedPush({
+				userIds: committeeUserIds,
+				inquiryTitle: input.inquiryTitle,
+				url: `${env.APP_URL}/committee/support/${input.inquiryId}`,
+			}),
+			sendInquiryCommentAddedPush({
+				userIds: projectUserIds,
+				inquiryTitle: input.inquiryTitle,
+				url: `${env.APP_URL}/project/support/${input.inquiryId}`,
+			}),
+		]);
 	} catch (err) {
 		console.error("[Notification] notifyInquiryCommentAdded failed", err);
 	}

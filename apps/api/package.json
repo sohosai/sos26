@@ -19,7 +19,8 @@
     "db:pull": "prisma db pull",
     "db:studio": "prisma studio",
     "db:format": "prisma format",
-    "make-committee-member": "bun run scripts/make-committee-member.ts"
+    "make-committee-member": "bun run scripts/make-committee-member.ts",
+    "db:seed": "bun run scripts/seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.988.0",

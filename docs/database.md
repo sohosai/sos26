@@ -36,6 +36,7 @@ bun run db:generate
 | `bun run db:pull` | 既存の DB からスキーマを生成 |
 | `bun run db:studio` | Prisma Studio（GUI）を起動 |
 | `bun run db:format` | Prisma スキーマをフォーマット |
+| `bun run db:seed` | 開発用シードデータを投入 |
 
 ## 開発フロー
 
@@ -165,6 +166,29 @@ bun run db:migrate:reset
 ```
 
 **注意**: このコマンドは**全データが消えます**。開発環境でのみ使用してください。
+
+リセット後にデータを復元する場合は `bun run db:seed` を実行してください（`docs/how-to/seed.md` 参照）。
+
+## データ規約
+
+### ふりがな（namePhonetic）はひらがなで統一
+
+`namePhonetic`、`organizationNamePhonetic` などの読み仮名フィールドは**ひらがな**で保存します。
+
+- Zod スキーマに `.transform(toHiragana)` を適用済み
+- カタカナで入力されても自動的にひらがなに変換される
+- `toHiragana` ユーティリティは `packages/shared/src/lib/phonetic.ts` に定義
+- 新しい読み仮名フィールドを追加する場合も同様に `.transform(toHiragana)` を付与すること
+
+## 未使用スキーマに関する注意
+
+以下のスキーマは DB・共有パッケージに定義済みですが、現時点では UI から使用されていません。
+
+| スキーマ | 場所 | 備考 |
+|---------|------|------|
+| `SendKey` enum (`ENTER`, `CTRL_ENTER`) | `schema.prisma` / `packages/shared` | 送信キー切替機能が実装されるまで UI ではコメントアウト。`User.sendKey` カラムはデフォルト値 `ENTER` で運用。 |
+
+対応する UI を有効化する際は `apps/web/src/routes/settings/index.tsx` 内のコメントアウトを解除してください。
 
 ## 参考リンク
 

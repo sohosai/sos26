@@ -44,13 +44,14 @@ export function CreateFormDialog({ open, onOpenChange, onSuccess }: Props) {
 						label: opt.label,
 						sortOrder: i,
 					})),
+					constraints: item.constraints ?? null,
 				})),
 			});
 
 			onSuccess?.();
 			onOpenChange(false);
 		} catch {
-			toast.error("フォームの作成に失敗しました");
+			toast.error("申請の作成に失敗しました");
 		} finally {
 			setIsSubmitting(false);
 		}

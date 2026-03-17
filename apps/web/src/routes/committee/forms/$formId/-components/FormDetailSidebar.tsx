@@ -1,5 +1,5 @@
 import { Badge, Separator, Text } from "@radix-ui/themes";
-import type { GetFormDetailResponse } from "@sos26/shared";
+import type { DeliveryMode, GetFormDetailResponse } from "@sos26/shared";
 import {
 	IconCheck,
 	IconPlus,
@@ -12,9 +12,15 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { AddCollaboratorDialog } from "@/components/committee/AddCollaboratorDialog";
 import { Button, IconButton } from "@/components/primitives";
+import type { ViewerDetail, ViewerInput } from "@/components/support/types";
+import { ViewerSettings } from "@/components/support/ViewerSettings";
 import { validateAuthorizationDates } from "@/lib/form/AuthDateCheck";
 import { getFormStatusFromAuth } from "@/lib/form/form-status";
 import { formatDate } from "@/lib/format";
+import {
+	PROJECT_LOCATION_LABELS,
+	PROJECT_TYPE_LABELS,
+} from "@/lib/project/options";
 import styles from "./FormDetailSidebar.module.scss";
 import { FormPublishRequestDialog } from "./FormPublishRequestDialog";
 
@@ -32,9 +38,10 @@ type Approver = {
 
 function resolveFormPermissions(params: {
 	canEdit: boolean;
+	isViewer: boolean;
 	statusCode: string;
 }) {
-	const { canEdit, statusCode } = params;
+	const { canEdit, isViewer, statusCode } = params;
 
 	return {
 		// 公開申請できるのは「下書き or 却下」のみ
@@ -46,6 +53,10 @@ function resolveFormPermissions(params: {
 			statusCode !== "PUBLISHED" &&
 			statusCode !== "SCHEDULED" &&
 			statusCode !== "EXPIRED",
+		// 回答確認は「公開済み」または「期限切れ」で、編集者 or 閲覧者
+		canViewAnswers:
+			(canEdit || isViewer) &&
+			(statusCode === "PUBLISHED" || statusCode === "EXPIRED"),
 	};
 }
 
@@ -54,13 +65,16 @@ type Props = {
 	userId: string;
 	isOwner: boolean;
 	canEdit: boolean;
+	isViewer: boolean;
 	availableMembers: AvailableMember[];
 	approvers: Approver[];
+	committeeMembers: { id: string; name: string }[];
 	removingId: string | null;
 	onAddCollaborator: (userId: string) => Promise<void>;
 	onRemoveCollaborator: (collaboratorId: string) => void;
 	onApprove: (authorizationId: string) => Promise<void>;
 	onReject: (authorizationId: string) => Promise<void>;
+	onUpdateViewers: (viewers: ViewerInput[]) => Promise<void>;
 	onPublishSuccess: () => void;
 	onEdit: () => void;
 	onDelete: () => void;
@@ -71,13 +85,16 @@ export function FormDetailSidebar({
 	userId,
 	isOwner,
 	canEdit,
+	isViewer,
 	availableMembers,
 	approvers,
+	committeeMembers,
 	removingId,
 	onAddCollaborator,
 	onRemoveCollaborator,
 	onApprove,
 	onReject,
+	onUpdateViewers,
 	onPublishSuccess,
 	onEdit,
 	onDelete,
@@ -102,6 +119,7 @@ export function FormDetailSidebar({
 
 	const { canPublish, canEditForm } = resolveFormPermissions({
 		canEdit,
+		isViewer,
 		statusCode: statusInfo.code,
 	});
 
@@ -238,6 +256,36 @@ export function FormDetailSidebar({
 						)}
 					</aside>
 				)}
+
+				{/* ボックス3: 回答確認 */}
+				{/* {canViewAnswers && (
+					<aside className={styles.sidebar}>
+						<div className={styles.section}>
+							<Button
+								intent="primary"
+								size="2"
+								onClick={() =>
+									navigate({
+										to: "/committee/forms/$formId/answers",
+										params: { formId: form.id },
+									})
+								}
+							>
+								回答を確認する
+							</Button>
+						</div>
+					</aside>
+				)} */}
+
+				{/* ボックス4: 閲覧者設定 */}
+				<aside className={styles.sidebar}>
+					<ViewerSettings
+						viewers={form.viewers as ViewerDetail[]}
+						committeeMembers={committeeMembers}
+						onUpdate={canEdit ? onUpdateViewers : undefined}
+						readOnly={!canEdit}
+					/>
+				</aside>
 			</div>
 
 			<AddCollaboratorDialog
@@ -314,20 +362,12 @@ function AuthDetailSection({
 				</Text>
 				<Text size="2">{formatDate(auth.scheduledSendAt, "datetime")}</Text>
 			</div>
-			{auth.deliveries.length > 0 && (
-				<div className={styles.authDetailRow}>
-					<Text size="2" color="gray">
-						配信先
-					</Text>
-					<div className={styles.projectTags}>
-						{auth.deliveries.map(d => (
-							<Badge key={d.id} variant="soft" size="1">
-								{d.project.name}
-							</Badge>
-						))}
-					</div>
-				</div>
-			)}
+			<DeliveryTargetDisplay
+				deliveryMode={auth.deliveryMode}
+				filterTypes={auth.filterTypes}
+				filterLocations={auth.filterLocations}
+				deliveries={auth.deliveries}
+			/>
 			{auth.deadlineAt && (
 				<>
 					<div className={styles.authDetailRow}>
@@ -350,6 +390,12 @@ function AuthDetailSection({
 					回答
 				</Text>
 				<Text size="2">{auth.required ? "必須" : "任意"}</Text>
+			</div>
+			<div className={styles.authDetailRow}>
+				<Text size="2" color="gray">
+					閲覧制限
+				</Text>
+				<Text size="2">{auth.ownerOnly ? "責任者・副責任者のみ" : "なし"}</Text>
 			</div>
 			{isApprover && pendingAuth && (
 				<div className={styles.authorizationActions}>
@@ -397,6 +443,70 @@ function AuthDetailSection({
 					</Button>
 				</div>
 			)}
+		</div>
+	);
+}
+
+function DeliveryTargetDisplay({
+	deliveryMode,
+	filterTypes,
+	filterLocations,
+	deliveries,
+}: {
+	deliveryMode: DeliveryMode;
+	filterTypes: string[];
+	filterLocations: string[];
+	deliveries: { id: string; project: { id: string; name: string } }[];
+}) {
+	if (deliveryMode === "CATEGORY") {
+		const isAll = filterTypes.length === 0 && filterLocations.length === 0;
+		return (
+			<div className={styles.authDetailRow}>
+				<Text size="2" color="gray">
+					配信先
+				</Text>
+				{isAll ? (
+					<Badge variant="soft" size="1" color="blue">
+						全企画
+					</Badge>
+				) : (
+					<div className={styles.projectTags}>
+						{filterTypes.map(t => (
+							<Badge key={t} variant="soft" size="1" color="violet">
+								{PROJECT_TYPE_LABELS[t] ?? t}
+							</Badge>
+						))}
+						{filterLocations.map(l => (
+							<Badge key={l} variant="soft" size="1" color="cyan">
+								{PROJECT_LOCATION_LABELS[l] ?? l}
+							</Badge>
+						))}
+					</div>
+				)}
+				<Text size="1" color="gray">
+					カテゴリ指定
+				</Text>
+			</div>
+		);
+	}
+
+	if (deliveries.length === 0) return null;
+
+	return (
+		<div className={styles.authDetailRow}>
+			<Text size="2" color="gray">
+				配信先
+			</Text>
+			<div className={styles.projectTags}>
+				{deliveries.map(d => (
+					<Badge key={d.id} variant="soft" size="1">
+						{d.project.name}
+					</Badge>
+				))}
+			</div>
+			<Text size="1" color="gray">
+				個別指定（{deliveries.length}件）
+			</Text>
 		</div>
 	);
 }

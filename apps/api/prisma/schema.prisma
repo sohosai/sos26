@@ -53,6 +53,8 @@ model User {
   name            String
   namePhonetic    String
   telephoneNumber String
+  avatarFileId    String?
+  sendKey         SendKey   @default(ENTER)
   deletedAt       DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -76,6 +78,7 @@ model User {
   collaboratingForms          FormCollaborator[]
   requestedFormAuthorizations FormAuthorization[] @relation("FormRequestedBy")
   receivedFormAuthorizations  FormAuthorization[] @relation("FormRequestedTo")
+  formViewerEntries           FormViewer[]        @relation("FormViewer")
   formResponses               FormResponse[]      @relation("FormRespondent")
   noticeReadStatuses          NoticeReadStatus[]
 
@@ -85,15 +88,36 @@ model User {
   files File[]
 
   // Inquiry関連
-  createdInquiries          Inquiry[]         @relation("InquiryCreatedBy")
-  inquiryAssignments        InquiryAssignee[] @relation("InquiryAssignee")
-  inquiryViewerEntries      InquiryViewer[]   @relation("InquiryViewer")
-  inquiryComments           InquiryComment[]  @relation("InquiryCommentCreatedBy")
-  inquiryActivitiesAsActor  InquiryActivity[] @relation("InquiryActivityActor")
-  inquiryActivitiesAsTarget InquiryActivity[] @relation("InquiryActivityTarget")
+  createdInquiries          Inquiry[]                @relation("InquiryCreatedBy")
+  inquiryAssignments        InquiryAssignee[]        @relation("InquiryAssignee")
+  inquiryViewerEntries      InquiryViewer[]          @relation("InquiryViewer")
+  inquiryComments           InquiryComment[]         @relation("InquiryCommentCreatedBy")
+  inquiryActivitiesAsActor  InquiryActivity[]        @relation("InquiryActivityActor")
+  inquiryActivitiesAsTarget InquiryActivity[]        @relation("InquiryActivityTarget")
+  projectSubOwnerRequests   ProjectSubOwnerRequest[]
+
+  //Project ProjectRegistration Form関連
+  requestedProjectRegistrationFormAuthorizations ProjectRegistrationFormAuthorization[] @relation("ProjectRegFormRequestedBy")
+  receivedProjectRegistrationFormAuthorizations  ProjectRegistrationFormAuthorization[] @relation("ProjectRegFormRequestedTo")
+  projectRegistrationForms                       ProjectRegistrationForm[]
+  projectRegistrationFormCollaborators           ProjectRegistrationFormCollaborator[]
+  // Mastersheet関連
+  mastersheetColumns                             MastersheetColumn[]                    @relation("MastersheetColumnCreatedBy")
+  mastersheetColumnViewers                       MastersheetColumnViewer[]
+  mastersheetAccessRequestsMade                  MastersheetAccessRequest[]             @relation("MastersheetAccessRequester")
+  mastersheetAccessRequestsJudged                MastersheetAccessRequest[]             @relation("MastersheetAccessDecider")
+  mastersheetViews                               MastersheetView[]
+
+  // FormItemEditHistory関連
+  formItemEditHistory FormItemEditHistory[] @relation("FormItemEditHistoryActor")
 
   @@unique([firebaseUid, deletedAt])
   @@unique([email, deletedAt])
+}
+
+enum SendKey {
+  ENTER
+  CTRL_ENTER
 }
 
 enum ProjectType {
@@ -105,6 +129,25 @@ enum ProjectType {
 
   //普通企画
   NORMAL
+}
+
+enum ProjectLocation {
+  //屋内
+  INDOOR
+
+  //屋外
+  OUTDOOR
+
+  //ステージ
+  STAGE
+}
+
+enum DeliveryMode {
+  //個別指定
+  INDIVIDUAL
+
+  //カテゴリ指定
+  CATEGORY
 }
 
 model Project {
@@ -124,6 +167,9 @@ model Project {
   //企画区分
   type ProjectType
 
+  //企画実施場所
+  location ProjectLocation
+
   //責任者
   ownerId String
   owner   User   @relation("ProjectOwner", fields: [ownerId], references: [id])
@@ -139,10 +185,15 @@ model Project {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  projectMembers   ProjectMember[]
-  noticeDeliveries NoticeDelivery[]
-  formDeliveries   FormDelivery[]
-  inquiries        Inquiry[]
+  projectMembers                   ProjectMember[]
+  noticeDeliveries                 NoticeDelivery[]
+  formDeliveries                   FormDelivery[]
+  inquiries                        Inquiry[]
+  projectRegistrationFormResponses ProjectRegistrationFormResponse[]
+  projectSubOwnerRequests          ProjectSubOwnerRequest[]
+
+  mastersheetCellValues MastersheetCellValue[]
+  formItemEditHistory   FormItemEditHistory[]
 
   @@index([ownerId])
   @@index([subOwnerId])
@@ -162,6 +213,40 @@ model ProjectMember {
   deletedAt DateTime?
 
   @@unique([projectId, userId, deletedAt])
+  @@index([projectId])
+  @@index([userId])
+}
+
+// 副責任者の承認待ちの状態Enum
+enum SubOwnerRequestStatus {
+  PENDING // 承認待ち
+  APPROVED // 承認済み
+  REJECTED // 却下
+}
+
+// 副責任者の承認確認
+model ProjectSubOwnerRequest {
+  id String @id @default(cuid())
+
+  // 対象プロジェクト
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // 指名された副責任者リクエスト対象ユーザー
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  status SubOwnerRequestStatus @default(PENDING)
+
+  // PENDING のときだけ projectId を入れる（1企画1件のPENDINGを一意制約で担保）
+  pendingProjectId String? @unique
+
+  // 承認 or 却下した日時
+  decidedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([projectId])
   @@index([userId])
 }
@@ -202,6 +287,8 @@ enum CommitteePermission {
   NOTICE_DELIVER // お知らせ配信・承認
   FORM_DELIVER // フォーム配信
   INQUIRY_ADMIN // お問い合わせ管理
+  PROJECT_REGISTRATION_FORM_CREATE // 企画登録フォーム作成・編集・公開申請
+  PROJECT_REGISTRATION_FORM_DELIVER // 企画登録フォーム承認
 }
 
 //実委人の権限管理Table
@@ -276,8 +363,9 @@ model File {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  noticeAttachments  NoticeAttachment[]
-  inquiryAttachments InquiryAttachment[]
+  noticeAttachments              NoticeAttachment[]
+  inquiryAttachments             InquiryAttachment[]
+  projectRegistrationFormAnswers ProjectRegistrationFormAnswer[]
 
   @@index([uploadedById])
   @@index([status])
@@ -367,12 +455,22 @@ model NoticeAuthorization {
   //承認を求める側があらかじめここを埋める
   deliveredAt DateTime
 
+  //配信先指定モード
+  deliveryMode DeliveryMode @default(INDIVIDUAL)
+
+  //カテゴリ指定時のフィルタ: 対象企画区分
+  filterTypes ProjectType[]
+
+  //カテゴリ指定時のフィルタ: 対象実施場所
+  filterLocations ProjectLocation[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   deliveries NoticeDelivery[]
 
   @@index([noticeId, status])
+  @@index([deliveryMode, status, deliveredAt])
 }
 
 //Noticeの配信
@@ -445,9 +543,36 @@ model Form {
   // お問い合わせ関連
   inquiries Inquiry[]
 
+  // 閲覧者
+  viewers FormViewer[]
+
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+}
+
+model FormViewer {
+  id String @id @default(cuid())
+
+  formId String
+  form   Form   @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  // 閲覧者スコープ
+  scope ViewerScope
+
+  // scope = BUREAU の場合の局
+  bureauValue Bureau?
+
+  // scope = INDIVIDUAL の場合のユーザー
+  userId String?
+  user   User?   @relation("FormViewer", fields: [userId], references: [id])
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([formId])
+  @@index([userId])
+  @@index([deletedAt])
 }
 
 //フォームの質問項目
@@ -469,6 +594,12 @@ model FormItem {
   //必須かどうか
   required Boolean @default(false)
 
+  //テキスト制約（TEXT/TEXTAREA のみ使用）
+  constraintMinLength     Int?
+  constraintMaxLength     Int?
+  constraintPattern       String?
+  constraintCustomPattern String?
+
   //表示順
   sortOrder Int
 
@@ -477,6 +608,9 @@ model FormItem {
 
   //回答
   answers FormAnswer[]
+
+  mastersheetColumns MastersheetColumn[]
+  editHistory        FormItemEditHistory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -499,6 +633,8 @@ model FormItemOption {
 
   //回答での選択
   selectedIn FormAnswerSelectedOption[]
+
+  editHistorySelections FormItemEditHistorySelectedOption[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -526,8 +662,27 @@ model FormCollaborator {
   @@unique([formId, userId])
 }
 
+model ProjectRegistrationFormCollaborator {
+  id String @id @default(cuid())
+
+  formId String
+  userId String
+
+  form ProjectRegistrationForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  user User                    @relation(fields: [userId], references: [id])
+
+  // 編集権限を持つのか
+  isWrite Boolean @default(false)
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([formId, userId])
+}
+
 //Formに関する承認待ちの状態Enum
-enum FormAuthorizationStatus {
+enum ApprovalStatus {
   //承認待ち
   PENDING
   //承認済み（時間になれば配信される）
@@ -552,7 +707,7 @@ model FormAuthorization {
   requestedTo   User   @relation("FormRequestedTo", fields: [requestedToId], references: [id])
 
   //審査のステータス
-  status FormAuthorizationStatus @default(PENDING)
+  status ApprovalStatus @default(PENDING)
 
   //審査を行った日付
   decidedAt DateTime?
@@ -569,11 +724,24 @@ model FormAuthorization {
   //フォーム自体を回答必須にするか
   required Boolean @default(true)
 
+  //回答の閲覧制限（trueの場合、責任者・副責任者のみ閲覧・回答可能）
+  ownerOnly Boolean @default(false)
+
+  //配信先指定モード
+  deliveryMode DeliveryMode @default(INDIVIDUAL)
+
+  //カテゴリ指定時のフィルタ: 対象企画区分
+  filterTypes ProjectType[]
+
+  //カテゴリ指定時のフィルタ: 対象実施場所
+  filterLocations ProjectLocation[]
+
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
   deliveries FormDelivery[]
 
   @@index([formId, createdAt(sort: Desc)])
+  @@index([deliveryMode, status, scheduledSendAt])
 }
 
 //フォームの配信
@@ -634,8 +802,8 @@ model FormAnswer {
   //数値回答（number用）
   numberValue Float?
 
-  //ファイルURL（file用）
-  fileUrl String?
+  //ファイルID（file用）
+  fileId String?
 
   //選択肢回答（select, checkbox用）
   selectedOptions FormAnswerSelectedOption[]
@@ -717,7 +885,7 @@ enum InquiryAssigneeSide {
   COMMITTEE // 実委側
 }
 
-enum InquiryViewerScope {
+enum ViewerScope {
   ALL // 全員
   BUREAU // 特定局
   INDIVIDUAL // 個人
@@ -754,7 +922,7 @@ model Inquiry {
   projectId String
   project   Project @relation(fields: [projectId], references: [id])
 
-  // 問い合わせに紐づくフォーム
+  // お問い合わせに紐づくフォーム
   relatedFormId String?
   relatedForm   Form?   @relation(fields: [relatedFormId], references: [id])
 
@@ -802,7 +970,7 @@ model InquiryViewer {
   inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
 
   // 閲覧者スコープ
-  scope InquiryViewerScope
+  scope ViewerScope
 
   // scope = BUREAU の場合の局
   bureauValue Bureau?
@@ -868,6 +1036,194 @@ model InquiryActivity {
   @@index([deletedAt])
 }
 
+// ─────────────────────────────────────────────────────────────
+// マスターシート関連
+// ─────────────────────────────────────────────────────────────
+
+enum MastersheetColumnType {
+  FORM_ITEM // フォーム由来
+  CUSTOM // 自由追加
+  PROJECT_REGISTRATION_FORM_ITEM // 企画登録フォーム由来
+}
+
+enum MastersheetDataType {
+  TEXT
+  NUMBER
+  SELECT
+  MULTI_SELECT
+}
+
+enum MastersheetColumnVisibility {
+  PRIVATE
+  PUBLIC
+}
+
+// ─── カラム定義 ───
+
+model MastersheetColumn {
+  id          String                @id @default(cuid())
+  type        MastersheetColumnType
+  name        String
+  description String?
+  sortOrder   Int
+  createdById String
+  createdBy   User                  @relation("MastersheetColumnCreatedBy", fields: [createdById], references: [id])
+
+  // フォーム由来カラムの場合（同一フォーム項目のカラムは1つのみ）
+  formItemId String?   @unique
+  formItem   FormItem? @relation(fields: [formItemId], references: [id])
+
+  // 企画登録フォーム由来カラムの場合（同一フォーム項目のカラムは1つのみ）
+  projectRegistrationFormItemId String?                      @unique
+  projectRegistrationFormItem   ProjectRegistrationFormItem? @relation(fields: [projectRegistrationFormItemId], references: [id])
+
+  // 自由追加カラムの場合
+  dataType   MastersheetDataType?
+  visibility MastersheetColumnVisibility?
+
+  viewers        MastersheetColumnViewer[]
+  options        MastersheetColumnOption[]
+  cellValues     MastersheetCellValue[]
+  accessRequests MastersheetAccessRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdById])
+}
+
+// ─── 自由追加カラムの選択肢 ───
+
+model MastersheetColumnOption {
+  id        String            @id @default(cuid())
+  columnId  String
+  column    MastersheetColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  label     String
+  sortOrder Int
+
+  cellSelections MastersheetCellSelectedOption[]
+
+  @@index([columnId])
+}
+
+// ─── 自由追加カラムのセル値 ───
+
+model MastersheetCellValue {
+  id          String            @id @default(cuid())
+  columnId    String
+  column      MastersheetColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project           @relation(fields: [projectId], references: [id])
+  textValue   String?
+  numberValue Float?
+
+  selectedOptions MastersheetCellSelectedOption[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([columnId, projectId])
+  @@index([projectId])
+}
+
+// ─── SELECT/MULTI_SELECT のセル値（中間テーブル）───
+
+model MastersheetCellSelectedOption {
+  id       String                  @id @default(cuid())
+  cellId   String
+  cell     MastersheetCellValue    @relation(fields: [cellId], references: [id], onDelete: Cascade)
+  optionId String
+  option   MastersheetColumnOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([cellId, optionId])
+}
+
+// ─── フォーム設問の編集履歴（append-only）───
+
+enum FormItemEditHistoryTrigger {
+  PROJECT_SUBMIT
+  PROJECT_RESUBMIT
+  COMMITTEE_EDIT
+}
+
+model FormItemEditHistory {
+  id          String                     @id @default(cuid())
+  formItemId  String
+  formItem    FormItem                   @relation(fields: [formItemId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project                    @relation(fields: [projectId], references: [id])
+  textValue   String?
+  numberValue Float?
+  fileId      String?
+  actorId     String
+  actor       User                       @relation("FormItemEditHistoryActor", fields: [actorId], references: [id])
+  trigger     FormItemEditHistoryTrigger
+  createdAt   DateTime                   @default(now())
+
+  selectedOptions FormItemEditHistorySelectedOption[]
+
+  @@index([formItemId, projectId, createdAt(sort: Desc)])
+  @@index([actorId])
+}
+
+model FormItemEditHistorySelectedOption {
+  id               String              @id @default(cuid())
+  editHistoryId    String
+  editHistory      FormItemEditHistory @relation(fields: [editHistoryId], references: [id], onDelete: Cascade)
+  formItemOptionId String
+  formItemOption   FormItemOption      @relation(fields: [formItemOptionId], references: [id])
+
+  @@unique([editHistoryId, formItemOptionId])
+}
+
+// ─── カラムの公開範囲（自由追加カラム用）───
+
+model MastersheetColumnViewer {
+  id          String            @id @default(cuid())
+  columnId    String
+  column      MastersheetColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  scope       ViewerScope
+  bureauValue Bureau?
+  userId      String?
+  user        User?             @relation(fields: [userId], references: [id])
+
+  @@index([columnId])
+  @@index([userId])
+}
+
+// ─── アクセス申請 ───
+
+model MastersheetAccessRequest {
+  id          String            @id @default(cuid())
+  columnId    String
+  column      MastersheetColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  requesterId String
+  requester   User              @relation("MastersheetAccessRequester", fields: [requesterId], references: [id])
+  decidedById String?
+  decidedBy   User?             @relation("MastersheetAccessDecider", fields: [decidedById], references: [id])
+  status      ApprovalStatus
+  decidedAt   DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([columnId])
+  @@index([requesterId])
+}
+
+// ─── 保存済みビュー ───
+
+model MastersheetView {
+  id          String   @id @default(cuid())
+  name        String
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  state       String // JSON: { sorting?: SortingState, knownColumnIds?: string[], columnFilters?: ColumnFiltersState }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdById])
+}
+
 //お問い合わせの添付ファイル
 model InquiryAttachment {
   id        String  @id @default(cuid())
@@ -889,4 +1245,214 @@ model InquiryAttachment {
   @@index([fileId])
   @@index([commentId])
   @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 企画登録フォーム関連
+// ─────────────────────────────────────────────────────────────
+
+enum ProjectRegistrationFormAuthorizationStatus {
+  PENDING // 承認待ち
+  APPROVED // 承認済み
+  REJECTED // 却下
+}
+
+// 実委人が作成する企画登録フォーム
+model ProjectRegistrationForm {
+  id String @id @default(cuid())
+
+  // 作成者
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  // タイトル
+  title String @default("無題の企画登録フォーム")
+
+  // 説明
+  description String?
+
+  // 有効フラグ（承認されたら true になり、企画登録時に表示される）
+  isActive Boolean @default(false)
+
+  // 表示順序（企画登録のページ順）
+  sortOrder Int @default(0)
+
+  // フィルタ: 対象企画区分（空配列=全区分対象）
+  filterTypes ProjectType[]
+
+  // フィルタ: 対象実施場所（空配列=全場所対象）
+  filterLocations ProjectLocation[]
+
+  // フォーム項目
+  items ProjectRegistrationFormItem[]
+
+  // 承認フロー
+  authorizations ProjectRegistrationFormAuthorization[]
+
+  // 企画登録時の回答
+  responses ProjectRegistrationFormResponse[]
+
+  // 共同編集者
+  collaborators ProjectRegistrationFormCollaborator[]
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([ownerId])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+// 企画登録フォームの質問項目
+model ProjectRegistrationFormItem {
+  id     String                  @id @default(cuid())
+  formId String
+  form   ProjectRegistrationForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  // 質問文
+  label String
+
+  // 説明
+  description String?
+
+  // 回答タイプ
+  type FormItemType
+
+  // 必須かどうか
+  required Boolean @default(false)
+
+  // テキスト制約（TEXT/TEXTAREA のみ使用）
+  constraintMinLength     Int?
+  constraintMaxLength     Int?
+  constraintPattern       String?
+  constraintCustomPattern String?
+
+  // 表示順
+  sortOrder Int
+
+  // 選択肢（SELECT/CHECKBOX用）
+  options ProjectRegistrationFormItemOption[]
+
+  // 回答
+  answers ProjectRegistrationFormAnswer[]
+
+  // マスターシートカラム
+  mastersheetColumn MastersheetColumn?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([formId])
+}
+
+// 企画登録フォーム項目の選択肢
+model ProjectRegistrationFormItemOption {
+  id         String                      @id @default(cuid())
+  formItemId String
+  formItem   ProjectRegistrationFormItem @relation(fields: [formItemId], references: [id], onDelete: Cascade)
+
+  // 選択肢ラベル
+  label String
+
+  // 表示順
+  sortOrder Int
+
+  // 回答での選択
+  selectedIn ProjectRegistrationFormAnswerSelectedOption[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([formItemId])
+}
+
+// 企画登録フォームの承認
+model ProjectRegistrationFormAuthorization {
+  id     String                  @id @default(cuid())
+  formId String
+  form   ProjectRegistrationForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  // 承認を求めた人
+  requestedById String
+  requestedBy   User   @relation("ProjectRegFormRequestedBy", fields: [requestedById], references: [id])
+
+  // 承認を求められた人
+  requestedToId String
+  requestedTo   User   @relation("ProjectRegFormRequestedTo", fields: [requestedToId], references: [id])
+
+  // 審査ステータス
+  status ProjectRegistrationFormAuthorizationStatus @default(PENDING)
+
+  // 審査を行った日付
+  decidedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([formId, status])
+}
+
+// 企画登録時の回答（1企画1フォームにつき1件）
+model ProjectRegistrationFormResponse {
+  id        String                  @id @default(cuid())
+  formId    String
+  form      ProjectRegistrationForm @relation(fields: [formId], references: [id])
+  projectId String
+  project   Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // 各項目への回答
+  answers ProjectRegistrationFormAnswer[]
+
+  submittedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([formId, projectId])
+  @@index([formId])
+  @@index([projectId])
+}
+
+// 企画登録フォーム各項目への回答
+model ProjectRegistrationFormAnswer {
+  id         String                          @id @default(cuid())
+  responseId String
+  response   ProjectRegistrationFormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  formItemId String
+  formItem   ProjectRegistrationFormItem     @relation(fields: [formItemId], references: [id])
+
+  // テキスト回答（TEXT/TEXTAREA用）
+  textValue String?
+
+  // 数値回答（NUMBER用）
+  numberValue Float?
+
+  // ファイルId（FILE用）
+  fileId String?
+  file   File?   @relation(fields: [fileId], references: [id], onDelete: SetNull)
+
+  // 選択肢回答（SELECT/CHECKBOX用）
+  selectedOptions ProjectRegistrationFormAnswerSelectedOption[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([responseId, formItemId])
+  @@index([responseId])
+  @@index([formItemId])
+  @@index([fileId])
+}
+
+// 選択肢回答の中間テーブル
+model ProjectRegistrationFormAnswerSelectedOption {
+  id               String @id @default(cuid())
+  answerId         String
+  formItemOptionId String
+
+  answer         ProjectRegistrationFormAnswer     @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  formItemOption ProjectRegistrationFormItemOption @relation(fields: [formItemOptionId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([answerId, formItemOptionId])
 }

@@ -1,5 +1,13 @@
-import type { PushSendRequest, PushSubscription } from "@sos26/shared";
-import { pushSendEndpoint, pushSubscribeEndpoint } from "@sos26/shared";
+import type {
+	PushSendRequest,
+	PushSubscription,
+	PushUnsubscribeRequest,
+} from "@sos26/shared";
+import {
+	pushSendEndpoint,
+	pushSubscribeEndpoint,
+	pushUnsubscribeEndpoint,
+} from "@sos26/shared";
 import { env } from "../env";
 import { callBodyApi } from "./core";
 
@@ -21,6 +29,37 @@ export async function enablePush(): Promise<void> {
 	});
 }
 
+/**
+ * Push通知を無効化
+ */
+export async function disablePush(): Promise<void> {
+	const registration = await navigator.serviceWorker.ready;
+	const subscription = await registration.pushManager.getSubscription();
+	if (!subscription) {
+		return;
+	}
+
+	const endpoint = subscription.endpoint;
+	let unsubscribeError: unknown = null;
+
+	try {
+		await subscription.unsubscribe();
+	} catch (error) {
+		unsubscribeError = error;
+	}
+
+	await callBodyApi(pushUnsubscribeEndpoint, {
+		endpoint,
+	} satisfies PushUnsubscribeRequest);
+
+	if (unsubscribeError) {
+		throw unsubscribeError;
+	}
+}
+
+/**
+ * Push通知を送信
+ */
 export async function sendPush(param: PushSendRequest): Promise<void> {
 	await callBodyApi(pushSendEndpoint, param);
 }
