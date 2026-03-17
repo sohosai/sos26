@@ -76,7 +76,7 @@ export const Route = createFileRoute("/project")({
 				form.deadlineAt && !form.allowLateResponse && now > form.deadlineAt;
 			if (isExpired) return false;
 
-			return !form.response;
+			return !form.response?.submittedAt;
 		});
 
 		const hasUncheckedNotices = notices.some(notice => !notice.isRead);
