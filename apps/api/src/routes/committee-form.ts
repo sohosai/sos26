@@ -13,6 +13,7 @@ import {
 import { Hono } from "hono";
 import { requireDeliverPermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
+import { formAnswerFileSelect, mapAnswerFiles } from "../lib/form-answer-files";
 import {
 	constraintsToPrisma,
 	mapFormToApiShape,
@@ -29,6 +30,18 @@ import type { AuthEnv } from "../types/auth-env";
 const committeeFormRoute = new Hono<AuthEnv>();
 
 // 申請の存在確認 編集権限チェック
+const answerFilesInclude = {
+	where: {
+		file: {
+			status: "CONFIRMED" as const,
+			deletedAt: null,
+		},
+	},
+	orderBy: { sortOrder: "asc" as const },
+	include: {
+		file: { select: formAnswerFileSelect },
+	},
+};
 
 const getFormOrThrow = async (formId: string) => {
 	const form = await prisma.form.findFirst({
@@ -779,6 +792,7 @@ committeeFormRoute.get(
 				},
 				answers: {
 					include: {
+						files: answerFilesInclude,
 						selectedOptions: {
 							include: {
 								formItemOption: { select: { id: true, label: true } },
@@ -809,6 +823,7 @@ committeeFormRoute.get(
 						},
 						orderBy: { createdAt: "desc" },
 						include: {
+							files: answerFilesInclude,
 							selectedOptions: {
 								include: {
 									formItemOption: { select: { id: true, label: true } },
@@ -843,7 +858,7 @@ committeeFormRoute.get(
 							formItemId: a.formItemId,
 							textValue: history.textValue,
 							numberValue: history.numberValue,
-							fileId: history.fileId,
+							files: mapAnswerFiles(history.files),
 							selectedOptions: history.selectedOptions.map(s => ({
 								id: s.formItemOption.id,
 								label: s.formItemOption.label,
@@ -854,7 +869,7 @@ committeeFormRoute.get(
 						formItemId: a.formItemId,
 						textValue: a.textValue,
 						numberValue: a.numberValue,
-						fileId: a.fileId,
+						files: mapAnswerFiles(a.files),
 						selectedOptions: a.selectedOptions.map(s => ({
 							id: s.formItemOption.id,
 							label: s.formItemOption.label,
@@ -901,6 +916,7 @@ committeeFormRoute.get(
 				},
 				answers: {
 					include: {
+						files: answerFilesInclude,
 						selectedOptions: {
 							include: {
 								formItemOption: { select: { id: true, label: true } },
@@ -923,6 +939,7 @@ committeeFormRoute.get(
 					},
 					orderBy: { createdAt: "desc" },
 					include: {
+						files: answerFilesInclude,
 						selectedOptions: {
 							include: {
 								formItemOption: { select: { id: true, label: true } },
@@ -936,28 +953,6 @@ committeeFormRoute.get(
 		for (const h of allHistory) {
 			if (!latestByItem.has(h.formItemId)) latestByItem.set(h.formItemId, h);
 		}
-		const fileIds = [
-			...r.answers.map(answer => answer.fileId),
-			...allHistory.map(history => history.fileId),
-		].filter((id): id is string => Boolean(id));
-		const fileMap = new Map(
-			(
-				await prisma.file.findMany({
-					where: {
-						id: { in: [...new Set(fileIds)] },
-						status: "CONFIRMED",
-						deletedAt: null,
-					},
-					select: {
-						id: true,
-						fileName: true,
-						mimeType: true,
-						size: true,
-						isPublic: true,
-					},
-				})
-			).map(file => [file.id, file])
-		);
 
 		return c.json({
 			response: {
@@ -977,10 +972,7 @@ committeeFormRoute.get(
 							formItemId: a.formItemId,
 							textValue: history.textValue,
 							numberValue: history.numberValue,
-							fileId: history.fileId,
-							fileMetadata: history.fileId
-								? (fileMap.get(history.fileId) ?? null)
-								: null,
+							files: mapAnswerFiles(history.files),
 							selectedOptions: history.selectedOptions.map(s => ({
 								id: s.formItemOption.id,
 								label: s.formItemOption.label,
@@ -991,8 +983,7 @@ committeeFormRoute.get(
 						formItemId: a.formItemId,
 						textValue: a.textValue,
 						numberValue: a.numberValue,
-						fileId: a.fileId,
-						fileMetadata: a.fileId ? (fileMap.get(a.fileId) ?? null) : null,
+						files: mapAnswerFiles(a.files),
 						selectedOptions: a.selectedOptions.map(s => ({
 							id: s.formItemOption.id,
 							label: s.formItemOption.label,

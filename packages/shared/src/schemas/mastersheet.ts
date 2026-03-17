@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { bureauSchema } from "./committee-member";
 import { viewerScopeSchema } from "./common";
+import { formAnswerFileSchema } from "./file";
 import { formItemTypeSchema } from "./form";
 import { userSchema } from "./user";
 
@@ -123,7 +124,7 @@ const columnViewerSchema = z.object({
 const cellValueDataSchema = z.object({
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileId: z.string().nullable(),
+	files: z.array(formAnswerFileSchema),
 	selectedOptionIds: z.array(z.string()),
 });
 
@@ -312,7 +313,7 @@ export type UpsertMastersheetCellResponse = z.infer<
 export const editFormItemCellRequestSchema = z.object({
 	textValue: z.string().nullable().optional(),
 	numberValue: z.number().nullable().optional(),
-	fileId: z.string().nullable().optional(),
+	fileIds: z.array(z.string()).optional(),
 	selectedOptionIds: z.array(z.string()).optional(),
 });
 export type EditFormItemCellRequest = z.infer<
@@ -335,7 +336,7 @@ export const formItemEditHistorySchema = z.object({
 	value: z.object({
 		textValue: z.string().nullable(),
 		numberValue: z.number().nullable(),
-		fileId: z.string().nullable(),
+		files: z.array(formAnswerFileSchema),
 		selectedOptionIds: z.array(z.string()),
 	}),
 	actor: userSummarySchema,

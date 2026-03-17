@@ -1,11 +1,177 @@
 import { Badge, Text } from "@radix-ui/themes";
 import type { InquiryAttachment } from "@sos26/shared";
+import { IconTrash } from "@tabler/icons-react";
 import Avatar from "boring-avatars";
+import { useEffect, useState } from "react";
 import { AttachmentPreviewButton } from "@/components/filePreview/AttachmentPreviewButton";
 import { formatDate } from "@/lib/format";
 import { useStorageUrl } from "@/lib/storage";
+import { Button, TextArea } from "../primitives";
 import styles from "./SupportDetail.module.scss";
 import type { ActivityInfo } from "./types";
+
+type TimelineItemProps = {
+	name: string;
+	role: "project" | "committee";
+	date: Date;
+	body: string;
+	attachments?: InquiryAttachment[];
+	isDraft?: boolean;
+	isOwnDraft?: boolean;
+	onPublishDraft?: () => Promise<void>;
+	onDeleteDraft?: () => Promise<void>;
+	onUpdateDraft?: (body: string) => Promise<void>;
+};
+
+function TimelineHeader({
+	name,
+	role,
+	isDraft,
+	date,
+}: {
+	name: string;
+	role: "project" | "committee";
+	isDraft?: boolean;
+	date: Date;
+}) {
+	return (
+		<div className={styles.timelineHeader}>
+			<Text size="2" weight="medium">
+				{name}
+			</Text>
+			<Badge
+				size="1"
+				variant="soft"
+				color={role === "committee" ? "blue" : "green"}
+			>
+				{role === "committee" ? "実行委員" : "企画者"}
+			</Badge>
+			{isDraft && (
+				<Badge size="1" variant="soft" color="orange">
+					下書き
+				</Badge>
+			)}
+			<Text size="1" color="gray" className={styles.timelineHeaderMeta}>
+				{formatDate(date, "datetime")}
+			</Text>
+		</div>
+	);
+}
+
+function TimelineBodySection({
+	isEditingDraft,
+	draftBody,
+	isDraftActionPending,
+	onDraftBodyChange,
+	body,
+}: {
+	isEditingDraft: boolean;
+	draftBody: string;
+	isDraftActionPending: boolean;
+	onDraftBodyChange: (value: string) => void;
+	body: string;
+}) {
+	if (isEditingDraft) {
+		return (
+			<div className={styles.draftEditor}>
+				<TextArea
+					label="下書き内容"
+					value={draftBody}
+					onChange={onDraftBodyChange}
+					rows={4}
+					disabled={isDraftActionPending}
+				/>
+			</div>
+		);
+	}
+
+	return (
+		<Text size="2" className={styles.timelineBody}>
+			{body}
+		</Text>
+	);
+}
+
+function DraftActionButtons({
+	isEditingDraft,
+	isDraftActionPending,
+	canUpdateDraft,
+	canSaveDraft,
+	isUpdatingDraft,
+	isPublishingDraft,
+	isDeletingDraft,
+	onStartEdit,
+	onCancelEdit,
+	onUpdateDraft,
+	onPublishDraft,
+	onDeleteDraft,
+}: {
+	isEditingDraft: boolean;
+	isDraftActionPending: boolean;
+	canUpdateDraft: boolean;
+	canSaveDraft: boolean;
+	isUpdatingDraft: boolean;
+	isPublishingDraft: boolean;
+	isDeletingDraft: boolean;
+	onStartEdit: () => void;
+	onCancelEdit: () => void;
+	onUpdateDraft: () => void;
+	onPublishDraft?: () => void;
+	onDeleteDraft?: () => void;
+}) {
+	if (isEditingDraft) {
+		return (
+			<>
+				<Button
+					intent="secondary"
+					onClick={onCancelEdit}
+					disabled={isDraftActionPending}
+				>
+					キャンセル
+				</Button>
+				<Button
+					onClick={onUpdateDraft}
+					disabled={isDraftActionPending || !canSaveDraft}
+				>
+					{isUpdatingDraft ? "保存中..." : "保存"}
+				</Button>
+			</>
+		);
+	}
+
+	return (
+		<>
+			{canUpdateDraft && (
+				<Button
+					intent="secondary"
+					onClick={onStartEdit}
+					disabled={isDraftActionPending}
+				>
+					編集
+				</Button>
+			)}
+			{onPublishDraft && (
+				<Button
+					intent="primary"
+					onClick={onPublishDraft}
+					disabled={isDraftActionPending}
+				>
+					{isPublishingDraft ? "送信中..." : "送信"}
+				</Button>
+			)}
+			{onDeleteDraft && (
+				<Button
+					intent="ghost"
+					onClick={onDeleteDraft}
+					disabled={isDraftActionPending}
+				>
+					<IconTrash size={14} />
+					{isDeletingDraft ? "削除中..." : "削除"}
+				</Button>
+			)}
+		</>
+	);
+}
 
 export function TimelineItem({
 	name,
@@ -13,37 +179,96 @@ export function TimelineItem({
 	date,
 	body,
 	attachments,
-}: {
-	name: string;
-	role: "project" | "committee";
-	date: Date;
-	body: string;
-	attachments?: InquiryAttachment[];
-}) {
+	isDraft,
+	isOwnDraft,
+	onPublishDraft,
+	onDeleteDraft,
+	onUpdateDraft,
+}: TimelineItemProps) {
+	const [isPublishingDraft, setIsPublishingDraft] = useState(false);
+	const [isDeletingDraft, setIsDeletingDraft] = useState(false);
+	const [isUpdatingDraft, setIsUpdatingDraft] = useState(false);
+	const [isEditingDraft, setIsEditingDraft] = useState(false);
+	const [draftBody, setDraftBody] = useState(body);
+	const isDraftActionPending =
+		isPublishingDraft || isDeletingDraft || isUpdatingDraft;
+
+	useEffect(() => {
+		if (!isEditingDraft) {
+			setDraftBody(body);
+		}
+	}, [body, isEditingDraft]);
+	const showDraftActions = Boolean(isDraft && isOwnDraft);
+	const canUpdateDraft = Boolean(onUpdateDraft);
+	const canSaveDraft = draftBody.trim().length > 0;
+
+	const handlePublishDraft = async () => {
+		if (!onPublishDraft || isDraftActionPending) {
+			return;
+		}
+		setIsPublishingDraft(true);
+		try {
+			await onPublishDraft();
+		} finally {
+			setIsPublishingDraft(false);
+		}
+	};
+
+	const handleDeleteDraft = async () => {
+		if (!onDeleteDraft || isDraftActionPending) {
+			return;
+		}
+		setIsDeletingDraft(true);
+		try {
+			await onDeleteDraft();
+		} finally {
+			setIsDeletingDraft(false);
+		}
+	};
+
+	const handleStartEditDraft = () => {
+		if (!onUpdateDraft || isDraftActionPending) {
+			return;
+		}
+		setDraftBody(body);
+		setIsEditingDraft(true);
+	};
+
+	const handleCancelEditDraft = () => {
+		if (isDraftActionPending) {
+			return;
+		}
+		setDraftBody(body);
+		setIsEditingDraft(false);
+	};
+
+	const handleUpdateDraft = async () => {
+		if (!onUpdateDraft || isDraftActionPending || !draftBody.trim()) {
+			return;
+		}
+		setIsUpdatingDraft(true);
+		try {
+			await onUpdateDraft(draftBody.trim());
+			setIsEditingDraft(false);
+		} finally {
+			setIsUpdatingDraft(false);
+		}
+	};
+
 	return (
-		<div className={styles.timelineItem}>
+		<div className={styles.timelineItem} data-draft={isDraft || undefined}>
 			<span className={styles.avatar}>
 				<Avatar size={28} name={name} variant="beam" />
 			</span>
 			<div className={styles.timelineContent}>
-				<div className={styles.timelineHeader}>
-					<Text size="2" weight="medium">
-						{name}
-					</Text>
-					<Badge
-						size="1"
-						variant="soft"
-						color={role === "committee" ? "blue" : "green"}
-					>
-						{role === "committee" ? "実行委員" : "企画者"}
-					</Badge>
-					<Text size="1" color="gray" className={styles.timelineHeaderMeta}>
-						{formatDate(date, "datetime")}
-					</Text>
-				</div>
-				<Text size="2" className={styles.timelineBody}>
-					{body}
-				</Text>
+				<TimelineHeader name={name} role={role} isDraft={isDraft} date={date} />
+				<TimelineBodySection
+					isEditingDraft={isEditingDraft}
+					draftBody={draftBody}
+					isDraftActionPending={isDraftActionPending}
+					onDraftBodyChange={setDraftBody}
+					body={body}
+				/>
 				{attachments && attachments.length > 0 && (
 					<div className={styles.attachmentSection}>
 						{attachments.map(att =>
@@ -53,6 +278,24 @@ export function TimelineItem({
 								<AttachmentPreviewButton key={att.id} attachment={att} />
 							)
 						)}
+					</div>
+				)}
+				{showDraftActions && (
+					<div className={styles.draftActions}>
+						<DraftActionButtons
+							isEditingDraft={isEditingDraft}
+							isDraftActionPending={isDraftActionPending}
+							canUpdateDraft={canUpdateDraft}
+							canSaveDraft={canSaveDraft}
+							isUpdatingDraft={isUpdatingDraft}
+							isPublishingDraft={isPublishingDraft}
+							isDeletingDraft={isDeletingDraft}
+							onStartEdit={handleStartEditDraft}
+							onCancelEdit={handleCancelEditDraft}
+							onUpdateDraft={handleUpdateDraft}
+							onPublishDraft={onPublishDraft ? handlePublishDraft : undefined}
+							onDeleteDraft={onDeleteDraft ? handleDeleteDraft : undefined}
+						/>
 					</div>
 				)}
 			</div>

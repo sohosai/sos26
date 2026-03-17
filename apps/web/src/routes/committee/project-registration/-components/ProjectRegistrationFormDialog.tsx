@@ -227,6 +227,19 @@ export function ProjectRegistrationFormDialog({
 	const validateItem = (item: FormItem): string | null => {
 		const labelError = validateItemLabel(item);
 		if (labelError) return labelError;
+
+		if (item.type === "FILE") {
+			const minFiles = item.constraints?.minFiles;
+			const maxFiles = item.constraints?.maxFiles;
+			if (
+				minFiles !== undefined &&
+				maxFiles !== undefined &&
+				minFiles > maxFiles
+			) {
+				return "最小ファイル数は最大ファイル数以下にしてください";
+			}
+		}
+
 		return validateItemOptions(item);
 	};
 

@@ -4,7 +4,10 @@ import {
 	addInquiryCommentRequestSchema,
 	committeeInquiryAssigneeIdPathParamsSchema,
 	createCommitteeInquiryRequestSchema,
+	inquiryCommentIdPathParamsSchema,
 	inquiryIdPathParamsSchema,
+	updateDraftCommentRequestSchema,
+	updateDraftInquiryRequestSchema,
 	updateInquiryStatusRequestSchema,
 	updateInquiryViewersRequestSchema,
 } from "@sos26/shared";
@@ -41,6 +44,83 @@ async function validateRelatedForm(
 	});
 	if (!form) {
 		throw Errors.invalidRequest("指定された申請が見つかりません");
+	}
+}
+
+async function validateProjectAssignees(
+	projectId: string,
+	projectAssigneeUserIds: string[]
+): Promise<void> {
+	const project = await prisma.project.findFirst({
+		where: { id: projectId, deletedAt: null },
+	});
+	if (!project) {
+		throw Errors.notFound("企画が見つかりません");
+	}
+
+	const uniqueUserIds = [...new Set(projectAssigneeUserIds)];
+	const ownerIds = new Set(
+		[project.ownerId, project.subOwnerId].filter(Boolean)
+	);
+	const nonOwnerIds = uniqueUserIds.filter(id => !ownerIds.has(id));
+	if (nonOwnerIds.length > 0) {
+		const members = await prisma.projectMember.findMany({
+			where: {
+				projectId,
+				userId: { in: nonOwnerIds },
+				deletedAt: null,
+			},
+			select: { userId: true },
+		});
+		const memberUserIds = new Set(members.map(m => m.userId));
+		if (nonOwnerIds.some(id => !memberUserIds.has(id))) {
+			throw Errors.invalidRequest(
+				"指定された企画側担当者の中に企画メンバーでないユーザーが含まれています"
+			);
+		}
+	}
+}
+
+async function validateCommitteeAssignees(
+	committeeAssigneeUserIds: string[]
+): Promise<void> {
+	const uniqueCommitteeIds = [
+		...new Set(committeeAssigneeUserIds.filter(id => id)),
+	];
+	if (uniqueCommitteeIds.length > 0) {
+		const committeeMembers = await prisma.committeeMember.findMany({
+			where: {
+				userId: { in: uniqueCommitteeIds },
+				deletedAt: null,
+			},
+			select: { userId: true },
+		});
+		const committeeMemberUserIds = new Set(committeeMembers.map(m => m.userId));
+		if (uniqueCommitteeIds.some(id => !committeeMemberUserIds.has(id))) {
+			throw Errors.invalidRequest(
+				"指定された実委担当者の中に実委人でないユーザーが含まれています"
+			);
+		}
+	}
+}
+
+async function validateAttachments(
+	fileIds: string[],
+	userId: string
+): Promise<void> {
+	const uniqueFileIds = [...new Set(fileIds ?? [])];
+	if (uniqueFileIds.length > 0) {
+		const files = await prisma.file.findMany({
+			where: {
+				id: { in: uniqueFileIds },
+				uploadedById: userId,
+				status: "CONFIRMED",
+				deletedAt: null,
+			},
+		});
+		if (files.length !== uniqueFileIds.length) {
+			throw Errors.invalidRequest("指定されたファイルの一部が見つかりません");
+		}
 	}
 }
 
@@ -182,6 +262,10 @@ function formatAttachment(a: {
 	};
 }
 
+function getCommentSentAt(comment: { createdAt: Date; sentAt: Date | null }) {
+	return comment.sentAt ?? comment.createdAt;
+}
+
 // ─────────────────────────────────────────────────────────────
 // POST /committee/inquiries
 // お問い合わせを作成（企画側担当者の指定が必須）
@@ -202,81 +286,23 @@ committeeInquiryRoute.post(
 			committeeAssigneeUserIds,
 			fileIds,
 			viewers: viewerInputs,
+			isDraft,
 		} = createCommitteeInquiryRequestSchema.parse(body);
 
-		// 企画の存在チェック
-		const project = await prisma.project.findFirst({
-			where: { id: projectId, deletedAt: null },
-		});
-		if (!project) {
-			throw Errors.notFound("企画が見つかりません");
-		}
-
-		// 企画側担当者が全て企画メンバーかチェック
-		const uniqueUserIds = [...new Set(projectAssigneeUserIds)];
-		const ownerIds = new Set(
-			[project.ownerId, project.subOwnerId].filter(Boolean)
-		);
-		const nonOwnerIds = uniqueUserIds.filter(id => !ownerIds.has(id));
-		if (nonOwnerIds.length > 0) {
-			const members = await prisma.projectMember.findMany({
-				where: {
-					projectId,
-					userId: { in: nonOwnerIds },
-					deletedAt: null,
-				},
-				select: { userId: true },
-			});
-			const memberUserIds = new Set(members.map(m => m.userId));
-			if (nonOwnerIds.some(id => !memberUserIds.has(id))) {
-				throw Errors.invalidRequest(
-					"指定された企画側担当者の中に企画メンバーでないユーザーが含まれています"
-				);
-			}
-		}
-
-		// 追加実委担当者が全て実委人かチェック
-		const uniqueCommitteeIds = [
-			...new Set((committeeAssigneeUserIds ?? []).filter(id => id !== user.id)),
-		];
-		if (uniqueCommitteeIds.length > 0) {
-			const committeeMembers = await prisma.committeeMember.findMany({
-				where: {
-					userId: { in: uniqueCommitteeIds },
-					deletedAt: null,
-				},
-				select: { userId: true },
-			});
-			const committeeMemberUserIds = new Set(
-				committeeMembers.map(m => m.userId)
-			);
-			if (uniqueCommitteeIds.some(id => !committeeMemberUserIds.has(id))) {
-				throw Errors.invalidRequest(
-					"指定された実委担当者の中に実委人でないユーザーが含まれています"
-				);
-			}
-		}
-
-		// 添付ファイルの存在・ステータスチェック
-		const uniqueFileIds = [...new Set(fileIds ?? [])];
-		if (uniqueFileIds.length > 0) {
-			const files = await prisma.file.findMany({
-				where: {
-					id: { in: uniqueFileIds },
-					uploadedById: user.id,
-					status: "CONFIRMED",
-					deletedAt: null,
-				},
-			});
-			if (files.length !== uniqueFileIds.length) {
-				throw Errors.invalidRequest("指定されたファイルの一部が見つかりません");
-			}
-		}
+		await validateProjectAssignees(projectId, projectAssigneeUserIds);
+		await validateCommitteeAssignees(committeeAssigneeUserIds ?? []);
+		await validateAttachments(fileIds ?? [], user.id);
 
 		// 関連申請の検証（オーナーまたは共同編集者のみ）
 		if (relatedFormId) {
 			await validateRelatedForm(relatedFormId, user.id);
 		}
+
+		const uniqueUserIds = [...new Set(projectAssigneeUserIds)];
+		const uniqueCommitteeIds = [
+			...new Set((committeeAssigneeUserIds ?? []).filter(id => id !== user.id)),
+		];
+		const uniqueFileIds = [...new Set(fileIds ?? [])];
 
 		const inquiry = await prisma.inquiry.create({
 			data: {
@@ -287,6 +313,7 @@ committeeInquiryRoute.post(
 				creatorRole: "COMMITTEE",
 				projectId,
 				relatedFormId,
+				isDraft: isDraft ?? false,
 				assignees: {
 					create: [
 						// 作成者（実委側）
@@ -318,12 +345,14 @@ committeeInquiryRoute.post(
 			},
 		});
 
-		void notifyInquiryCreatedByCommittee({
-			inquiryId: inquiry.id,
-			inquiryTitle: title,
-			creatorName: user.name,
-			projectAssigneeUserIds: uniqueUserIds,
-		});
+		if (!isDraft) {
+			void notifyInquiryCreatedByCommittee({
+				inquiryId: inquiry.id,
+				inquiryTitle: title,
+				creatorName: user.name,
+				projectAssigneeUserIds: uniqueUserIds,
+			});
+		}
 
 		return c.json({ inquiry }, 201);
 	}
@@ -393,7 +422,7 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 			},
 			_count: {
 				select: {
-					comments: { where: { deletedAt: null } },
+					comments: { where: { deletedAt: null, isDraft: false } },
 				},
 			},
 		},
@@ -407,6 +436,7 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 		creatorRole: inq.creatorRole,
 		createdAt: inq.createdAt,
 		updatedAt: inq.updatedAt,
+		isDraft: inq.isDraft,
 		createdBy: inq.createdBy,
 		project: inq.project,
 		projectAssignees: inq.assignees
@@ -456,7 +486,9 @@ committeeInquiryRoute.get(
 					include: { user: { select: userSelect } },
 				},
 				comments: {
-					where: { deletedAt: null },
+					where: {
+						deletedAt: null,
+					},
 					include: {
 						createdBy: { select: userSelect },
 						attachments: {
@@ -485,6 +517,33 @@ committeeInquiryRoute.get(
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
 
+		// コメントを整形し、通常コメントの後に下書きを表示する
+		const formattedComments = inquiry.comments.map(cm => ({
+			id: cm.id,
+			body: cm.body,
+			senderRole: cm.senderRole,
+			isDraft: cm.isDraft,
+			createdAt: cm.createdAt,
+			sentAt: cm.sentAt,
+			createdBy: cm.createdBy,
+			attachments: cm.attachments.map(formatAttachment),
+		}));
+
+		// 通常のコメント（isDraft: false）と下書き（isDraft: true）に分離
+		const regularComments = formattedComments.filter(cm => !cm.isDraft);
+		const draftComments = formattedComments.filter(cm => cm.isDraft);
+
+		// 通常コメントは送信時刻でソート（既存データは createdAt をフォールバック）
+		regularComments.sort(
+			(a, b) => getCommentSentAt(a).getTime() - getCommentSentAt(b).getTime()
+		);
+
+		// 下書きもcreatedAtでソート（複数の下書きがある場合のため）
+		draftComments.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+		// 通常コメントの後に下書きを追加
+		const sortedComments = [...regularComments, ...draftComments];
+
 		const formatted = {
 			id: inquiry.id,
 			title: inquiry.title,
@@ -494,6 +553,7 @@ committeeInquiryRoute.get(
 			creatorRole: inquiry.creatorRole,
 			projectId: inquiry.projectId,
 			relatedFormId: inquiry.relatedFormId,
+			isDraft: inquiry.isDraft,
 			createdAt: inquiry.createdAt,
 			updatedAt: inquiry.updatedAt,
 			createdBy: inquiry.createdBy,
@@ -512,14 +572,7 @@ committeeInquiryRoute.get(
 				createdAt: v.createdAt,
 				user: v.user,
 			})),
-			comments: inquiry.comments.map(cm => ({
-				id: cm.id,
-				body: cm.body,
-				senderRole: cm.senderRole,
-				createdAt: cm.createdAt,
-				createdBy: cm.createdBy,
-				attachments: cm.attachments.map(formatAttachment),
-			})),
+			comments: sortedComments,
 			activities: inquiry.activities.map(act => ({
 				id: act.id,
 				type: act.type,
@@ -549,8 +602,11 @@ committeeInquiryRoute.post(
 			inquiryId: c.req.param("inquiryId"),
 		});
 		const body = await c.req.json().catch(() => ({}));
-		const { body: commentBody, fileIds } =
-			addInquiryCommentRequestSchema.parse(body);
+		const {
+			body: commentBody,
+			fileIds,
+			isDraft,
+		} = addInquiryCommentRequestSchema.parse(body);
 
 		// 担当者 or 管理者チェック
 		await requireAssigneeOrAdmin(inquiryId, user.id, committeeMember);
@@ -561,6 +617,11 @@ committeeInquiryRoute.post(
 		});
 		if (!inquiry) {
 			throw Errors.notFound("お問い合わせが見つかりません");
+		}
+		if (inquiry.isDraft) {
+			throw Errors.invalidRequest(
+				"下書き状態のお問い合わせにはコメントできません"
+			);
 		}
 		if (inquiry.status === "RESOLVED") {
 			throw Errors.invalidRequest(
@@ -591,6 +652,8 @@ committeeInquiryRoute.post(
 					body: commentBody,
 					createdById: user.id,
 					senderRole: "COMMITTEE",
+					isDraft: isDraft ?? false,
+					sentAt: isDraft ? null : new Date(),
 				},
 				include: { createdBy: { select: userSelect } },
 			});
@@ -634,13 +697,16 @@ committeeInquiryRoute.post(
 			return { ...created, attachments };
 		});
 
-		void notifyInquiryCommentAdded({
-			inquiryId,
-			inquiryTitle: inquiry.title,
-			commenterUserId: user.id,
-			commenterName: user.name,
-			commentBodyPreview: commentBody.slice(0, 200),
-		});
+		// 下書きでない場合のみ通知を送信
+		if (!isDraft) {
+			void notifyInquiryCommentAdded({
+				inquiryId,
+				inquiryTitle: inquiry.title,
+				commenterUserId: user.id,
+				commenterName: user.name,
+				commentBodyPreview: commentBody.slice(0, 200),
+			});
+		}
 
 		return c.json(
 			{
@@ -648,13 +714,238 @@ committeeInquiryRoute.post(
 					id: comment.id,
 					body: comment.body,
 					senderRole: comment.senderRole,
+					isDraft: comment.isDraft,
 					createdAt: comment.createdAt,
+					sentAt: comment.sentAt,
 					createdBy: comment.createdBy,
 					attachments: comment.attachments.map(formatAttachment),
 				},
 			},
 			201
 		);
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// POST /committee/inquiries/:inquiryId/comments/:commentId/publish
+// 下書きコメントを正式送信（作成者のみ）
+// ─────────────────────────────────────────────────────────────
+committeeInquiryRoute.post(
+	"/:inquiryId/comments/:commentId/publish",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { inquiryId, commentId } = {
+			inquiryId: c.req.param("inquiryId"),
+			commentId: c.req.param("commentId"),
+		};
+
+		// コメントの存在と下書き状態を確認
+		const existingComment = await prisma.inquiryComment.findFirst({
+			where: {
+				id: commentId,
+				inquiryId,
+				deletedAt: null,
+			},
+			include: { inquiry: true, createdBy: { select: userSelect } },
+		});
+
+		if (!existingComment) {
+			throw Errors.notFound("コメントが見つかりません");
+		}
+
+		if (!existingComment.isDraft) {
+			throw Errors.invalidRequest("このコメントは既に送信済みです");
+		}
+
+		// 作成者のみが送信可能
+		if (existingComment.createdById !== user.id) {
+			throw Errors.forbidden("下書きの送信は作成者のみが可能です");
+		}
+
+		// お問い合わせがRESOLVED状態でないことを確認
+		if (existingComment.inquiry.status === "RESOLVED") {
+			throw Errors.invalidRequest(
+				"解決済みのお問い合わせにはコメントできません"
+			);
+		}
+
+		// 下書きを正式送信に変換（送信時刻をコメント時刻として確定）
+		const comment = await prisma.$transaction(async tx => {
+			const publishedAt = new Date();
+			const updated = await tx.inquiryComment.update({
+				where: { id: commentId },
+				data: {
+					isDraft: false,
+					sentAt: publishedAt,
+				},
+				include: { createdBy: { select: userSelect } },
+			});
+
+			// 親の updatedAt を更新
+			await tx.inquiry.update({
+				where: { id: inquiryId },
+				data: { updatedAt: publishedAt },
+			});
+
+			// 添付ファイルを取得
+			const attachments = await tx.inquiryAttachment.findMany({
+				where: { commentId: updated.id, deletedAt: null },
+				include: attachmentInclude,
+			});
+
+			return { ...updated, attachments };
+		});
+
+		// 通知を送信
+		void notifyInquiryCommentAdded({
+			inquiryId,
+			inquiryTitle: existingComment.inquiry.title,
+			commenterUserId: user.id,
+			commenterName: user.name,
+			commentBodyPreview: comment.body.slice(0, 200),
+		});
+
+		return c.json({
+			comment: {
+				id: comment.id,
+				body: comment.body,
+				senderRole: comment.senderRole,
+				isDraft: comment.isDraft,
+				createdAt: comment.createdAt,
+				sentAt: comment.sentAt,
+				createdBy: comment.createdBy,
+				attachments: comment.attachments.map(formatAttachment),
+			},
+		});
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// PATCH /committee/inquiries/:inquiryId/comments/:commentId
+// 下書きコメントを更新（作成者のみ）
+// ─────────────────────────────────────────────────────────────
+committeeInquiryRoute.patch(
+	"/:inquiryId/comments/:commentId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { inquiryId, commentId } = inquiryCommentIdPathParamsSchema.parse({
+			inquiryId: c.req.param("inquiryId"),
+			commentId: c.req.param("commentId"),
+		});
+		const body = await c.req.json().catch(() => ({}));
+		const { body: draftBody } = updateDraftCommentRequestSchema.parse(body);
+
+		const existingComment = await prisma.inquiryComment.findFirst({
+			where: {
+				id: commentId,
+				inquiryId,
+				deletedAt: null,
+			},
+			include: { inquiry: true, createdBy: { select: userSelect } },
+		});
+		if (!existingComment) {
+			throw Errors.notFound("コメントが見つかりません");
+		}
+		if (!existingComment.isDraft) {
+			throw Errors.invalidRequest("送信済みコメントは編集できません");
+		}
+		if (existingComment.createdById !== user.id) {
+			throw Errors.forbidden("下書きの編集は作成者のみが可能です");
+		}
+		if (existingComment.inquiry.status === "RESOLVED") {
+			throw Errors.invalidRequest(
+				"解決済みのお問い合わせにはコメントできません"
+			);
+		}
+
+		const comment = await prisma.$transaction(async tx => {
+			const now = new Date();
+			const updated = await tx.inquiryComment.update({
+				where: { id: commentId },
+				data: { body: draftBody },
+				include: { createdBy: { select: userSelect } },
+			});
+			await tx.inquiry.update({
+				where: { id: inquiryId },
+				data: { updatedAt: now },
+			});
+			const attachments = await tx.inquiryAttachment.findMany({
+				where: { commentId: updated.id, deletedAt: null },
+				include: attachmentInclude,
+			});
+			return { ...updated, attachments };
+		});
+
+		return c.json({
+			comment: {
+				id: comment.id,
+				body: comment.body,
+				senderRole: comment.senderRole,
+				isDraft: comment.isDraft,
+				createdAt: comment.createdAt,
+				sentAt: comment.sentAt,
+				createdBy: comment.createdBy,
+				attachments: comment.attachments.map(formatAttachment),
+			},
+		});
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// DELETE /committee/inquiries/:inquiryId/comments/:commentId
+// コメントを削除（下書きは作成者のみ、通常コメントは管理者または作成者）
+// ─────────────────────────────────────────────────────────────
+committeeInquiryRoute.delete(
+	"/:inquiryId/comments/:commentId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const committeeMember = c.get("committeeMember");
+		const { inquiryId, commentId } = {
+			inquiryId: c.req.param("inquiryId"),
+			commentId: c.req.param("commentId"),
+		};
+
+		// コメントの存在確認
+		const existingComment = await prisma.inquiryComment.findFirst({
+			where: {
+				id: commentId,
+				inquiryId,
+				deletedAt: null,
+			},
+		});
+
+		if (!existingComment) {
+			throw Errors.notFound("コメントが見つかりません");
+		}
+
+		// 権限チェック
+		if (existingComment.isDraft) {
+			// 下書きの場合: 作成者のみ削除可能
+			if (existingComment.createdById !== user.id) {
+				throw Errors.forbidden("下書きの削除は作成者のみが可能です");
+			}
+		} else {
+			// 通常コメントの場合: 管理者または作成者
+			const isAdmin = await isInquiryAdmin(committeeMember.id);
+			const isCreator = existingComment.createdById === user.id;
+			if (!isAdmin && !isCreator) {
+				throw Errors.forbidden("このコメントを削除する権限がありません");
+			}
+		}
+
+		// 論理削除
+		await prisma.inquiryComment.update({
+			where: { id: commentId },
+			data: { deletedAt: new Date() },
+		});
+
+		return c.json({ success: true as const });
 	}
 );
 
@@ -1005,6 +1296,212 @@ committeeInquiryRoute.put(
 				user: v.user,
 			})),
 		});
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// PATCH /:inquiryId (下書きお問い合わせの編集)
+// ─────────────────────────────────────────────────────────────
+committeeInquiryRoute.patch(
+	"/:inquiryId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { inquiryId } = inquiryIdPathParamsSchema.parse({
+			inquiryId: c.req.param("inquiryId"),
+		});
+		const body = await c.req.json().catch(() => ({}));
+		const {
+			title,
+			body: inquiryBody,
+			fileIds,
+		} = updateDraftInquiryRequestSchema.parse(body);
+
+		// 下書きの存在確認
+		const inquiry = await prisma.inquiry.findFirst({
+			where: { id: inquiryId, deletedAt: null },
+		});
+		if (!inquiry) {
+			throw Errors.notFound("お問い合わせが見つかりません");
+		}
+		if (!inquiry.isDraft) {
+			throw Errors.invalidRequest("下書き状態のお問い合わせのみ編集可能です");
+		}
+
+		// 作成者本人のみ編集可能
+		if (inquiry.createdById !== user.id) {
+			throw Errors.forbidden("下書きの作成者のみが編集できます");
+		}
+
+		// 更新
+		const uniqueFileIds = fileIds ? [...new Set(fileIds)] : null;
+		if (uniqueFileIds && uniqueFileIds.length > 0) {
+			const files = await prisma.file.findMany({
+				where: {
+					id: { in: uniqueFileIds },
+					uploadedById: user.id,
+					status: "CONFIRMED",
+					deletedAt: null,
+				},
+			});
+			if (files.length !== uniqueFileIds.length) {
+				throw Errors.invalidRequest("指定されたファイルの一部が見つかりません");
+			}
+		}
+
+		const updateData: {
+			title?: string;
+			body?: string;
+			updatedAt: Date;
+		} = { updatedAt: new Date() };
+		if (title !== undefined) updateData.title = title;
+		if (inquiryBody !== undefined) updateData.body = inquiryBody;
+
+		const updated = await prisma.$transaction(async tx => {
+			const updatedInquiry = await tx.inquiry.update({
+				where: { id: inquiryId },
+				data: updateData,
+			});
+
+			if (uniqueFileIds) {
+				const existingAttachments = await tx.inquiryAttachment.findMany({
+					where: { inquiryId, commentId: null, deletedAt: null },
+					select: { id: true, fileId: true },
+				});
+				const desiredFileIds = new Set(uniqueFileIds);
+				const existingFileIds = new Set(existingAttachments.map(a => a.fileId));
+				const removeIds = existingAttachments
+					.filter(a => !desiredFileIds.has(a.fileId))
+					.map(a => a.id);
+				const addFileIds = uniqueFileIds.filter(
+					fileId => !existingFileIds.has(fileId)
+				);
+
+				if (removeIds.length > 0) {
+					await tx.inquiryAttachment.updateMany({
+						where: { id: { in: removeIds } },
+						data: { deletedAt: new Date() },
+					});
+				}
+				if (addFileIds.length > 0) {
+					await tx.inquiryAttachment.createMany({
+						data: addFileIds.map(fileId => ({ inquiryId, fileId })),
+					});
+				}
+			}
+
+			return updatedInquiry;
+		});
+
+		return c.json({
+			inquiry: updated,
+		});
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// POST /:inquiryId/publish (下書きお問い合わせの送信)
+// ─────────────────────────────────────────────────────────────
+committeeInquiryRoute.post(
+	"/:inquiryId/publish",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { inquiryId } = inquiryIdPathParamsSchema.parse({
+			inquiryId: c.req.param("inquiryId"),
+		});
+
+		// 下書きの存在確認
+		const inquiry = await prisma.inquiry.findFirst({
+			where: { id: inquiryId, deletedAt: null },
+			include: {
+				assignees: {
+					where: { side: "PROJECT", deletedAt: null },
+					include: { user: true },
+				},
+			},
+		});
+		if (!inquiry) {
+			throw Errors.notFound("お問い合わせが見つかりません");
+		}
+		if (!inquiry.isDraft) {
+			throw Errors.invalidRequest("下書き状態のお問い合わせのみ送信可能です");
+		}
+
+		// 作成者本人のみ送信可能
+		if (inquiry.createdById !== user.id) {
+			throw Errors.forbidden("下書きの作成者のみが送信できます");
+		}
+
+		// 送信（isDraft を false に更新）
+		const published = await prisma.$transaction(async tx => {
+			const updated = await tx.inquiry.update({
+				where: { id: inquiryId },
+				data: {
+					isDraft: false,
+					updatedAt: new Date(),
+				},
+			});
+
+			// アクティビティ記録
+			return updated;
+		});
+
+		// 企画側担当者に通知
+		const projectAssigneeUserIds = inquiry.assignees.map(a => a.userId);
+		void notifyInquiryCreatedByCommittee({
+			inquiryId: published.id,
+			inquiryTitle: published.title,
+			creatorName: user.name,
+			projectAssigneeUserIds,
+		});
+
+		return c.json({
+			inquiry: published,
+		});
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// DELETE /:inquiryId (下書きお問い合わせの削除)
+// ─────────────────────────────────────────────────────────────
+committeeInquiryRoute.delete(
+	"/:inquiryId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const { inquiryId } = inquiryIdPathParamsSchema.parse({
+			inquiryId: c.req.param("inquiryId"),
+		});
+
+		// 下書きの存在確認
+		const inquiry = await prisma.inquiry.findFirst({
+			where: { id: inquiryId, deletedAt: null },
+		});
+		if (!inquiry) {
+			throw Errors.notFound("お問い合わせが見つかりません");
+		}
+		if (!inquiry.isDraft) {
+			throw Errors.invalidRequest("下書き状態のお問い合わせのみ削除可能です");
+		}
+
+		// 作成者本人のみ削除可能
+		if (inquiry.createdById !== user.id) {
+			throw Errors.forbidden("下書きの作成者のみが削除できます");
+		}
+
+		// 論理削除
+		await prisma.inquiry.update({
+			where: { id: inquiryId },
+			data: {
+				deletedAt: new Date(),
+			},
+		});
+
+		return c.json({ success: true });
 	}
 );
 

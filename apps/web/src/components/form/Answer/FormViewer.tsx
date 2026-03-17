@@ -133,26 +133,65 @@ function validateTextConstraints(
 	return null;
 }
 
+function validateFileConstraints(
+	value: FormAnswerValue | undefined,
+	constraints: NonNullable<FormItem["constraints"]>
+): string | null {
+	if (!isFileAnswerValue(value)) {
+		return null;
+	}
+
+	const fileCount = value.pendingFiles.length + value.uploadedFiles.length;
+
+	if (constraints.minFiles !== undefined && fileCount < constraints.minFiles) {
+		return `${constraints.minFiles}個以上添付してください`;
+	}
+
+	if (constraints.maxFiles !== undefined && fileCount > constraints.maxFiles) {
+		return `${constraints.maxFiles}個以内で添付してください`;
+	}
+
+	return null;
+}
+
+function isRequiredValueMissing(value: FormAnswerValue | undefined): boolean {
+	return (
+		value === undefined ||
+		value === null ||
+		value === "" ||
+		(Array.isArray(value) && value.length === 0)
+	);
+}
+
+function isRequiredFileValueMissing(
+	value: FormAnswerValue | undefined
+): boolean {
+	return (
+		!isFileAnswerValue(value) ||
+		(value.pendingFiles.length === 0 && value.uploadedFiles.length === 0)
+	);
+}
+
+function validateRequiredItem(
+	item: FormItem,
+	value: FormAnswerValue | undefined
+): string | null {
+	if (!item.required) return null;
+	if (item.type === "FILE") {
+		return isRequiredFileValueMissing(value) ? "この項目は必須です" : null;
+	}
+	return isRequiredValueMissing(value) ? "この項目は必須です" : null;
+}
+
 function validateItem(
 	item: FormItem,
 	value: FormAnswerValue | undefined
 ): string | null {
-	if (item.required) {
-		if (item.type === "FILE") {
-			if (
-				!isFileAnswerValue(value) ||
-				(value.pendingFile === null && value.uploadedFile === null)
-			) {
-				return "この項目は必須です";
-			}
-		} else if (
-			value === undefined ||
-			value === null ||
-			value === "" ||
-			(Array.isArray(value) && value.length === 0)
-		) {
-			return "この項目は必須です";
-		}
+	const requiredError = validateRequiredItem(item, value);
+	if (requiredError) return requiredError;
+
+	if (item.type === "FILE" && item.constraints) {
+		return validateFileConstraints(value, item.constraints);
 	}
 
 	if (
@@ -165,6 +204,33 @@ function validateItem(
 	}
 
 	return null;
+}
+
+function summarizeAnswersForLog(answers: FormAnswers) {
+	return Object.fromEntries(
+		Object.entries(answers).map(([itemId, value]) => {
+			if (isFileAnswerValue(value)) {
+				return [
+					itemId,
+					{
+						pendingFiles: value.pendingFiles.map(file => ({
+							name: file.name,
+							size: file.size,
+							type: file.type,
+						})),
+						uploadedFiles: value.uploadedFiles.map(file => ({
+							id: file.id,
+							fileName: file.fileName,
+							size: file.size,
+							mimeType: file.mimeType,
+							sortOrder: file.sortOrder,
+						})),
+					},
+				];
+			}
+			return [itemId, value];
+		})
+	);
 }
 
 export function FormViewer({
@@ -249,7 +315,13 @@ export function FormViewer({
 			await onSubmit(answers);
 			setBaselineAnswers(answers);
 			toast.success("送信しました");
-		} catch {
+		} catch (error) {
+			console.error("Form submission failed", {
+				formId: form.id,
+				formName: form.name,
+				answers: summarizeAnswersForLog(answers),
+				error,
+			});
 			toast.error("送信に失敗しました");
 		} finally {
 			setIsSubmitting(false);

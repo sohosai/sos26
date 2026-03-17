@@ -198,6 +198,10 @@
 	&[data-status="RESOLVED"] {
 		color: var(--green-9);
 	}
+
+	&[data-status="DRAFT"] {
+		color: var(--orange-9);
+	}
 }
 
 .cardBody {

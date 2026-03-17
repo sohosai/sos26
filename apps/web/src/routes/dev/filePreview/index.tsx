@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { FileUploadFieldWithPreview } from "@/components/form/EachField/FileUploadFieldWithPreview";
+import { FileUploadField } from "@/components/form/EachField/FileUploadField";
 import styles from "./index.module.scss";
 export const Route = createFileRoute("/dev/filePreview/")({
 	component: RouteComponent,
@@ -9,7 +9,7 @@ export const Route = createFileRoute("/dev/filePreview/")({
 function RouteComponent() {
 	return (
 		<div className={styles.root}>
-			<FileUploadFieldWithPreview
+			<FileUploadField
 				label={"ファイルをアップロード"}
 				onChange={() => toast.success("ファイルアップロード")}
 			/>

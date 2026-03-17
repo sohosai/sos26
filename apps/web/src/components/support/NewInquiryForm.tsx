@@ -23,6 +23,7 @@ type ViewerInput = {
 
 type UserSummary = { id: string; name: string };
 type FormSummary = { id: string; title: string };
+type SubmitParams = Parameters<NewInquiryFormProps["onSubmit"]>[0];
 
 type NewInquiryFormProps = {
 	open: boolean;
@@ -46,8 +47,297 @@ type NewInquiryFormProps = {
 		committeeAssigneeUserIds?: string[];
 		fileIds?: string[];
 		viewers?: ViewerInput[];
+		isDraft?: boolean;
 	}) => Promise<void>;
+	initialData?: {
+		title: string;
+		body: string;
+		relatedFormId?: string;
+		projectId?: string;
+		fileIds?: string[];
+	};
 };
+
+type BuildSubmitParamsInput = {
+	viewerRole: NewInquiryFormProps["viewerRole"];
+	title: string;
+	body: string;
+	selectedForm: FormSummary | null;
+	selectedProject: { id: string; name: string } | null;
+	selectedProjectAssignees: UserSummary[];
+	selectedCommitteeAssignees: UserSummary[];
+	selectedCoAssignees: UserSummary[];
+	selectedViewers: ViewerInput[];
+	fileIds?: string[];
+};
+
+const trimText = (value: string) => value.trim();
+
+const buildCommitteeParams = ({
+	title,
+	body,
+	selectedForm,
+	selectedProject,
+	selectedProjectAssignees,
+	selectedCommitteeAssignees,
+	selectedViewers,
+	fileIds,
+}: BuildSubmitParamsInput): SubmitParams | null => {
+	if (!selectedProject || selectedProjectAssignees.length === 0) return null;
+	return {
+		title: trimText(title),
+		body: trimText(body),
+		relatedFormId: selectedForm?.id,
+		projectId: selectedProject.id,
+		projectAssigneeUserIds: selectedProjectAssignees.map(p => p.id),
+		committeeAssigneeUserIds:
+			selectedCommitteeAssignees.length > 0
+				? selectedCommitteeAssignees.map(p => p.id)
+				: undefined,
+		fileIds,
+		viewers: selectedViewers.length > 0 ? selectedViewers : undefined,
+	};
+};
+
+const buildProjectParams = ({
+	title,
+	body,
+	selectedForm,
+	selectedCoAssignees,
+	fileIds,
+}: BuildSubmitParamsInput): SubmitParams => ({
+	title: trimText(title),
+	body: trimText(body),
+	relatedFormId: selectedForm?.id,
+	coAssigneeUserIds:
+		selectedCoAssignees.length > 0
+			? selectedCoAssignees.map(p => p.id)
+			: undefined,
+	fileIds,
+});
+
+const buildSubmitParams = (
+	input: BuildSubmitParamsInput
+): SubmitParams | null => {
+	if (input.viewerRole === "committee") return buildCommitteeParams(input);
+	return buildProjectParams(input);
+};
+
+const getSuccessMessage = (isDraft: boolean) =>
+	isDraft ? "下書きとして保存しました" : "お問い合わせを作成しました";
+
+const getErrorMessage = (isDraft: boolean) =>
+	isDraft ? "下書きの保存に失敗しました" : "お問い合わせの作成に失敗しました";
+
+function FormSection({
+	availableForms,
+	selectedForm,
+	onSelect,
+}: {
+	availableForms?: FormSummary[];
+	selectedForm: FormSummary | null;
+	onSelect: (form: FormSummary | null) => void;
+}) {
+	if (!availableForms || availableForms.length === 0) return null;
+	return (
+		<FormSelector
+			forms={availableForms}
+			selectedForm={selectedForm}
+			onSelect={onSelect}
+		/>
+	);
+}
+
+function CommitteeContent({
+	projects,
+	selectedProject,
+	onSelectProject,
+	loadingMembers,
+	loadedProjectMembers,
+	selectedProjectAssignees,
+	onToggleProjectAssignee,
+	committeeMembers,
+	currentUser,
+	selectedCommitteeAssignees,
+	onToggleCommitteeAssignee,
+	selectedViewers,
+	onChangeViewers,
+}: {
+	projects?: { id: string; name: string }[];
+	selectedProject: { id: string; name: string } | null;
+	onSelectProject: (project: { id: string; name: string }) => void;
+	loadingMembers: boolean;
+	loadedProjectMembers: UserSummary[];
+	selectedProjectAssignees: UserSummary[];
+	onToggleProjectAssignee: (person: UserSummary) => void;
+	committeeMembers?: UserSummary[];
+	currentUser: UserSummary;
+	selectedCommitteeAssignees: UserSummary[];
+	onToggleCommitteeAssignee: (person: UserSummary) => void;
+	selectedViewers: ViewerInput[];
+	onChangeViewers: (viewers: ViewerInput[]) => void;
+}) {
+	return (
+		<>
+			{projects && (
+				<ProjectSelector
+					projects={projects}
+					selectedProject={selectedProject}
+					onSelect={onSelectProject}
+				/>
+			)}
+
+			{selectedProject && (
+				<div className={styles.assignSection}>
+					<Text size="2" weight="medium">
+						企画側の担当者を選択
+					</Text>
+					<Text size="1" color="gray">
+						このお問い合わせに対応する企画側のメンバーを選択してください
+					</Text>
+					{loadingMembers ? (
+						<Text size="1" color="gray">
+							メンバーを読み込み中...
+						</Text>
+					) : (
+						<>
+							<MemberSelectPopover
+								members={loadedProjectMembers}
+								selected={selectedProjectAssignees}
+								onToggle={onToggleProjectAssignee}
+								triggerLabel="担当者を選択..."
+							/>
+							<SelectedChips
+								items={selectedProjectAssignees}
+								onRemove={onToggleProjectAssignee}
+							/>
+						</>
+					)}
+				</div>
+			)}
+
+			{committeeMembers && committeeMembers.length > 0 && (
+				<div className={styles.assignSection}>
+					<Text size="2" weight="medium">
+						追加の実委担当者（任意）
+					</Text>
+					<Text size="1" color="gray">
+						あなた以外に実委側の担当者を追加する場合に選択してください
+					</Text>
+					<MemberSelectPopover
+						members={committeeMembers.filter(m => m.id !== currentUser.id)}
+						selected={selectedCommitteeAssignees}
+						onToggle={onToggleCommitteeAssignee}
+						triggerLabel="実委担当者を追加..."
+					/>
+					<SelectedChips
+						items={selectedCommitteeAssignees}
+						onRemove={onToggleCommitteeAssignee}
+					/>
+				</div>
+			)}
+
+			{committeeMembers && (
+				<FormViewerSelector
+					selectedViewers={selectedViewers}
+					onChangeViewers={onChangeViewers}
+					committeeMembers={committeeMembers}
+				/>
+			)}
+		</>
+	);
+}
+
+function ProjectContent({
+	projectMembers,
+	currentUser,
+	selectedCoAssignees,
+	onToggleCoAssignee,
+}: {
+	projectMembers?: UserSummary[];
+	currentUser: UserSummary;
+	selectedCoAssignees: UserSummary[];
+	onToggleCoAssignee: (person: UserSummary) => void;
+}) {
+	if (!projectMembers || projectMembers.length <= 1) return null;
+	return (
+		<div className={styles.assignSection}>
+			<Text size="2" weight="medium">
+				共同担当者（任意）
+			</Text>
+			<Text size="1" color="gray">
+				自企画のメンバーを共同担当者として追加できます
+			</Text>
+			<MemberSelectPopover
+				members={projectMembers.filter(m => m.id !== currentUser.id)}
+				selected={selectedCoAssignees}
+				onToggle={onToggleCoAssignee}
+				triggerLabel="共同担当者を追加..."
+			/>
+			<SelectedChips
+				items={selectedCoAssignees}
+				onRemove={onToggleCoAssignee}
+			/>
+		</div>
+	);
+}
+
+function InfoBox({
+	viewerRole,
+	currentUser,
+}: {
+	viewerRole: NewInquiryFormProps["viewerRole"];
+	currentUser: UserSummary;
+}) {
+	return (
+		<div className={styles.infoBox}>
+			<Text size="1" color="gray">
+				{viewerRole === "project"
+					? `あなた（${currentUser.name}）が企画側の担当者になります。実行委員側の担当者は実行委員会によって割り当てられます。`
+					: `あなた（${currentUser.name}）が実行委員側の担当者になります。`}
+			</Text>
+		</div>
+	);
+}
+
+function FormActions({
+	viewerRole,
+	canSubmit,
+	isSubmitting,
+	onCancel,
+	onSubmit,
+}: {
+	viewerRole: NewInquiryFormProps["viewerRole"];
+	canSubmit: boolean;
+	isSubmitting: boolean;
+	onCancel: () => void;
+	onSubmit: (isDraft: boolean) => void;
+}) {
+	return (
+		<div className={styles.actions}>
+			<Button intent="ghost" onClick={onCancel}>
+				キャンセル
+			</Button>
+			{viewerRole === "committee" && (
+				<Button
+					intent="secondary"
+					onClick={() => onSubmit(true)}
+					disabled={!canSubmit || isSubmitting}
+					loading={isSubmitting}
+				>
+					下書き保存
+				</Button>
+			)}
+			<Button
+				onClick={() => onSubmit(false)}
+				disabled={!canSubmit || isSubmitting}
+				loading={isSubmitting}
+			>
+				{isSubmitting ? "送信中..." : "お問い合わせを作成"}
+			</Button>
+		</div>
+	);
+}
 
 export function NewInquiryForm({
 	open,
@@ -60,14 +350,23 @@ export function NewInquiryForm({
 	committeeMembers,
 	availableForms,
 	onSubmit,
+	initialData,
 }: NewInquiryFormProps) {
-	const [title, setTitle] = useState("");
-	const [body, setBody] = useState("");
-	const [selectedForm, setSelectedForm] = useState<FormSummary | null>(null);
+	const [title, setTitle] = useState(initialData?.title ?? "");
+	const [body, setBody] = useState(initialData?.body ?? "");
+	const [selectedForm, setSelectedForm] = useState<FormSummary | null>(
+		initialData?.relatedFormId && availableForms
+			? (availableForms.find(f => f.id === initialData.relatedFormId) ?? null)
+			: null
+	);
 	const [selectedProject, setSelectedProject] = useState<{
 		id: string;
 		name: string;
-	} | null>(null);
+	} | null>(
+		initialData?.projectId && projects
+			? (projects.find(p => p.id === initialData.projectId) ?? null)
+			: null
+	);
 	const [loadedProjectMembers, setLoadedProjectMembers] = useState<
 		UserSummary[]
 	>([]);
@@ -83,6 +382,9 @@ export function NewInquiryForm({
 	>([]);
 	const [selectedViewers, setSelectedViewers] = useState<ViewerInput[]>([]);
 	const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+	const [existingFileIds, setExistingFileIds] = useState<string[]>(
+		initialData?.fileIds ?? []
+	);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [confirmClose, setConfirmClose] = useState(false);
@@ -121,16 +423,17 @@ export function NewInquiryForm({
 		return results.map(r => r.file.id);
 	};
 
-	const handleSubmit = async () => {
-		setIsSubmitting(true);
+	const submitInquiry = async (isDraft: boolean) => {
 		try {
-			const fileIds =
-				selectedFiles.length > 0 ? await uploadFiles(selectedFiles) : undefined;
-			const params = buildInquiryParams({
+			const newFileIds =
+				selectedFiles.length > 0 ? await uploadFiles(selectedFiles) : [];
+			const mergedFileIds = [...existingFileIds, ...newFileIds];
+			const fileIds = mergedFileIds.length > 0 ? mergedFileIds : undefined;
+			const params = buildSubmitParams({
+				viewerRole,
 				title,
 				body,
-				viewerRole,
-				formId: selectedForm?.id,
+				selectedForm,
 				selectedProject,
 				selectedProjectAssignees,
 				selectedCommitteeAssignees,
@@ -138,16 +441,32 @@ export function NewInquiryForm({
 				selectedViewers,
 				fileIds,
 			});
-			if (!params) return;
-
-			await onSubmit(params);
-			reset();
-			onOpenChange(false);
+			if (!params) return { ok: false, silent: true };
+			await onSubmit({ ...params, isDraft });
+			return { ok: true };
 		} catch {
-			toast.error("お問い合わせの作成に失敗しました");
-		} finally {
-			setIsSubmitting(false);
+			return { ok: false, message: getErrorMessage(isDraft) };
 		}
+	};
+
+	const handleSubmit = async (isDraft = false) => {
+		if (!canSubmit) return;
+
+		setIsSubmitting(true);
+		const result = await submitInquiry(isDraft);
+		setIsSubmitting(false);
+
+		if (!result.ok) {
+			if (!result.silent) {
+				toast.error(result.message);
+			}
+			return;
+		}
+
+		reset();
+		setExistingFileIds([]);
+		onOpenChange(false);
+		toast.success(getSuccessMessage(isDraft));
 	};
 
 	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -205,8 +524,8 @@ export function NewInquiryForm({
 	};
 
 	const canSubmit =
-		title.trim() &&
-		body.trim() &&
+		trimText(title) &&
+		trimText(body) &&
 		(viewerRole === "project" ||
 			(selectedProject && selectedProjectAssignees.length > 0));
 
@@ -238,114 +557,37 @@ export function NewInquiryForm({
 						required
 					/>
 
-					{/* 関連申請選択（任意） */}
-					{availableForms && availableForms.length > 0 && (
-						<FormSelector
-							forms={availableForms}
-							selectedForm={selectedForm}
-							onSelect={setSelectedForm}
-						/>
-					)}
+					<FormSection
+						availableForms={availableForms}
+						selectedForm={selectedForm}
+						onSelect={setSelectedForm}
+					/>
 
-					{/* 実委作成の場合: 対象企画を選択 */}
-					{viewerRole === "committee" && projects && (
-						<ProjectSelector
+					{viewerRole === "committee" ? (
+						<CommitteeContent
 							projects={projects}
 							selectedProject={selectedProject}
-							onSelect={handleSelectProject}
-						/>
-					)}
-
-					{/* 実委作成の場合: 企画側担当者を選択 */}
-					{viewerRole === "committee" && selectedProject && (
-						<div className={styles.assignSection}>
-							<Text size="2" weight="medium">
-								企画側の担当者を選択
-							</Text>
-							<Text size="1" color="gray">
-								このお問い合わせに対応する企画側のメンバーを選択してください
-							</Text>
-							{loadingMembers ? (
-								<Text size="1" color="gray">
-									メンバーを読み込み中...
-								</Text>
-							) : (
-								<>
-									<MemberSelectPopover
-										members={loadedProjectMembers}
-										selected={selectedProjectAssignees}
-										onToggle={toggleProjectAssignee}
-										triggerLabel="担当者を選択..."
-									/>
-									<SelectedChips
-										items={selectedProjectAssignees}
-										onRemove={toggleProjectAssignee}
-									/>
-								</>
-							)}
-						</div>
-					)}
-
-					{/* 実委作成の場合: 追加実委担当者（任意） */}
-					{viewerRole === "committee" &&
-						committeeMembers &&
-						committeeMembers.length > 0 && (
-							<div className={styles.assignSection}>
-								<Text size="2" weight="medium">
-									追加の実委担当者（任意）
-								</Text>
-								<Text size="1" color="gray">
-									あなた以外に実委側の担当者を追加する場合に選択してください
-								</Text>
-								<MemberSelectPopover
-									members={committeeMembers.filter(
-										m => m.id !== currentUser.id
-									)}
-									selected={selectedCommitteeAssignees}
-									onToggle={toggleCommitteeAssignee}
-									triggerLabel="実委担当者を追加..."
-								/>
-								<SelectedChips
-									items={selectedCommitteeAssignees}
-									onRemove={toggleCommitteeAssignee}
-								/>
-							</div>
-						)}
-
-					{/* 実委作成の場合: 閲覧者設定（任意） */}
-					{viewerRole === "committee" && committeeMembers && (
-						<FormViewerSelector
+							onSelectProject={handleSelectProject}
+							loadingMembers={loadingMembers}
+							loadedProjectMembers={loadedProjectMembers}
+							selectedProjectAssignees={selectedProjectAssignees}
+							onToggleProjectAssignee={toggleProjectAssignee}
+							committeeMembers={committeeMembers}
+							currentUser={currentUser}
+							selectedCommitteeAssignees={selectedCommitteeAssignees}
+							onToggleCommitteeAssignee={toggleCommitteeAssignee}
 							selectedViewers={selectedViewers}
 							onChangeViewers={setSelectedViewers}
-							committeeMembers={committeeMembers}
+						/>
+					) : (
+						<ProjectContent
+							projectMembers={projectMembers}
+							currentUser={currentUser}
+							selectedCoAssignees={selectedCoAssignees}
+							onToggleCoAssignee={toggleCoAssignee}
 						/>
 					)}
 
-					{/* 企画作成の場合: 共同担当者（任意） */}
-					{viewerRole === "project" &&
-						projectMembers &&
-						projectMembers.length > 1 && (
-							<div className={styles.assignSection}>
-								<Text size="2" weight="medium">
-									共同担当者（任意）
-								</Text>
-								<Text size="1" color="gray">
-									自企画のメンバーを共同担当者として追加できます
-								</Text>
-								<MemberSelectPopover
-									members={projectMembers.filter(m => m.id !== currentUser.id)}
-									selected={selectedCoAssignees}
-									onToggle={toggleCoAssignee}
-									triggerLabel="共同担当者を追加..."
-								/>
-								<SelectedChips
-									items={selectedCoAssignees}
-									onRemove={toggleCoAssignee}
-								/>
-							</div>
-						)}
-
-					{/* ファイル添付 */}
 					<FileAttachmentArea
 						fileInputRef={fileInputRef}
 						selectedFiles={selectedFiles}
@@ -353,35 +595,16 @@ export function NewInquiryForm({
 						onRemoveFile={removeFile}
 					/>
 
-					{viewerRole === "project" ? (
-						<div className={styles.infoBox}>
-							<Text size="1" color="gray">
-								あなた（{currentUser.name}
-								）が企画側の担当者になります。実行委員側の担当者は実行委員会によって割り当てられます。
-							</Text>
-						</div>
-					) : (
-						<div className={styles.infoBox}>
-							<Text size="1" color="gray">
-								あなた（{currentUser.name}
-								）が実行委員側の担当者になります。
-							</Text>
-						</div>
-					)}
+					<InfoBox viewerRole={viewerRole} currentUser={currentUser} />
 				</div>
 
-				<div className={styles.actions}>
-					<Button intent="ghost" onClick={() => handleOpenChange(false)}>
-						キャンセル
-					</Button>
-					<Button
-						onClick={handleSubmit}
-						disabled={!canSubmit || isSubmitting}
-						loading={isSubmitting}
-					>
-						{isSubmitting ? "送信中..." : "お問い合わせを作成"}
-					</Button>
-				</div>
+				<FormActions
+					viewerRole={viewerRole}
+					canSubmit={Boolean(canSubmit)}
+					isSubmitting={isSubmitting}
+					onCancel={() => onOpenChange(false)}
+					onSubmit={handleSubmit}
+				/>
 			</Dialog.Content>
 			<DiscardChangesDialog
 				open={confirmClose}
@@ -393,57 +616,6 @@ export function NewInquiryForm({
 }
 
 /* ─── ユーティリティ ─── */
-
-function buildInquiryParams({
-	title,
-	body,
-	viewerRole,
-	formId,
-	selectedProject,
-	selectedProjectAssignees,
-	selectedCommitteeAssignees,
-	selectedCoAssignees,
-	selectedViewers,
-	fileIds,
-}: {
-	title: string;
-	body: string;
-	viewerRole: "project" | "committee";
-	formId: string | undefined;
-	selectedProject: { id: string; name: string } | null;
-	selectedProjectAssignees: UserSummary[];
-	selectedCommitteeAssignees: UserSummary[];
-	selectedCoAssignees: UserSummary[];
-	selectedViewers: ViewerInput[];
-	fileIds?: string[];
-}) {
-	if (viewerRole === "committee") {
-		if (!selectedProject || selectedProjectAssignees.length === 0) return null;
-		return {
-			title: title.trim(),
-			body: body.trim(),
-			relatedFormId: formId,
-			projectId: selectedProject.id,
-			projectAssigneeUserIds: selectedProjectAssignees.map(p => p.id),
-			committeeAssigneeUserIds:
-				selectedCommitteeAssignees.length > 0
-					? selectedCommitteeAssignees.map(p => p.id)
-					: undefined,
-			fileIds,
-			viewers: selectedViewers.length > 0 ? selectedViewers : undefined,
-		};
-	}
-	return {
-		title: title.trim(),
-		body: body.trim(),
-		relatedFormId: formId,
-		coAssigneeUserIds:
-			selectedCoAssignees.length > 0
-				? selectedCoAssignees.map(p => p.id)
-				: undefined,
-		fileIds,
-	};
-}
 
 function toggleItem<T extends { id: string }>(prev: T[], item: T): T[] {
 	return prev.some(p => p.id === item.id)

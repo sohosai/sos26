@@ -9,7 +9,9 @@ import {
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
+import { mapAnswerFiles, normalizeFileIds } from "../lib/form-answer-files";
 import {
+	assertFileCountConstraints,
 	assertFormAnswersValid,
 	assertRequiredAnswered,
 } from "../lib/form-answer-validation";
@@ -37,7 +39,15 @@ const buildPrismaAnswerData = (
 	formItemId: answer.formItemId,
 	textValue: "textValue" in answer ? answer.textValue : undefined,
 	numberValue: "numberValue" in answer ? answer.numberValue : undefined,
-	fileId: "fileId" in answer ? answer.fileId : undefined,
+	files:
+		"fileIds" in answer && answer.fileIds.length > 0
+			? {
+					create: normalizeFileIds(answer.fileIds).map((fileId, sortOrder) => ({
+						fileId,
+						sortOrder,
+					})),
+				}
+			: undefined,
 	selectedOptions:
 		"selectedOptionIds" in answer && answer.selectedOptionIds?.length
 			? {
@@ -89,6 +99,7 @@ function validateRegistrationFormAnswers(
 			if (!items) continue;
 			assertFormAnswersValid(items, answers);
 			assertRequiredAnswered(items, answers);
+			assertFileCountConstraints(items, answers);
 		}
 	}
 }
@@ -144,13 +155,23 @@ projectRoute.post("/create", requireAuth, async c => {
 						type: true,
 						required: true,
 						options: { select: { id: true } },
+						constraintMinLength: true,
+						constraintMaxLength: true,
+						constraintPattern: true,
+						constraintCustomPattern: true,
+						constraintMinFiles: true,
+						constraintMaxFiles: true,
 					},
 					orderBy: { sortOrder: "asc" },
 				},
 			},
 		});
+		const applicableFormsWithConstraints = applicableForms.map(form => ({
+			...form,
+			items: form.items.map(mapItemToApiShape),
+		}));
 		validateRegistrationFormAnswers(
-			applicableForms,
+			applicableFormsWithConstraints,
 			data.location,
 			registrationFormAnswers
 		);
@@ -299,6 +320,21 @@ projectRoute.get(
 								type: true,
 							},
 						},
+						files: {
+							orderBy: { sortOrder: "asc" },
+							include: {
+								file: {
+									select: {
+										id: true,
+										fileName: true,
+										mimeType: true,
+										size: true,
+										isPublic: true,
+										createdAt: true,
+									},
+								},
+							},
+						},
 						selectedOptions: {
 							include: {
 								formItemOption: { select: { id: true, label: true } },
@@ -332,7 +368,7 @@ projectRoute.get(
 					type: answer.formItem.type,
 					textValue: answer.textValue,
 					numberValue: answer.numberValue,
-					fileId: answer.fileId,
+					files: mapAnswerFiles(answer.files),
 					selectedOptions: answer.selectedOptions.map(selected => ({
 						id: selected.formItemOption.id,
 						label: selected.formItemOption.label,

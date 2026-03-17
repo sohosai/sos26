@@ -48,30 +48,20 @@ function resolveResponseValue(
 }
 
 function resolveFileResponseValue(answer: AnyResponseAnswer): FileAnswerValue {
-	if (!answer.fileId) {
+	if (answer.files.length === 0) {
 		return createEmptyFileAnswerValue();
 	}
-
-	if ("fileMetadata" in answer && answer.fileMetadata) {
-		return {
-			pendingFile: null,
-			uploadedFile: {
-				fileId: answer.fileMetadata.id,
-				fileName: answer.fileMetadata.fileName,
-				mimeType: answer.fileMetadata.mimeType,
-				isPublic: answer.fileMetadata.isPublic,
-			},
-		};
-	}
-
 	return {
-		pendingFile: null,
-		uploadedFile: {
-			fileId: answer.fileId,
-			fileName: null,
-			mimeType: null,
-			isPublic: null,
-		},
+		pendingFiles: [],
+		uploadedFiles: answer.files.map(file => ({
+			id: file.id,
+			fileName: file.fileName,
+			mimeType: file.mimeType,
+			size: file.size,
+			isPublic: file.isPublic,
+			createdAt: file.createdAt,
+			sortOrder: file.sortOrder,
+		})),
 	};
 }
 
@@ -139,19 +129,36 @@ export async function prepareAnswersForSubmit(
 				throw new Error(`FILE回答の型が不正です: ${item.id}`);
 			}
 
-			if (value.pendingFile instanceof File) {
-				const result = await uploadFile(value.pendingFile);
-				const uploadedFile: UploadedFileValue = {
-					fileId: result.file.id,
-					fileName: result.file.fileName,
-					mimeType: result.file.mimeType,
-					isPublic: result.file.isPublic,
-				};
+			if (value.pendingFiles.length > 0) {
+				const uploadedFiles = await Promise.all(
+					value.pendingFiles.map(async (file, sortOrder) => {
+						const result = await uploadFile(file).catch(error => {
+							console.error("Failed to upload form answer file", {
+								formId: form.id,
+								formItemId: item.id,
+								fileName: file.name,
+								fileSize: file.size,
+								fileType: file.type,
+								sortOrder,
+								error,
+							});
+							throw error;
+						});
+						const uploadedFile: UploadedFileValue = {
+							id: result.file.id,
+							fileName: result.file.fileName,
+							mimeType: result.file.mimeType,
+							size: result.file.size,
+							isPublic: result.file.isPublic,
+							sortOrder,
+						};
+						return uploadedFile;
+					})
+				);
 				preparedAnswers[item.id] = {
-					pendingFile: null,
-					uploadedFile,
+					pendingFiles: [],
+					uploadedFiles,
 				};
-				return;
 			}
 		})
 	);
@@ -191,7 +198,14 @@ function buildSingleAnswer(
 			if (!isFileAnswerValue(value)) {
 				throw new Error(`FILE回答の型が不正です: ${formItemId}`);
 			}
-			return { type, formItemId, fileId: value.uploadedFile?.fileId ?? null };
+			return {
+				type,
+				formItemId,
+				fileIds: value.uploadedFiles
+					.slice()
+					.sort((a, b) => a.sortOrder - b.sortOrder)
+					.map(file => file.id),
+			};
 	}
 	return assertNever(type);
 }

@@ -8,7 +8,7 @@ import {
 	projectTypeSchema,
 	viewerScopeSchema,
 } from "./common";
-import { fileSchema } from "./file";
+import { formAnswerFileSchema } from "./file";
 import { viewerInputSchema } from "./inquiry";
 import { userSchema } from "./user";
 
@@ -35,6 +35,19 @@ export const formAnswerValidationItemSchema = z.object({
 	type: formItemTypeSchema,
 	required: z.boolean(),
 	options: z.array(z.object({ id: z.string() })),
+	constraints: z
+		.object({
+			minLength: z.number().int().nonnegative().optional(),
+			maxLength: z.number().int().positive().optional(),
+			pattern: z
+				.enum(["katakana", "hiragana", "alphanumeric", "custom"])
+				.optional(),
+			customPattern: z.string().optional(),
+			minFiles: z.number().int().nonnegative().optional(),
+			maxFiles: z.number().int().positive().optional(),
+		})
+		.nullable()
+		.optional(),
 });
 export type FormAnswerValidationItem = z.infer<
 	typeof formAnswerValidationItemSchema
@@ -78,6 +91,66 @@ export const textConstraintsSchema = z
 	);
 export type TextConstraints = z.infer<typeof textConstraintsSchema>;
 
+export const fileConstraintsSchema = z
+	.object({
+		minFiles: z.number().int().nonnegative().optional(),
+		maxFiles: z.number().int().positive().optional(),
+	})
+	.refine(
+		({ minFiles, maxFiles }) =>
+			minFiles === undefined || maxFiles === undefined || minFiles <= maxFiles,
+		{
+			message: "最小ファイル数は最大ファイル数以下にしてください",
+			path: ["minFiles"],
+		}
+	);
+export type FileConstraints = z.infer<typeof fileConstraintsSchema>;
+
+export const formItemConstraintsSchema = z
+	.object({
+		minLength: textConstraintsSchema.shape.minLength,
+		maxLength: textConstraintsSchema.shape.maxLength,
+		pattern: textConstraintsSchema.shape.pattern,
+		customPattern: textConstraintsSchema.shape.customPattern,
+		minFiles: fileConstraintsSchema.shape.minFiles,
+		maxFiles: fileConstraintsSchema.shape.maxFiles,
+	})
+	.refine(
+		({ minLength, maxLength }) =>
+			minLength === undefined ||
+			maxLength === undefined ||
+			minLength <= maxLength,
+		{ message: "最小文字数は最大文字数以下にしてください", path: ["minLength"] }
+	)
+	.refine(
+		({ minFiles, maxFiles }) =>
+			minFiles === undefined || maxFiles === undefined || minFiles <= maxFiles,
+		{
+			message: "最小ファイル数は最大ファイル数以下にしてください",
+			path: ["minFiles"],
+		}
+	);
+export type FormItemConstraints = z.infer<typeof formItemConstraintsSchema>;
+
+function hasTextConstraints(
+	constraints: FormItemConstraints | null | undefined
+): boolean {
+	return (
+		constraints?.minLength !== undefined ||
+		constraints?.maxLength !== undefined ||
+		constraints?.pattern !== undefined ||
+		constraints?.customPattern !== undefined
+	);
+}
+
+function hasFileConstraints(
+	constraints: FormItemConstraints | null | undefined
+): boolean {
+	return (
+		constraints?.minFiles !== undefined || constraints?.maxFiles !== undefined
+	);
+}
+
 // ─────────────────────────────────────────────────────────────
 // 基本モデルスキーマ
 // ─────────────────────────────────────────────────────────────
@@ -101,7 +174,7 @@ export const formItemSchema = z.object({
 	required: z.boolean().default(false),
 	sortOrder: z.number().int(),
 	options: z.array(formItemOptionSchema),
-	constraints: textConstraintsSchema.nullable(),
+	constraints: formItemConstraintsSchema.nullable(),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 });
@@ -241,7 +314,7 @@ const numberAnswerSchema = z.object({
 const fileAnswerSchema = z.object({
 	...baseAnswerSchema,
 	type: z.literal("FILE"),
-	fileId: z.string().nullable(),
+	fileIds: z.array(z.string()),
 });
 
 const selectAnswerSchema = z.object({
@@ -289,6 +362,73 @@ export const validateFormItemTypeOptions = (
 	}
 };
 
+export const validateFormItemTypeConstraints = (
+	data: { type: string; constraints?: FormItemConstraints | null },
+	ctx: z.RefinementCtx
+) => {
+	const constraints = data.constraints;
+	if (!constraints) return;
+
+	const hasText = hasTextConstraints(constraints);
+	const hasFile = hasFileConstraints(constraints);
+
+	if (data.type === "TEXT" || data.type === "TEXTAREA") {
+		if (hasFile) {
+			ctx.addIssue({
+				code: "custom",
+				message: "TEXT/TEXTAREAタイプの設問にはファイル数制約を設定できません",
+				path: ["constraints"],
+			});
+		}
+		return;
+	}
+
+	if (data.type === "FILE") {
+		if (hasText) {
+			ctx.addIssue({
+				code: "custom",
+				message: "FILEタイプの設問には文字数制約を設定できません",
+				path: ["constraints"],
+			});
+		}
+		return;
+	}
+
+	if (hasText || hasFile) {
+		ctx.addIssue({
+			code: "custom",
+			message: "このタイプの設問には入力制約を設定できません",
+			path: ["constraints"],
+		});
+	}
+};
+
+export const validateFormItemTypeConfiguration = (
+	data: {
+		type: string;
+		required?: boolean;
+		options?: unknown[];
+		constraints?: FormItemConstraints | null;
+	},
+	ctx: z.RefinementCtx
+) => {
+	validateFormItemTypeOptions(data, ctx);
+	validateFormItemTypeConstraints(data, ctx);
+
+	// 必須FILEは minFiles >= 1 を強制
+	if (data.type === "FILE" && data.required) {
+		const minFiles = data.constraints?.minFiles;
+		if (minFiles === undefined || minFiles < 1) {
+			ctx.addIssue({
+				code: "custom",
+				message:
+					"必須のファイル設問には最小ファイル数を1以上に設定してください",
+				path: ["constraints"],
+			});
+		}
+	}
+};
+
 // .extend() を使うため superRefine なしのベーススキーマ（内部利用）
 const formItemInputObjectSchema = formItemSchema
 	.pick({
@@ -300,11 +440,11 @@ const formItemInputObjectSchema = formItemSchema
 	})
 	.extend({
 		options: z.array(createFormItemOptionInputSchema).optional(),
-		constraints: textConstraintsSchema.nullable().optional(),
+		constraints: formItemConstraintsSchema.nullable().optional(),
 	});
 
 export const createFormItemInputSchema = formItemInputObjectSchema.superRefine(
-	validateFormItemTypeOptions
+	validateFormItemTypeConfiguration
 );
 
 export const createFormRequestSchema = z.object({
@@ -387,7 +527,7 @@ export type UpdateFormViewersResponse = z.infer<
 // 更新リクエスト用のitem入力スキーマ
 export const updateFormItemInputSchema = formItemInputObjectSchema
 	.extend({ id: z.string().min(1).optional() })
-	.superRefine(validateFormItemTypeOptions);
+	.superRefine(validateFormItemTypeConfiguration);
 
 export const updateFormDetailRequestSchema = z.object({
 	title: z.string().min(1).optional(),
@@ -494,17 +634,7 @@ export const formResponseAnswerSchema = z.object({
 	formItemId: z.string(),
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileId: z.string().nullable(),
-	fileMetadata: fileSchema
-		.pick({
-			id: true,
-			fileName: true,
-			mimeType: true,
-			size: true,
-			isPublic: true,
-		})
-		.nullable()
-		.optional(),
+	files: z.array(formAnswerFileSchema),
 	selectedOptions: z.array(
 		z.object({
 			id: z.string(),
@@ -612,13 +742,6 @@ const projectFormItemOptionSchema = z.object({
 	sortOrder: z.number().int(),
 });
 
-const projectFormFileMetadataSchema = fileSchema.pick({
-	id: true,
-	fileName: true,
-	mimeType: true,
-	isPublic: true,
-});
-
 const projectFormItemSchema = z.object({
 	id: z.string(),
 	label: z.string(),
@@ -627,7 +750,7 @@ const projectFormItemSchema = z.object({
 	required: z.boolean(),
 	sortOrder: z.number().int(),
 	options: z.array(projectFormItemOptionSchema),
-	constraints: textConstraintsSchema.nullable(),
+	constraints: formItemConstraintsSchema.nullable(),
 });
 
 // 回答値スキーマ
@@ -635,8 +758,7 @@ const formAnswerSchema = z.object({
 	formItemId: z.string(),
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileId: z.string().nullable(),
-	fileMetadata: projectFormFileMetadataSchema.nullable(),
+	files: z.array(formAnswerFileSchema),
 	selectedOptionIds: z.array(z.string()),
 });
 

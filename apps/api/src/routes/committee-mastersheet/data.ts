@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { formAnswerFileSelect } from "../../lib/form-answer-files";
 import { prisma } from "../../lib/prisma";
 import { requireAuth, requireCommitteeMember } from "../../middlewares/auth";
 import type { AuthEnv } from "../../types/auth-env";
@@ -113,6 +114,16 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 				include: {
 					answers: {
 						include: {
+							files: {
+								where: {
+									file: {
+										status: "CONFIRMED",
+										deletedAt: null,
+									},
+								},
+								orderBy: { sortOrder: "asc" },
+								include: { file: { select: formAnswerFileSelect } },
+							},
 							selectedOptions: { select: { formItemOptionId: true } },
 						},
 					},
@@ -155,6 +166,10 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 				include: {
 					answers: {
 						include: {
+							files: {
+								orderBy: { sortOrder: "asc" },
+								include: { file: { select: formAnswerFileSelect } },
+							},
 							selectedOptions: { select: { formItemOptionId: true } },
 						},
 					},
@@ -225,7 +240,7 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 					? {
 							textValue: cv.textValue,
 							numberValue: cv.numberValue,
-							fileId: null,
+							files: [],
 							selectedOptionIds: cv.selectedOptions.map(s => s.optionId),
 						}
 					: null,

@@ -11,6 +11,7 @@ import {
 import { Hono } from "hono";
 import { requireDeliverPermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
+import { formAnswerFileSelect, mapAnswerFiles } from "../lib/form-answer-files";
 import {
 	constraintsToPrisma,
 	mapFormToApiShape,
@@ -24,6 +25,19 @@ import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
 const committeeProjectRegistrationFormRoute = new Hono<AuthEnv>();
+
+const answerFilesInclude = {
+	where: {
+		file: {
+			status: "CONFIRMED" as const,
+			deletedAt: null,
+		},
+	},
+	orderBy: { sortOrder: "asc" as const },
+	include: {
+		file: { select: formAnswerFileSelect },
+	},
+};
 
 // ─────────────────────────────────────────────────────────────
 // ヘルパー
@@ -711,6 +725,7 @@ committeeProjectRegistrationFormRoute.get(
 				},
 				answers: {
 					include: {
+						files: answerFilesInclude,
 						selectedOptions: {
 							include: {
 								formItemOption: { select: { id: true, label: true } },
@@ -735,7 +750,7 @@ committeeProjectRegistrationFormRoute.get(
 					formItemId: a.formItemId,
 					textValue: a.textValue,
 					numberValue: a.numberValue,
-					fileId: a.fileId,
+					files: mapAnswerFiles(a.files),
 					selectedOptions: a.selectedOptions.map(s => ({
 						id: s.formItemOption.id,
 						label: s.formItemOption.label,

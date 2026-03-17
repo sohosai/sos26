@@ -181,6 +181,10 @@ function formatAssignee(a: {
 	};
 }
 
+function getCommentSentAt(comment: { createdAt: Date; sentAt: Date | null }) {
+	return comment.sentAt ?? comment.createdAt;
+}
+
 // ─────────────────────────────────────────────────────────────
 // POST /project/:projectId/inquiries
 // お問い合わせを作成
@@ -326,6 +330,7 @@ projectInquiryRoute.get(
 			where: {
 				projectId: project.id,
 				deletedAt: null,
+				isDraft: false,
 				assignees: {
 					some: { userId: user.id, side: "PROJECT", deletedAt: null },
 				},
@@ -339,7 +344,7 @@ projectInquiryRoute.get(
 				},
 				_count: {
 					select: {
-						comments: { where: { deletedAt: null } },
+						comments: { where: { deletedAt: null, isDraft: false } },
 					},
 				},
 			},
@@ -353,6 +358,7 @@ projectInquiryRoute.get(
 			creatorRole: inq.creatorRole,
 			createdAt: inq.createdAt,
 			updatedAt: inq.updatedAt,
+			isDraft: inq.isDraft,
 			createdBy: inq.createdBy,
 			project: inq.project,
 			projectAssignees: inq.assignees
@@ -388,7 +394,12 @@ projectInquiryRoute.get(
 		await requireProjectAssignee(inquiryId, user.id);
 
 		const inquiry = await prisma.inquiry.findFirst({
-			where: { id: inquiryId, projectId: project.id, deletedAt: null },
+			where: {
+				id: inquiryId,
+				projectId: project.id,
+				deletedAt: null,
+				isDraft: false,
+			},
 			include: {
 				createdBy: { select: userSelect },
 				project: { select: { id: true, name: true } },
@@ -398,7 +409,7 @@ projectInquiryRoute.get(
 					include: assigneeInclude,
 				},
 				comments: {
-					where: { deletedAt: null },
+					where: { deletedAt: null, isDraft: false },
 					include: {
 						createdBy: { select: userSelect },
 						attachments: {
@@ -427,6 +438,20 @@ projectInquiryRoute.get(
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
 
+		const sortedComments = inquiry.comments
+			.map(cm => ({
+				id: cm.id,
+				body: cm.body,
+				senderRole: cm.senderRole,
+				createdAt: cm.createdAt,
+				sentAt: cm.sentAt,
+				createdBy: cm.createdBy,
+				attachments: cm.attachments.map(formatAttachment),
+			}))
+			.sort(
+				(a, b) => getCommentSentAt(a).getTime() - getCommentSentAt(b).getTime()
+			);
+
 		const formatted = {
 			id: inquiry.id,
 			title: inquiry.title,
@@ -436,6 +461,7 @@ projectInquiryRoute.get(
 			creatorRole: inquiry.creatorRole,
 			projectId: inquiry.projectId,
 			relatedFormId: inquiry.relatedFormId,
+			isDraft: inquiry.isDraft,
 			createdAt: inquiry.createdAt,
 			updatedAt: inquiry.updatedAt,
 			createdBy: inquiry.createdBy,
@@ -447,14 +473,7 @@ projectInquiryRoute.get(
 			committeeAssignees: inquiry.assignees
 				.filter(a => a.side === "COMMITTEE")
 				.map(formatAssignee),
-			comments: inquiry.comments.map(cm => ({
-				id: cm.id,
-				body: cm.body,
-				senderRole: cm.senderRole,
-				createdAt: cm.createdAt,
-				createdBy: cm.createdBy,
-				attachments: cm.attachments.map(formatAttachment),
-			})),
+			comments: sortedComments,
 			activities: inquiry.activities.map(act => ({
 				id: act.id,
 				type: act.type,
@@ -498,6 +517,11 @@ projectInquiryRoute.post(
 		if (!inquiry) {
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
+		if (inquiry.isDraft) {
+			throw Errors.invalidRequest(
+				"下書き状態のお問い合わせにはコメントできません"
+			);
+		}
 		if (inquiry.status === "RESOLVED") {
 			throw Errors.invalidRequest(
 				"解決済みのお問い合わせにはコメントできません"
@@ -527,6 +551,7 @@ projectInquiryRoute.post(
 					body: commentBody,
 					createdById: user.id,
 					senderRole: "PROJECT",
+					sentAt: new Date(),
 				},
 				include: { createdBy: { select: userSelect } },
 			});
@@ -584,7 +609,9 @@ projectInquiryRoute.post(
 					id: comment.id,
 					body: comment.body,
 					senderRole: comment.senderRole,
+					isDraft: comment.isDraft,
 					createdAt: comment.createdAt,
+					sentAt: comment.sentAt,
 					createdBy: comment.createdBy,
 					attachments: comment.attachments.map(formatAttachment),
 				},

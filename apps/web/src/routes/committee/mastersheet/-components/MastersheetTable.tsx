@@ -1,4 +1,4 @@
-import { Text, Tooltip } from "@radix-ui/themes";
+import { Link, Text, Tooltip } from "@radix-ui/themes";
 import type {
 	EditFormItemCellRequest,
 	GetMastersheetDataResponse,
@@ -23,7 +23,6 @@ import { toast } from "sonner";
 import {
 	DataTable,
 	EditableCell,
-	FileCell,
 	MultiSelectEditCell,
 	SelectCell,
 } from "@/components/patterns";
@@ -32,6 +31,7 @@ import {
 	upsertMastersheetCell,
 } from "@/lib/api/committee-mastersheet";
 import { isClientError } from "@/lib/http/error";
+import { useStorageUrl } from "@/lib/storage";
 import styles from "./MastersheetTable.module.scss";
 
 type MastersheetRow = {
@@ -187,6 +187,57 @@ const INACTIVE_PLACEHOLDER = (
 	</Text>
 );
 
+type FormCellFile = NonNullable<
+	GetMastersheetDataResponse["rows"][number]["cells"][number]["formValue"]
+>["files"][number];
+
+function CompactFileLink({ file }: { file: FormCellFile }) {
+	const url = useStorageUrl(file.id, file.isPublic);
+
+	if (!url) {
+		return <Text size="2">{file.fileName}</Text>;
+	}
+
+	return (
+		<Link href={url} target="_blank" rel="noopener noreferrer" size="2">
+			{file.fileName}
+		</Link>
+	);
+}
+
+function CompactFileCell({ files }: { files: FormCellFile[] }) {
+	if (files.length === 0) {
+		return (
+			<Text color="gray" size="2">
+				─
+			</Text>
+		);
+	}
+
+	const [first, ...rest] = files
+		.slice()
+		.sort((a, b) => a.sortOrder - b.sortOrder);
+	if (!first) {
+		return (
+			<Text color="gray" size="2">
+				─
+			</Text>
+		);
+	}
+
+	return (
+		<div>
+			<CompactFileLink file={first} />
+			{rest.length > 0 && (
+				<Text size="1" color="gray">
+					{" "}
+					+{rest.length}件
+				</Text>
+			)}
+		</div>
+	);
+}
+
 /** 企画登録情報由来カラム（読み取り専用） */
 function buildPrfReadOnlyColumn(
 	col: ApiColumn
@@ -238,12 +289,13 @@ function buildPrfReadOnlyColumn(
 
 	if (itemType === "FILE") {
 		return columnHelper.accessor(
-			row => row.cells[col.id]?.formValue?.fileId ?? null,
+			row => row.cells[col.id]?.formValue?.files ?? [],
 			{
 				id: col.id,
 				header: () => <ColHeader col={col} />,
-				cell: props =>
-					props.getValue() ? <FileCell {...props} /> : INACTIVE_PLACEHOLDER,
+				cell: props => (
+					<CompactFileCell files={props.getValue() as FormCellFile[]} />
+				),
 				meta: { filterVariant: "text" },
 			}
 		);
@@ -331,7 +383,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 
 		if (itemType === "FILE") {
 			return columnHelper.accessor(
-				row => row.cells[col.id]?.formValue?.fileId ?? null,
+				row => row.cells[col.id]?.formValue?.files ?? [],
 				{
 					id: col.id,
 					header: () => <ColHeader col={col} />,
@@ -339,7 +391,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 						isFormItemInactive(props.row.original, col.id) ? (
 							INACTIVE_PLACEHOLDER
 						) : (
-							<FileCell {...props} />
+							<CompactFileCell files={props.getValue() as FormCellFile[]} />
 						),
 					meta: { filterVariant: "text" },
 				}

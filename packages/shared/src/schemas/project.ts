@@ -5,6 +5,7 @@ import {
 	PROJECT_DISPLAY_NAME_RULE_MESSAGE,
 } from "../lib/project-display-name";
 import { projectLocationSchema, projectTypeSchema } from "./common";
+import { formAnswerFileSchema } from "./file";
 import { formAnswerInputSchema, formItemTypeSchema } from "./form";
 
 export { projectTypeSchema, projectLocationSchema };
@@ -162,7 +163,7 @@ export const projectRegistrationFormResponseAnswerViewSchema = z.object({
 	type: formItemTypeSchema,
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileId: z.string().nullable(),
+	files: z.array(formAnswerFileSchema),
 	selectedOptions: z.array(
 		z.object({
 			id: z.string(),

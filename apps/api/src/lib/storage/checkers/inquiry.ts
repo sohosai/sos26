@@ -55,19 +55,32 @@ async function checkCommitteeAccess(
  * fileId で InquiryAttachment を検索し、以下の条件でアクセスを許可:
  * 1. INQUIRY_ADMIN 権限を持つ実委人
  * 2. 実委側担当者
- * 3. 企画側担当者
- * 4. 閲覧者スコープに一致（ALL / BUREAU / INDIVIDUAL）
+ * 3. 閲覧者スコープに一致（ALL / BUREAU / INDIVIDUAL）
+ * 4. 企画側担当者（ただし下書きコメント添付は除く）
  */
 registerFileAccessChecker(async (fileId, user) => {
 	// このファイルがお問い合わせに添付されているか検索
 	const attachment = await prisma.inquiryAttachment.findFirst({
 		where: { fileId, deletedAt: null },
+		include: {
+			comment: {
+				select: {
+					isDraft: true,
+					deletedAt: true,
+				},
+			},
+		},
 	});
 
 	if (!attachment) {
 		return false; // このチェッカーでは判定不能
 	}
 
+	if (attachment.comment?.deletedAt) {
+		return false;
+	}
+
+	const isDraftCommentAttachment = attachment.comment?.isDraft ?? false;
 	const { inquiryId } = attachment;
 
 	// 実委人チェック
@@ -77,6 +90,11 @@ registerFileAccessChecker(async (fileId, user) => {
 
 	if (committeeMember) {
 		return checkCommitteeAccess(inquiryId, user.id, committeeMember);
+	}
+
+	// 下書きコメント添付は企画側に公開しない
+	if (isDraftCommentAttachment) {
+		return false;
 	}
 
 	// 企画側担当者

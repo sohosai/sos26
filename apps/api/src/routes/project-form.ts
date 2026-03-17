@@ -11,10 +11,19 @@ import {
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import {
+	formAnswerFileSelect,
+	mapAnswerFiles,
+	normalizeFileIds,
+} from "../lib/form-answer-files";
+import {
+	assertFileCountConstraints,
 	assertFormAnswersValid,
 	assertRequiredAnswered,
 } from "../lib/form-answer-validation";
-import { constraintsFromPrisma } from "../lib/form-constraints";
+import {
+	constraintsFromPrisma,
+	mapItemToApiShape,
+} from "../lib/form-constraints";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -60,6 +69,8 @@ const getDeliveryOrThrow = async (
 									constraintMaxLength: true,
 									constraintPattern: true,
 									constraintCustomPattern: true,
+									constraintMinFiles: true,
+									constraintMaxFiles: true,
 								},
 								orderBy: { sortOrder: "asc" },
 							},
@@ -91,6 +102,19 @@ const checkDeadline = (auth: {
 // ヘルパー: 回答のupsert
 // ─────────────────────────────────────────────────────────────
 
+const answerFilesInclude = {
+	where: {
+		file: {
+			status: "CONFIRMED" as const,
+			deletedAt: null,
+		},
+	},
+	orderBy: { sortOrder: "asc" as const },
+	include: {
+		file: { select: formAnswerFileSelect },
+	},
+};
+
 const upsertAnswers = async (
 	tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
 	responseId: string,
@@ -99,13 +123,9 @@ const upsertAnswers = async (
 	// 既存回答を全削除して再作成（シンプルな全置き換え）
 	await tx.formAnswer.deleteMany({ where: { formResponseId: responseId } });
 
-	// SELECT/CHECKBOX 以外はバッチ作成
-	const simpleAnswers = answers.filter(
-		a => a.type !== "SELECT" && a.type !== "CHECKBOX"
-	);
-	if (simpleAnswers.length > 0) {
-		await tx.formAnswer.createMany({
-			data: simpleAnswers.map(answer => ({
+	for (const answer of answers) {
+		await tx.formAnswer.create({
+			data: {
 				formResponseId: responseId,
 				formItemId: answer.formItemId,
 				textValue:
@@ -114,79 +134,29 @@ const upsertAnswers = async (
 						: null,
 				numberValue:
 					answer.type === "NUMBER" ? (answer.numberValue ?? null) : null,
-				fileId: answer.type === "FILE" ? (answer.fileId ?? null) : null,
-			})),
-		});
-	}
-
-	// SELECT/CHECKBOX はネストされたリレーションがあるため個別作成
-	const selectAnswers = answers.filter(
-		a => a.type === "SELECT" || a.type === "CHECKBOX"
-	);
-	for (const answer of selectAnswers) {
-		await tx.formAnswer.create({
-			data: {
-				formResponseId: responseId,
-				formItemId: answer.formItemId,
-				selectedOptions: {
-					create: (answer.selectedOptionIds ?? []).map(id => ({
-						formItemOptionId: id,
-					})),
-				},
+				files:
+					answer.type === "FILE" && answer.fileIds.length > 0
+						? {
+								create: normalizeFileIds(answer.fileIds).map(
+									(fileId, sortOrder) => ({
+										fileId,
+										sortOrder,
+									})
+								),
+							}
+						: undefined,
+				selectedOptions:
+					answer.type === "SELECT" || answer.type === "CHECKBOX"
+						? {
+								create: (answer.selectedOptionIds ?? []).map(id => ({
+									formItemOptionId: id,
+								})),
+							}
+						: undefined,
 			},
 		});
 	}
 };
-
-// ─────────────────────────────────────────────────────────────
-// ヘルパー: レスポンス整形
-// ─────────────────────────────────────────────────────────────
-
-type ProjectFormFileMetadata = {
-	id: string;
-	fileName: string;
-	mimeType: string;
-	isPublic: boolean;
-};
-
-function toProjectFormFileMetadata(
-	file: ProjectFormFileMetadata | null | undefined
-): ProjectFormFileMetadata | null {
-	return file
-		? {
-				id: file.id,
-				fileName: file.fileName,
-				mimeType: file.mimeType,
-				isPublic: file.isPublic,
-			}
-		: null;
-}
-
-async function getProjectFormFileMetadataMap(
-	db: typeof prisma | PrismaTx,
-	fileIds: Array<string | null | undefined>
-) {
-	const uniqueIds = [...new Set(fileIds.filter((id): id is string => !!id))];
-	if (uniqueIds.length === 0) {
-		return new Map<string, ProjectFormFileMetadata>();
-	}
-
-	const files = await db.file.findMany({
-		where: {
-			id: { in: uniqueIds },
-			status: "CONFIRMED",
-			deletedAt: null,
-		},
-		select: {
-			id: true,
-			fileName: true,
-			mimeType: true,
-			isPublic: true,
-		},
-	});
-
-	return new Map(files.map(file => [file.id, file]));
-}
 
 const formatResponse = async (
 	tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
@@ -196,14 +166,13 @@ const formatResponse = async (
 		where: { id: responseId },
 		include: {
 			answers: {
-				include: { selectedOptions: true },
+				include: {
+					selectedOptions: true,
+					files: answerFilesInclude,
+				},
 			},
 		},
 	});
-	const fileMap = await getProjectFormFileMetadataMap(
-		tx,
-		response.answers.map(answer => answer.fileId)
-	);
 
 	return {
 		id: response.id,
@@ -212,10 +181,7 @@ const formatResponse = async (
 			formItemId: a.formItemId,
 			textValue: a.textValue,
 			numberValue: a.numberValue,
-			fileId: a.fileId,
-			fileMetadata: toProjectFormFileMetadata(
-				a.fileId ? fileMap.get(a.fileId) : null
-			),
+			files: mapAnswerFiles(a.files),
 			selectedOptionIds: a.selectedOptions.map(s => s.formItemOptionId),
 		})),
 	};
@@ -323,7 +289,7 @@ function extractAnswerValues(answer: CreateFormResponseRequest["answers"][0]) {
 	return {
 		textValue: isText ? (answer.textValue ?? null) : null,
 		numberValue: answer.type === "NUMBER" ? (answer.numberValue ?? null) : null,
-		fileId: answer.type === "FILE" ? (answer.fileId ?? null) : null,
+		fileIds: answer.type === "FILE" ? normalizeFileIds(answer.fileIds) : [],
 		optionIds: isSelect ? (answer.selectedOptionIds ?? []) : [],
 	};
 }
@@ -335,36 +301,8 @@ const appendEditHistory = async (
 	actorId: string,
 	trigger: "PROJECT_SUBMIT" | "PROJECT_RESUBMIT"
 ) => {
-	// オプション無しの回答はバッチ作成
-	const withoutOptions = answers.filter(a => {
-		const { optionIds } = extractAnswerValues(a);
-		return optionIds.length === 0;
-	});
-	const withOptions = answers.filter(a => {
-		const { optionIds } = extractAnswerValues(a);
-		return optionIds.length > 0;
-	});
-
-	if (withoutOptions.length > 0) {
-		await tx.formItemEditHistory.createMany({
-			data: withoutOptions.map(answer => {
-				const { textValue, numberValue, fileId } = extractAnswerValues(answer);
-				return {
-					formItemId: answer.formItemId,
-					projectId,
-					textValue,
-					numberValue,
-					fileId,
-					actorId,
-					trigger,
-				};
-			}),
-		});
-	}
-
-	// オプション有りの回答は個別作成（IDが必要なため）
-	for (const answer of withOptions) {
-		const { textValue, numberValue, fileId, optionIds } =
+	for (const answer of answers) {
+		const { textValue, numberValue, fileIds, optionIds } =
 			extractAnswerValues(answer);
 
 		const history = await tx.formItemEditHistory.create({
@@ -373,17 +311,27 @@ const appendEditHistory = async (
 				projectId,
 				textValue,
 				numberValue,
-				fileId,
 				actorId,
 				trigger,
 			},
 		});
-		await tx.formItemEditHistorySelectedOption.createMany({
-			data: optionIds.map(optionId => ({
-				editHistoryId: history.id,
-				formItemOptionId: optionId,
-			})),
-		});
+		if (fileIds.length > 0) {
+			await tx.formItemEditHistoryFile.createMany({
+				data: fileIds.map((fileId, sortOrder) => ({
+					editHistoryId: history.id,
+					fileId,
+					sortOrder,
+				})),
+			});
+		}
+		if (optionIds.length > 0) {
+			await tx.formItemEditHistorySelectedOption.createMany({
+				data: optionIds.map(optionId => ({
+					editHistoryId: history.id,
+					formItemOptionId: optionId,
+				})),
+			});
+		}
 	}
 };
 
@@ -553,7 +501,12 @@ projectFormRoute.get(
 		const existingResponse = await prisma.formResponse.findFirst({
 			where: { formDeliveryId },
 			include: {
-				answers: { include: { selectedOptions: true } },
+				answers: {
+					include: {
+						selectedOptions: true,
+						files: answerFilesInclude,
+					},
+				},
 			},
 		});
 
@@ -562,16 +515,15 @@ projectFormRoute.get(
 		const allHistory = await prisma.formItemEditHistory.findMany({
 			where: { formItemId: { in: formItemIds }, projectId },
 			orderBy: { createdAt: "desc" },
-			include: { selectedOptions: true },
+			include: {
+				selectedOptions: true,
+				files: answerFilesInclude,
+			},
 		});
 		const latestByItem = new Map<string, (typeof allHistory)[number]>();
 		for (const h of allHistory) {
 			if (!latestByItem.has(h.formItemId)) latestByItem.set(h.formItemId, h);
 		}
-		const fileMap = await getProjectFormFileMetadataMap(prisma, [
-			...(existingResponse?.answers.map(answer => answer.fileId) ?? []),
-			...allHistory.map(history => history.fileId),
-		]);
 
 		return c.json({
 			form: {
@@ -611,10 +563,7 @@ projectFormRoute.get(
 										formItemId: a.formItemId,
 										textValue: hist.textValue,
 										numberValue: hist.numberValue,
-										fileId: hist.fileId,
-										fileMetadata: toProjectFormFileMetadata(
-											hist.fileId ? fileMap.get(hist.fileId) : null
-										),
+										files: mapAnswerFiles(hist.files),
 										selectedOptionIds: hist.selectedOptions.map(
 											s => s.formItemOptionId
 										),
@@ -624,10 +573,7 @@ projectFormRoute.get(
 									formItemId: a.formItemId,
 									textValue: a.textValue,
 									numberValue: a.numberValue,
-									fileId: a.fileId,
-									fileMetadata: toProjectFormFileMetadata(
-										a.fileId ? fileMap.get(a.fileId) : null
-									),
+									files: mapAnswerFiles(a.files),
 									selectedOptionIds: a.selectedOptions.map(
 										s => s.formItemOptionId
 									),
@@ -665,13 +611,16 @@ projectFormRoute.post(
 
 		const body = await c.req.json().catch(() => ({}));
 		const { answers, submit } = createFormResponseRequestSchema.parse(body);
+		const validationItems =
+			delivery.formAuthorization.form.items.map(mapItemToApiShape);
 
-		assertFormAnswersValid(delivery.formAuthorization.form.items, answers);
+		assertFormAnswersValid(validationItems, answers);
 
 		checkDeadline(delivery.formAuthorization);
 
 		if (submit) {
-			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
+			assertRequiredAnswered(validationItems, answers);
+			assertFileCountConstraints(validationItems, answers);
 			assertTextConstraints(delivery.formAuthorization.form.items, answers);
 		}
 
@@ -742,15 +691,18 @@ projectFormRoute.patch(
 
 		const body = await c.req.json().catch(() => ({}));
 		const { answers, submit } = updateFormResponseRequestSchema.parse(body);
+		const validationItems =
+			delivery.formAuthorization.form.items.map(mapItemToApiShape);
 
-		assertFormAnswersValid(delivery.formAuthorization.form.items, answers);
+		assertFormAnswersValid(validationItems, answers);
 
 		const isAlreadySubmitted = existing.submittedAt !== null;
 
 		checkDeadline(delivery.formAuthorization);
 
 		if (submit || isAlreadySubmitted) {
-			assertRequiredAnswered(delivery.formAuthorization.form.items, answers);
+			assertRequiredAnswered(validationItems, answers);
+			assertFileCountConstraints(validationItems, answers);
 			assertTextConstraints(delivery.formAuthorization.form.items, answers);
 		}
 
