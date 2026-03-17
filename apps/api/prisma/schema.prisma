@@ -753,6 +753,7 @@ model FormAuthorization {
 
   @@index([formId, createdAt(sort: Desc)])
   @@index([deliveryMode, status, scheduledSendAt])
+  @@index([status, scheduledSendAt, deliveryNotifiedAt])
 }
 
 //申請の配信
