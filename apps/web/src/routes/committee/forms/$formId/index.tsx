@@ -106,7 +106,7 @@ function buildAnswerRows(
 					label: o.label,
 					color: getOptionColor(o.id),
 				}));
-			} else if (a.fileUrl) {
+			} else if (a.fileId) {
 				map[a.formItemId] = "ファイル";
 			} else {
 				map[a.formItemId] = "";
