@@ -463,6 +463,7 @@ projectInquiryRoute.get(
 			creatorRole: inquiry.creatorRole,
 			projectId: inquiry.projectId,
 			relatedFormId: inquiry.relatedFormId,
+			isDraft: inquiry.isDraft,
 			createdAt: inquiry.createdAt,
 			updatedAt: inquiry.updatedAt,
 			createdBy: inquiry.createdBy,
