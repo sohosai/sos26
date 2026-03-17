@@ -287,7 +287,7 @@ function RouteComponent() {
 				...baseColumns,
 				memberColumnHelper.display({
 					id: "actions",
-					header: "",
+					header: "操作",
 					cell: ({ row }) => (
 						<ActionsMenu
 							item={row.original}
