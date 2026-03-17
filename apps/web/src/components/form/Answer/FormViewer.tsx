@@ -265,6 +265,11 @@ export function FormViewer({
 		[form.items, answers, baselineAnswers]
 	);
 
+	const isSubmittable = useMemo(() => {
+		if (disableSubmit) return false;
+		return form.items.every(item => !validateItem(item, answers[item.id]));
+	}, [form.items, answers, disableSubmit]);
+
 	useEffect(() => {
 		onDirtyChange?.(isDirty);
 	}, [isDirty, onDirtyChange]);
@@ -384,6 +389,7 @@ export function FormViewer({
 				)}
 				<Button
 					type="submit"
+					intent={isSubmittable ? "primary" : "secondary"}
 					loading={isSubmitting}
 					disabled={isSavingDraft || disableSubmit}
 				>
