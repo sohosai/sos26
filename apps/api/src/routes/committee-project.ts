@@ -518,6 +518,26 @@ committeeProjectRoute.patch(
 			});
 		}
 
+		const maskedOwner = project.owner
+			? {
+					...project.owner,
+					email: permissions.canViewContacts ? project.owner.email : null,
+					telephoneNumber: permissions.canViewContacts
+						? project.owner.telephoneNumber
+						: null,
+			  }
+			: null;
+
+		const maskedSubOwner = project.subOwner
+			? {
+					...project.subOwner,
+					email: permissions.canViewContacts ? project.subOwner.email : null,
+					telephoneNumber: permissions.canViewContacts
+						? project.subOwner.telephoneNumber
+						: null,
+			  }
+			: null;
+
 		return c.json({
 			project: {
 				...status,
@@ -534,8 +554,8 @@ committeeProjectRoute.patch(
 				createdAt: project.createdAt,
 				updatedAt: project.updatedAt,
 				memberCount: project._count.projectMembers,
-				owner: project.owner,
-				subOwner: project.subOwner,
+				owner: maskedOwner,
+				subOwner: maskedSubOwner,
 			},
 		});
 	}
