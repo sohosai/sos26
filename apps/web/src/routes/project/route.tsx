@@ -11,6 +11,9 @@ import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
 import { joinProject, listMyProjects } from "@/lib/api/project";
+import { listProjectForms } from "@/lib/api/project-form";
+import { listProjectInquiries } from "@/lib/api/project-inquiry";
+import { listProjectNotices } from "@/lib/api/project-notice";
 import {
 	preloadMemberEditPermission,
 	requireAuth,
@@ -37,10 +40,54 @@ export const Route = createFileRoute("/project")({
 			store.setSelectedProjectId(res.projects[0].id);
 		}
 	},
+	loader: async () => {
+		const { selectedProjectId } = useProjectStore.getState();
+
+		if (!selectedProjectId) {
+			return {
+				hasUnansweredForms: false,
+				hasUncheckedNotices: false,
+				hasPendingInquiries: false,
+			};
+		}
+
+		const [formsRes, noticesRes, inquiriesRes] = await Promise.all([
+			listProjectForms(selectedProjectId),
+			listProjectNotices(selectedProjectId),
+			listProjectInquiries(selectedProjectId),
+		]);
+
+		const now = new Date();
+		const hasUnansweredForms = formsRes.forms.some(form => {
+			if (form.restricted) return false;
+			if (form.response?.submittedAt) return false;
+
+			const isExpired =
+				form.deadlineAt && !form.allowLateResponse && now > form.deadlineAt;
+			if (isExpired) return false;
+
+			return !form.response;
+		});
+
+		const hasUncheckedNotices = noticesRes.notices.some(
+			notice => !notice.isRead
+		);
+		const hasPendingInquiries = inquiriesRes.inquiries.some(
+			inquiry => !inquiry.isDraft && inquiry.status !== "RESOLVED"
+		);
+
+		return {
+			hasUnansweredForms,
+			hasUncheckedNotices,
+			hasPendingInquiries,
+		};
+	},
 	component: ProjectLayout,
 });
 
 function ProjectLayout() {
+	const { hasUnansweredForms, hasUncheckedNotices, hasPendingInquiries } =
+		Route.useLoaderData();
 	const navigate = useNavigate();
 	const router = useRouter();
 	const { projects, selectedProjectId, setSelectedProjectId, setProjects } =
@@ -52,6 +99,13 @@ function ProjectLayout() {
 	const hasPrivilegedProject = projects.some(
 		project => project.ownerId === user?.id || project.subOwnerId === user?.id
 	);
+	const projectMenuItemsWithDot = projectMenuItems.map(item => ({
+		...item,
+		showNotificationDot:
+			(item.to === "/project/forms" && hasUnansweredForms) ||
+			(item.to === "/project/notice" && hasUncheckedNotices) ||
+			(item.to === "/project/support" && hasPendingInquiries),
+	}));
 
 	const handleSelectProject = (projectId: string) => {
 		setSelectedProjectId(projectId);
@@ -78,7 +132,7 @@ function ProjectLayout() {
 			<Sidebar
 				collapsed={sidebarCollapsed}
 				onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-				menuItems={projectMenuItems}
+				menuItems={projectMenuItemsWithDot}
 				projectId={selectedProjectId}
 				projectSelector={
 					<ProjectSelector

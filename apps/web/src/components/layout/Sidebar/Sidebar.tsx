@@ -18,6 +18,7 @@ export type MenuItem = {
 	icon: ReactNode;
 	to: string;
 	exact?: boolean;
+	showNotificationDot?: boolean;
 };
 
 type SidebarProps = {
@@ -127,7 +128,12 @@ export function Sidebar({
 
 		const inner = (
 			<div className={`${styles.item} ${active ? styles.active : ""}`}>
-				<span className={styles.icon}>{item.icon}</span>
+				<span className={styles.icon}>
+					{item.icon}
+					{item.showNotificationDot && (
+						<span className={styles.notificationDot} aria-hidden="true" />
+					)}
+				</span>
 				{!collapsed && <Text size="2">{item.label}</Text>}
 			</div>
 		);

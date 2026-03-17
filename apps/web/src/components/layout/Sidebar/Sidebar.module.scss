@@ -104,5 +104,17 @@
 		width: 20px;
 		height: 20px;
 		flex-shrink: 0;
+		position: relative;
+	}
+
+	.notificationDot {
+		position: absolute;
+		top: -1px;
+		right: -2px;
+		width: 8px;
+		height: 8px;
+		border-radius: 9999px;
+		background-color: var(--red-9);
+		box-shadow: 0 0 0 1px var(--gray-1);
 	}
 }
