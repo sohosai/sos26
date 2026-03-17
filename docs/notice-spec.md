@@ -224,7 +224,7 @@ enum NoticeAuthorizationStatus { PENDING, APPROVED, REJECTED }
 ### 11.1 実委側一覧画面
 
 - 全お知らせを一覧表示（実委人全員が閲覧可能）
-- 最新の承認申請ステータスを表示
+- 最新の承認依頼ステータスを表示
 - お知らせの作成ボタン
 
 ### 11.2 実委側詳細画面

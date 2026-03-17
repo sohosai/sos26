@@ -13,9 +13,9 @@
 | **企画登録フォーム（ProjectRegistrationForm）** | 実委人が作成する追加質問票。企画登録のステップとして利用される |
 | **設問（ProjectRegistrationFormItem）** | フォーム内の1つの質問。タイプ・ラベル・必須フラグ・選択肢を持つ |
 | **選択肢（ProjectRegistrationFormItemOption）** | SELECT / CHECKBOX 設問の選択肢 |
-| **オーナー** | フォームの作成者。編集・削除・共同編集者管理・承認申請が可能 |
-| **共同編集者（ProjectRegistrationFormCollaborator）** | オーナーが追加した実委人。フォームの編集・承認申請が可能 |
-| **承認申請（ProjectRegistrationFormAuthorization）** | フォームを有効化するための承認リクエスト |
+| **オーナー** | フォームの作成者。編集・削除・共同編集者管理・承認依頼が可能 |
+| **共同編集者（ProjectRegistrationFormCollaborator）** | オーナーが追加した実委人。フォームの編集・承認依頼が可能 |
+| **承認依頼（ProjectRegistrationFormAuthorization）** | フォームを有効化するための承認リクエスト |
 | **有効フォーム** | `isActive: true` のフォーム。企画登録に表示される |
 | **回答（ProjectRegistrationFormResponse / Answer）** | 企画登録時に提出されたフォームへの回答。企画と紐づく |
 
@@ -51,8 +51,8 @@ PENDING → REJECTED（自動）
 
 | 権限 | Enum 値 | 説明 |
 |------|---------|------|
-| 作成・編集権限 | `PROJECT_REGISTRATION_FORM_CREATE` | フォームの作成・編集・削除・承認申請が可能 |
-| 承認権限 | `PROJECT_REGISTRATION_FORM_DELIVER` | 承認申請の承認・却下が可能 |
+| 作成・編集権限 | `PROJECT_REGISTRATION_FORM_CREATE` | フォームの作成・編集・削除・承認依頼が可能 |
+| 承認権限 | `PROJECT_REGISTRATION_FORM_DELIVER` | 承認依頼の承認・却下が可能 |
 
 ### 4.2 権限マトリクス
 
@@ -63,10 +63,10 @@ PENDING → REJECTED（自動）
 | フォーム編集 | o | o | x | x |
 | フォーム削除 | o | x | x | x |
 | 共同編集者管理 | o | x | x | x |
-| 承認申請の送信 | o | x | x | x |
+| 承認依頼の送信 | o | x | x | x |
 | 承認・却下 | — | — | o（requestedTo 本人のみ） | x |
 
-> フォームの編集・削除・承認申請には加えて `PROJECT_REGISTRATION_FORM_CREATE` 権限も必要。
+> フォームの編集・削除・承認依頼には加えて `PROJECT_REGISTRATION_FORM_CREATE` 権限も必要。
 
 ---
 
@@ -118,7 +118,7 @@ ProjectRegistrationForm ─┬─ ProjectRegistrationFormItem ── ProjectRegi
 - `deletedAt`: 論理削除。再追加時は再アクティベーション
 - **一意制約**: `(formId, userId)`
 
-#### ProjectRegistrationFormAuthorization（承認申請）
+#### ProjectRegistrationFormAuthorization（承認依頼）
 
 - `requestedById` → User: 申請者
 - `requestedToId` → User: 承認者（`PROJECT_REGISTRATION_FORM_DELIVER` 権限が必要）
@@ -185,7 +185,7 @@ ProjectRegistrationForm ─┬─ ProjectRegistrationFormItem ── ProjectRegi
 ```
 isActive: false（下書き）
   │
-  ├─ [承認申請を送信]（オーナー + CREATE 権限）
+  ├─ [承認依頼を送信]（オーナー + CREATE 権限）
   ▼
 PENDING（承認待機中）
   │
@@ -201,7 +201,7 @@ PENDING（承認待機中）
 #### 申請の制約
 
 - PENDING または APPROVED の申請が存在する場合は新規申請不可（Serializable トランザクションで二重申請を防止）
-- 承認申請先は `PROJECT_REGISTRATION_FORM_DELIVER` 権限を持つ実委人であること
+- 承認依頼先は `PROJECT_REGISTRATION_FORM_DELIVER` 権限を持つ実委人であること
 
 #### 承認・却下
 
@@ -212,7 +212,7 @@ PENDING（承認待機中）
 ### 6.5 フォームの削除
 
 - オーナー（+ `CREATE` 権限）のみが論理削除可能
-- 削除時に PENDING の承認申請は自動的に REJECTED になる
+- 削除時に PENDING の承認依頼は自動的に REJECTED になる
 - `isActive: true` のフォームは削除できない
 
 ---
@@ -284,7 +284,7 @@ PENDING（承認待機中）
 | GET | `/committee/project-registration-forms/:formId` | フォーム詳細 | 実委人全員 |
 | PATCH | `/committee/project-registration-forms/:formId` | フォーム更新 | `CREATE` 権限 + オーナー / 共同編集者 |
 | DELETE | `/committee/project-registration-forms/:formId` | フォーム削除 | `CREATE` 権限 + オーナー |
-| POST | `/committee/project-registration-forms/:formId/authorizations` | 承認申請 | `CREATE` 権限 + オーナー |
+| POST | `/committee/project-registration-forms/:formId/authorizations` | 承認依頼 | `CREATE` 権限 + オーナー |
 | PATCH | `/committee/project-registration-forms/:formId/authorizations/:authorizationId` | 承認 / 却下 | `DELIVER` 権限 + `requestedTo` 本人 |
 | POST | `/committee/project-registration-forms/:formId/collaborators/:userId` | 共同編集者追加 | `CREATE` 権限 + オーナー |
 | DELETE | `/committee/project-registration-forms/:formId/collaborators/:userId` | 共同編集者削除 | オーナー |
@@ -318,7 +318,7 @@ PENDING（承認待機中）
   - オーナー情報
   - 共同編集者一覧（オーナーのみ追加・削除可能）
   - 承認ステータス（申請者・承認者情報、申請日時、判定日時）
-  - 承認申請ボタン（オーナー + `CREATE` 権限に表示）
+  - 承認依頼ボタン（オーナー + `CREATE` 権限に表示）
   - 承認・却下ボタン（`requestedTo` 本人に表示）
 
 ### 10.3 企画登録（`ProjectCreateDialog`）

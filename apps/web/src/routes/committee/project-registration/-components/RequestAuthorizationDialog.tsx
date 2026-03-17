@@ -52,9 +52,9 @@ export function RequestAuthorizationDialog({
 			});
 			handleOpenChange(false);
 			onSuccess();
-			toast.success("承認申請を送信しました");
+			toast.success("承認依頼を送信しました");
 		} catch {
-			toast.error("承認申請の送信に失敗しました");
+			toast.error("承認依頼の送信に失敗しました");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -63,7 +63,7 @@ export function RequestAuthorizationDialog({
 	return (
 		<Dialog.Root open={open} onOpenChange={handleOpenChange}>
 			<Dialog.Content maxWidth="420px">
-				<Dialog.Title>承認申請</Dialog.Title>
+				<Dialog.Title>承認依頼</Dialog.Title>
 				<Dialog.Description size="2" mb="4" color="gray">
 					企画登録フォームの承認を依頼します。承認されると、即座に企画登録時に表示されるようになります。
 				</Dialog.Description>

@@ -107,14 +107,14 @@ PENDING → REJECTED（却下）
 
 全お知らせ一覧を返します（実委人全員閲覧可）。
 
-- 最新の承認申請（`authorizations` の先頭1件）を含む
+- 最新の承認依頼（`authorizations` の先頭1件）を含む
 - `deletedAt: null` のみ
 
 ### GET `/committee/notices/:noticeId`
 
 お知らせ詳細を返します。
 
-- owner、共同編集者、全承認申請（配信先含む）を返却
+- owner、共同編集者、全承認依頼（配信先含む）を返却
 
 ### PATCH `/committee/notices/:noticeId`
 
@@ -130,7 +130,7 @@ PENDING → REJECTED（却下）
 お知らせを論理削除します。
 
 - owner のみ実行可能
-- PENDING の承認申請は自動的に REJECTED になる
+- PENDING の承認依頼は自動的に REJECTED になる
 
 ### POST `/committee/notices/:noticeId/collaborators`
 

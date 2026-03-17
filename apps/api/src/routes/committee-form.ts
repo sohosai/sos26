@@ -693,18 +693,18 @@ committeeFormRoute.patch(
 				include: { form: { select: { deletedAt: true, title: true } } },
 			});
 
-			if (!authorization) throw Errors.notFound("承認申請が見つかりません");
+			if (!authorization) throw Errors.notFound("承認依頼が見つかりません");
 
 			if (authorization.form.deletedAt)
 				throw Errors.invalidRequest("削除済みのフォームは承認できません");
 
 			if (authorization.requestedToId !== user.id)
-				throw Errors.forbidden("この承認申請を操作する権限がありません");
+				throw Errors.forbidden("この承認依頼を操作する権限がありません");
 
 			if (authorization.status !== "PENDING")
-				throw Errors.invalidRequest("この承認申請は既に処理済みです");
+				throw Errors.invalidRequest("この承認依頼は既に処理済みです");
 
-			// 承認申請作成後に FORM_DELIVER 権限が剥奪されていないか再確認
+			// 承認依頼作成後に FORM_DELIVER 権限が剥奪されていないか再確認
 			await requireDeliverPermission(
 				tx,
 				user.id,

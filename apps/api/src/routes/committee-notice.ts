@@ -763,7 +763,7 @@ committeeNoticeRoute.patch(
 		});
 
 		if (!authorization) {
-			throw Errors.notFound("承認申請が見つかりません");
+			throw Errors.notFound("承認依頼が見つかりません");
 		}
 
 		// 削除済みお知らせの承認は不可
@@ -773,12 +773,12 @@ committeeNoticeRoute.patch(
 
 		// requestedTo 本人のみ
 		if (authorization.requestedToId !== user.id) {
-			throw Errors.forbidden("この承認申請を操作する権限がありません");
+			throw Errors.forbidden("この承認依頼を操作する権限がありません");
 		}
 
 		// PENDING でなければ操作不可
 		if (authorization.status !== "PENDING") {
-			throw Errors.invalidRequest("この承認申請は既に処理済みです");
+			throw Errors.invalidRequest("この承認依頼は既に処理済みです");
 		}
 
 		// 承認する場合、deliveredAt が未来であること

@@ -427,7 +427,7 @@ committeeProjectRegistrationFormRoute.delete(
 
 // ─────────────────────────────────────────
 // POST /committee/project-registration-forms/:formId/authorizations
-// 承認申請（作成者 + CREATE権限）
+// 承認依頼（作成者 + CREATE権限）
 // ─────────────────────────────────────────
 committeeProjectRegistrationFormRoute.post(
 	"/:formId/authorizations",
@@ -528,15 +528,15 @@ committeeProjectRegistrationFormRoute.patch(
 					},
 				});
 
-				if (!auth) throw Errors.notFound("承認申請が見つかりません");
+				if (!auth) throw Errors.notFound("承認依頼が見つかりません");
 				if (auth.form.deletedAt)
 					throw Errors.invalidRequest("削除済みのフォームは承認できません");
 				if (auth.requestedToId !== user.id)
-					throw Errors.forbidden("この承認申請を操作する権限がありません");
+					throw Errors.forbidden("この承認依頼を操作する権限がありません");
 				if (auth.status !== "PENDING")
-					throw Errors.invalidRequest("この承認申請は既に処理済みです");
+					throw Errors.invalidRequest("この承認依頼は既に処理済みです");
 
-				// 承認申請作成後に DELIVER 権限が剥奪されていないか再確認
+				// 承認依頼作成後に DELIVER 権限が剥奪されていないか再確認
 				await requireDeliverPermission(
 					tx,
 					user.id,

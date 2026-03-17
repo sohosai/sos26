@@ -120,7 +120,7 @@ export const deleteProjectRegistrationFormEndpoint: NoBodyEndpoint<
 
 /**
  * POST /committee/project-registration-forms/:formId/authorizations
- * 承認申請
+ * 承認依頼
  * 権限: PROJECT_REGISTRATION_FORM_CREATE (作成者のみ)
  */
 export const requestProjectRegistrationFormAuthorizationEndpoint: BodyEndpoint<

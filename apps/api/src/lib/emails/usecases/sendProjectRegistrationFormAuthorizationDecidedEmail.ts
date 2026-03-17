@@ -1,5 +1,5 @@
 /**
- * 企画登録フォームの承認申請が承認または却下されたとき、申請者に送信するメール
+ * 企画登録フォームの承認依頼が承認または却下されたとき、申請者に送信するメール
  * トリガー: PATCH /committee/project-registration-forms/:formId/authorizations/:authorizationId
  */
 import { z } from "zod";

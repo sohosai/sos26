@@ -4,9 +4,9 @@ export function projectRegistrationFormAuthorizationRejectedTemplate(params: {
 	formTitle: string;
 	url: string;
 }) {
-	const body = `企画登録フォームの承認申請が却下されました。
+	const body = `企画登録フォームの承認依頼が却下されました。
 
-フォームタイトル: ${params.formTitle}
+タイトル: ${params.formTitle}
 
 内容を修正のうえ、再度申請してください。
 
@@ -19,7 +19,7 @@ ${params.url}
 
 	return {
 		subject:
-			"【雙峰祭オンラインシステム】企画登録フォーム承認申請が却下されました",
+			"【雙峰祭オンラインシステム】企画登録フォームの承認依頼が却下されました",
 		html: textToHtml(body),
 		text: body,
 	};
