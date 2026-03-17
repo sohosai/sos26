@@ -1,9 +1,9 @@
 import { Flex, Text } from "@radix-ui/themes";
 import {
 	type AllowedMimeType,
-	allowedFileExtensions,
 	allowedMimeTypes,
-	fileAcceptAttribute,
+	buildFileAcceptAttribute,
+	buildFileExtensionsLabel,
 } from "@sos26/shared";
 import { IconFileSearch, IconX } from "@tabler/icons-react";
 import { useCallback, useId, useMemo, useRef, useState } from "react";
@@ -23,12 +23,13 @@ type FileUploadProps = {
 	disabled?: boolean;
 	minFiles?: number;
 	maxFiles?: number;
+	allowedMimeTypes?: AllowedMimeType[];
 	error?: string;
 	"aria-label"?: string;
 	onDeleteUploadedFile?: (file: UploadedFileValue) => void;
 };
 
-function buildHelperText(
+function buildCountPart(
 	selectedCount: number,
 	minFiles?: number,
 	maxFiles?: number
@@ -37,12 +38,8 @@ function buildHelperText(
 		if (minFiles !== undefined && maxFiles !== undefined) {
 			return `${minFiles}〜${maxFiles}個`;
 		}
-		if (maxFiles !== undefined) {
-			return `最大${maxFiles}個`;
-		}
-		if (minFiles !== undefined) {
-			return `最低${minFiles}個`;
-		}
+		if (maxFiles !== undefined) return `最大${maxFiles}個`;
+		if (minFiles !== undefined) return `最低${minFiles}個`;
 		return null;
 	}
 	if (minFiles !== undefined && maxFiles !== undefined) {
@@ -57,22 +54,38 @@ function buildHelperText(
 	return null;
 }
 
-function isAllowedMimeType(file: File): boolean {
-	return allowedMimeTypes.includes(file.type as AllowedMimeType);
+function buildHelperText(
+	selectedCount: number,
+	minFiles?: number,
+	maxFiles?: number,
+	allowedTypes?: AllowedMimeType[]
+): string | null {
+	const countPart = buildCountPart(selectedCount, minFiles, maxFiles);
+	const extensionsLabel = allowedTypes
+		? buildFileExtensionsLabel(allowedTypes)
+		: null;
+
+	if (countPart && extensionsLabel) {
+		return `${countPart} / ${extensionsLabel}`;
+	}
+	return countPart ?? extensionsLabel ?? null;
 }
 
 function processFileSelection(
 	addedFiles: File[],
 	currentFiles: File[],
-	maxFiles?: number
+	maxFiles?: number,
+	allowedTypes?: AllowedMimeType[]
 ): { filesToSet: File[] | null; error: string | null } {
-	const valid = addedFiles.filter(isAllowedMimeType);
+	const acceptedSet = new Set<string>(allowedTypes ?? allowedMimeTypes);
+	const valid = addedFiles.filter(f => acceptedSet.has(f.type));
 	const hasInvalid = valid.length < addedFiles.length;
+	const extensionsLabel = buildFileExtensionsLabel(allowedTypes);
 
 	if (hasInvalid && valid.length === 0) {
 		return {
 			filesToSet: null,
-			error: `対応していないファイル形式です（${allowedFileExtensions}）`,
+			error: `対応していないファイル形式です（${extensionsLabel}）`,
 		};
 	}
 
@@ -81,7 +94,7 @@ function processFileSelection(
 		return {
 			filesToSet: merged.slice(0, maxFiles),
 			error: hasInvalid
-				? `対応していないファイル形式です（${allowedFileExtensions}）`
+				? `対応していないファイル形式です（${extensionsLabel}）`
 				: `${maxFiles}個以内で添付してください`,
 		};
 	}
@@ -89,7 +102,7 @@ function processFileSelection(
 	return {
 		filesToSet: merged,
 		error: hasInvalid
-			? `対応していないファイル形式です（${allowedFileExtensions}）`
+			? `対応していないファイル形式です（${extensionsLabel}）`
 			: null,
 	};
 }
@@ -103,6 +116,7 @@ export function FileUploadField({
 	disabled,
 	minFiles,
 	maxFiles,
+	allowedMimeTypes: allowedTypes,
 	error,
 	"aria-label": ariaLabel,
 	onDeleteUploadedFile,
@@ -122,9 +136,16 @@ export function FileUploadField({
 	);
 	const previewLabel = ariaLabel ?? (label || "ファイル");
 
+	const computedAccept = buildFileAcceptAttribute(allowedTypes);
+
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const addedFiles = Array.from(e.target.files ?? []);
-		const result = processFileSelection(addedFiles, value, maxFiles);
+		const result = processFileSelection(
+			addedFiles,
+			value,
+			maxFiles,
+			allowedTypes
+		);
 		setSelectionError(result.error);
 		if (result.filesToSet) {
 			onChange(result.filesToSet);
@@ -203,7 +224,12 @@ export function FileUploadField({
 		})),
 	];
 
-	const helperText = buildHelperText(previewItems.length, minFiles, maxFiles);
+	const helperText = buildHelperText(
+		previewItems.length,
+		minFiles,
+		maxFiles,
+		allowedTypes
+	);
 
 	const fileList = (() => {
 		if (previewItems.length > 0) {
@@ -255,7 +281,7 @@ export function FileUploadField({
 					ref={inputRef}
 					type="file"
 					multiple
-					accept={fileAcceptAttribute}
+					accept={computedAccept}
 					className={styles.fileInput}
 					required={required}
 					onChange={handleFileChange}

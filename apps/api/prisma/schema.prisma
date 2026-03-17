@@ -597,12 +597,13 @@ model FormItem {
   required Boolean @default(false)
 
   //入力制約（TEXT/TEXTAREA/FILE のみ使用）
-  constraintMinLength     Int?
-  constraintMaxLength     Int?
-  constraintPattern       String?
-  constraintCustomPattern String?
-  constraintMinFiles      Int?
-  constraintMaxFiles      Int?
+  constraintMinLength        Int?
+  constraintMaxLength        Int?
+  constraintPattern          String?
+  constraintCustomPattern    String?
+  constraintMinFiles         Int?
+  constraintMaxFiles         Int?
+  constraintAllowedMimeTypes String?
 
   //表示順
   sortOrder Int
@@ -1366,12 +1367,13 @@ model ProjectRegistrationFormItem {
   required Boolean @default(false)
 
   // 入力制約（TEXT/TEXTAREA/FILE のみ使用）
-  constraintMinLength     Int?
-  constraintMaxLength     Int?
-  constraintPattern       String?
-  constraintCustomPattern String?
-  constraintMinFiles      Int?
-  constraintMaxFiles      Int?
+  constraintMinLength        Int?
+  constraintMaxLength        Int?
+  constraintPattern          String?
+  constraintCustomPattern    String?
+  constraintMinFiles         Int?
+  constraintMaxFiles         Int?
+  constraintAllowedMimeTypes String?
 
   // 表示順
   sortOrder Int

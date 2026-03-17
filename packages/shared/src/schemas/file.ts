@@ -24,11 +24,39 @@ export const allowedMimeTypes = [
 export const mimeTypeSchema = z.enum(allowedMimeTypes);
 export type AllowedMimeType = z.infer<typeof mimeTypeSchema>;
 
+/** MIMEタイプ → 表示名のマップ */
+export const mimeTypeLabels: Record<AllowedMimeType, string> = {
+	"image/jpeg": "JPEG",
+	"image/png": "PNG",
+	"image/gif": "GIF",
+	"image/webp": "WebP",
+	"application/pdf": "PDF",
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+		"DOCX",
+	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "XLSX",
+};
+
 /** HTML input accept 属性用の文字列 */
 export const fileAcceptAttribute = allowedMimeTypes.join(",");
 
 /** 人間が読めるファイル形式一覧 */
 export const allowedFileExtensions = "JPEG, PNG, GIF, WebP, PDF, DOCX, XLSX";
+
+/** 指定MIMEタイプ配列から accept 属性文字列を生成（未指定時は全許可） */
+export function buildFileAcceptAttribute(
+	mimeTypes?: AllowedMimeType[]
+): string {
+	if (!mimeTypes || mimeTypes.length === 0) return fileAcceptAttribute;
+	return mimeTypes.join(",");
+}
+
+/** 指定MIMEタイプ配列から表示用ラベルを生成（未指定時は全形式） */
+export function buildFileExtensionsLabel(
+	mimeTypes?: AllowedMimeType[]
+): string {
+	if (!mimeTypes || mimeTypes.length === 0) return allowedFileExtensions;
+	return mimeTypes.map(m => mimeTypeLabels[m]).join(", ");
+}
 
 /**
  * ファイル情報（レスポンス用）

@@ -1,10 +1,12 @@
 // Radio/Checkbox: Editor の装飾表示用（disabled 固定）のため直接 import
-import { Checkbox, Radio, Text } from "@radix-ui/themes";
+import { Radio, Checkbox as RadixCheckbox, Text } from "@radix-ui/themes";
 import type {
+	AllowedMimeType,
 	FileConstraints,
 	FormItemConstraints,
 	TextConstraints,
 } from "@sos26/shared";
+import { allowedMimeTypes, mimeTypeLabels } from "@sos26/shared";
 import { IconPlus, IconX } from "@tabler/icons-react";
 import { Button, IconButton, Select, TextField } from "@/components/primitives";
 import { FileUploadField } from "../EachField/FileUploadField";
@@ -57,6 +59,9 @@ function pickFileConstraints(
 		}),
 		...(constraints.maxFiles !== undefined && {
 			maxFiles: constraints.maxFiles,
+		}),
+		...(constraints.allowedMimeTypes !== undefined && {
+			allowedMimeTypes: constraints.allowedMimeTypes,
 		}),
 	};
 
@@ -153,7 +158,10 @@ function FileConstraintEditor({
 
 	const update = (partial: Partial<FileConstraints>) => {
 		const next = { ...(fileConstraints ?? {}), ...partial };
-		const isEmpty = next.minFiles === undefined && next.maxFiles === undefined;
+		const isEmpty =
+			next.minFiles === undefined &&
+			next.maxFiles === undefined &&
+			next.allowedMimeTypes === undefined;
 		onUpdate(isEmpty ? null : next);
 	};
 
@@ -169,6 +177,24 @@ function FileConstraintEditor({
 		(fileConstraints?.minFiles === undefined || fileConstraints.minFiles < 1)
 			? "必須のファイル設問には最小ファイル数を1以上に設定してください"
 			: undefined;
+
+	const selectedMimeTypes = new Set(fileConstraints?.allowedMimeTypes ?? []);
+
+	const handleMimeTypeToggle = (
+		mimeType: AllowedMimeType,
+		checked: boolean
+	) => {
+		const current = new Set(selectedMimeTypes);
+		if (checked) {
+			current.add(mimeType);
+		} else {
+			current.delete(mimeType);
+		}
+		update({
+			allowedMimeTypes:
+				current.size > 0 ? ([...current] as AllowedMimeType[]) : undefined,
+		});
+	};
 
 	return (
 		<div className={styles.constraints}>
@@ -189,6 +215,43 @@ function FileConstraintEditor({
 					onChange={n => update({ maxFiles: n ?? undefined })}
 					placeholder="例: 5"
 				/>
+				<div className={styles.constraintMimeTypesField}>
+					<Text as="label" size="2" weight="medium">
+						許可するファイル形式
+					</Text>
+					<Text size="1" color="gray" mx="1">
+						未選択の場合はすべての形式が許可されます
+					</Text>
+					<div className={styles.constraintRow}>
+						{allowedMimeTypes.map(mimeType => (
+							<Text
+								as="span"
+								size="2"
+								key={mimeType}
+								style={{
+									display: "inline-flex",
+									alignItems: "center",
+									gap: "4px",
+									cursor: "pointer",
+								}}
+								onClick={() =>
+									handleMimeTypeToggle(
+										mimeType,
+										!selectedMimeTypes.has(mimeType)
+									)
+								}
+							>
+								<RadixCheckbox
+									checked={selectedMimeTypes.has(mimeType)}
+									onCheckedChange={checked =>
+										handleMimeTypeToggle(mimeType, checked === true)
+									}
+								/>
+								{mimeTypeLabels[mimeType]}
+							</Text>
+						))}
+					</div>
+				</div>
 			</div>
 		</div>
 	);
@@ -278,7 +341,7 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 							{item.type === "SELECT" ? (
 								<Radio disabled value={""} />
 							) : (
-								<Checkbox disabled />
+								<RadixCheckbox disabled />
 							)}
 							<TextField
 								value={option.label}

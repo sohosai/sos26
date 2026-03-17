@@ -1,4 +1,8 @@
-import type { FormItemConstraints, TextConstraintPattern } from "@sos26/shared";
+import type {
+	AllowedMimeType,
+	FormItemConstraints,
+	TextConstraintPattern,
+} from "@sos26/shared";
 
 export type PrismaConstraintFields = {
 	constraintMinLength: number | null;
@@ -7,6 +11,7 @@ export type PrismaConstraintFields = {
 	constraintCustomPattern: string | null;
 	constraintMinFiles: number | null;
 	constraintMaxFiles: number | null;
+	constraintAllowedMimeTypes: string | null;
 };
 
 export function constraintsToPrisma(
@@ -19,6 +24,8 @@ export function constraintsToPrisma(
 		constraintCustomPattern: constraints?.customPattern ?? null,
 		constraintMinFiles: constraints?.minFiles ?? null,
 		constraintMaxFiles: constraints?.maxFiles ?? null,
+		constraintAllowedMimeTypes:
+			constraints?.allowedMimeTypes?.join(",") ?? null,
 	};
 }
 
@@ -29,13 +36,15 @@ export function constraintsFromPrisma({
 	constraintCustomPattern,
 	constraintMinFiles,
 	constraintMaxFiles,
+	constraintAllowedMimeTypes,
 }: PrismaConstraintFields): FormItemConstraints | null {
 	if (
 		constraintMinLength === null &&
 		constraintMaxLength === null &&
 		constraintPattern === null &&
 		constraintMinFiles === null &&
-		constraintMaxFiles === null
+		constraintMaxFiles === null &&
+		constraintAllowedMimeTypes === null
 	) {
 		return null;
 	}
@@ -50,6 +59,11 @@ export function constraintsFromPrisma({
 		}),
 		...(constraintMinFiles !== null && { minFiles: constraintMinFiles }),
 		...(constraintMaxFiles !== null && { maxFiles: constraintMaxFiles }),
+		...(constraintAllowedMimeTypes !== null && {
+			allowedMimeTypes: constraintAllowedMimeTypes.split(
+				","
+			) as AllowedMimeType[],
+		}),
 	};
 }
 
@@ -61,6 +75,7 @@ export function mapItemToApiShape<T extends PrismaConstraintFields>(item: T) {
 		constraintCustomPattern,
 		constraintMinFiles,
 		constraintMaxFiles,
+		constraintAllowedMimeTypes,
 		...rest
 	} = item;
 	return {
@@ -72,6 +87,7 @@ export function mapItemToApiShape<T extends PrismaConstraintFields>(item: T) {
 			constraintCustomPattern,
 			constraintMinFiles,
 			constraintMaxFiles,
+			constraintAllowedMimeTypes,
 		}),
 	};
 }
