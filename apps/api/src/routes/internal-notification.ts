@@ -134,20 +134,37 @@ async function processFormAuthorizations(formAuthIds: Array<{ id: string }>) {
 			continue;
 		}
 
-		const ok = await notifyFormDelivered({
-			formTitle: auth.form.title,
-			projectIds,
-		});
-
-		if (ok) {
-			await prisma.$executeRaw(Prisma.sql`
+		// Reserve this authorization for notification by setting deliveryNotifiedAt,
+		// guarding against concurrent workers processing the same record.
+		const updatedCount =
+			await prisma.$executeRaw<number>(Prisma.sql`
 				UPDATE "FormAuthorization"
 				SET "deliveryNotifiedAt" = NOW()
 				WHERE "id" = ${auth.id}
 					AND "deliveryNotifiedAt" IS NULL
 			`);
-			formNotified += 1;
+
+		// If no row was updated, another process has already reserved or processed it.
+		if (updatedCount === 0) {
+			continue;
 		}
+
+		const ok = await notifyFormDelivered({
+			formTitle: auth.form.title,
+			projectIds,
+		});
+
+		if (!ok) {
+			// Revert the reservation so that failed notifications can be retried.
+			await prisma.$executeRaw(Prisma.sql`
+				UPDATE "FormAuthorization"
+				SET "deliveryNotifiedAt" = NULL
+				WHERE "id" = ${auth.id}
+			`);
+			continue;
+		}
+
+		formNotified += 1;
 	}
 
 	return formNotified;
