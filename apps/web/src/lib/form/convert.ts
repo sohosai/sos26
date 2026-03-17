@@ -10,6 +10,7 @@ export function ProjectFormToForm(form: GetProjectFormResponse): Form {
 		id: detail.formId,
 		name: detail.title,
 		description: detail.description ?? undefined,
+		attachments: detail.attachments,
 		items: [...detail.items]
 			.sort((a, b) => a.sortOrder - b.sortOrder)
 			.map(item => ({
@@ -35,6 +36,7 @@ export function formDetailToForm(formDetail: GetFormDetailResponse): Form {
 		id: detail.id,
 		name: detail.title,
 		description: detail.description ?? undefined,
+		attachments: detail.attachments,
 		items: [...detail.items]
 			.sort((a, b) => a.sortOrder - b.sortOrder)
 			.map(item => ({

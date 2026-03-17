@@ -1,7 +1,9 @@
 import type { CommitteeMember } from "@prisma/client";
 import {
+	addFormAttachmentRequestSchema,
 	addFormCollaboratorRequestSchema,
 	createFormRequestSchema,
+	formAttachmentPathParamsSchema,
 	formAuthorizationPathParamsSchema,
 	formIdPathParamsSchema,
 	formResponsePathParamsSchema,
@@ -14,6 +16,10 @@ import { Hono } from "hono";
 import { requireDeliverPermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
 import { formAnswerFileSelect, mapAnswerFiles } from "../lib/form-answer-files";
+import {
+	formAttachmentsInclude,
+	mapFormAttachments,
+} from "../lib/form-attachments";
 import {
 	constraintsToPrisma,
 	mapFormToApiShape,
@@ -77,6 +83,17 @@ const requireOwner = async (formId: string, userId: string) => {
 };
 
 const userSelect = { id: true, name: true } as const;
+
+/** 承認済みの申請は編集不可 */
+const requireNotApproved = async (formId: string) => {
+	const approvedAuth = await prisma.formAuthorization.findFirst({
+		where: { formId, status: "APPROVED" },
+		select: { id: true },
+	});
+	if (approvedAuth) {
+		throw Errors.invalidRequest("承認済みの申請は編集できません");
+	}
+};
 
 /**
  * 回答閲覧権限チェック:
@@ -255,6 +272,7 @@ committeeFormRoute.get(
 						user: { select: { id: true, name: true } },
 					},
 				},
+				attachments: formAttachmentsInclude,
 				authorizations: {
 					orderBy: { createdAt: "desc" },
 					take: 1,
@@ -284,6 +302,7 @@ committeeFormRoute.get(
 			form: {
 				...form,
 				items: form.items.map(mapItemToApiShape),
+				attachments: mapFormAttachments(form.attachments),
 				authorizationDetail: form.authorizations[0] ?? null,
 				authorizations: undefined,
 				viewers: viewers.map(v => ({
@@ -322,7 +341,7 @@ committeeFormRoute.patch(
 					where: { formId, status: "APPROVED" },
 				});
 				if (approvedAuth) {
-					throw Errors.invalidRequest("承認待ちの申請は編集できません");
+					throw Errors.invalidRequest("承認済みの申請は編集できません");
 				}
 
 				await tx.form.update({ where: { id: formId }, data: formData });
@@ -552,6 +571,110 @@ committeeFormRoute.delete(
 
 		await prisma.formCollaborator.update({
 			where: { id: collaborator.id },
+			data: { deletedAt: new Date() },
+		});
+
+		return c.json({ success: true as const });
+	}
+);
+
+// ─────────────────────────────────────────
+// POST /committee/forms/:formId/attachments
+// 添付ファイルを追加
+// ─────────────────────────────────────────
+committeeFormRoute.post(
+	"/:formId/attachments",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
+		const userId = c.get("user").id;
+		await requireWriteAccess(formId, userId);
+
+		await requireNotApproved(formId);
+
+		const body = await c.req.json().catch(() => ({}));
+		const { fileIds } = addFormAttachmentRequestSchema.parse(body);
+		const uniqueFileIds = [...new Set(fileIds)];
+
+		const files = await prisma.file.findMany({
+			where: {
+				id: { in: uniqueFileIds },
+				status: "CONFIRMED",
+				deletedAt: null,
+			},
+			select: { id: true },
+		});
+		if (files.length !== uniqueFileIds.length) {
+			throw Errors.invalidRequest(
+				"指定されたファイルの一部が存在しないか、アップロードが未完了です"
+			);
+		}
+
+		const attachments = await Promise.all(
+			uniqueFileIds.map(async fileId => {
+				const existing = await prisma.formAttachment.findUnique({
+					where: { formId_fileId: { formId, fileId } },
+				});
+
+				if (existing) {
+					if (!existing.deletedAt) {
+						return prisma.formAttachment.findUniqueOrThrow({
+							where: { id: existing.id },
+							include: formAttachmentsInclude.include,
+						});
+					}
+					return prisma.formAttachment.update({
+						where: { id: existing.id },
+						data: { deletedAt: null },
+						include: formAttachmentsInclude.include,
+					});
+				}
+
+				return prisma.formAttachment.create({
+					data: { formId, fileId },
+					include: formAttachmentsInclude.include,
+				});
+			})
+		);
+
+		return c.json(
+			{
+				attachments: mapFormAttachments(attachments),
+			},
+			201
+		);
+	}
+);
+
+// ─────────────────────────────────────────
+// DELETE /committee/forms/:formId/attachments/:attachmentId
+// 添付ファイルを削除
+// ─────────────────────────────────────────
+committeeFormRoute.delete(
+	"/:formId/attachments/:attachmentId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const { formId, attachmentId } = formAttachmentPathParamsSchema.parse({
+			formId: c.req.param("formId"),
+			attachmentId: c.req.param("attachmentId"),
+		});
+		const userId = c.get("user").id;
+		await requireWriteAccess(formId, userId);
+
+		await requireNotApproved(formId);
+
+		const attachment = await prisma.formAttachment.findFirst({
+			where: { id: attachmentId, formId, deletedAt: null },
+			select: { id: true },
+		});
+		if (!attachment) {
+			throw Errors.notFound("添付ファイルが見つかりません");
+		}
+
+		await prisma.formAttachment.update({
+			where: { id: attachmentId },
 			data: { deletedAt: new Date() },
 		});
 

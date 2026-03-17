@@ -65,11 +65,22 @@ export type FormItem = {
 	constraints?: FormItemConstraints | null;
 };
 
+export type FormAttachmentValue = {
+	id: string;
+	fileId: string;
+	fileName: string;
+	mimeType: string;
+	size: number;
+	isPublic: boolean;
+	createdAt?: Date;
+};
+
 export type Form = {
 	id: string;
 	name: string;
 	description?: string;
 	items: FormItem[];
+	attachments?: FormAttachmentValue[];
 	settings?: {
 		scheduledSendAt?: string;
 		deadlineAt?: string;

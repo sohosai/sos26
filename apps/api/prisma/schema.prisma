@@ -365,6 +365,7 @@ model File {
 
   noticeAttachments                  NoticeAttachment[]
   inquiryAttachments                 InquiryAttachment[]
+  formAttachments                    FormAttachment[]
   formAnswerFiles                    FormAnswerFile[]
   formItemEditHistoryFiles           FormItemEditHistoryFile[]
   projectRegistrationFormAnswerFiles ProjectRegistrationFormAnswerFile[]
@@ -542,6 +543,9 @@ model Form {
   //申請項目
   items FormItem[]
 
+  // 添付ファイル
+  attachments FormAttachment[]
+
   // お問い合わせ関連
   inquiries Inquiry[]
 
@@ -551,6 +555,23 @@ model Form {
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+}
+
+model FormAttachment {
+  id String @id @default(cuid())
+
+  formId String
+  fileId String
+
+  form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@unique([formId, fileId])
+  @@index([formId])
+  @@index([fileId])
 }
 
 model FormViewer {

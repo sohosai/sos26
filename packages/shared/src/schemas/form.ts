@@ -236,6 +236,17 @@ export const formDeliverySchema = z.object({
 });
 export type FormDelivery = z.infer<typeof formDeliverySchema>;
 
+export const formAttachmentSchema = z.object({
+	id: z.cuid(),
+	fileId: z.string(),
+	fileName: z.string(),
+	mimeType: z.string(),
+	size: z.number(),
+	isPublic: z.boolean(),
+	createdAt: z.coerce.date(),
+});
+export type FormAttachment = z.infer<typeof formAttachmentSchema>;
+
 // ─────────────────────────────────────────────────────────────
 // パスパラメーター
 // ─────────────────────────────────────────────────────────────
@@ -252,6 +263,11 @@ export const formCollaboratorPathParamsSchema = z.object({
 export const formAuthorizationPathParamsSchema = z.object({
 	formId: z.cuid(),
 	authorizationId: z.cuid(),
+});
+
+export const formAttachmentPathParamsSchema = z.object({
+	formId: z.cuid(),
+	attachmentId: z.cuid(),
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -502,6 +518,7 @@ export const getFormDetailResponseSchema = z.object({
 		owner: userSummarySchema,
 		collaborators: z.array(collaboratorWithUserSchema),
 		authorizationDetail: authorizationDetailSchema.nullable(),
+		attachments: z.array(formAttachmentSchema),
 		viewers: z.array(formViewerDetailSchema),
 	}),
 });
@@ -586,6 +603,35 @@ export const removeFormCollaboratorResponseSchema = z.object({
 });
 export type RemoveFormCollaboratorResponse = z.infer<
 	typeof removeFormCollaboratorResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// POST /committee/forms/:formId/attachments
+// ─────────────────────────────────────────────────────────────
+
+export const addFormAttachmentRequestSchema = z.object({
+	fileIds: z.array(z.string()).min(1, "ファイルを1つ以上指定してください"),
+});
+export type AddFormAttachmentRequest = z.infer<
+	typeof addFormAttachmentRequestSchema
+>;
+
+export const addFormAttachmentResponseSchema = z.object({
+	attachments: z.array(formAttachmentSchema),
+});
+export type AddFormAttachmentResponse = z.infer<
+	typeof addFormAttachmentResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// DELETE /committee/forms/:formId/attachments/:attachmentId
+// ─────────────────────────────────────────────────────────────
+
+export const removeFormAttachmentResponseSchema = z.object({
+	success: z.literal(true),
+});
+export type RemoveFormAttachmentResponse = z.infer<
+	typeof removeFormAttachmentResponseSchema
 >;
 
 // ─────────────────────────────────────────────────────────────
@@ -773,6 +819,7 @@ export const getProjectFormResponseSchema = z.object({
 		formId: z.string(),
 		title: z.string(),
 		description: z.string().nullable(),
+		attachments: z.array(formAttachmentSchema),
 		scheduledSendAt: z.coerce.date(),
 		deadlineAt: z.coerce.date().nullable(),
 		allowLateResponse: z.boolean(),

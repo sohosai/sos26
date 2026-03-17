@@ -1,6 +1,9 @@
 import {
+	type AddFormAttachmentRequest,
+	type AddFormAttachmentResponse,
 	type AddFormCollaboratorRequest,
 	type AddFormCollaboratorResponse,
+	addFormAttachmentEndpoint,
 	addFormCollaboratorEndpoint,
 	type CreateFormRequest,
 	type CreateFormResponse,
@@ -15,9 +18,11 @@ import {
 	type ListMyFormsResponse,
 	listFormResponsesEndpoint,
 	listMyFormsEndpoint,
+	type RemoveFormAttachmentResponse,
 	type RemoveFormCollaboratorResponse,
 	type RequestFormAuthorizationRequest,
 	type RequestFormAuthorizationResponse,
+	removeFormAttachmentEndpoint,
 	removeFormCollaboratorEndpoint,
 	requestFormAuthorizationEndpoint,
 	type UpdateFormAuthorizationResponse,
@@ -116,6 +121,32 @@ export async function removeFormCollaborator(
 ): Promise<RemoveFormCollaboratorResponse> {
 	return callNoBodyApi(removeFormCollaboratorEndpoint, {
 		pathParams: { formId, userId },
+	});
+}
+
+/**
+ * POST /committee/forms/:formId/attachments
+ * 添付ファイルを追加
+ */
+export async function addFormAttachments(
+	formId: string,
+	body: AddFormAttachmentRequest
+): Promise<AddFormAttachmentResponse> {
+	return callBodyApi(addFormAttachmentEndpoint, body, {
+		pathParams: { formId },
+	});
+}
+
+/**
+ * DELETE /committee/forms/:formId/attachments/:attachmentId
+ * 添付ファイルを削除
+ */
+export async function removeFormAttachment(
+	formId: string,
+	attachmentId: string
+): Promise<RemoveFormAttachmentResponse> {
+	return callNoBodyApi(removeFormAttachmentEndpoint, {
+		pathParams: { formId, attachmentId },
 	});
 }
 

@@ -159,6 +159,13 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"FormAttachment" {
+  String id PK
+  String formId FK
+  String fileId FK
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+}
 "FormViewer" {
   String id PK
   String formId FK
@@ -521,6 +528,8 @@ erDiagram
 "NoticeDelivery" }o--|| "NoticeAuthorization" : noticeAuthorization
 "NoticeDelivery" }o--|| "Project" : project
 "Form" }o--|| "User" : owner
+"FormAttachment" }o--|| "Form" : form
+"FormAttachment" }o--|| "File" : file
 "FormViewer" }o--|| "Form" : form
 "FormViewer" }o--o| "User" : user
 "FormItem" }o--|| "Form" : form
@@ -796,6 +805,16 @@ Properties as follows:
 - `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
+
+### `FormAttachment`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `fileId`:
+- `deletedAt`:
+- `createdAt`:
 
 ### `FormViewer`
 

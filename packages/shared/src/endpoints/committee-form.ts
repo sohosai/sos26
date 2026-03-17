@@ -1,9 +1,12 @@
 import {
+	addFormAttachmentRequestSchema,
+	addFormAttachmentResponseSchema,
 	addFormCollaboratorRequestSchema,
 	addFormCollaboratorResponseSchema,
 	createFormRequestSchema,
 	createFormResponseSchema,
 	deleteFormResponseSchema,
+	formAttachmentPathParamsSchema,
 	formAuthorizationPathParamsSchema,
 	formCollaboratorPathParamsSchema,
 	formIdPathParamsSchema,
@@ -12,6 +15,7 @@ import {
 	getFormResponseResponseSchema,
 	listFormResponsesResponseSchema,
 	listMyFormsResponseSchema,
+	removeFormAttachmentResponseSchema,
 	removeFormCollaboratorResponseSchema,
 	requestFormAuthorizationRequestSchema,
 	requestFormAuthorizationResponseSchema,
@@ -170,6 +174,53 @@ export const removeFormCollaboratorEndpoint: NoBodyEndpoint<
 	query: undefined,
 	request: undefined,
 	response: removeFormCollaboratorResponseSchema,
+} as const;
+
+// ─────────────────────────────────────────────────────────────
+// 添付ファイル
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * POST /committee/forms/:formId/attachments
+ * 添付ファイルを追加
+ *
+ * - 作成者または書き込み権限付き共同編集者のみ
+ */
+export const addFormAttachmentEndpoint: BodyEndpoint<
+	"POST",
+	"/committee/forms/:formId/attachments",
+	typeof formIdPathParamsSchema,
+	undefined,
+	typeof addFormAttachmentRequestSchema,
+	typeof addFormAttachmentResponseSchema
+> = {
+	method: "POST",
+	path: "/committee/forms/:formId/attachments",
+	pathParams: formIdPathParamsSchema,
+	query: undefined,
+	request: addFormAttachmentRequestSchema,
+	response: addFormAttachmentResponseSchema,
+} as const;
+
+/**
+ * DELETE /committee/forms/:formId/attachments/:attachmentId
+ * 添付ファイルを削除
+ *
+ * - 作成者または書き込み権限付き共同編集者のみ
+ */
+export const removeFormAttachmentEndpoint: NoBodyEndpoint<
+	"DELETE",
+	"/committee/forms/:formId/attachments/:attachmentId",
+	typeof formAttachmentPathParamsSchema,
+	undefined,
+	typeof removeFormAttachmentResponseSchema
+> = {
+	method: "DELETE",
+	path: "/committee/forms/:formId/attachments/:attachmentId",
+	pathParams: formAttachmentPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: removeFormAttachmentResponseSchema,
 } as const;
 
 // ─────────────────────────────────────────────────────────────
