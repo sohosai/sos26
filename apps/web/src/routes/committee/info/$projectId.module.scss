@@ -24,26 +24,6 @@
 	border: none;
 }
 
-.tabs {
-	display: flex;
-	gap: 8px;
-	flex-wrap: wrap;
-}
-
-.tabButton {
-	border: 1px solid var(--gray-6);
-	background: var(--gray-2);
-	color: var(--gray-12);
-	padding: 6px 12px;
-	border-radius: 999px;
-	cursor: pointer;
-}
-
-.activeTab {
-	background: var(--blue-3);
-	border-color: var(--blue-7);
-}
-
 .actionList {
 	display: flex;
 	flex-direction: column;

@@ -6,6 +6,7 @@ import {
 	Card,
 	Dialog,
 	Heading,
+	Select,
 	Table,
 	Text,
 	TextField,
@@ -30,6 +31,8 @@ import {
 } from "@/lib/project/options";
 import styles from "./$projectId.module.scss";
 
+type DeletionStatusSelectValue = ProjectDeletionStatus | "ACTIVE";
+
 export const Route = createFileRoute("/committee/info/$projectId")({
 	loader: async ({ params }) => getCommitteeProjectDetail(params.projectId),
 	component: CommitteeProjectInfoPage,
@@ -51,7 +54,7 @@ function CommitteeProjectInfoPage() {
 	const [saving, setSaving] = useState(false);
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 	const [deletionStatus, setDeletionStatus] =
-		useState<ProjectDeletionStatus>("DELETED");
+		useState<DeletionStatusSelectValue>("DELETED");
 
 	const [form, setForm] = useState<UpdateCommitteeProjectBaseInfoRequest>({
 		name: project.name,
@@ -133,6 +136,11 @@ function CommitteeProjectInfoPage() {
 		}
 	};
 
+	const openDeleteStatusDialog = () => {
+		setDeletionStatus(project.deletionStatus ?? "ACTIVE");
+		setDeleteConfirmOpen(true);
+	};
+
 	return (
 		<div className={styles.page}>
 			<header className={styles.header}>
@@ -152,21 +160,8 @@ function CommitteeProjectInfoPage() {
 						<Button onClick={() => setEditOpen(true)}>基本情報を編集</Button>
 					)}
 					{project.permissions.canDelete && (
-						<Button
-							color="red"
-							variant="soft"
-							onClick={() => setDeleteConfirmOpen(true)}
-						>
-							削除状態を変更
-						</Button>
-					)}
-					{project.permissions.canDelete && !project.isActive && (
-						<Button
-							variant="outline"
-							onClick={() => handleUpdateDeletionStatus(null)}
-							disabled={saving}
-						>
-							削除を取り消す
+						<Button color="red" variant="soft" onClick={openDeleteStatusDialog}>
+							ステータスを変更
 						</Button>
 					)}
 				</div>
@@ -309,22 +304,26 @@ function CommitteeProjectInfoPage() {
 			>
 				<AlertDialog.Content>
 					<AlertDialog.Title>企画の削除状態を変更</AlertDialog.Title>
+					<AlertDialog.Title>企画のステータスを変更</AlertDialog.Title>
 					<AlertDialog.Description>
 						削除状態を設定すると、企画人画面に警告バーが表示されます。
 					</AlertDialog.Description>
-					<div className={styles.tabs}>
-						<TabButton
-							active={deletionStatus === "DELETED"}
-							label="削除"
-							onClick={() => setDeletionStatus("DELETED")}
-						/>
-						<TabButton
-							active={deletionStatus === "LOTTERY_LOSS"}
-							label="抽選漏れ"
-							onClick={() => setDeletionStatus("LOTTERY_LOSS")}
-						/>
-					</div>
-					<div className={styles.controls}>
+					<Field label="変更後の状態">
+						<Select.Root
+							value={deletionStatus}
+							onValueChange={value =>
+								setDeletionStatus(value as DeletionStatusSelectValue)
+							}
+						>
+							<Select.Trigger />
+							<Select.Content>
+								<Select.Item value="ACTIVE">有効（削除を取り消す）</Select.Item>
+								<Select.Item value="DELETED">削除</Select.Item>
+								<Select.Item value="LOTTERY_LOSS">抽選漏れ</Select.Item>
+							</Select.Content>
+						</Select.Root>
+					</Field>
+					<div className={styles.dialogActions}>
 						<AlertDialog.Cancel>
 							<Button variant="soft" color="gray">
 								キャンセル
@@ -332,7 +331,11 @@ function CommitteeProjectInfoPage() {
 						</AlertDialog.Cancel>
 						<Button
 							color="red"
-							onClick={() => handleUpdateDeletionStatus(deletionStatus)}
+							onClick={() =>
+								handleUpdateDeletionStatus(
+									deletionStatus === "ACTIVE" ? null : deletionStatus
+								)
+							}
 							disabled={saving}
 						>
 							{saving ? "保存中..." : "保存"}
@@ -388,26 +391,6 @@ function PersonCard({
 				電話: {person.telephoneNumber ?? "権限がないため非表示"}
 			</Text>
 		</div>
-	);
-}
-
-function TabButton({
-	active,
-	label,
-	onClick,
-}: {
-	active: boolean;
-	label: string;
-	onClick: () => void;
-}) {
-	return (
-		<button
-			type="button"
-			onClick={onClick}
-			className={`${styles.tabButton} ${active ? styles.activeTab : ""}`}
-		>
-			{label}
-		</button>
 	);
 }
 
