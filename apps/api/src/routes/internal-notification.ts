@@ -174,19 +174,28 @@ async function processNoticeAuthorizations(
 ) {
 	let noticeNotified = 0;
 
-	for (const authId of noticeAuthIds) {
-		const auth = await prisma.noticeAuthorization.findUnique({
-			where: { id: authId.id },
-			select: {
-				id: true,
-				deliveryMode: true,
-				filterTypes: true,
-				filterLocations: true,
-				notice: { select: { title: true, body: true, deletedAt: true } },
-				deliveries: { select: { projectId: true } },
-			},
-		});
-		if (!auth || auth.notice.deletedAt) continue;
+	if (noticeAuthIds.length === 0) {
+		return noticeNotified;
+	}
+
+	const ids = noticeAuthIds.map(authId => authId.id);
+
+	const auths = await prisma.noticeAuthorization.findMany({
+		where: {
+			id: { in: ids },
+		},
+		select: {
+			id: true,
+			deliveryMode: true,
+			filterTypes: true,
+			filterLocations: true,
+			notice: { select: { title: true, body: true, deletedAt: true } },
+			deliveries: { select: { projectId: true } },
+		},
+	});
+
+	for (const auth of auths) {
+		if (auth.notice.deletedAt) continue;
 
 		const targetProjectIds = await resolveTargetProjectIds({
 			deliveryMode: auth.deliveryMode,
