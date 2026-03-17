@@ -157,15 +157,15 @@ export function FileUploadField({
 			return (
 				<Flex direction="column">
 					{previewItems.map(item => (
-						<div key={item.key}>
-							<Text size="2">{item.name}</Text>
+						<Flex key={item.key} align="center" gap="1">
+							<Text size="3">{item.name}</Text>
 							<IconButton
 								size="1"
 								aria-label={`${previewLabel}「${item.name}」をプレビュー`}
 								disabled={item.disabled}
 								onClick={item.onClick}
 							>
-								<IconFileSearch size={16} />
+								<IconFileSearch size={20} />
 							</IconButton>
 							{item.onDelete && (
 								<IconButton
@@ -175,10 +175,10 @@ export function FileUploadField({
 									disabled={item.disabled || !!disabled}
 									onClick={item.onDelete}
 								>
-									<IconX size={16} />
+									<IconX size={20} />
 								</IconButton>
 							)}
-						</div>
+						</Flex>
 					))}
 				</Flex>
 			);
