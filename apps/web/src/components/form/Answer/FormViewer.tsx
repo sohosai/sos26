@@ -405,7 +405,7 @@ export function FormViewer({
 					type="submit"
 					intent={isSubmittable ? "primary" : "secondary"}
 					loading={isSubmitting}
-					disabled={isSavingDraft || disableSubmit}
+					disabled={isSubmitting || isSavingDraft || disableSubmit}
 				>
 					送信する
 				</Button>
