@@ -446,9 +446,11 @@ function DeliveryTargetDisplay({
 					配信先
 				</Text>
 				{isAll ? (
-					<Badge variant="soft" size="1" color="blue">
-						全企画
-					</Badge>
+					<div className={styles.projectTags}>
+						<Badge variant="soft" size="1" color="blue">
+							全企画
+						</Badge>
+					</div>
 				) : (
 					<div className={styles.projectTags}>
 						{filterTypes.map(t => (
