@@ -8,15 +8,16 @@
 }
 
 .dialogInner {
+	display: flex;
+	flex-direction: column;
 	flex: 1;
 	min-height: 0;
-	overflow-y: auto;
-	padding: var(--space-5);
+	overflow: hidden;
 }
 
 .loading {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 200px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	min-height: 200px;
 }

@@ -194,30 +194,32 @@ export function FormViewer({
 
 	return (
 		<form className={styles.root} onSubmit={handleSubmit} noValidate>
-			<div className={styles.header}>
-				<Text size="5" weight="bold">
-					{form.name || "無題の申請"}
-				</Text>
-				{form.description && <Text size="2">{form.description}</Text>}
-			</div>
+			<div className={styles.content}>
+				<div className={styles.header}>
+					<Text size="5" weight="bold">
+						{form.name || "無題の申請"}
+					</Text>
+					{form.description && <Text size="2">{form.description}</Text>}
+				</div>
 
-			<ul className={styles.itemList}>
-				{form.items.map(item => (
-					<li key={item.id} className={styles.itemCard}>
-						<AnswerField
-							item={item}
-							value={answers[item.id]}
-							onChange={val => updateAnswer(item.id, val)}
-							disabled={disableSubmit && disableSaveDraft}
-						/>
-						{errors[item.id] && (
-							<Text size="2" color="red">
-								{errors[item.id]}
-							</Text>
-						)}
-					</li>
-				))}
-			</ul>
+				<ul className={styles.itemList}>
+					{form.items.map(item => (
+						<li key={item.id} className={styles.itemCard}>
+							<AnswerField
+								item={item}
+								value={answers[item.id]}
+								onChange={val => updateAnswer(item.id, val)}
+								disabled={disableSubmit && disableSaveDraft}
+							/>
+							{errors[item.id] && (
+								<Text size="2" color="red">
+									{errors[item.id]}
+								</Text>
+							)}
+						</li>
+					))}
+				</ul>
+			</div>
 
 			<div className={styles.footer}>
 				{onSaveDraft && !disableSaveDraft && (
