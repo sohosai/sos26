@@ -178,7 +178,7 @@ export const removeFormCollaboratorEndpoint: NoBodyEndpoint<
 
 /**
  * POST /committee/forms/:formId/authorizations
- * 配信承認をリクエスト
+ * 承認依頼をリクエスト
  *
  * - 作成者または書き込み権限付き共同編集者のみ
  */
@@ -200,7 +200,7 @@ export const requestFormAuthorizationEndpoint: BodyEndpoint<
 
 /**
  * POST /committee/forms/:formId/authorizations/:authorizationId/reject
- * 配信承認を承認/却下
+ * 承認依頼を承認/却下
  *
  * - requestedTo のユーザーのみ
  */

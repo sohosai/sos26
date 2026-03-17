@@ -1,5 +1,5 @@
 /**
- * フォームの配信承認が申請されたとき、承認者に送信するメール
+ * フォームの承認依頼が申請されたとき、承認者に送信するメール
  * トリガー: POST /committee/forms/:formId/authorizations
  */
 import { z } from "zod";

@@ -228,7 +228,7 @@ committeeNoticeRoute.patch(
 		}
 
 		if (notice.authorizations.length > 0) {
-			throw Errors.invalidRequest("配信承認済みのお知らせは編集できません");
+			throw Errors.invalidRequest("承認待ちのお知らせは編集できません");
 		}
 
 		// owner または共同編集者のみ編集可能
@@ -604,7 +604,7 @@ committeeNoticeRoute.delete(
 
 // ─────────────────────────────────────────────────────────────
 // POST /committee/notices/:noticeId/authorizations
-// 配信承認を申請（owner または共同編集者）
+// 承認依頼を申請（owner または共同編集者）
 // ─────────────────────────────────────────────────────────────
 committeeNoticeRoute.post(
 	"/:noticeId/authorizations",
@@ -634,7 +634,7 @@ committeeNoticeRoute.post(
 			col => col.userId === user.id
 		);
 		if (!isOwner && !isCollaborator) {
-			throw Errors.forbidden("配信承認の申請権限がありません");
+			throw Errors.forbidden("承認依頼を送る権限がありません");
 		}
 
 		// 承認者が NOTICE_DELIVER 権限を持つか確認

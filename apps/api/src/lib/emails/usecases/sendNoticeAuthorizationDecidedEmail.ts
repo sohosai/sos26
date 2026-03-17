@@ -1,5 +1,5 @@
 /**
- * お知らせの配信承認が承認または却下されたとき、申請者に送信するメール
+ * お知らせの承認依頼が承認または却下されたとき、申請者に送信するメール
  * トリガー: PATCH /committee/notices/:id/authorizations/:id
  */
 import { z } from "zod";

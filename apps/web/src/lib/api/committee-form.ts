@@ -125,7 +125,7 @@ export async function removeFormCollaborator(
 
 /**
  * POST /form/:formId/authorizations
- * 配信承認をリクエスト
+ * 承認依頼をリクエスト
  */
 export async function requestFormAuthorization(
 	formId: string,
@@ -138,7 +138,7 @@ export async function requestFormAuthorization(
 
 /**
  * PATCH /form/:formId/authorizations/:authorizationId/approve
- * 配信承認を承認
+ * 承認依頼を承認
  */
 export async function approveFormAuthorization(
 	formId: string,
@@ -155,7 +155,7 @@ export async function approveFormAuthorization(
 
 /**
  * PATCH /form/:formId/authorizations/:authorizationId/reject
- * 配信承認を却下
+ * 承認依頼を却下
  */
 export async function rejectFormAuthorization(
 	formId: string,

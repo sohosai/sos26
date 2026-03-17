@@ -1,5 +1,5 @@
 /**
- * お知らせの配信承認が申請されたとき、承認者に送信するメール
+ * お知らせの承認依頼が申請されたとき、承認者に送信するメール
  * トリガー: POST /committee/notices/:id/authorizations
  */
 import { z } from "zod";

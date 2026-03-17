@@ -6,9 +6,9 @@ export function formAuthorizationRequestedTemplate(params: {
 	scheduledSendAt: string;
 	url: string;
 }) {
-	const body = `${params.requesterName} さんからフォームの配信承認が申請されました。
+	const body = `${params.requesterName} さんから申請の承認依頼が申請されました。
 
-フォームタイトル: ${params.formTitle}
+タイトル: ${params.formTitle}
 配信希望日時: ${params.scheduledSendAt}
 
 以下のURLから承認または却下を行ってください。
@@ -19,7 +19,7 @@ ${params.url}
 このメールは送信専用です。返信いただいてもお応えできません。`;
 
 	return {
-		subject: "【雙峰祭オンラインシステム】フォーム配信承認の申請",
+		subject: "【雙峰祭オンラインシステム】申請の承認依頼が申請されました",
 		html: textToHtml(body),
 		text: body,
 	};

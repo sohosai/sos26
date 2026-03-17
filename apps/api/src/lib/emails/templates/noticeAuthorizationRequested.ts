@@ -6,9 +6,9 @@ export function noticeAuthorizationRequestedTemplate(params: {
 	deliveredAt: string;
 	url: string;
 }) {
-	const body = `${params.requesterName} さんからお知らせの配信承認が申請されました。
+	const body = `${params.requesterName} さんからお知らせの承認依頼が申請されました。
 
-お知らせタイトル: ${params.noticeTitle}
+タイトル: ${params.noticeTitle}
 配信希望日時: ${params.deliveredAt}
 
 以下のURLから承認または却下を行ってください。
@@ -19,7 +19,7 @@ ${params.url}
 このメールは送信専用です。返信いただいてもお応えできません。`;
 
 	return {
-		subject: "【雙峰祭オンラインシステム】配信承認の申請",
+		subject: "【雙峰祭オンラインシステム】お知らせの承認依頼が申請されました",
 		html: textToHtml(body),
 		text: body,
 	};

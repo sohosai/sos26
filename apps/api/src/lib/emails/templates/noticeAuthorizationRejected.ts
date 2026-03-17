@@ -4,9 +4,9 @@ export function noticeAuthorizationRejectedTemplate(params: {
 	noticeTitle: string;
 	url: string;
 }) {
-	const body = `お知らせの配信承認が却下されました。
+	const body = `お知らせの承認依頼が却下されました。
 
-お知らせタイトル: ${params.noticeTitle}
+タイトル: ${params.noticeTitle}
 
 内容を修正のうえ、再度申請してください。
 
@@ -18,7 +18,7 @@ ${params.url}
 このメールは送信専用です。返信いただいてもお応えできません。`;
 
 	return {
-		subject: "【雙峰祭オンラインシステム】配信承認が却下されました",
+		subject: "【雙峰祭オンラインシステム】お知らせの承認依頼が却下されました",
 		html: textToHtml(body),
 		text: body,
 	};

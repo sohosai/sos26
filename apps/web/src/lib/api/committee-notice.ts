@@ -137,7 +137,7 @@ export async function removeNoticeAttachment(
 
 /**
  * POST /committee/notices/:noticeId/authorizations
- * 配信承認を申請
+ * 承認依頼を申請
  */
 export async function createNoticeAuthorization(
 	noticeId: string,

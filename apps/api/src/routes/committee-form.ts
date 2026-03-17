@@ -309,7 +309,7 @@ committeeFormRoute.patch(
 					where: { formId, status: "APPROVED" },
 				});
 				if (approvedAuth) {
-					throw Errors.invalidRequest("配信承認済みのフォームは編集できません");
+					throw Errors.invalidRequest("承認待ちの申請は編集できません");
 				}
 
 				await tx.form.update({ where: { id: formId }, data: formData });
@@ -552,7 +552,7 @@ committeeFormRoute.delete(
 
 // ─────────────────────────────────────────
 // POST /committee/forms/:formId/authorizations
-// 配信承認をリクエスト
+// 承認依頼をリクエスト
 // ─────────────────────────────────────────
 committeeFormRoute.post(
 	"/:formId/authorizations",
