@@ -5,6 +5,7 @@ import {
 	IconCircleCheck,
 	IconCircleDot,
 	IconEye,
+	IconPencil,
 	IconPlus,
 	IconSearch,
 	IconUserCheck,
@@ -29,7 +30,7 @@ type SupportListProps = {
 	isAdmin?: boolean;
 };
 
-type CommitteeTab = "open" | "resolved";
+type CommitteeTab = "open" | "draft" | "resolved";
 
 export function SupportList({
 	inquiries,
@@ -55,12 +56,17 @@ export function SupportList({
 	};
 
 	const myCount = searched.filter(
-		inq => inq.status !== "RESOLVED" && isAssignedToMe(inq)
+		inq => inq.status !== "RESOLVED" && !inq.isDraft && isAssignedToMe(inq)
 	).length;
 
 	// 企画者側: 未解決 / 解決済みに分割
-	const openItems = searched.filter(inq => inq.status !== "RESOLVED");
-	const resolvedItems = searched.filter(inq => inq.status === "RESOLVED");
+	const draftItems = searched.filter(inq => inq.isDraft);
+	const openItems = searched.filter(
+		inq => inq.status !== "RESOLVED" && !inq.isDraft
+	);
+	const resolvedItems = searched.filter(
+		inq => inq.status === "RESOLVED" && !inq.isDraft
+	);
 
 	return (
 		<div className={styles.container}>
@@ -84,6 +90,7 @@ export function SupportList({
 					<CommitteeTabs
 						activeTab={activeTab}
 						myCount={myCount}
+						draftCount={draftItems.length}
 						onChangeTab={setActiveTab}
 					/>
 				)}
@@ -101,14 +108,16 @@ export function SupportList({
 			{isCommittee ? (
 				activeTab === "open" ? (
 					<CommitteeOpenSections
-						inquiries={searched}
+						inquiries={openItems}
 						currentUser={currentUser}
 						basePath={basePath}
 						isAdmin={isAdmin}
 					/>
+				) : activeTab === "draft" ? (
+					<CommitteeDraftList inquiries={draftItems} basePath={basePath} />
 				) : (
 					<CommitteeResolvedList
-						inquiries={searched}
+						inquiries={resolvedItems}
 						basePath={basePath}
 						isAssignedToMe={isAssignedToMe}
 					/>
@@ -129,10 +138,12 @@ export function SupportList({
 function CommitteeTabs({
 	activeTab,
 	myCount,
+	draftCount,
 	onChangeTab,
 }: {
 	activeTab: CommitteeTab;
 	myCount: number;
+	draftCount: number;
 	onChangeTab: (tab: CommitteeTab) => void;
 }) {
 	return (
@@ -145,6 +156,17 @@ function CommitteeTabs({
 				<IconCircleDot size={14} />
 				未完了
 				{myCount > 0 && <span className={styles.tabBadge}>{myCount}</span>}
+			</button>
+			<button
+				type="button"
+				className={`${styles.tab} ${activeTab === "draft" ? styles.tabActive : ""}`}
+				onClick={() => onChangeTab("draft")}
+			>
+				<IconPencil size={14} />
+				下書き
+				{draftCount > 0 && (
+					<span className={styles.tabBadge}>{draftCount}</span>
+				)}
 			</button>
 			<button
 				type="button"
@@ -322,6 +344,39 @@ function CommitteeResolvedList({
 	);
 }
 
+function CommitteeDraftList({
+	inquiries,
+	basePath,
+}: {
+	inquiries: InquirySummary[];
+	basePath: string;
+}) {
+	if (inquiries.length === 0) {
+		return (
+			<div className={styles.empty}>
+				<IconSearch size={40} />
+				<Text size="3" color="gray">
+					下書きはありません
+				</Text>
+			</div>
+		);
+	}
+
+	return (
+		<ul className={styles.list}>
+			{inquiries.map(inq => (
+				<InquiryCard
+					key={inq.id}
+					inquiry={inq}
+					basePath={basePath}
+					isMyInquiry={false}
+					showAssignees
+				/>
+			))}
+		</ul>
+	);
+}
+
 function ProjectList({
 	openItems,
 	resolvedItems,
@@ -399,6 +454,10 @@ function InquiryCard({
 	const navigate = useNavigate();
 	const config = statusConfig[inquiry.status];
 	const StatusIcon = config.icon;
+	const isDraft = inquiry.isDraft;
+	const displayLabel = isDraft ? "下書き" : config.label;
+	const displayColor = isDraft ? "orange" : config.color;
+	const DisplayIcon = isDraft ? IconPencil : StatusIcon;
 
 	const allAssignees: AssigneeInfo[] = [
 		...inquiry.committeeAssignees,
@@ -414,9 +473,12 @@ function InquiryCard({
 				className={styles.cardButton}
 				onClick={() => navigate({ to: `${basePath}/${inquiry.id}` as string })}
 			>
-				<span className={styles.statusIcon} data-status={inquiry.status}>
-					<Tooltip content={config.label}>
-						<StatusIcon size={20} />
+				<span
+					className={styles.statusIcon}
+					data-status={isDraft ? "DRAFT" : inquiry.status}
+				>
+					<Tooltip content={displayLabel}>
+						<DisplayIcon size={20} />
 					</Tooltip>
 				</span>
 
@@ -438,8 +500,8 @@ function InquiryCard({
 					</Text>
 
 					<span className={styles.cardTags}>
-						<Badge color={config.color} size="1" variant="soft">
-							{config.label}
+						<Badge color={displayColor} size="1" variant="soft">
+							{displayLabel}
 						</Badge>
 						{showAssignees && (
 							<span className={styles.assignees}>

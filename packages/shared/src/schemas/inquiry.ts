@@ -38,6 +38,7 @@ export const inquirySchema = z.object({
 	creatorRole: inquiryCreatorRoleSchema,
 	projectId: z.cuid(),
 	relatedFormId: z.cuid().nullable(),
+	isDraft: z.boolean(),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 });
@@ -69,7 +70,10 @@ export const inquiryCommentSchema = z.object({
 	body: z.string(),
 	createdById: z.cuid(),
 	senderRole: inquiryCreatorRoleSchema,
+	isDraft: z.boolean(),
+	draftCreatedById: z.cuid().nullable(),
 	createdAt: z.coerce.date(),
+	sentAt: z.coerce.date().nullable(),
 });
 export type InquiryComment = z.infer<typeof inquiryCommentSchema>;
 
@@ -132,9 +136,30 @@ const assigneeWithUserSchema = inquiryAssigneeSchema
 		user: userSummarySchema,
 	});
 
-/** コメント + 投稿者情報 */
+/** コメント + 投稿者情報（Committee側用 - 下書き含む） */
 const commentWithUserSchema = inquiryCommentSchema
-	.pick({ id: true, body: true, senderRole: true, createdAt: true })
+	.pick({
+		id: true,
+		body: true,
+		senderRole: true,
+		isDraft: true,
+		createdAt: true,
+		sentAt: true,
+	})
+	.extend({
+		createdBy: userSummarySchema,
+		attachments: z.array(inquiryAttachmentSchema),
+	});
+
+/** コメント + 投稿者情報（Project側用 - 下書き除外） */
+const commentWithUserSchemaForProject = inquiryCommentSchema
+	.pick({
+		id: true,
+		body: true,
+		senderRole: true,
+		createdAt: true,
+		sentAt: true,
+	})
 	.extend({
 		createdBy: userSummarySchema,
 		attachments: z.array(inquiryAttachmentSchema),
@@ -163,6 +188,7 @@ const inquirySummarySchema = z.object({
 	creatorRole: inquiryCreatorRoleSchema,
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
+	isDraft: z.boolean(),
 	createdBy: userSummarySchema,
 	project: z.object({ id: z.cuid(), name: z.string() }),
 	projectAssignees: z.array(assigneeWithUserSchema),
@@ -222,7 +248,7 @@ export const getProjectInquiryResponseSchema = z.object({
 		relatedForm: relatedFormSummarySchema,
 		projectAssignees: z.array(assigneeWithUserSchema),
 		committeeAssignees: z.array(assigneeWithUserSchema),
-		comments: z.array(commentWithUserSchema),
+		comments: z.array(commentWithUserSchemaForProject),
 		activities: z.array(activityWithUserSchema),
 		attachments: z.array(inquiryAttachmentSchema),
 	}),
@@ -238,6 +264,7 @@ export type GetProjectInquiryResponse = z.infer<
 export const addInquiryCommentRequestSchema = z.object({
 	body: z.string().min(1, "コメントを入力してください"),
 	fileIds: z.array(z.string()).optional(),
+	isDraft: z.boolean().optional(),
 });
 export type AddInquiryCommentRequest = z.infer<
 	typeof addInquiryCommentRequestSchema
@@ -249,6 +276,87 @@ export const addInquiryCommentResponseSchema = z.object({
 export type AddInquiryCommentResponse = z.infer<
 	typeof addInquiryCommentResponseSchema
 >;
+
+// ─────────────────────────────────────────────────────────────
+// 実委側: POST /committee/inquiries/:inquiryId/comments/:commentId/publish
+// ─────────────────────────────────────────────────────────────
+
+export const inquiryCommentIdPathParamsSchema = z.object({
+	inquiryId: z.cuid(),
+	commentId: z.cuid(),
+});
+
+export const publishDraftCommentResponseSchema = z.object({
+	comment: commentWithUserSchema,
+});
+export type PublishDraftCommentResponse = z.infer<
+	typeof publishDraftCommentResponseSchema
+>;
+
+export const updateDraftCommentRequestSchema = z.object({
+	body: z.string().min(1, "コメントを入力してください"),
+});
+export type UpdateDraftCommentRequest = z.infer<
+	typeof updateDraftCommentRequestSchema
+>;
+
+export const updateDraftCommentResponseSchema = z.object({
+	comment: commentWithUserSchema,
+});
+export type UpdateDraftCommentResponse = z.infer<
+	typeof updateDraftCommentResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// 実委側: DELETE /committee/inquiries/:inquiryId/comments/:commentId
+// ─────────────────────────────────────────────────────────────
+
+export const deleteInquiryCommentResponseSchema = z.object({
+	success: z.literal(true),
+});
+export type DeleteInquiryCommentResponse = z.infer<
+	typeof deleteInquiryCommentResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// 実委側: PATCH /committee/inquiries/:inquiryId - 下書きのお問い合わせ編集
+// ─────────────────────────────────────────────────────────────
+
+export const updateDraftInquiryRequestSchema = z.object({
+	title: z.string().min(1, "件名を入力してください").optional(),
+	body: z.string().min(1, "内容を入力してください").optional(),
+	fileIds: z.array(z.string()).optional(),
+});
+export type UpdateDraftInquiryRequest = z.infer<
+	typeof updateDraftInquiryRequestSchema
+>;
+
+export const updateDraftInquiryResponseSchema = z.object({
+	inquiry: inquirySchema,
+});
+export type UpdateDraftInquiryResponse = z.infer<
+	typeof updateDraftInquiryResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// 実委側: POST /committee/inquiries/:inquiryId/publish - 下書きのお問い合わせ送信
+// ─────────────────────────────────────────────────────────────
+
+export const publishDraftInquiryResponseSchema = z.object({
+	inquiry: inquirySchema,
+});
+export type PublishDraftInquiryResponse = z.infer<
+	typeof publishDraftInquiryResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// 実委側: DELETE /committee/inquiries/:inquiryId - 下書きのお問い合わせ削除
+// ─────────────────────────────────────────────────────────────
+
+export const deleteInquiryResponseSchema = z.object({
+	success: z.literal(true),
+});
+export type DeleteInquiryResponse = z.infer<typeof deleteInquiryResponseSchema>;
 
 // ─────────────────────────────────────────────────────────────
 // 企画側/実委側共通: PATCH .../reopen
@@ -332,6 +440,7 @@ export const createCommitteeInquiryRequestSchema = z.object({
 	committeeAssigneeUserIds: z.array(z.cuid()).optional(),
 	fileIds: z.array(z.string()).optional(),
 	viewers: z.array(viewerInputSchema).optional(),
+	isDraft: z.boolean().optional(),
 });
 export type CreateCommitteeInquiryRequest = z.infer<
 	typeof createCommitteeInquiryRequestSchema

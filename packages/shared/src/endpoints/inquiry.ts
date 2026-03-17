@@ -8,15 +8,24 @@ import {
 	createCommitteeInquiryResponseSchema,
 	createProjectInquiryRequestSchema,
 	createProjectInquiryResponseSchema,
+	deleteInquiryCommentResponseSchema,
+	deleteInquiryResponseSchema,
 	getCommitteeInquiryResponseSchema,
 	getProjectInquiryResponseSchema,
+	inquiryCommentIdPathParamsSchema,
 	inquiryIdPathParamsSchema,
 	listCommitteeInquiriesResponseSchema,
 	listProjectInquiriesResponseSchema,
 	projectInquiryAssigneeIdPathParamsSchema,
 	projectInquiryIdPathParamsSchema,
+	publishDraftCommentResponseSchema,
+	publishDraftInquiryResponseSchema,
 	removeInquiryAssigneeResponseSchema,
 	reopenInquiryResponseSchema,
+	updateDraftCommentRequestSchema,
+	updateDraftCommentResponseSchema,
+	updateDraftInquiryRequestSchema,
+	updateDraftInquiryResponseSchema,
 	updateInquiryStatusRequestSchema,
 	updateInquiryStatusResponseSchema,
 	updateInquiryViewersRequestSchema,
@@ -355,4 +364,122 @@ export const updateCommitteeInquiryViewersEndpoint: BodyEndpoint<
 	query: undefined,
 	request: updateInquiryViewersRequestSchema,
 	response: updateInquiryViewersResponseSchema,
+} as const;
+
+/**
+ * POST /committee/inquiries/:inquiryId/comments/:commentId/publish
+ * 下書きコメントを正式送信に変換（作成者のみ）
+ */
+export const publishDraftCommentEndpoint: Endpoint<
+	"POST",
+	"/committee/inquiries/:inquiryId/comments/:commentId/publish",
+	typeof inquiryCommentIdPathParamsSchema,
+	undefined,
+	undefined,
+	typeof publishDraftCommentResponseSchema
+> = {
+	method: "POST",
+	path: "/committee/inquiries/:inquiryId/comments/:commentId/publish",
+	pathParams: inquiryCommentIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: publishDraftCommentResponseSchema,
+} as const;
+
+/**
+ * PATCH /committee/inquiries/:inquiryId/comments/:commentId
+ * 下書きコメントを更新（作成者のみ）
+ */
+export const updateCommitteeDraftCommentEndpoint: BodyEndpoint<
+	"PATCH",
+	"/committee/inquiries/:inquiryId/comments/:commentId",
+	typeof inquiryCommentIdPathParamsSchema,
+	undefined,
+	typeof updateDraftCommentRequestSchema,
+	typeof updateDraftCommentResponseSchema
+> = {
+	method: "PATCH",
+	path: "/committee/inquiries/:inquiryId/comments/:commentId",
+	pathParams: inquiryCommentIdPathParamsSchema,
+	query: undefined,
+	request: updateDraftCommentRequestSchema,
+	response: updateDraftCommentResponseSchema,
+} as const;
+
+/**
+ * DELETE /committee/inquiries/:inquiryId/comments/:commentId
+ * コメントを削除（下書きの場合は作成者のみ、通常コメントは管理者または作成者）
+ */
+export const deleteCommitteeInquiryCommentEndpoint: NoBodyEndpoint<
+	"DELETE",
+	"/committee/inquiries/:inquiryId/comments/:commentId",
+	typeof inquiryCommentIdPathParamsSchema,
+	undefined,
+	typeof deleteInquiryCommentResponseSchema
+> = {
+	method: "DELETE",
+	path: "/committee/inquiries/:inquiryId/comments/:commentId",
+	pathParams: inquiryCommentIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: deleteInquiryCommentResponseSchema,
+} as const;
+
+/**
+ * PATCH /committee/inquiries/:inquiryId
+ * 下書きのお問い合わせを編集（件名・内容のみ、下書き作成者のみ）
+ */
+export const updateDraftInquiryEndpoint: BodyEndpoint<
+	"PATCH",
+	"/committee/inquiries/:inquiryId",
+	typeof inquiryIdPathParamsSchema,
+	undefined,
+	typeof updateDraftInquiryRequestSchema,
+	typeof updateDraftInquiryResponseSchema
+> = {
+	method: "PATCH",
+	path: "/committee/inquiries/:inquiryId",
+	pathParams: inquiryIdPathParamsSchema,
+	query: undefined,
+	request: updateDraftInquiryRequestSchema,
+	response: updateDraftInquiryResponseSchema,
+} as const;
+
+/**
+ * POST /committee/inquiries/:inquiryId/publish
+ * 下書きのお問い合わせを送信（下書き作成者のみ）
+ */
+export const publishDraftInquiryEndpoint: Endpoint<
+	"POST",
+	"/committee/inquiries/:inquiryId/publish",
+	typeof inquiryIdPathParamsSchema,
+	undefined,
+	undefined,
+	typeof publishDraftInquiryResponseSchema
+> = {
+	method: "POST",
+	path: "/committee/inquiries/:inquiryId/publish",
+	pathParams: inquiryIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: publishDraftInquiryResponseSchema,
+} as const;
+
+/**
+ * DELETE /committee/inquiries/:inquiryId
+ * 下書きのお問い合わせを削除（下書き作成者のみ）
+ */
+export const deleteInquiryEndpoint: NoBodyEndpoint<
+	"DELETE",
+	"/committee/inquiries/:inquiryId",
+	typeof inquiryIdPathParamsSchema,
+	undefined,
+	typeof deleteInquiryResponseSchema
+> = {
+	method: "DELETE",
+	path: "/committee/inquiries/:inquiryId",
+	pathParams: inquiryIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: deleteInquiryResponseSchema,
 } as const;

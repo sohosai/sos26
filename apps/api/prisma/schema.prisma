@@ -926,6 +926,9 @@ model Inquiry {
   relatedFormId String?
   relatedForm   Form?   @relation(fields: [relatedFormId], references: [id])
 
+  // 下書き機能（実委が作成時に下書きとして保存可能）
+  isDraft Boolean @default(false)
+
   assignees   InquiryAssignee[]
   viewers     InquiryViewer[]
   comments    InquiryComment[]
@@ -1003,10 +1006,14 @@ model InquiryComment {
   // 投稿時のロール
   senderRole InquiryCreatorRole @default(PROJECT)
 
+  // 下書き機能
+  isDraft Boolean @default(false)
+
   attachments InquiryAttachment[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
+  sentAt    DateTime?
 
   @@index([inquiryId])
   @@index([deletedAt])

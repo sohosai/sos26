@@ -280,6 +280,7 @@ erDiagram
   InquiryCreatorRole creatorRole
   String projectId FK
   String relatedFormId FK "nullable"
+  Boolean isDraft
   DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
@@ -308,8 +309,10 @@ erDiagram
   String body
   String createdById FK
   InquiryCreatorRole senderRole
+  Boolean isDraft
   DateTime deletedAt "nullable"
   DateTime createdAt
+  DateTime sentAt "nullable"
 }
 "InquiryActivity" {
   String id PK
@@ -925,6 +928,7 @@ Properties as follows:
 - `creatorRole`:
 - `projectId`:
 - `relatedFormId`:
+- `isDraft`:
 - `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
@@ -962,8 +966,10 @@ Properties as follows:
 - `body`:
 - `createdById`:
 - `senderRole`:
+- `isDraft`:
 - `deletedAt`:
 - `createdAt`:
+- `sentAt`:
 
 ### `InquiryActivity`
 
