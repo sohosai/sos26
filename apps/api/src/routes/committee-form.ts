@@ -1,3 +1,4 @@
+import type { CommitteeMember } from "@prisma/client";
 import {
 	addFormCollaboratorRequestSchema,
 	createFormRequestSchema,
@@ -73,7 +74,7 @@ const userSelect = { id: true, name: true } as const;
 async function canViewFormResponses(
 	formId: string,
 	userId: string,
-	committeeMemberBureau: string
+	committeeMember: CommitteeMember
 ): Promise<boolean> {
 	const form = await prisma.form.findFirst({
 		where: { id: formId, deletedAt: null },
@@ -95,7 +96,7 @@ async function canViewFormResponses(
 		if (viewer.scope === "ALL") return true;
 		if (
 			viewer.scope === "BUREAU" &&
-			viewer.bureauValue === committeeMemberBureau
+			viewer.bureauValue === committeeMember.Bureau
 		)
 			return true;
 		if (viewer.scope === "INDIVIDUAL" && viewer.userId === userId) return true;
@@ -751,7 +752,7 @@ committeeFormRoute.get(
 		const committeeMember = c.get("committeeMember");
 
 		// owner, 共同編集者, または閲覧者のみ閲覧可
-		if (!(await canViewFormResponses(formId, userId, committeeMember.Bureau))) {
+		if (!(await canViewFormResponses(formId, userId, committeeMember))) {
 			throw Errors.forbidden("回答の閲覧権限がありません");
 		}
 
@@ -877,7 +878,7 @@ committeeFormRoute.get(
 		const committeeMember = c.get("committeeMember");
 
 		// owner, 共同編集者, または閲覧者のみ閲覧可
-		if (!(await canViewFormResponses(formId, userId, committeeMember.Bureau))) {
+		if (!(await canViewFormResponses(formId, userId, committeeMember))) {
 			throw Errors.forbidden("回答の閲覧権限がありません");
 		}
 
