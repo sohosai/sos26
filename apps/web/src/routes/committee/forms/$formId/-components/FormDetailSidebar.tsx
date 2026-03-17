@@ -7,7 +7,6 @@ import {
 	IconTrash,
 	IconX,
 } from "@tabler/icons-react";
-import { useNavigate } from "@tanstack/react-router";
 import Avatar from "boring-avatars";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -100,7 +99,6 @@ export function FormDetailSidebar({
 	onEdit,
 	onDelete,
 }: Props) {
-	const navigate = useNavigate();
 	const [addCollaboratorOpen, setAddCollaboratorOpen] = useState(false);
 	const [publishRequestOpen, setPublishRequestOpen] = useState(false);
 	const [approvingId, setApprovingId] = useState<string | null>(null);
@@ -119,7 +117,7 @@ export function FormDetailSidebar({
 	const isApprover =
 		latestAuth?.status === "PENDING" && latestAuth.requestedToId === userId;
 
-	const { canPublish, canEditForm, canViewAnswers } = resolveFormPermissions({
+	const { canPublish, canEditForm } = resolveFormPermissions({
 		canEdit,
 		isViewer,
 		statusCode: statusInfo.code,
@@ -259,27 +257,7 @@ export function FormDetailSidebar({
 					</aside>
 				)}
 
-				{/* ボックス3: 回答確認 */}
-				{canViewAnswers && (
-					<aside className={styles.sidebar}>
-						<div className={styles.section}>
-							<Button
-								intent="primary"
-								size="2"
-								onClick={() =>
-									navigate({
-										to: "/committee/forms/$formId/answers",
-										params: { formId: form.id },
-									})
-								}
-							>
-								回答を確認する
-							</Button>
-						</div>
-					</aside>
-				)}
-
-				{/* ボックス4: 閲覧者設定 */}
+				{/* ボックス3: 閲覧者設定 */}
 				<aside className={styles.sidebar}>
 					<ViewerSettings
 						viewers={form.viewers as ViewerDetail[]}

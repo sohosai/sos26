@@ -80,10 +80,13 @@ async function canViewFormResponses(
 		where: { id: formId, deletedAt: null },
 		include: {
 			collaborators: { where: { deletedAt: null } },
-			viewers: { where: { deletedAt: null } },
 		},
 	});
 	if (!form) return false;
+
+	const viewers = await prisma.formViewer.findMany({
+		where: { formId, deletedAt: null },
+	});
 
 	// 1. owner
 	if (form.ownerId === userId) return true;
@@ -92,7 +95,7 @@ async function canViewFormResponses(
 	if (form.collaborators.some(c => c.userId === userId)) return true;
 
 	// 3. viewer
-	for (const viewer of form.viewers) {
+	for (const viewer of viewers) {
 		if (viewer.scope === "ALL") return true;
 		if (
 			viewer.scope === "BUREAU" &&
@@ -252,10 +255,6 @@ committeeFormRoute.get(
 						},
 					},
 				},
-				viewers: {
-					where: { deletedAt: null },
-					include: { user: { select: userSelect } },
-				},
 			},
 		});
 
@@ -263,13 +262,18 @@ committeeFormRoute.get(
 			throw Errors.notFound("フォームが見つかりません");
 		}
 
+		const viewers = await prisma.formViewer.findMany({
+			where: { formId, deletedAt: null },
+			include: { user: { select: userSelect } },
+		});
+
 		return c.json({
 			form: {
 				...form,
 				items: form.items.map(mapItemToApiShape),
 				authorizationDetail: form.authorizations[0] ?? null,
 				authorizations: undefined,
-				viewers: form.viewers.map(v => ({
+				viewers: viewers.map(v => ({
 					id: v.id,
 					scope: v.scope,
 					bureauValue: v.bureauValue,

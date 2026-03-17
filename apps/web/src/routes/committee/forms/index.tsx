@@ -16,7 +16,6 @@ import {
 } from "@/components/patterns/ActionMenu/ActionMenu";
 import { Button } from "@/components/primitives";
 import { listMyForms } from "@/lib/api/committee-form";
-import { useAuthStore } from "@/lib/auth";
 import {
 	type FormStatusInfo,
 	getFormStatusFromAuth,
@@ -35,26 +34,13 @@ type FormRow = {
 	status: FormStatusInfo;
 };
 
-const buildFormActions = (
-	form: FormRow,
-	canViewAnswers: boolean
-): ActionItem<FormRow>[] => [
+const buildFormActions = (form: FormRow): ActionItem<FormRow>[] => [
 	{
 		key: "detail",
 		label: "詳細",
 		icon: <IconEye size={16} />,
 		href: {
 			to: "/committee/forms/$formId",
-			params: { formId: form.id },
-		},
-	},
-	{
-		key: "view-answers",
-		label: "回答を確認する",
-		icon: <IconEye size={16} />,
-		hidden: !canViewAnswers,
-		href: {
-			to: "/committee/forms/$formId/answers",
 			params: { formId: form.id },
 		},
 	},
@@ -105,7 +91,6 @@ export const Route = createFileRoute("/committee/forms/")({
 
 function CommitteeIndexPage() {
 	const { forms } = Route.useLoaderData();
-	const userId = useAuthStore().user?.id;
 	const router = useRouter();
 
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -157,14 +142,7 @@ function CommitteeIndexPage() {
 			cell: ({ row }) => (
 				<ActionsMenu
 					item={row.original}
-					actions={buildFormActions(
-						row.original,
-						//オーナーか共同編集者、かつ承認済み
-						(row.original.ownerId === userId ||
-							row.original.collaborators.some(c => c.id === userId)) &&
-							(row.original.status.code === "EXPIRED" ||
-								row.original.status.code === "PUBLISHED")
-					)}
+					actions={buildFormActions(row.original)}
 				/>
 			),
 			enableSorting: false,

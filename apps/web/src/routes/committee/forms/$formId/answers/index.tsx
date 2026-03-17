@@ -5,7 +5,6 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { DataTable, DateCell, NameCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { getFormDetail, listFormResponses } from "@/lib/api/committee-form";
-import styles from "./index.module.scss";
 
 type AnswerRow = {
 	id: string;
@@ -176,11 +175,7 @@ function RouteComponent() {
 
 	return (
 		<div>
-			<Link
-				to="/committee/forms/$formId"
-				params={{ formId }}
-				className={styles.backLink}
-			>
+			<Link to="/committee/forms/$formId" params={{ formId }}>
 				<IconArrowLeft size={16} />
 				<Text size="2">申請詳細に戻る</Text>
 			</Link>
