@@ -1,6 +1,6 @@
 import { Badge, Heading, Text } from "@radix-ui/themes";
 import { IconEye, IconPlus } from "@tabler/icons-react";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useState } from "react";
 import {
@@ -10,10 +10,6 @@ import {
 	DateCell,
 	NameCell,
 } from "@/components/patterns";
-import {
-	type ActionItem,
-	ActionsMenu,
-} from "@/components/patterns/ActionMenu/ActionMenu";
 import { Button } from "@/components/primitives";
 import { listMyForms } from "@/lib/api/committee-form";
 import {
@@ -33,18 +29,6 @@ type FormRow = {
 	approverName: string;
 	status: FormStatusInfo;
 };
-
-const buildFormActions = (form: FormRow): ActionItem<FormRow>[] => [
-	{
-		key: "detail",
-		label: "詳細",
-		icon: <IconEye size={16} />,
-		href: {
-			to: "/committee/forms/$formId",
-			params: { formId: form.id },
-		},
-	},
-];
 
 const columnHelper = createColumnHelper<FormRow>();
 
@@ -140,10 +124,15 @@ function CommitteeIndexPage() {
 			id: "actions",
 			header: "操作",
 			cell: ({ row }) => (
-				<ActionsMenu
-					item={row.original}
-					actions={buildFormActions(row.original)}
-				/>
+				<Link
+					to="/committee/forms/$formId"
+					params={{ formId: row.original.id }}
+				>
+					<Button intent="ghost" size="1">
+						<IconEye size={16} />
+						詳細
+					</Button>
+				</Link>
 			),
 			enableSorting: false,
 		}),
