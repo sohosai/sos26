@@ -28,7 +28,7 @@ const columnHelper = createColumnHelper<FormRow>();
 export const Route = createFileRoute("/project/forms/")({
 	component: RouteComponent,
 	head: () => ({
-		meta: [{ title: "申請一覧 | 雙峰祭オンラインシステム" }],
+		meta: [{ title: "申請 | 雙峰祭オンラインシステム" }],
 	}),
 	loader: async () => {
 		const { selectedProjectId } = useProjectStore.getState();
@@ -208,7 +208,7 @@ function RouteComponent() {
 	return (
 		<div>
 			<div className={styles.header}>
-				<Heading size="6">申請一覧</Heading>
+				<Heading size="6">申請</Heading>
 				<Text size="2" color="gray">
 					実委人から配信された申請に回答できます。
 				</Text>
