@@ -78,6 +78,7 @@ model User {
   collaboratingForms          FormCollaborator[]
   requestedFormAuthorizations FormAuthorization[] @relation("FormRequestedBy")
   receivedFormAuthorizations  FormAuthorization[] @relation("FormRequestedTo")
+  formViewerEntries           FormViewer[]         @relation("FormViewer")
   formResponses               FormResponse[]      @relation("FormRespondent")
   noticeReadStatuses          NoticeReadStatus[]
 
@@ -542,9 +543,36 @@ model Form {
   // お問い合わせ関連
   inquiries Inquiry[]
 
+  // 閲覧者
+  viewers FormViewer[]
+
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+}
+
+model FormViewer {
+  id String @id @default(cuid())
+
+  formId String
+  form   Form   @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  // 閲覧者スコープ
+  scope ViewerScope
+
+  // scope = BUREAU の場合の局
+  bureauValue Bureau?
+
+  // scope = INDIVIDUAL の場合のユーザー
+  userId String?
+  user   User?   @relation("FormViewer", fields: [userId], references: [id])
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([formId])
+  @@index([userId])
+  @@index([deletedAt])
 }
 
 //フォームの質問項目

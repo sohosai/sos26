@@ -159,6 +159,15 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"FormViewer" {
+  String id PK
+  String formId FK
+  ViewerScope scope
+  Bureau bureauValue "nullable"
+  String userId FK "nullable"
+  DateTime deletedAt "nullable"
+  DateTime createdAt
+}
 "FormItem" {
   String id PK
   String formId FK
@@ -484,6 +493,8 @@ erDiagram
 "NoticeDelivery" }o--|| "NoticeAuthorization" : noticeAuthorization
 "NoticeDelivery" }o--|| "Project" : project
 "Form" }o--|| "User" : owner
+"FormViewer" }o--|| "Form" : form
+"FormViewer" }o--o| "User" : user
 "FormItem" }o--|| "Form" : form
 "FormItemOption" }o--|| "FormItem" : formItem
 "FormCollaborator" }o--|| "Form" : form
@@ -751,6 +762,18 @@ Properties as follows:
 - `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
+
+### `FormViewer`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `scope`:
+- `bureauValue`:
+- `userId`:
+- `deletedAt`:
+- `createdAt`:
 
 ### `FormItem`
 

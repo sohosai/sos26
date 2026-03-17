@@ -17,6 +17,7 @@ import {
 	getFormDetail,
 	rejectFormAuthorization,
 	removeFormCollaborator,
+	updateFormViewers,
 } from "@/lib/api/committee-form";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { useAuthStore } from "@/lib/auth";
@@ -61,6 +62,15 @@ function RouteComponent() {
 	const isCollaborator = form.collaborators.some(c => c.user.id === user?.id);
 	const canEdit = isOwner || isCollaborator;
 
+	const currentMember = committeeMembers.find(m => m.user.id === user?.id);
+	const isViewer = form.viewers.some(v => {
+		if (v.scope === "ALL") return true;
+		if (v.scope === "BUREAU" && currentMember)
+			return v.bureauValue === currentMember.Bureau;
+		if (v.scope === "INDIVIDUAL") return v.user?.id === user?.id;
+		return false;
+	});
+
 	const collaboratorUserIds = new Set(form.collaborators.map(c => c.user.id));
 	const availableMembers = committeeMembers
 		.filter(
@@ -92,6 +102,19 @@ function RouteComponent() {
 			toast.error("共同編集者の削除に失敗しました");
 		} finally {
 			setRemovingId(null);
+		}
+	};
+
+	const handleUpdateViewers = async (
+		viewers: { scope: string; bureauValue?: string; userId?: string }[]
+	) => {
+		try {
+			await updateFormViewers(form.id, {
+				viewers: viewers as Parameters<typeof updateFormViewers>[1]["viewers"],
+			});
+			await router.invalidate();
+		} catch {
+			toast.error("閲覧者の更新に失敗しました");
 		}
 	};
 
@@ -168,13 +191,19 @@ function RouteComponent() {
 				userId={user?.id ?? ""}
 				isOwner={isOwner}
 				canEdit={canEdit}
+				isViewer={isViewer}
 				availableMembers={availableMembers}
 				approvers={approvers}
+				committeeMembers={committeeMembers.map(m => ({
+					id: m.user.id,
+					name: m.user.name,
+				}))}
 				removingId={removingId}
 				onAddCollaborator={handleAddCollaborator}
 				onRemoveCollaborator={handleRemoveCollaborator}
 				onApprove={handleApprove}
 				onReject={handleReject}
+				onUpdateViewers={handleUpdateViewers}
 				onPublishSuccess={() => router.invalidate()}
 				onEdit={() => setEditDialogOpen(true)}
 				onDelete={() => setDeleteConfirmOpen(true)}

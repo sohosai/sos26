@@ -13,6 +13,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { AddCollaboratorDialog } from "@/components/committee/AddCollaboratorDialog";
 import { Button, IconButton } from "@/components/primitives";
+import type { ViewerDetail, ViewerInput } from "@/components/support/types";
+import { ViewerSettings } from "@/components/support/ViewerSettings";
 import { validateAuthorizationDates } from "@/lib/form/AuthDateCheck";
 import { getFormStatusFromAuth } from "@/lib/form/form-status";
 import { formatDate } from "@/lib/format";
@@ -37,9 +39,10 @@ type Approver = {
 
 function resolveFormPermissions(params: {
 	canEdit: boolean;
+	isViewer: boolean;
 	statusCode: string;
 }) {
-	const { canEdit, statusCode } = params;
+	const { canEdit, isViewer, statusCode } = params;
 
 	return {
 		// 公開申請できるのは「下書き or 却下」のみ
@@ -51,9 +54,10 @@ function resolveFormPermissions(params: {
 			statusCode !== "PUBLISHED" &&
 			statusCode !== "SCHEDULED" &&
 			statusCode !== "EXPIRED",
-		// 回答確認は「公開済み」または「期限切れ」
+		// 回答確認は「公開済み」または「期限切れ」で、編集者 or 閲覧者
 		canViewAnswers:
-			canEdit && (statusCode === "PUBLISHED" || statusCode === "EXPIRED"),
+			(canEdit || isViewer) &&
+			(statusCode === "PUBLISHED" || statusCode === "EXPIRED"),
 	};
 }
 
@@ -62,13 +66,16 @@ type Props = {
 	userId: string;
 	isOwner: boolean;
 	canEdit: boolean;
+	isViewer: boolean;
 	availableMembers: AvailableMember[];
 	approvers: Approver[];
+	committeeMembers: { id: string; name: string }[];
 	removingId: string | null;
 	onAddCollaborator: (userId: string) => Promise<void>;
 	onRemoveCollaborator: (collaboratorId: string) => void;
 	onApprove: (authorizationId: string) => Promise<void>;
 	onReject: (authorizationId: string) => Promise<void>;
+	onUpdateViewers: (viewers: ViewerInput[]) => Promise<void>;
 	onPublishSuccess: () => void;
 	onEdit: () => void;
 	onDelete: () => void;
@@ -79,13 +86,16 @@ export function FormDetailSidebar({
 	userId,
 	isOwner,
 	canEdit,
+	isViewer,
 	availableMembers,
 	approvers,
+	committeeMembers,
 	removingId,
 	onAddCollaborator,
 	onRemoveCollaborator,
 	onApprove,
 	onReject,
+	onUpdateViewers,
 	onPublishSuccess,
 	onEdit,
 	onDelete,
@@ -111,6 +121,7 @@ export function FormDetailSidebar({
 
 	const { canPublish, canEditForm, canViewAnswers } = resolveFormPermissions({
 		canEdit,
+		isViewer,
 		statusCode: statusInfo.code,
 	});
 
@@ -267,6 +278,16 @@ export function FormDetailSidebar({
 						</div>
 					</aside>
 				)}
+
+				{/* ボックス4: 閲覧者設定 */}
+				<aside className={styles.sidebar}>
+					<ViewerSettings
+						viewers={form.viewers as ViewerDetail[]}
+						committeeMembers={committeeMembers}
+						onUpdate={canEdit ? onUpdateViewers : undefined}
+						readOnly={!canEdit}
+					/>
+				</aside>
 			</div>
 
 			<AddCollaboratorDialog
