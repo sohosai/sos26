@@ -363,10 +363,10 @@ model File {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  noticeAttachments              NoticeAttachment[]
-  inquiryAttachments             InquiryAttachment[]
-  formAnswerFiles                FormAnswerFile[]
-  formItemEditHistoryFiles       FormItemEditHistoryFile[]
+  noticeAttachments                  NoticeAttachment[]
+  inquiryAttachments                 InquiryAttachment[]
+  formAnswerFiles                    FormAnswerFile[]
+  formItemEditHistoryFiles           FormItemEditHistoryFile[]
   projectRegistrationFormAnswerFiles ProjectRegistrationFormAnswerFile[]
 
   @@index([uploadedById])
@@ -821,9 +821,9 @@ model FormAnswer {
 }
 
 model FormAnswerFile {
-  id       String @id @default(cuid())
-  answerId String
-  fileId   String
+  id        String @id @default(cuid())
+  answerId  String
+  fileId    String
   sortOrder Int
 
   answer FormAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
@@ -1480,9 +1480,9 @@ model ProjectRegistrationFormAnswer {
 }
 
 model ProjectRegistrationFormAnswerFile {
-  id       String @id @default(cuid())
-  answerId String
-  fileId   String
+  id        String @id @default(cuid())
+  answerId  String
+  fileId    String
   sortOrder Int
 
   answer ProjectRegistrationFormAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
