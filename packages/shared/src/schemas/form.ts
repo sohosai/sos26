@@ -27,7 +27,7 @@ export const formItemTypeSchema = z.enum([
 export type FormItemType = z.infer<typeof formItemTypeSchema>;
 
 // ─────────────────────────────────────────────────────────────
-// 回答バリデーション用の最小フォームアイテム型
+// 回答バリデーション用の最小申請アイテム型
 // ─────────────────────────────────────────────────────────────
 
 export const formAnswerValidationItemSchema = z.object({
@@ -448,7 +448,7 @@ export const createFormItemInputSchema = formItemInputObjectSchema.superRefine(
 );
 
 export const createFormRequestSchema = z.object({
-	title: z.string().min(1).default("無題のフォーム"),
+	title: z.string().min(1).default("無題の申請"),
 	description: z.string().optional(),
 	items: z.array(createFormItemInputSchema).default([]),
 });
@@ -627,7 +627,7 @@ export type UpdateFormAuthorizationResponse = z.infer<
 
 // ─────────────────────────────────────────────────────────────
 // GET /committee/forms/:formId/responses
-// フォームの回答一覧（共同編集者のみ）
+// 申請の回答一覧（共同編集者のみ）
 // ─────────────────────────────────────────────────────────────
 
 export const formResponseAnswerSchema = z.object({
@@ -664,7 +664,7 @@ export type ListFormResponsesResponse = z.infer<
 
 // ─────────────────────────────────────────────────────────────
 // GET /committee/forms/:formId/responses/:responseId
-// フォームの回答詳細（共同編集者のみ）
+// 申請の回答詳細（共同編集者のみ）
 // ─────────────────────────────────────────────────────────────
 
 export const formResponsePathParamsSchema = z.object({
@@ -700,7 +700,7 @@ export const projectFormPathParamsSchema = z.object({
 
 // ─────────────────────────────────────────────────────────────
 // 企画側: GET /project/:projectId/forms
-// 自分の企画に配信されたフォーム一覧
+// 自分の企画に配信された申請一覧
 // ─────────────────────────────────────────────────────────────
 
 export const listProjectFormsResponseSchema = z.object({
@@ -732,7 +732,7 @@ export type ListProjectFormsResponse = z.infer<
 
 // ─────────────────────────────────────────────────────────────
 // 企画側: GET /project/:projectId/forms/:formDeliveryId
-// フォーム詳細（項目含む）+ 自分の回答
+// 申請詳細（項目含む）+ 自分の回答
 // ─────────────────────────────────────────────────────────────
 
 // 企画側に返す項目スキーマ

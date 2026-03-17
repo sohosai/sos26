@@ -1,4 +1,6 @@
 import { Dialog, Spinner, VisuallyHidden } from "@radix-ui/themes";
+import { useEffect, useState } from "react";
+import { DiscardChangesDialog } from "@/components/patterns";
 import type { Form, FormAnswers } from "../type";
 import styles from "./AnswerDialog.module.scss";
 import { FormViewer } from "./FormViewer";
@@ -24,8 +26,38 @@ export function FormAnswerDialog({
 	disableSubmit = false,
 	disableSaveDraft = false,
 }: Props) {
+	const [isDirty, setIsDirty] = useState(false);
+	const [confirmOpen, setConfirmOpen] = useState(false);
+
+	useEffect(() => {
+		if (!open) {
+			setConfirmOpen(false);
+			setIsDirty(false);
+		}
+	}, [open]);
+
+	const handleDialogOpenChange = (nextOpen: boolean) => {
+		if (nextOpen) {
+			onOpenChange(true);
+			return;
+		}
+
+		if (isDirty) {
+			setConfirmOpen(true);
+			return;
+		}
+
+		onOpenChange(false);
+	};
+
+	const handleDiscard = () => {
+		setConfirmOpen(false);
+		setIsDirty(false);
+		onOpenChange(false);
+	};
+
 	return (
-		<Dialog.Root open={open} onOpenChange={onOpenChange}>
+		<Dialog.Root open={open} onOpenChange={handleDialogOpenChange}>
 			<Dialog.Content className={styles.dialogContent}>
 				<VisuallyHidden>
 					<Dialog.Title>申請回答</Dialog.Title>
@@ -39,6 +71,7 @@ export function FormAnswerDialog({
 							onSaveDraft={onSaveDraft}
 							disableSubmit={disableSubmit}
 							disableSaveDraft={disableSaveDraft}
+							onDirtyChange={setIsDirty}
 						/>
 					) : (
 						<div className={styles.loading}>
@@ -47,6 +80,11 @@ export function FormAnswerDialog({
 					)}
 				</div>
 			</Dialog.Content>
+			<DiscardChangesDialog
+				open={confirmOpen}
+				onOpenChange={setConfirmOpen}
+				onConfirm={handleDiscard}
+			/>
 		</Dialog.Root>
 	);
 }

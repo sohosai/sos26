@@ -18,12 +18,12 @@ export type ProjectLocation = z.infer<typeof projectLocationSchema>;
 export const viewerScopeSchema = z.enum(["ALL", "BUREAU", "INDIVIDUAL"]);
 export type ViewerScope = z.infer<typeof viewerScopeSchema>;
 
-/** フォーム承認・マスターシートアクセス申請で共用する承認ステータス */
+/** 申請承認・マスターシートアクセス申請で共用する承認ステータス */
 export const approvalStatusSchema = z.enum(["PENDING", "APPROVED", "REJECTED"]);
 export type ApprovalStatus = z.infer<typeof approvalStatusSchema>;
 
 // ─────────────────────────────────────────────────────────────
-// 配信先指定モード（お知らせ・フォームで共用）
+// 配信先指定モード（お知らせ・申請で共用）
 // ─────────────────────────────────────────────────────────────
 
 export const deliveryModeSchema = z.enum(["INDIVIDUAL", "CATEGORY"]);

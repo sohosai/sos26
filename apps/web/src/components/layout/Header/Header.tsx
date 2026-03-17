@@ -1,5 +1,4 @@
 import { Link as RadixLink, Text } from "@radix-ui/themes";
-import { IconExternalLink } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 import styles from "./Header.module.scss";
 
@@ -17,14 +16,10 @@ export function Header() {
 						<Text size="2">説明書</Text>
 					</Link>
 				</RadixLink>
-				<RadixLink
-					href="https://forms.sohosai.com/support"
-					target="_blank"
-					rel="noopener noreferrer"
-				>
-					<Text size="2">
-						不具合報告 <IconExternalLink size={14} />
-					</Text>
+				<RadixLink asChild>
+					<Link to="/support">
+						<Text size="2">不具合報告</Text>
+					</Link>
 				</RadixLink>
 			</nav>
 		</header>

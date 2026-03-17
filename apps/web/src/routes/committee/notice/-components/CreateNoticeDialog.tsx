@@ -3,7 +3,7 @@ import type { NoticeAttachment } from "@sos26/shared";
 import { allowedMimeTypes } from "@sos26/shared";
 import { IconPaperclip, IconTrash, IconX } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
-import { RichTextEditor } from "@/components/patterns";
+import { DiscardChangesDialog, RichTextEditor } from "@/components/patterns";
 import { Button, IconButton, TextField } from "@/components/primitives";
 import {
 	addNoticeAttachments,
@@ -37,6 +37,7 @@ export function CreateNoticeDialog({
 	const [body, setBody] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [confirmOpen, setConfirmOpen] = useState(false);
 
 	// 添付ファイル管理
 	const [newFiles, setNewFiles] = useState<File[]>([]);
@@ -60,6 +61,27 @@ export function CreateNoticeDialog({
 			setRemovedAttachmentIds([]);
 		}
 	}, [open, initialValues]);
+
+	useEffect(() => {
+		if (!open) {
+			setConfirmOpen(false);
+		}
+	}, [open]);
+
+	const hasUnsavedChanges =
+		title !== (initialValues?.title ?? "") ||
+		body !== (initialValues?.body ?? "") ||
+		newFiles.length > 0 ||
+		removedAttachmentIds.length > 0;
+
+	const requestClose = () => {
+		if (isLoading) return;
+		if (hasUnsavedChanges) {
+			setConfirmOpen(true);
+			return;
+		}
+		onOpenChange(false);
+	};
 
 	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const files = e.target.files;
@@ -126,13 +148,22 @@ export function CreateNoticeDialog({
 	};
 
 	return (
-		<Dialog.Root open={open} onOpenChange={onOpenChange}>
+		<Dialog.Root
+			open={open}
+			onOpenChange={nextOpen => {
+				if (nextOpen) {
+					onOpenChange(true);
+					return;
+				}
+				requestClose();
+			}}
+		>
 			<Dialog.Content maxWidth="540px">
 				<div className={styles.dialogHeader}>
 					<Dialog.Title mb="0">
 						{isEdit ? "お知らせを編集" : "お知らせを作成"}
 					</Dialog.Title>
-					<IconButton aria-label="閉じる" onClick={() => onOpenChange(false)}>
+					<IconButton aria-label="閉じる" onClick={requestClose}>
 						<IconX size={16} />
 					</IconButton>
 				</div>
@@ -240,7 +271,7 @@ export function CreateNoticeDialog({
 						<Button
 							intent="secondary"
 							size="2"
-							onClick={() => onOpenChange(false)}
+							onClick={requestClose}
 							disabled={isLoading}
 						>
 							キャンセル
@@ -257,6 +288,11 @@ export function CreateNoticeDialog({
 					</div>
 				</div>
 			</Dialog.Content>
+			<DiscardChangesDialog
+				open={confirmOpen}
+				onOpenChange={setConfirmOpen}
+				onConfirm={() => onOpenChange(false)}
+			/>
 		</Dialog.Root>
 	);
 }

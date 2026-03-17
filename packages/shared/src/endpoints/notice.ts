@@ -219,12 +219,12 @@ export const removeNoticeAttachmentEndpoint: NoBodyEndpoint<
 } as const;
 
 // ─────────────────────────────────────────────────────────────
-// 実委側: 配信承認
+// 実委側: 承認フロー
 // ─────────────────────────────────────────────────────────────
 
 /**
  * POST /committee/notices/:noticeId/authorizations
- * 配信承認を申請（owner または共同編集者 + NOTICE_DELIVER 権限）
+ * 承認依頼を申請（owner または共同編集者 + NOTICE_DELIVER 権限）
  */
 export const createNoticeAuthorizationEndpoint: BodyEndpoint<
 	"POST",

@@ -1,5 +1,5 @@
 /**
- * フォームの配信承認が承認または却下されたとき、申請者に送信するメール
+ * 申請の承認依頼が承認または却下されたとき、申請者に送信するメール
  * トリガー: PATCH /committee/forms/:formId/authorizations/:authorizationId
  */
 import { z } from "zod";

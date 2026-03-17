@@ -5,21 +5,33 @@ import {
 	projectMenuItems,
 	Sidebar,
 } from "@/components/layout/Sidebar";
-import { requireAuth, useAuthStore } from "@/lib/auth";
+import {
+	preloadMemberEditPermission,
+	requireAuth,
+	useAuthStore,
+} from "@/lib/auth";
 import styles from "./route.module.scss";
 
 export const Route = createFileRoute("/settings")({
 	beforeLoad: async ({ location }) => {
 		await requireAuth(location.pathname);
+		await preloadMemberEditPermission();
 	},
 	component: SettingsLayout,
 });
 
 function SettingsLayout() {
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-	const { isCommitteeMember } = useAuthStore();
+	const { activePortal, isCommitteeMember } = useAuthStore();
 
-	const menuItems = isCommitteeMember ? committeeMenuItems : projectMenuItems;
+	const menuItems =
+		activePortal === "committee"
+			? committeeMenuItems
+			: activePortal === "project"
+				? projectMenuItems
+				: isCommitteeMember
+					? committeeMenuItems
+					: projectMenuItems;
 
 	return (
 		<div className={styles.layout}>

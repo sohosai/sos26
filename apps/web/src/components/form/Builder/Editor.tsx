@@ -1,6 +1,6 @@
 import { Text } from "@radix-ui/themes";
 import { IconPlus } from "@tabler/icons-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button, TextArea, TextField } from "@/components/primitives";
 import type { Form, FormItem } from "../type";
@@ -11,27 +11,66 @@ type Props = {
 	initialForm: Form;
 	onSubmit?: (form: Form) => void;
 	loading: boolean;
+	onDirtyChange?: (dirty: boolean) => void;
 };
 
-export function FormEditor({ initialForm, onSubmit, loading }: Props) {
-	const [formName, setFormName] = useState(initialForm.name);
+export function FormEditor({
+	initialForm,
+	onSubmit,
+	loading,
+	onDirtyChange,
+}: Props) {
+	const initialState = useMemo(() => {
+		const initialItems =
+			initialForm.items && initialForm.items.length > 0
+				? initialForm.items
+				: [
+						{
+							id: crypto.randomUUID(),
+							label: "",
+							type: "TEXT" as const,
+							required: false,
+						},
+					];
+		return {
+			formName: initialForm.name,
+			formDescription: initialForm.description ?? "",
+			items: initialItems,
+		};
+	}, [initialForm]);
+
+	const [formName, setFormName] = useState(initialState.formName);
 	const [formDescription, setFormDescription] = useState(
-		initialForm.description ?? ""
+		initialState.formDescription
+	);
+	const [items, setItems] = useState<FormItem[]>(initialState.items);
+	const [errors, setErrors] = useState<Record<string, string>>({});
+
+	useEffect(() => {
+		setFormName(initialState.formName);
+		setFormDescription(initialState.formDescription);
+		setItems(initialState.items);
+		setErrors({});
+	}, [initialState]);
+
+	const isDirty = useMemo(
+		() =>
+			formName !== initialState.formName ||
+			formDescription !== initialState.formDescription ||
+			JSON.stringify(items) !== JSON.stringify(initialState.items),
+		[
+			formName,
+			formDescription,
+			items,
+			initialState.formName,
+			initialState.formDescription,
+			initialState.items,
+		]
 	);
 
-	const [items, setItems] = useState<FormItem[]>(
-		initialForm.items && initialForm.items.length > 0
-			? initialForm.items
-			: [
-					{
-						id: crypto.randomUUID(),
-						label: "",
-						type: "TEXT",
-						required: false,
-					},
-				]
-	);
-	const [errors, setErrors] = useState<Record<string, string>>({});
+	useEffect(() => {
+		onDirtyChange?.(isDirty);
+	}, [isDirty, onDirtyChange]);
 	const validate = (): boolean => {
 		const newErrors: Record<string, string> = {};
 

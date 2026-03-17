@@ -1,9 +1,9 @@
 # Form API 仕様
 
-このページは、フォーム関連 API の仕様をまとめたドキュメントです。
+このページは、申請関連 API の仕様をまとめたドキュメントです。
 
-- 実委向けフォーム管理: `apps/api/src/routes/committee-form.ts`
-- 企画向けフォーム回答: `apps/api/src/routes/project-form.ts`
+- 実委向け申請管理: `apps/api/src/routes/committee-form.ts`
+- 企画向け申請回答: `apps/api/src/routes/project-form.ts`
 
 > 型定義・リクエスト/レスポンスの Zod スキーマは `packages/shared/src/endpoints/committee-form.ts` / `packages/shared/src/endpoints/project-form.ts` と `packages/shared/src/schemas/form.ts` を参照してください。
 
@@ -41,7 +41,7 @@
 
 ## 概要
 
-フォーム機能は、実委人がフォームを作成し、企画に配信して回答を回収するための仕組みです。
+申請機能は、実委人が申請を作成し、企画に配信して回答を回収するための仕組みです。
 
 ```txt
 作成 → 共同編集 → 公開申請 → 承認 → 企画へ配信 → 下書き/提出
@@ -51,7 +51,7 @@
 
 | モデル | 説明 |
 |---|---|
-| `Form` | フォーム本体（タイトル・説明） |
+| `Form` | 申請本体（タイトル・説明） |
 | `FormItem` | 設問（ラベル・説明・型・必須フラグ） |
 | `FormItemOption` | 選択肢（SELECT / CHECKBOX 用） |
 | `FormCollaborator` | 共同編集者（書き込み権限あり） |
@@ -111,8 +111,8 @@
 
 ### 編集制約
 
-- `APPROVED` な公開申請が存在するフォームは編集不可
-- フォーム削除はオーナーのみ
+- `APPROVED` な公開申請が存在する申請は編集不可
+- 申請削除はオーナーのみ
 
 ---
 
@@ -141,11 +141,11 @@
 
 | Method | Path | 概要 | 権限 |
 |---|---|---|---|
-| POST | `/committee/forms/create` | フォーム作成 | 実委人 |
-| GET | `/committee/forms/list` | フォーム一覧 | 実委人 |
-| GET | `/committee/forms/:formId/detail` | フォーム詳細 | 実委人 |
-| PATCH | `/committee/forms/:formId/detail` | フォーム更新 | owner / 書込共同編集者 |
-| DELETE | `/committee/forms/:formId` | フォーム削除（論理削除） | owner |
+| POST | `/committee/forms/create` | 申請作成 | 実委人 |
+| GET | `/committee/forms/list` | 申請一覧 | 実委人 |
+| GET | `/committee/forms/:formId/detail` | 申請詳細 | 実委人 |
+| PATCH | `/committee/forms/:formId/detail` | 申請更新 | owner / 書込共同編集者 |
+| DELETE | `/committee/forms/:formId` | 申請削除（論理削除） | owner |
 | POST | `/committee/forms/:formId/collaborators/:userId` | 共同編集者追加 | owner |
 | DELETE | `/committee/forms/:formId/collaborators/:userId` | 共同編集者削除 | owner |
 | POST | `/committee/forms/:formId/authorizations` | 公開申請 | owner / 書込共同編集者 |
@@ -168,8 +168,8 @@
 
 | Method | Path | 概要 |
 |---|---|---|
-| GET | `/project/:projectId/forms` | 配信済みフォーム一覧 |
-| GET | `/project/:projectId/forms/:formDeliveryId` | フォーム詳細 + 既存回答 |
+| GET | `/project/:projectId/forms` | 配信済み申請一覧 |
+| GET | `/project/:projectId/forms/:formDeliveryId` | 申請詳細 + 既存回答 |
 | POST | `/project/:projectId/forms/:formDeliveryId/response` | 回答作成（下書き/提出） |
 | PATCH | `/project/:projectId/forms/:formDeliveryId/response` | 回答更新（下書き/再提出） |
 
@@ -194,7 +194,7 @@
 
 ### 1. 設問 ID の妥当性
 
-- 送信された `formItemId` が当該フォームの設問に存在すること
+- 送信された `formItemId` が当該申請の設問に存在すること
 
 ### 2. 選択肢 ID の妥当性
 

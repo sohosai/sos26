@@ -493,7 +493,7 @@ function RouteComponent() {
 	return (
 		<div>
 			<div className={styles.header}>
-				<Heading size="6">実委人メンバー管理</Heading>
+				<Heading size="6">メンバー管理</Heading>
 				<Text size="2" color="gray">
 					実委人メンバーの追加・権限編集・削除ができます。
 				</Text>

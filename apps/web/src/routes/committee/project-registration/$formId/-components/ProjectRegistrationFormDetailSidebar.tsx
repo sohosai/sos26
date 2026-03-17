@@ -159,13 +159,13 @@ export function ProjectRegistrationFormDetailSidebar({
 					/>
 				</aside>
 
-				{/* ボックス2: 承認申請 */}
+				{/* ボックス2: 承認依頼 */}
 				{showAuthBox && (
 					<aside className={styles.sidebar}>
 						{canRequestAuth && (
 							<div className={styles.section}>
 								<Text size="2" weight="medium" color="gray">
-									承認申請
+									承認依頼
 								</Text>
 								<Button
 									intent="primary"
@@ -173,7 +173,7 @@ export function ProjectRegistrationFormDetailSidebar({
 									onClick={() => setAuthRequestOpen(true)}
 								>
 									<IconSend size={16} />
-									承認申請を行う
+									承認依頼を行う
 								</Button>
 							</div>
 						)}

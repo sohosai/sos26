@@ -44,8 +44,8 @@
 
 ### 編集権限
 
-- **オーナー**: お知らせの作成者。編集・削除・共同編集者管理が可能（配信承認済みのお知らせは編集不可）
-- **共同編集者**: オーナーが追加した実委人。編集・公開申請が可能（配信承認済みのお知らせは編集不可）
+- **オーナー**: お知らせの作成者。編集・削除・共同編集者管理が可能（承認依頼送信済みのお知らせは編集不可）
+- **共同編集者**: オーナーが追加した実委人。編集・公開申請が可能（承認依頼送信済みのお知らせは編集不可）
 
 ---
 
@@ -107,14 +107,14 @@ PENDING → REJECTED（却下）
 
 全お知らせ一覧を返します（実委人全員閲覧可）。
 
-- 最新の承認申請（`authorizations` の先頭1件）を含む
+- 最新の承認依頼（`authorizations` の先頭1件）を含む
 - `deletedAt: null` のみ
 
 ### GET `/committee/notices/:noticeId`
 
 お知らせ詳細を返します。
 
-- owner、共同編集者、全承認申請（配信先含む）を返却
+- owner、共同編集者、全承認依頼（配信先含む）を返却
 
 ### PATCH `/committee/notices/:noticeId`
 
@@ -123,14 +123,14 @@ PENDING → REJECTED（却下）
 - 入力: `title`（任意）、`body`（任意）
 - `body` は DOMPurify でサニタイズして保存
 - owner または共同編集者のみ編集可能
-- **配信承認済み（APPROVED）のお知らせは編集不可**（`400: 配信承認済みのお知らせは編集できません`）
+- **承認依頼送信済み（APPROVED）のお知らせは編集不可**（`400: 承認依頼送信済みのお知らせは編集できません`）
 
 ### DELETE `/committee/notices/:noticeId`
 
 お知らせを論理削除します。
 
 - owner のみ実行可能
-- PENDING の承認申請は自動的に REJECTED になる
+- PENDING の承認依頼は自動的に REJECTED になる
 
 ### POST `/committee/notices/:noticeId/collaborators`
 

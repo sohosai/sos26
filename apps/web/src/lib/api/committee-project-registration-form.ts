@@ -84,7 +84,7 @@ export async function deleteProjectRegistrationForm(
 
 /**
  * POST /committee/project-registration-forms/:formId/authorizations
- * 承認申請
+ * 承認依頼を作成
  */
 export async function requestProjectRegistrationFormAuthorization(
 	formId: string,

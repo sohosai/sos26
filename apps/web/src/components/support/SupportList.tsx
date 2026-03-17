@@ -80,8 +80,8 @@ export function SupportList({
 				</div>
 				<Text size="2" color="gray">
 					{isCommittee
-						? "企画からのお問い合わせを管理します"
-						: "実行委員会へのお問い合わせを管理します"}
+						? "企画からのお問い合わせを管理します。"
+						: "実行委員会へのお問い合わせを管理します。"}
 				</Text>
 			</div>
 

@@ -25,7 +25,7 @@ import type { AuthEnv } from "../types/auth-env";
 const committeeInquiryRoute = new Hono<AuthEnv>();
 
 // ─────────────────────────────────────────────────────────────
-// ヘルパー: 関連フォームの検証（オーナーまたは共同編集者のみ選択可）
+// ヘルパー: 関連申請の検証（オーナーまたは共同編集者のみ選択可）
 // ─────────────────────────────────────────────────────────────
 
 async function validateRelatedForm(
@@ -43,7 +43,7 @@ async function validateRelatedForm(
 		},
 	});
 	if (!form) {
-		throw Errors.invalidRequest("指定されたフォームが見つかりません");
+		throw Errors.invalidRequest("指定された申請が見つかりません");
 	}
 }
 
@@ -293,6 +293,7 @@ committeeInquiryRoute.post(
 		await validateCommitteeAssignees(committeeAssigneeUserIds ?? []);
 		await validateAttachments(fileIds ?? [], user.id);
 
+		// 関連申請の検証（オーナーまたは共同編集者のみ）
 		if (relatedFormId) {
 			await validateRelatedForm(relatedFormId, user.id);
 		}

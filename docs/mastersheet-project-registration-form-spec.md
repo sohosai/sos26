@@ -18,7 +18,7 @@ MastersheetColumnType: FORM_ITEM | CUSTOM | PROJECT_REGISTRATION_FORM_ITEM
 
 ### 2.2 MastersheetColumn の拡張
 
-既存の `formItemId`（申請フォーム設問への FK）に加え、企画登録フォーム設問への FK を追加。
+既存の `formItemId`（申請申請設問への FK）に加え、企画登録フォーム設問への FK を追加。
 
 ```
 MastersheetColumn
@@ -66,7 +66,7 @@ MastersheetCellStatus: NOT_DELIVERED | NOT_ANSWERED | SUBMITTED | COMMITTEE_EDIT
 
 回答が存在しないケース:
 - 企画登録フォームが**企画作成後に**追加・有効化された場合（既存企画には回答がない）
-- 企画の `type` / `location` がフォームの `filterTypes` / `filterLocations` に合致しなかった場合
+- 企画の `type` / `location` が申請の `filterTypes` / `filterLocations` に合致しなかった場合
 
 配信の概念がないため `NOT_DELIVERED` / `NOT_ANSWERED` は発生しない。読み取り専用のため `COMMITTEE_EDITED` は発生しない。
 
@@ -125,7 +125,7 @@ projectRegistrationFormItemType: formItemTypeSchema.nullable(),
 `columns` 配列に `PROJECT_REGISTRATION_FORM_ITEM` 型のカラムが含まれる。
 
 セル値の取得:
-1. 対象フォームの `ProjectRegistrationFormResponse` をバッチ取得
+1. 対象申請の `ProjectRegistrationFormResponse` をバッチ取得
 2. 対象の `ProjectRegistrationFormAnswer` から値を取得
 3. 回答が存在すれば `SUBMITTED`、存在しなければ `NOT_APPLICABLE`
 
@@ -150,12 +150,12 @@ const mastersheetCellSchema = z.object({
 
 | 操作 | CUSTOM | FORM_ITEM | PROJECT_REGISTRATION_FORM_ITEM |
 |------|--------|-----------|-------------------------------|
-| カラム作成 | 全実委人 | フォーム owner / collaborator | **全実委人** |
+| カラム作成 | 全実委人 | 申請 owner / collaborator | **全実委人** |
 | カラム編集（名前等） | 作成者のみ | 作成者のみ | 作成者のみ |
 | カラム削除 | 作成者のみ | 作成者のみ | 作成者のみ |
-| カラムへのアクセス | 作成者 + viewer 設定に合致 | フォーム owner / collaborator | **全実委人** |
+| カラムへのアクセス | 作成者 + viewer 設定に合致 | 申請 owner / collaborator | **全実委人** |
 | セル編集 | アクセス可能な全員 | アクセス可能な全員 | **不可（読み取り専用）** |
-| アクセス申請の承認 | カラム作成者 | フォーム owner | **不要** |
+| アクセス申請の承認 | カラム作成者 | 申請 owner | **不要** |
 | 変更履歴の閲覧 | — | アクセス可能な全員 | **─（なし）** |
 
 ---

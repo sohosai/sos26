@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SupportRouteRouteImport } from './routes/support/route'
 import { Route as SettingsRouteRouteImport } from './routes/settings/route'
 import { Route as ProjectRouteRouteImport } from './routes/project/route'
 import { Route as DocsRouteRouteImport } from './routes/docs/route'
@@ -16,6 +17,7 @@ import { Route as DevRouteRouteImport } from './routes/dev/route'
 import { Route as CommitteeRouteRouteImport } from './routes/committee/route'
 import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SupportIndexRouteImport } from './routes/support/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ProjectIndexRouteImport } from './routes/project/index'
 import { Route as ForbiddenIndexRouteImport } from './routes/forbidden/index'
@@ -52,6 +54,11 @@ import { Route as AuthRegisterSetupIndexRouteImport } from './routes/auth/regist
 import { Route as CommitteeFormsFormIdAnswersIndexRouteImport } from './routes/committee/forms/$formId/answers/index'
 import { Route as CommitteeFormsFormIdAnswersAnswerIdIndexRouteImport } from './routes/committee/forms/$formId/answers/$answerId/index'
 
+const SupportRouteRoute = SupportRouteRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRouteRoute = SettingsRouteRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -86,6 +93,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SupportIndexRoute = SupportIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SupportRouteRoute,
 } as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
@@ -280,12 +292,14 @@ export interface FileRoutesByFullPath {
   '/docs': typeof DocsRouteRouteWithChildren
   '/project': typeof ProjectRouteRouteWithChildren
   '/settings': typeof SettingsRouteRouteWithChildren
+  '/support': typeof SupportRouteRouteWithChildren
   '/docs/$slug': typeof DocsSlugRoute
   '/committee/': typeof CommitteeIndexRoute
   '/docs/': typeof DocsIndexRoute
   '/forbidden/': typeof ForbiddenIndexRoute
   '/project/': typeof ProjectIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/support/': typeof SupportIndexRoute
   '/committee/support/$inquiryId': typeof CommitteeSupportInquiryIdRoute
   '/project/support/$inquiryId': typeof ProjectSupportInquiryIdRoute
   '/auth/login/': typeof AuthLoginIndexRoute
@@ -326,6 +340,7 @@ export interface FileRoutesByTo {
   '/forbidden': typeof ForbiddenIndexRoute
   '/project': typeof ProjectIndexRoute
   '/settings': typeof SettingsIndexRoute
+  '/support': typeof SupportIndexRoute
   '/committee/support/$inquiryId': typeof CommitteeSupportInquiryIdRoute
   '/project/support/$inquiryId': typeof ProjectSupportInquiryIdRoute
   '/auth/login': typeof AuthLoginIndexRoute
@@ -365,12 +380,14 @@ export interface FileRoutesById {
   '/docs': typeof DocsRouteRouteWithChildren
   '/project': typeof ProjectRouteRouteWithChildren
   '/settings': typeof SettingsRouteRouteWithChildren
+  '/support': typeof SupportRouteRouteWithChildren
   '/docs/$slug': typeof DocsSlugRoute
   '/committee/': typeof CommitteeIndexRoute
   '/docs/': typeof DocsIndexRoute
   '/forbidden/': typeof ForbiddenIndexRoute
   '/project/': typeof ProjectIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/support/': typeof SupportIndexRoute
   '/committee/support/$inquiryId': typeof CommitteeSupportInquiryIdRoute
   '/project/support/$inquiryId': typeof ProjectSupportInquiryIdRoute
   '/auth/login/': typeof AuthLoginIndexRoute
@@ -411,12 +428,14 @@ export interface FileRouteTypes {
     | '/docs'
     | '/project'
     | '/settings'
+    | '/support'
     | '/docs/$slug'
     | '/committee/'
     | '/docs/'
     | '/forbidden/'
     | '/project/'
     | '/settings/'
+    | '/support/'
     | '/committee/support/$inquiryId'
     | '/project/support/$inquiryId'
     | '/auth/login/'
@@ -457,6 +476,7 @@ export interface FileRouteTypes {
     | '/forbidden'
     | '/project'
     | '/settings'
+    | '/support'
     | '/committee/support/$inquiryId'
     | '/project/support/$inquiryId'
     | '/auth/login'
@@ -495,12 +515,14 @@ export interface FileRouteTypes {
     | '/docs'
     | '/project'
     | '/settings'
+    | '/support'
     | '/docs/$slug'
     | '/committee/'
     | '/docs/'
     | '/forbidden/'
     | '/project/'
     | '/settings/'
+    | '/support/'
     | '/committee/support/$inquiryId'
     | '/project/support/$inquiryId'
     | '/auth/login/'
@@ -540,11 +562,19 @@ export interface RootRouteChildren {
   DocsRouteRoute: typeof DocsRouteRouteWithChildren
   ProjectRouteRoute: typeof ProjectRouteRouteWithChildren
   SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
+  SupportRouteRoute: typeof SupportRouteRouteWithChildren
   ForbiddenIndexRoute: typeof ForbiddenIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -593,6 +623,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/support/': {
+      id: '/support/'
+      path: '/'
+      fullPath: '/support/'
+      preLoaderRoute: typeof SupportIndexRouteImport
+      parentRoute: typeof SupportRouteRoute
     }
     '/settings/': {
       id: '/settings/'
@@ -973,6 +1010,18 @@ const SettingsRouteRouteWithChildren = SettingsRouteRoute._addFileChildren(
   SettingsRouteRouteChildren,
 )
 
+interface SupportRouteRouteChildren {
+  SupportIndexRoute: typeof SupportIndexRoute
+}
+
+const SupportRouteRouteChildren: SupportRouteRouteChildren = {
+  SupportIndexRoute: SupportIndexRoute,
+}
+
+const SupportRouteRouteWithChildren = SupportRouteRoute._addFileChildren(
+  SupportRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRouteRoute: AuthRouteRouteWithChildren,
@@ -981,6 +1030,7 @@ const rootRouteChildren: RootRouteChildren = {
   DocsRouteRoute: DocsRouteRouteWithChildren,
   ProjectRouteRoute: ProjectRouteRouteWithChildren,
   SettingsRouteRoute: SettingsRouteRouteWithChildren,
+  SupportRouteRoute: SupportRouteRouteWithChildren,
   ForbiddenIndexRoute: ForbiddenIndexRoute,
 }
 export const routeTree = rootRouteImport

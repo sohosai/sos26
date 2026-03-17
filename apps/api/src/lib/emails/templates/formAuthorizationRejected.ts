@@ -4,9 +4,9 @@ export function formAuthorizationRejectedTemplate(params: {
 	formTitle: string;
 	url: string;
 }) {
-	const body = `フォームの配信承認が却下されました。
+	const body = `申請の承認依頼が却下されました。
 
-フォームタイトル: ${params.formTitle}
+タイトル: ${params.formTitle}
 
 内容を修正のうえ、再度申請してください。
 
@@ -18,7 +18,7 @@ ${params.url}
 このメールは送信専用です。返信いただいてもお応えできません。`;
 
 	return {
-		subject: "【雙峰祭オンラインシステム】フォーム配信承認が却下されました",
+		subject: "【雙峰祭オンラインシステム】申請の承認依頼が却下されました",
 		html: textToHtml(body),
 		text: body,
 	};

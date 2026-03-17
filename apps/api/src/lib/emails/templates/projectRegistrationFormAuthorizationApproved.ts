@@ -4,9 +4,9 @@ export function projectRegistrationFormAuthorizationApprovedTemplate(params: {
 	formTitle: string;
 	url: string;
 }) {
-	const body = `企画登録フォームの承認申請が承認されました。
+	const body = `企画登録フォームの承認依頼が承認されました。
 
-フォームタイトル: ${params.formTitle}
+タイトル: ${params.formTitle}
 
 詳細は以下のURLからご確認ください。
 ${params.url}
@@ -17,7 +17,7 @@ ${params.url}
 
 	return {
 		subject:
-			"【雙峰祭オンラインシステム】企画登録フォーム承認申請が承認されました",
+			"【雙峰祭オンラインシステム】企画登録フォーム承認依頼が承認されました",
 		html: textToHtml(body),
 		text: body,
 	};

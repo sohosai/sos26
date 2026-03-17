@@ -91,7 +91,7 @@
 |---|---|
 | `MEMBER_EDIT` | メンバー編集 |
 | `NOTICE_DELIVER` | お知らせ配信・承認 |
-| `FORM_DELIVER` | フォーム配信 |
+| `FORM_DELIVER` | 申請配信 |
 | `INQUIRY_ADMIN` | お問い合わせ管理 |
 | `PROJECT_REGISTRATION_FORM_CREATE` | 企画登録フォーム作成 |
 | `PROJECT_REGISTRATION_FORM_DELIVER` | 企画登録フォーム配信・承認 |

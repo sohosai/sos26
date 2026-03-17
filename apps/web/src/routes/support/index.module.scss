@@ -1,0 +1,46 @@
+.page {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-5);
+	max-width: 900px;
+}
+
+.header {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.card {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+	max-width: 720px;
+}
+
+.mail {
+	font-weight: 500;
+}
+
+.steps {
+	margin: 0;
+	padding-left: 1.25rem;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	color: var(--gray-11);
+	font-size: var(--font-size-2);
+	line-height: var(--line-height-3);
+}
+
+.example {
+	margin: 0;
+	padding: var(--space-3);
+	border: 1px solid var(--gray-6);
+	border-radius: var(--radius-2);
+	background-color: var(--gray-2);
+	color: var(--gray-11);
+	font-size: var(--font-size-2);
+	line-height: var(--line-height-3);
+	white-space: pre-wrap;
+}

@@ -1,4 +1,6 @@
 import { Dialog, VisuallyHidden } from "@radix-ui/themes";
+import { useEffect, useState } from "react";
+import { DiscardChangesDialog } from "@/components/patterns";
 import type { Form } from "../type";
 import styles from "./EditDialog.module.scss";
 import { FormEditor } from "./Editor";
@@ -18,9 +20,37 @@ export function FormEditDialog({
 	onSubmit,
 	loading,
 }: Props) {
+	const [confirmOpen, setConfirmOpen] = useState(false);
+	const [isDirty, setIsDirty] = useState(false);
+
+	useEffect(() => {
+		if (!open) {
+			setConfirmOpen(false);
+			setIsDirty(false);
+		}
+	}, [open]);
+
+	const handleOpenChange = (nextOpen: boolean) => {
+		if (nextOpen) {
+			onOpenChange(true);
+			return;
+		}
+		if (isDirty) {
+			setConfirmOpen(true);
+			return;
+		}
+		onOpenChange(false);
+	};
+
+	const handleDiscard = () => {
+		setConfirmOpen(false);
+		setIsDirty(false);
+		onOpenChange(false);
+	};
+
 	if (!form) return null;
 	return (
-		<Dialog.Root open={open} onOpenChange={onOpenChange}>
+		<Dialog.Root open={open} onOpenChange={handleOpenChange}>
 			<Dialog.Content className={styles.dialogContent}>
 				<VisuallyHidden>
 					<Dialog.Title>申請編集</Dialog.Title>
@@ -30,9 +60,15 @@ export function FormEditDialog({
 						initialForm={form}
 						onSubmit={onSubmit}
 						loading={loading}
+						onDirtyChange={setIsDirty}
 					/>
 				</div>
 			</Dialog.Content>
+			<DiscardChangesDialog
+				open={confirmOpen}
+				onOpenChange={setConfirmOpen}
+				onConfirm={handleDiscard}
+			/>
 		</Dialog.Root>
 	);
 }

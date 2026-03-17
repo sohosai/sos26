@@ -122,7 +122,7 @@ committeeProjectRegistrationFormRoute.post(
 					totalCount
 				);
 
-				// 指定位置以降のフォームを +1 シフトして挿入スペースを確保
+				// 指定位置以降の申請を +1 シフトして挿入スペースを確保
 				await tx.projectRegistrationForm.updateMany({
 					where: { sortOrder: { gte: clampedSortOrder }, deletedAt: null },
 					data: { sortOrder: { increment: 1 } },
@@ -237,7 +237,7 @@ committeeProjectRegistrationFormRoute.patch(
 		let formData = formDataParsed;
 
 		const form = await prisma.$transaction(
-			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: フォーム更新のトランザクション処理
+			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: 申請更新のトランザクション処理
 			async tx => {
 				const existing = await tx.projectRegistrationForm.findFirstOrThrow({
 					where: { id: formId, deletedAt: null },
@@ -264,7 +264,7 @@ committeeProjectRegistrationFormRoute.patch(
 					);
 
 				if (existing.isActive)
-					throw Errors.invalidRequest("有効化されたフォームは変更できません");
+					throw Errors.invalidRequest("有効化された申請は変更できません");
 
 				// filterTypes/filterLocations 整合性チェック
 				{
@@ -289,7 +289,7 @@ committeeProjectRegistrationFormRoute.patch(
 					}
 				}
 
-				// sortOrder が変更される場合は既存フォームをシフト
+				// sortOrder が変更される場合は既存申請をシフト
 				if (
 					formData.sortOrder !== undefined &&
 					formData.sortOrder !== existing.sortOrder
@@ -341,7 +341,7 @@ committeeProjectRegistrationFormRoute.patch(
 					});
 					if (responseCount > 0)
 						throw Errors.invalidRequest(
-							"回答が存在するフォームの設問は変更できません"
+							"回答が存在する申請の設問は変更できません"
 						);
 
 					// 既存の items を全削除して再作成
@@ -416,7 +416,7 @@ committeeProjectRegistrationFormRoute.delete(
 				if (current.ownerId !== userId)
 					throw Errors.forbidden("この操作は作成者のみ行えます");
 				if (current.isActive)
-					throw Errors.invalidRequest("有効化されたフォームは削除できません");
+					throw Errors.invalidRequest("有効化された申請は削除できません");
 
 				await tx.projectRegistrationForm.update({
 					where: { id: formId },
@@ -441,7 +441,7 @@ committeeProjectRegistrationFormRoute.delete(
 
 // ─────────────────────────────────────────
 // POST /committee/project-registration-forms/:formId/authorizations
-// 承認申請（作成者 + CREATE権限）
+// 承認依頼（作成者 + CREATE権限）
 // ─────────────────────────────────────────
 committeeProjectRegistrationFormRoute.post(
 	"/:formId/authorizations",
@@ -486,7 +486,7 @@ committeeProjectRegistrationFormRoute.post(
 					});
 				if (existing) {
 					if (existing.status === "APPROVED") {
-						throw Errors.invalidRequest("このフォームは既に承認されています");
+						throw Errors.invalidRequest("この申請は既に承認されています");
 					}
 					throw Errors.alreadyExists("既に承認待ちの申請があります");
 				}
@@ -542,15 +542,15 @@ committeeProjectRegistrationFormRoute.patch(
 					},
 				});
 
-				if (!auth) throw Errors.notFound("承認申請が見つかりません");
+				if (!auth) throw Errors.notFound("承認依頼が見つかりません");
 				if (auth.form.deletedAt)
-					throw Errors.invalidRequest("削除済みのフォームは承認できません");
+					throw Errors.invalidRequest("削除済みの申請は承認できません");
 				if (auth.requestedToId !== user.id)
-					throw Errors.forbidden("この承認申請を操作する権限がありません");
+					throw Errors.forbidden("この承認依頼を操作する権限がありません");
 				if (auth.status !== "PENDING")
-					throw Errors.invalidRequest("この承認申請は既に処理済みです");
+					throw Errors.invalidRequest("この承認依頼は既に処理済みです");
 
-				// 承認申請作成後に DELIVER 権限が剥奪されていないか再確認
+				// 承認依頼作成後に DELIVER 権限が剥奪されていないか再確認
 				await requireDeliverPermission(
 					tx,
 					user.id,
@@ -563,7 +563,7 @@ committeeProjectRegistrationFormRoute.patch(
 					data: { status, decidedAt: new Date() },
 				});
 
-				// 承認された場合、フォームを有効化
+				// 承認された場合、申請を有効化
 				if (status === "APPROVED") {
 					await tx.projectRegistrationForm.update({
 						where: { id: formId },

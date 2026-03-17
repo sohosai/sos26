@@ -19,7 +19,7 @@ import type { AuthEnv } from "../types/auth-env";
 const projectInquiryRoute = new Hono<AuthEnv>();
 
 // ─────────────────────────────────────────────────────────────
-// ヘルパー: 関連フォームの検証と初期対応ルール
+// ヘルパー: 関連申請の検証と初期対応ルール
 // ─────────────────────────────────────────────────────────────
 
 type FormInitialAssignment = {
@@ -57,9 +57,7 @@ async function resolveRelatedForm(
 		},
 	});
 	if (!delivery) {
-		throw Errors.invalidRequest(
-			"指定されたフォームはこの企画に配信されていません"
-		);
+		throw Errors.invalidRequest("指定された申請はこの企画に配信されていません");
 	}
 	const formOwnerId = delivery.formAuthorization.form.ownerId;
 	const formCollaboratorIds = delivery.formAuthorization.form.collaborators
@@ -69,7 +67,7 @@ async function resolveRelatedForm(
 }
 
 // ─────────────────────────────────────────────────────────────
-// ヘルパー: フォーム紐づけ時の初期アサイン・閲覧者を構築
+// ヘルパー: 申請紐づけ時の初期アサイン・閲覧者を構築
 // （企画側担当者と重複するユーザーは除外）
 // ─────────────────────────────────────────────────────────────
 
@@ -250,7 +248,7 @@ projectInquiryRoute.post(
 			}
 		}
 
-		// 関連フォームの検証と初期対応ルール
+		// 関連申請の検証と初期対応ルール
 		const { formOwnerId, formCollaboratorIds } = await resolveRelatedForm(
 			relatedFormId,
 			project.id
@@ -302,7 +300,7 @@ projectInquiryRoute.post(
 			creatorName: user.name,
 		});
 
-		// フォーム紐づけで自動追加された実委担当者（フォームオーナー）に通知
+		// 申請紐づけで自動追加された実委担当者（申請オーナー）に通知
 		if (effectiveOwnerId) {
 			void notifyInquiryAssigneeAdded({
 				addedUserId: effectiveOwnerId,

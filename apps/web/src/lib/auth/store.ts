@@ -11,11 +11,14 @@ import { isClientError } from "../http/error";
 type AuthStore = {
 	user: User | null;
 	committeeMember: CommitteeMember | null;
+	hasMemberEditPermission: boolean | null;
+	activePortal: "project" | "committee" | null;
 	firebaseUser: FirebaseUser | null;
 	isLoading: boolean;
 	isLoggedIn: boolean;
 	isCommitteeMember: boolean;
 	isFirebaseAuthenticated: boolean;
+	setActivePortal: (portal: "project" | "committee") => void;
 	signOut: () => Promise<void>;
 	refreshUser: () => Promise<void>;
 };
@@ -23,6 +26,8 @@ type AuthStore = {
 const UNAUTHENTICATED_STATE = {
 	user: null,
 	committeeMember: null,
+	hasMemberEditPermission: null,
+	activePortal: null,
 	isLoggedIn: false,
 	isCommitteeMember: false,
 } as const;
@@ -32,6 +37,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 	firebaseUser: null,
 	isLoading: false,
 	isFirebaseAuthenticated: false,
+	setActivePortal: portal => set({ activePortal: portal }),
 
 	signOut: async () => {
 		await firebaseSignOut(firebaseAuth);
@@ -65,6 +71,7 @@ async function fetchAndSetUser(fbUser: FirebaseUser | null): Promise<void> {
 		useAuthStore.setState({
 			user: response.user,
 			committeeMember: response.committeeMember,
+			hasMemberEditPermission: null,
 			isLoggedIn: true,
 			isCommitteeMember: !!response.committeeMember,
 		});

@@ -29,6 +29,7 @@ import type { AuthEnv } from "../types/auth-env";
 
 const committeeFormRoute = new Hono<AuthEnv>();
 
+// 申請の存在確認 編集権限チェック
 const answerFilesInclude = {
 	where: {
 		file: {
@@ -42,8 +43,6 @@ const answerFilesInclude = {
 	},
 };
 
-// フォームの存在確認 編集権限チェック
-
 const getFormOrThrow = async (formId: string) => {
 	const form = await prisma.form.findFirst({
 		where: { id: formId, deletedAt: null },
@@ -51,7 +50,7 @@ const getFormOrThrow = async (formId: string) => {
 			items: { include: { options: true }, orderBy: { sortOrder: "asc" } },
 		},
 	});
-	if (!form) throw Errors.notFound("フォームが見つかりません");
+	if (!form) throw Errors.notFound("申請が見つかりません");
 	return form;
 };
 
@@ -142,7 +141,7 @@ const validateApprovalSchedule = (
 
 // ─────────────────────────────────────────
 // POST /committee/forms/create
-// フォームを作成（項目・選択肢含め一括登録）
+// 申請を作成（項目・選択肢含め一括登録）
 // ─────────────────────────────────────────
 committeeFormRoute.post(
 	"/create",
@@ -176,7 +175,7 @@ committeeFormRoute.post(
 
 // ─────────────────────────────────────────
 // GET /committee/forms/list
-// フォーム一覧を取得（実委人全員閲覧可）
+// 申請一覧を取得（実委人全員閲覧可）
 // ─────────────────────────────────────────
 committeeFormRoute.get(
 	"/list",
@@ -231,7 +230,7 @@ committeeFormRoute.get(
 
 // ─────────────────────────────────────────
 // GET /committee/forms/:formId/detail
-// フォームの詳細を取得（項目含む）
+// 申請の詳細を取得（項目含む）
 // ─────────────────────────────────────────
 committeeFormRoute.get(
 	"/:formId/detail",
@@ -273,7 +272,7 @@ committeeFormRoute.get(
 		});
 
 		if (!form) {
-			throw Errors.notFound("フォームが見つかりません");
+			throw Errors.notFound("申請が見つかりません");
 		}
 
 		const viewers = await prisma.formViewer.findMany({
@@ -301,7 +300,7 @@ committeeFormRoute.get(
 
 // ─────────────────────────────────────────
 // PATCH /committee/forms/:formId/detail
-// フォームを更新
+// 申請を更新
 // ─────────────────────────────────────────
 committeeFormRoute.patch(
 	"/:formId/detail",
@@ -317,13 +316,13 @@ committeeFormRoute.patch(
 		const { items, ...formData } = updateFormDetailRequestSchema.parse(body);
 
 		const form = await prisma.$transaction(
-			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: フォーム更新のトランザクション処理
+			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: 申請更新のトランザクション処理
 			async tx => {
 				const approvedAuth = await tx.formAuthorization.findFirst({
 					where: { formId, status: "APPROVED" },
 				});
 				if (approvedAuth) {
-					throw Errors.invalidRequest("配信承認済みのフォームは編集できません");
+					throw Errors.invalidRequest("承認待ちの申請は編集できません");
 				}
 
 				await tx.form.update({ where: { id: formId }, data: formData });
@@ -431,7 +430,7 @@ committeeFormRoute.patch(
 
 // ─────────────────────────────────────────
 // DELETE /committee/forms/:formId
-// フォームを論理削除
+// 申請を論理削除
 // ─────────────────────────────────────────
 committeeFormRoute.delete(
 	"/:formId",
@@ -566,7 +565,7 @@ committeeFormRoute.delete(
 
 // ─────────────────────────────────────────
 // POST /committee/forms/:formId/authorizations
-// 配信承認をリクエスト
+// 承認依頼をリクエスト
 // ─────────────────────────────────────────
 committeeFormRoute.post(
 	"/:formId/authorizations",
@@ -602,7 +601,7 @@ committeeFormRoute.post(
 		});
 		if (!committeeMember) {
 			throw Errors.invalidRequest(
-				"承認依頼先のユーザーにフォーム配信権限がありません"
+				"承認依頼先のユーザーに申請配信権限がありません"
 			);
 		}
 
@@ -632,7 +631,7 @@ committeeFormRoute.post(
 
 				if (existingAuth) {
 					if (existingAuth.status === "APPROVED") {
-						throw Errors.invalidRequest("このフォームは既に承認されています");
+						throw Errors.invalidRequest("この申請は既に承認されています");
 					}
 					throw Errors.alreadyExists("既に承認待ちの申請があります");
 				}
@@ -707,23 +706,23 @@ committeeFormRoute.patch(
 				include: { form: { select: { deletedAt: true, title: true } } },
 			});
 
-			if (!authorization) throw Errors.notFound("承認申請が見つかりません");
+			if (!authorization) throw Errors.notFound("承認依頼が見つかりません");
 
 			if (authorization.form.deletedAt)
-				throw Errors.invalidRequest("削除済みのフォームは承認できません");
+				throw Errors.invalidRequest("削除済みの申請は承認できません");
 
 			if (authorization.requestedToId !== user.id)
-				throw Errors.forbidden("この承認申請を操作する権限がありません");
+				throw Errors.forbidden("この承認依頼を操作する権限がありません");
 
 			if (authorization.status !== "PENDING")
-				throw Errors.invalidRequest("この承認申請は既に処理済みです");
+				throw Errors.invalidRequest("この承認依頼は既に処理済みです");
 
-			// 承認申請作成後に FORM_DELIVER 権限が剥奪されていないか再確認
+			// 承認依頼作成後に FORM_DELIVER 権限が剥奪されていないか再確認
 			await requireDeliverPermission(
 				tx,
 				user.id,
 				"FORM_DELIVER",
-				"フォーム承認権限がありません"
+				"申請承認権限がありません"
 			);
 
 			const now = new Date();

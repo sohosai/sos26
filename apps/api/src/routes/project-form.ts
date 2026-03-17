@@ -80,7 +80,7 @@ const getDeliveryOrThrow = async (
 			},
 		},
 	});
-	if (!delivery) throw Errors.notFound("フォームが見つかりません");
+	if (!delivery) throw Errors.notFound("申請が見つかりません");
 	return delivery;
 };
 // ─────────────────────────────────────────────────────────────

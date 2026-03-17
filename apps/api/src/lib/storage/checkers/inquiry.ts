@@ -76,7 +76,7 @@ registerFileAccessChecker(async (fileId, user) => {
 		return false; // このチェッカーでは判定不能
 	}
 
-	if (attachment.comment && attachment.comment.deletedAt) {
+	if (attachment.comment?.deletedAt) {
 		return false;
 	}
 

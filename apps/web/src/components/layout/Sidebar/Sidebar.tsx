@@ -8,9 +8,8 @@ import {
 	IconSettings,
 } from "@tabler/icons-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { type ReactNode, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { IconButton } from "@/components/primitives";
-import { listCommitteeMemberPermissions } from "@/lib/api/committee-member";
 import { useAuthStore } from "@/lib/auth";
 import styles from "./Sidebar.module.scss";
 
@@ -39,7 +38,7 @@ const commonItems: MenuItem[] = [
 	{
 		label: "不具合報告",
 		icon: <IconBug size={18} />,
-		to: "https://forms.sohosai.com/support",
+		to: "/support",
 	},
 ];
 
@@ -94,10 +93,8 @@ export function Sidebar({
 }: SidebarProps) {
 	const { location } = useRouterState();
 	const navigate = useNavigate();
-	const { committeeMember, isCommitteeMember, signOut } = useAuthStore();
-	const [hasMemberEditPermission, setHasMemberEditPermission] = useState<
-		boolean | null
-	>(null);
+	const { isCommitteeMember, hasMemberEditPermission, signOut } =
+		useAuthStore();
 	const shouldCheckMemberEdit = menuItems.some(
 		item => item.to === "/committee/members"
 	);
@@ -106,37 +103,6 @@ export function Sidebar({
 		await signOut();
 		navigate({ to: "/auth/login" });
 	};
-
-	useEffect(() => {
-		if (!shouldCheckMemberEdit || !committeeMember?.id) {
-			setHasMemberEditPermission(null);
-			return;
-		}
-
-		let cancelled = false;
-
-		const loadPermissions = async () => {
-			try {
-				const res = await listCommitteeMemberPermissions(committeeMember.id);
-				if (!cancelled) {
-					setHasMemberEditPermission(
-						res.permissions.some(p => p.permission === "MEMBER_EDIT")
-					);
-				}
-			} catch {
-				// 判定不能な場合は現状維持で表示する
-				if (!cancelled) {
-					setHasMemberEditPermission(null);
-				}
-			}
-		};
-
-		void loadPermissions();
-
-		return () => {
-			cancelled = true;
-		};
-	}, [committeeMember?.id, shouldCheckMemberEdit]);
 
 	const roleSwitchItem = getRoleSwitchItem(
 		location.pathname,
@@ -147,7 +113,7 @@ export function Sidebar({
 		? [roleSwitchItem, ...commonItems]
 		: commonItems;
 	const visibleMenuItems =
-		hasMemberEditPermission === false
+		shouldCheckMemberEdit && hasMemberEditPermission !== true
 			? menuItems.filter(item => item.to !== "/committee/members")
 			: menuItems;
 

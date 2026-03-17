@@ -16,7 +16,7 @@ import type { BodyEndpoint, GetEndpoint } from "./types";
 
 /**
  * GET /project/:projectId/forms
- * 配信されたフォーム一覧
+ * 配信された申請一覧
  */
 export const listProjectFormsEndpoint: GetEndpoint<
 	"/project/:projectId/forms",
@@ -34,7 +34,7 @@ export const listProjectFormsEndpoint: GetEndpoint<
 
 /**
  * GET /project/:projectId/forms/:formDeliveryId
- * フォーム詳細 + 自分の回答
+ * 申請詳細 + 自分の回答
  */
 export const getProjectFormEndpoint: GetEndpoint<
 	"/project/:projectId/forms/:formDeliveryId",

@@ -6,7 +6,7 @@ export function formAuthorizationDecidedTemplate(params: {
 	url: string;
 }): PushPayload {
 	return {
-		title: `フォーム承認が${params.status === "APPROVED" ? "承認" : "却下"}されました`,
+		title: `申請承認が${params.status === "APPROVED" ? "承認" : "却下"}されました`,
 		body: params.formTitle,
 		icon: "/sos.svg",
 		badge: "/sos.svg",

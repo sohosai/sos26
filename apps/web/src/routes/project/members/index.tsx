@@ -94,7 +94,7 @@ const memberColumnHelper = createColumnHelper<MemberRow>();
 export const Route = createFileRoute("/project/members/")({
 	component: RouteComponent,
 	head: () => ({
-		meta: [{ title: "メンバー一覧 | 雙峰祭オンラインシステム" }],
+		meta: [{ title: "メンバー管理 | 雙峰祭オンラインシステム" }],
 	}),
 	loader: async () => {
 		const { selectedProjectId } = useProjectStore.getState();
@@ -287,7 +287,7 @@ function RouteComponent() {
 				...baseColumns,
 				memberColumnHelper.display({
 					id: "actions",
-					header: "",
+					header: "操作",
 					cell: ({ row }) => (
 						<ActionsMenu
 							item={row.original}
@@ -310,7 +310,7 @@ function RouteComponent() {
 
 	return (
 		<div>
-			<Heading size="6">メンバー一覧</Heading>
+			<Heading size="6">メンバー管理</Heading>
 
 			<DataTable<MemberRow>
 				data={members}

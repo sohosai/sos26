@@ -26,7 +26,7 @@ import type { BodyEndpoint, GetEndpoint, NoBodyEndpoint } from "./types";
 
 /**
  * POST /committee/forms/create
- * フォームを作成
+ * 申請を作成
  *
  * - 認証必須
  */
@@ -48,7 +48,7 @@ export const createFormEndpoint: BodyEndpoint<
 
 /**
  * GET /committee/forms/list
- * 自分が作成・共同編集しているフォーム一覧を取得
+ * 自分が作成・共同編集している申請一覧を取得
  */
 export const listMyFormsEndpoint: GetEndpoint<
 	"/committee/forms/list",
@@ -66,7 +66,7 @@ export const listMyFormsEndpoint: GetEndpoint<
 
 /**
  * GET /committee/forms/:formId/detail
- * フォームの詳細を取得（項目含む）
+ * 申請の詳細を取得（項目含む）
  */
 export const getFormDetailEndpoint: GetEndpoint<
 	"/committee/forms/:formId/detail",
@@ -84,7 +84,7 @@ export const getFormDetailEndpoint: GetEndpoint<
 
 /**
  * PATCH /committee/forms/:formId/detail
- * フォームのタイトル・説明を更新
+ * 申請のタイトル・説明を更新
  *
  * - 作成者または書き込み権限付き共同編集者のみ
  */
@@ -106,7 +106,7 @@ export const updateFormDetailEndpoint: BodyEndpoint<
 
 /**
  * DELETE /committee/forms/:formId
- * フォームを論理削除
+ * 申請を論理削除
  *
  * - 作成者のみ
  */
@@ -178,7 +178,7 @@ export const removeFormCollaboratorEndpoint: NoBodyEndpoint<
 
 /**
  * POST /committee/forms/:formId/authorizations
- * 配信承認をリクエスト
+ * 承認依頼をリクエスト
  *
  * - 作成者または書き込み権限付き共同編集者のみ
  */
@@ -200,7 +200,7 @@ export const requestFormAuthorizationEndpoint: BodyEndpoint<
 
 /**
  * POST /committee/forms/:formId/authorizations/:authorizationId/reject
- * 配信承認を承認/却下
+ * 承認依頼を承認/却下
  *
  * - requestedTo のユーザーのみ
  */

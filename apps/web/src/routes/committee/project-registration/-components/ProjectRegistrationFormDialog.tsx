@@ -1,10 +1,11 @@
 import { Dialog, Text, VisuallyHidden } from "@radix-ui/themes";
 import type { ProjectLocation, ProjectType } from "@sos26/shared";
 import { IconArrowsSort, IconPlus, IconX } from "@tabler/icons-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { FormItemList } from "@/components/form/Builder/ItemList";
 import type { FormItem } from "@/components/form/type";
+import { DiscardChangesDialog } from "@/components/patterns";
 import {
 	Button,
 	Checkbox,
@@ -83,10 +84,13 @@ export function ProjectRegistrationFormDialog({
 	const [errors, setErrors] = useState<Record<string, string>>({});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [pickerOpen, setPickerOpen] = useState(false);
+	const [confirmOpen, setConfirmOpen] = useState(false);
+	const [baselineValues, setBaselineValues] = useState(init);
 
 	const initialValuesRef = useRef(initialValues);
 	initialValuesRef.current = initialValues;
 	const prevOpenRef = useRef(false);
+	const forceCloseRef = useRef(false);
 
 	useEffect(() => {
 		if (open && !prevOpenRef.current) {
@@ -98,9 +102,47 @@ export function ProjectRegistrationFormDialog({
 			setFilterLocations(v.filterLocations);
 			setItems(v.items);
 			setErrors({});
+			setBaselineValues(v);
+			setConfirmOpen(false);
 		}
 		prevOpenRef.current = open;
 	}, [open]);
+
+	const hasUnsavedChanges = useMemo(
+		() =>
+			title !== baselineValues.title ||
+			description !== baselineValues.description ||
+			sortOrder !== baselineValues.sortOrder ||
+			JSON.stringify(filterTypes) !==
+				JSON.stringify(baselineValues.filterTypes) ||
+			JSON.stringify(filterLocations) !==
+				JSON.stringify(baselineValues.filterLocations) ||
+			JSON.stringify(items) !== JSON.stringify(baselineValues.items),
+		[
+			title,
+			description,
+			sortOrder,
+			filterTypes,
+			filterLocations,
+			items,
+			baselineValues,
+		]
+	);
+
+	const requestClose = () => {
+		if (isSubmitting) return;
+		if (hasUnsavedChanges) {
+			setConfirmOpen(true);
+			return;
+		}
+		onOpenChange(false);
+	};
+
+	const closeWithoutConfirm = () => {
+		forceCloseRef.current = true;
+		setConfirmOpen(false);
+		onOpenChange(false);
+	};
 
 	// タイプと場所の選択ロジック
 	const handleStageTypeToggle = () => {
@@ -241,7 +283,20 @@ export function ProjectRegistrationFormDialog({
 
 	return (
 		<>
-			<Dialog.Root open={open} onOpenChange={onOpenChange}>
+			<Dialog.Root
+				open={open}
+				onOpenChange={nextOpen => {
+					if (nextOpen) {
+						onOpenChange(true);
+						return;
+					}
+					if (forceCloseRef.current) {
+						forceCloseRef.current = false;
+						return;
+					}
+					requestClose();
+				}}
+			>
 				<Dialog.Content className={styles.dialogContent}>
 					<VisuallyHidden>
 						<Dialog.Title>{dialogTitle}</Dialog.Title>
@@ -250,7 +305,7 @@ export function ProjectRegistrationFormDialog({
 						<Text size="5" weight="bold">
 							{dialogTitle}
 						</Text>
-						<IconButton aria-label="閉じる" onClick={() => onOpenChange(false)}>
+						<IconButton aria-label="閉じる" onClick={requestClose}>
 							<IconX size={16} />
 						</IconButton>
 					</div>
@@ -375,7 +430,7 @@ export function ProjectRegistrationFormDialog({
 					<div className={styles.dialogFooter}>
 						<Button
 							intent="secondary"
-							onClick={() => onOpenChange(false)}
+							onClick={requestClose}
 							disabled={isSubmitting}
 						>
 							キャンセル
@@ -386,6 +441,11 @@ export function ProjectRegistrationFormDialog({
 					</div>
 				</Dialog.Content>
 			</Dialog.Root>
+			<DiscardChangesDialog
+				open={confirmOpen}
+				onOpenChange={setConfirmOpen}
+				onConfirm={closeWithoutConfirm}
+			/>
 
 			{activeForms && (
 				<ReorderFormsDialog

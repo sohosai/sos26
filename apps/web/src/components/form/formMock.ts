@@ -3,7 +3,7 @@ import type { Form } from "@/components/form/type";
 // デザイン等確認用
 export const volunteerEntryFormMock: Form = {
 	id: "volunteer-entry-form",
-	name: "ボランティアスタッフ応募フォーム",
+	name: "ボランティアスタッフ応募申請",
 	description:
 		"学園祭を一緒に盛り上げてくれるスタッフを募集しています。以下の項目に回答し、応募を完了してください。",
 	items: [
