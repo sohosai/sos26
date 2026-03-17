@@ -303,7 +303,6 @@ function CommitteeProjectInfoPage() {
 				onOpenChange={setDeleteConfirmOpen}
 			>
 				<AlertDialog.Content>
-					<AlertDialog.Title>企画の削除状態を変更</AlertDialog.Title>
 					<AlertDialog.Title>企画のステータスを変更</AlertDialog.Title>
 					<AlertDialog.Description>
 						削除状態を設定すると、企画人画面に警告バーが表示されます。
