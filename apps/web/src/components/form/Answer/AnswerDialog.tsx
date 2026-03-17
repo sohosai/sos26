@@ -1,6 +1,6 @@
-import { AlertDialog, Dialog, Spinner, VisuallyHidden } from "@radix-ui/themes";
+import { Dialog, Spinner, VisuallyHidden } from "@radix-ui/themes";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/primitives";
+import { DiscardChangesDialog } from "@/components/patterns";
 import type { Form, FormAnswers } from "../type";
 import styles from "./AnswerDialog.module.scss";
 import { FormViewer } from "./FormViewer";
@@ -80,22 +80,11 @@ export function FormAnswerDialog({
 					)}
 				</div>
 			</Dialog.Content>
-			<AlertDialog.Root open={confirmOpen} onOpenChange={setConfirmOpen}>
-				<AlertDialog.Content maxWidth="440px">
-					<AlertDialog.Title>入力内容を破棄しますか？</AlertDialog.Title>
-					<AlertDialog.Description size="2">
-						保存していない入力内容は失われます。
-					</AlertDialog.Description>
-					<div className={styles.confirmActions}>
-						<Button intent="secondary" onClick={() => setConfirmOpen(false)}>
-							戻る
-						</Button>
-						<Button intent="primary" onClick={handleDiscard}>
-							破棄して閉じる
-						</Button>
-					</div>
-				</AlertDialog.Content>
-			</AlertDialog.Root>
+			<DiscardChangesDialog
+				open={confirmOpen}
+				onOpenChange={setConfirmOpen}
+				onConfirm={handleDiscard}
+			/>
 		</Dialog.Root>
 	);
 }

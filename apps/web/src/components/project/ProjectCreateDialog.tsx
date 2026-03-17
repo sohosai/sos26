@@ -1,10 +1,4 @@
-import {
-	AlertDialog,
-	Callout,
-	Dialog,
-	Text,
-	VisuallyHidden,
-} from "@radix-ui/themes";
+import { Callout, Dialog, Text, VisuallyHidden } from "@radix-ui/themes";
 import type {
 	GetActiveProjectRegistrationFormsResponse,
 	Project,
@@ -29,7 +23,11 @@ import {
 	type FormAnswerValue,
 	isFileAnswerValue,
 } from "@/components/form/type";
-import { RadioGroup, RadioGroupItem } from "@/components/patterns";
+import {
+	DiscardChangesDialog,
+	RadioGroup,
+	RadioGroupItem,
+} from "@/components/patterns";
 import { Button, Checkbox, TextField } from "@/components/primitives";
 import { uploadFile } from "@/lib/api/files";
 import { createProject } from "@/lib/api/project";
@@ -840,22 +838,11 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 					)
 				)}
 			</Dialog.Content>
-			<AlertDialog.Root open={confirmOpen} onOpenChange={setConfirmOpen}>
-				<AlertDialog.Content maxWidth="440px">
-					<AlertDialog.Title>入力内容を破棄しますか？</AlertDialog.Title>
-					<AlertDialog.Description size="2">
-						保存していない入力内容は失われます。
-					</AlertDialog.Description>
-					<div className={styles.confirmActions}>
-						<Button intent="secondary" onClick={() => setConfirmOpen(false)}>
-							戻る
-						</Button>
-						<Button intent="primary" onClick={closeAndReset}>
-							破棄して閉じる
-						</Button>
-					</div>
-				</AlertDialog.Content>
-			</AlertDialog.Root>
+			<DiscardChangesDialog
+				open={confirmOpen}
+				onOpenChange={setConfirmOpen}
+				onConfirm={closeAndReset}
+			/>
 		</Dialog.Root>
 	);
 }
