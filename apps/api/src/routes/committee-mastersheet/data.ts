@@ -166,6 +166,10 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 				include: {
 					answers: {
 						include: {
+							files: {
+								orderBy: { sortOrder: "asc" },
+								include: { file: { select: formAnswerFileSelect } },
+							},
 							selectedOptions: { select: { formItemOptionId: true } },
 						},
 					},

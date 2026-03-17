@@ -9,7 +9,7 @@ import {
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
-import { normalizeFileIds } from "../lib/form-answer-files";
+import { mapAnswerFiles, normalizeFileIds } from "../lib/form-answer-files";
 import {
 	assertFileCountConstraints,
 	assertFormAnswersValid,
@@ -320,6 +320,21 @@ projectRoute.get(
 								type: true,
 							},
 						},
+						files: {
+							orderBy: { sortOrder: "asc" },
+							include: {
+								file: {
+									select: {
+										id: true,
+										fileName: true,
+										mimeType: true,
+										size: true,
+										isPublic: true,
+										createdAt: true,
+									},
+								},
+							},
+						},
 						selectedOptions: {
 							include: {
 								formItemOption: { select: { id: true, label: true } },
@@ -353,7 +368,7 @@ projectRoute.get(
 					type: answer.formItem.type,
 					textValue: answer.textValue,
 					numberValue: answer.numberValue,
-					fileId: answer.fileId,
+					files: mapAnswerFiles(answer.files),
 					selectedOptions: answer.selectedOptions.map(selected => ({
 						id: selected.formItemOption.id,
 						label: selected.formItemOption.label,

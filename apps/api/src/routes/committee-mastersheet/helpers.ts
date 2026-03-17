@@ -282,6 +282,14 @@ export type PrfResponseWithAnswers =
 		include: {
 			answers: {
 				include: {
+					files: {
+						orderBy: { sortOrder: "asc" };
+						include: {
+							file: {
+								select: typeof formAnswerFileSelect;
+							};
+						};
+					};
 					selectedOptions: {
 						select: { formItemOptionId: true };
 					};
@@ -312,7 +320,7 @@ export function buildPrfItemCell(
 		? {
 				textValue: answer.textValue,
 				numberValue: answer.numberValue,
-				fileId: answer.fileId,
+				files: mapAnswerFiles(answer.files),
 				selectedOptionIds: answer.selectedOptions.map(s => s.formItemOptionId),
 			}
 		: null;
