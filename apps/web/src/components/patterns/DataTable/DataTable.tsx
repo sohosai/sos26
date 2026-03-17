@@ -364,9 +364,9 @@ export function DataTable<T extends RowData>({
 	return (
 		<Box ref={tableRef}>
 			{showToolbar && (
-				<Flex gap="3" mb="3" align="end">
+				<Flex gap="3" mb="3" align="end" className={styles.toolbar}>
 					{f.globalFilter && (
-						<Box maxWidth="300px" flexGrow="1">
+						<Box maxWidth="300px" flexGrow="1" className={styles.searchBox}>
 							<TextField.Root
 								placeholder="検索..."
 								value={globalFilter}
@@ -378,7 +378,7 @@ export function DataTable<T extends RowData>({
 							</TextField.Root>
 						</Box>
 					)}
-					<Box flexGrow="1" />
+					<Box flexGrow="1" className={styles.toolbarSpacer} />
 					{f.columnVisibility && (
 						<Popover.Root>
 							<Popover.Trigger>

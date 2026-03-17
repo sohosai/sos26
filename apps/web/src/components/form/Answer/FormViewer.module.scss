@@ -79,3 +79,25 @@
 	align-items: center;
 	gap: var(--space-2);
 }
+
+@media (max-width: 768px) {
+	.content {
+		padding: var(--space-3) var(--space-4);
+		gap: var(--space-4);
+	}
+
+	.itemCard {
+		padding: var(--space-3);
+	}
+
+	.footer {
+		padding: var(--space-3) var(--space-4);
+		flex-direction: column-reverse;
+		align-items: stretch;
+	}
+
+	.footer :global(button) {
+		width: 100%;
+		justify-content: center;
+	}
+}

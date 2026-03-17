@@ -35,10 +35,25 @@ export function ProjectSelector({
 	hasPrivilegedProject,
 }: ProjectSelectorProps) {
 	const [open, setOpen] = useState(false);
+	const [isMobile, setIsMobile] = useState(false);
 	const [showJoinInput, setShowJoinInput] = useState(false);
 	const [inviteCode, setInviteCode] = useState("");
 	const joinInputContainerRef = useRef<HTMLDivElement>(null);
 	const selectedProject = projects.find(p => p.id === selectedProjectId);
+
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+
+		const mediaQuery = window.matchMedia("(max-width: 900px)");
+		const handleMediaChange = () => {
+			setIsMobile(mediaQuery.matches);
+		};
+
+		handleMediaChange();
+		mediaQuery.addEventListener("change", handleMediaChange);
+
+		return () => mediaQuery.removeEventListener("change", handleMediaChange);
+	}, []);
 
 	useEffect(() => {
 		if (!showJoinInput) return;
@@ -97,7 +112,11 @@ export function ProjectSelector({
 	return (
 		<Popover.Root open={open} onOpenChange={setOpen}>
 			<Popover.Trigger>{trigger}</Popover.Trigger>
-			<Popover.Content side="right" align="start" className={styles.content}>
+			<Popover.Content
+				side={isMobile ? "bottom" : "right"}
+				align={isMobile ? "center" : "start"}
+				className={`${styles.content} ${isMobile ? styles.mobileContent : ""}`}
+			>
 				{projects.length > 0 && (
 					<>
 						<Text size="1" color="gray" className={styles.sectionLabel}>

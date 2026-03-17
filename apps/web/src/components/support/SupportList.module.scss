@@ -155,7 +155,9 @@
 	background-color: var(--gray-1);
 	border: 1px solid var(--gray-6);
 	border-radius: var(--radius-3);
-	transition: border-color 0.15s, box-shadow 0.15s;
+	transition:
+		border-color 0.15s,
+		box-shadow 0.15s;
 
 	&:hover {
 		border-color: var(--accent-7);
@@ -264,4 +266,48 @@
 	font-size: var(--font-size-1);
 	font-weight: 600;
 	margin-left: -6px;
+}
+
+@media (max-width: 768px) {
+	.container {
+		max-width: 100%;
+		gap: var(--space-4);
+	}
+
+	.titleRow {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.titleRow :global(button) {
+		width: 100%;
+		justify-content: center;
+	}
+
+	.tabs {
+		overflow-x: auto;
+		padding-bottom: var(--space-1);
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.tab {
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+
+	.search {
+		max-width: 100%;
+	}
+
+	.cardButton {
+		padding: var(--space-3);
+	}
+
+	.cardTitleRow {
+		flex-wrap: wrap;
+	}
+
+	.assignees {
+		margin-left: 0;
+	}
 }

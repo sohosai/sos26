@@ -41,6 +41,7 @@ type IconButtonProps = {
 	intent?: keyof typeof intentMap;
 	size?: "1" | "2";
 	disabled?: boolean;
+	className?: string;
 	type?: "button" | "submit" | "reset";
 	onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
 	"aria-label"?: string;
@@ -53,6 +54,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
 			intent = "ghost",
 			size = "2",
 			disabled = false,
+			className,
 			type = "button",
 			onClick,
 			"aria-label": ariaLabel,
@@ -64,7 +66,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
 		return (
 			<RadixIconButton
 				ref={ref}
-				className={styles.iconButton}
+				className={`${styles.iconButton}${className ? ` ${className}` : ""}`}
 				variant={variant}
 				color={color}
 				size={size}

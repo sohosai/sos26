@@ -14,3 +14,11 @@
 		margin-left: 64px;
 	}
 }
+
+@media (max-width: 900px) {
+	.main {
+		margin-left: 0;
+		padding: var(--space-4);
+		padding-top: calc(var(--space-8) + var(--space-2));
+	}
+}

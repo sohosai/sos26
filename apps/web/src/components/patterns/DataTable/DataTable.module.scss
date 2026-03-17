@@ -29,3 +29,22 @@
 .selecting {
 	user-select: none;
 }
+
+.toolbar {
+	flex-wrap: wrap;
+}
+
+.searchBox {
+	min-width: 220px;
+}
+
+@media (max-width: 768px) {
+	.searchBox {
+		min-width: 100%;
+		max-width: 100%;
+	}
+
+	.toolbarSpacer {
+		display: none;
+	}
+}

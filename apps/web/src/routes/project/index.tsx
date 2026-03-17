@@ -101,13 +101,15 @@ function ProjectIndexPage() {
 				</Text>
 			</header>
 
-			<Table.Root className={styles.infoTable}>
-				<Table.Body>
-					{rows.map(row => (
-						<InfoRow key={row.label} label={row.label} value={row.value} />
-					))}
-				</Table.Body>
-			</Table.Root>
+			<div className={styles.tableWrap}>
+				<Table.Root className={styles.infoTable}>
+					<Table.Body>
+						{rows.map(row => (
+							<InfoRow key={row.label} label={row.label} value={row.value} />
+						))}
+					</Table.Body>
+				</Table.Root>
+			</div>
 
 			{registrationFormResponses.length > 0 && (
 				<section className={styles.section}>
@@ -115,20 +117,22 @@ function ProjectIndexPage() {
 						{registrationFormResponses.map(response => (
 							<div key={response.id} className={styles.formResponseCard}>
 								<Heading size="3">{response.form.title}</Heading>
-								<Table.Root className={styles.infoTable}>
-									<Table.Body>
-										{response.answers.map(answer => (
-											<Table.Row key={answer.formItemId}>
-												<Table.RowHeaderCell className={styles.label}>
-													{answer.formItemLabel}
-												</Table.RowHeaderCell>
-												<Table.Cell className={styles.value}>
-													{formatAnswerValue(answer)}
-												</Table.Cell>
-											</Table.Row>
-										))}
-									</Table.Body>
-								</Table.Root>
+								<div className={styles.tableWrap}>
+									<Table.Root className={styles.infoTable}>
+										<Table.Body>
+											{response.answers.map(answer => (
+												<Table.Row key={answer.formItemId}>
+													<Table.RowHeaderCell className={styles.label}>
+														{answer.formItemLabel}
+													</Table.RowHeaderCell>
+													<Table.Cell className={styles.value}>
+														{formatAnswerValue(answer)}
+													</Table.Cell>
+												</Table.Row>
+											))}
+										</Table.Body>
+									</Table.Root>
+								</div>
 							</div>
 						))}
 					</div>
