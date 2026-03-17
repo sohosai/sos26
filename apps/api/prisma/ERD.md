@@ -138,6 +138,7 @@ erDiagram
   NoticeAuthorizationStatus status
   DateTime decidedAt "nullable"
   DateTime deliveredAt
+  DateTime deliveryNotifiedAt "nullable"
   DeliveryMode deliveryMode
   ProjectType filterTypes
   ProjectLocation filterLocations
@@ -220,6 +221,7 @@ erDiagram
   ApprovalStatus status
   DateTime decidedAt "nullable"
   DateTime scheduledSendAt
+  DateTime deliveryNotifiedAt "nullable"
   DateTime deadlineAt "nullable"
   Boolean allowLateResponse
   Boolean required
@@ -770,6 +772,7 @@ Properties as follows:
 - `status`:
 - `decidedAt`:
 - `deliveredAt`:
+- `deliveryNotifiedAt`:
 - `deliveryMode`:
 - `filterTypes`:
 - `filterLocations`:
@@ -876,6 +879,7 @@ Properties as follows:
 - `status`:
 - `decidedAt`:
 - `scheduledSendAt`:
+- `deliveryNotifiedAt`:
 - `deadlineAt`:
 - `allowLateResponse`:
 - `required`:

@@ -457,6 +457,9 @@ model NoticeAuthorization {
   //承認を求める側があらかじめここを埋める
   deliveredAt DateTime
 
+  // 配信通知（メール/Push）を送信した日時
+  deliveryNotifiedAt DateTime?
+
   //配信先指定モード
   deliveryMode DeliveryMode @default(INDIVIDUAL)
 
@@ -719,6 +722,9 @@ model FormAuthorization {
 
   //配信したい日時
   scheduledSendAt DateTime
+
+  // 配信通知（メール/Push）を送信した日時
+  deliveryNotifiedAt DateTime?
 
   //回答期限
   deadlineAt DateTime?
