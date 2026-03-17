@@ -1,4 +1,9 @@
-import type { FormAnswerInput, FormAnswerValidationItem } from "@sos26/shared";
+import type {
+	FormAnswerFile,
+	FormAnswerInput,
+	FormAnswerValidationItem,
+} from "@sos26/shared";
+import { buildFileExtensionsLabel } from "@sos26/shared";
 import { Errors } from "./error";
 
 // ─────────────────────────────────────────────────────────────
@@ -150,6 +155,39 @@ export function assertFileCountConstraints(
 
 		if (maxFiles !== undefined && fileCount > maxFiles) {
 			throw Errors.invalidRequest(`${maxFiles}個以内で添付してください`);
+		}
+	}
+}
+
+// ─────────────────────────────────────────────────────────────
+// MIMEタイプ制約チェック: FILE のアップロード済みファイルが許可されたMIMEタイプか
+// ─────────────────────────────────────────────────────────────
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: validation logic requires nested checks
+export function assertFileMimeTypeConstraints(
+	formItems: FormAnswerValidationItem[],
+	answers: FormAnswerInput[],
+	fileMap: Map<string, FormAnswerFile>
+) {
+	const answerMap = new Map(answers.map(a => [a.formItemId, a]));
+
+	for (const item of formItems) {
+		if (item.type !== "FILE") continue;
+
+		const allowedTypes = item.constraints?.allowedMimeTypes;
+		if (!allowedTypes || allowedTypes.length === 0) continue;
+
+		const answer = answerMap.get(item.id);
+		if (!answer || answer.type !== "FILE") continue;
+
+		const allowedSet = new Set(allowedTypes);
+		for (const fileId of answer.fileIds) {
+			const file = fileMap.get(fileId);
+			if (!file) continue;
+			if (!allowedSet.has(file.mimeType as never)) {
+				throw Errors.invalidRequest(
+					`対応していないファイル形式です（${buildFileExtensionsLabel(allowedTypes)}）`
+				);
+			}
 		}
 	}
 }

@@ -4,7 +4,13 @@ import {
 	TextField as RadixTextField,
 	Text,
 } from "@radix-ui/themes";
-import type { Bureau, ViewerScope } from "@sos26/shared";
+import {
+	type AllowedMimeType,
+	allowedFileExtensions,
+	allowedMimeTypes,
+	type Bureau,
+	type ViewerScope,
+} from "@sos26/shared";
 import { IconCheck, IconChevronDown, IconSearch } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -386,6 +392,7 @@ export function NewInquiryForm({
 		initialData?.fileIds ?? []
 	);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const [fileError, setFileError] = useState<string | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [confirmClose, setConfirmClose] = useState(false);
 
@@ -445,7 +452,10 @@ export function NewInquiryForm({
 			await onSubmit({ ...params, isDraft });
 			return { ok: true };
 		} catch {
-			return { ok: false, message: getErrorMessage(isDraft) };
+			return {
+				ok: false,
+				message: getErrorMessage(isDraft),
+			};
 		}
 	};
 
@@ -472,7 +482,23 @@ export function NewInquiryForm({
 	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const { files } = e.target;
 		if (files) {
-			setSelectedFiles(prev => [...prev, ...Array.from(files)]);
+			const added = Array.from(files);
+			const invalid = added.filter(
+				f => !allowedMimeTypes.includes(f.type as AllowedMimeType)
+			);
+			const valid = added.filter(f =>
+				allowedMimeTypes.includes(f.type as AllowedMimeType)
+			);
+			if (invalid.length > 0) {
+				setFileError(
+					`対応していないファイル形式です（${allowedFileExtensions}）`
+				);
+			} else {
+				setFileError(null);
+			}
+			if (valid.length > 0) {
+				setSelectedFiles(prev => [...prev, ...valid]);
+			}
 		}
 		e.target.value = "";
 	};
@@ -593,6 +619,7 @@ export function NewInquiryForm({
 						selectedFiles={selectedFiles}
 						onFileSelect={handleFileSelect}
 						onRemoveFile={removeFile}
+						error={fileError}
 					/>
 
 					<InfoBox viewerRole={viewerRole} currentUser={currentUser} />

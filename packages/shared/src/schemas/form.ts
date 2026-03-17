@@ -8,7 +8,7 @@ import {
 	projectTypeSchema,
 	viewerScopeSchema,
 } from "./common";
-import { formAnswerFileSchema } from "./file";
+import { formAnswerFileSchema, mimeTypeSchema } from "./file";
 import { viewerInputSchema } from "./inquiry";
 import { userSchema } from "./user";
 
@@ -45,6 +45,7 @@ export const formAnswerValidationItemSchema = z.object({
 			customPattern: z.string().optional(),
 			minFiles: z.number().int().nonnegative().optional(),
 			maxFiles: z.number().int().positive().optional(),
+			allowedMimeTypes: z.array(mimeTypeSchema).min(1).optional(),
 		})
 		.nullable()
 		.optional(),
@@ -95,6 +96,7 @@ export const fileConstraintsSchema = z
 	.object({
 		minFiles: z.number().int().nonnegative().optional(),
 		maxFiles: z.number().int().positive().optional(),
+		allowedMimeTypes: z.array(mimeTypeSchema).min(1).optional(),
 	})
 	.refine(
 		({ minFiles, maxFiles }) =>
@@ -114,6 +116,7 @@ export const formItemConstraintsSchema = z
 		customPattern: textConstraintsSchema.shape.customPattern,
 		minFiles: fileConstraintsSchema.shape.minFiles,
 		maxFiles: fileConstraintsSchema.shape.maxFiles,
+		allowedMimeTypes: fileConstraintsSchema.shape.allowedMimeTypes,
 	})
 	.refine(
 		({ minLength, maxLength }) =>
@@ -147,7 +150,9 @@ function hasFileConstraints(
 	constraints: FormItemConstraints | null | undefined
 ): boolean {
 	return (
-		constraints?.minFiles !== undefined || constraints?.maxFiles !== undefined
+		constraints?.minFiles !== undefined ||
+		constraints?.maxFiles !== undefined ||
+		constraints?.allowedMimeTypes !== undefined
 	);
 }
 

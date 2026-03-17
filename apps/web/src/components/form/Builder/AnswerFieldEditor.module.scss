@@ -26,6 +26,7 @@
 }
 
 .constraintRow {
+	padding: var(--space-3);
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
@@ -35,3 +36,6 @@
   margin-top: var(--space-1);
 }
 
+.constraintMimeTypesField {
+	grid-column: 1 / 3;
+}

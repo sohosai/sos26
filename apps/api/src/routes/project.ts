@@ -9,9 +9,14 @@ import {
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
-import { mapAnswerFiles, normalizeFileIds } from "../lib/form-answer-files";
+import {
+	getConfirmedFileMap,
+	mapAnswerFiles,
+	normalizeFileIds,
+} from "../lib/form-answer-files";
 import {
 	assertFileCountConstraints,
+	assertFileMimeTypeConstraints,
 	assertFormAnswersValid,
 	assertRequiredAnswered,
 } from "../lib/form-answer-validation";
@@ -59,7 +64,7 @@ const buildPrismaAnswerData = (
 });
 
 // 企画登録フォームの過不足・内容チェック
-function validateRegistrationFormAnswers(
+async function validateRegistrationFormAnswers(
 	applicableForms: {
 		id: string;
 		filterLocations: string[];
@@ -100,6 +105,14 @@ function validateRegistrationFormAnswers(
 			assertFormAnswersValid(items, answers);
 			assertRequiredAnswered(items, answers);
 			assertFileCountConstraints(items, answers);
+
+			const allFileIds = answers.flatMap(a =>
+				a.type === "FILE" ? a.fileIds : []
+			);
+			if (allFileIds.length > 0) {
+				const fileMap = await getConfirmedFileMap(prisma, allFileIds);
+				assertFileMimeTypeConstraints(items, answers, fileMap);
+			}
 		}
 	}
 }
@@ -161,6 +174,7 @@ projectRoute.post("/create", requireAuth, async c => {
 						constraintCustomPattern: true,
 						constraintMinFiles: true,
 						constraintMaxFiles: true,
+						constraintAllowedMimeTypes: true,
 					},
 					orderBy: { sortOrder: "asc" },
 				},
@@ -170,7 +184,7 @@ projectRoute.post("/create", requireAuth, async c => {
 			...form,
 			items: form.items.map(mapItemToApiShape),
 		}));
-		validateRegistrationFormAnswers(
+		await validateRegistrationFormAnswers(
 			applicableFormsWithConstraints,
 			data.location,
 			registrationFormAnswers

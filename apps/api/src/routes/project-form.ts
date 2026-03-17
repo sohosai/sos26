@@ -12,11 +12,13 @@ import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import {
 	formAnswerFileSelect,
+	getConfirmedFileMap,
 	mapAnswerFiles,
 	normalizeFileIds,
 } from "../lib/form-answer-files";
 import {
 	assertFileCountConstraints,
+	assertFileMimeTypeConstraints,
 	assertFormAnswersValid,
 	assertRequiredAnswered,
 } from "../lib/form-answer-validation";
@@ -71,6 +73,7 @@ const getDeliveryOrThrow = async (
 									constraintCustomPattern: true,
 									constraintMinFiles: true,
 									constraintMaxFiles: true,
+									constraintAllowedMimeTypes: true,
 								},
 								orderBy: { sortOrder: "asc" },
 							},
@@ -622,6 +625,14 @@ projectFormRoute.post(
 			assertRequiredAnswered(validationItems, answers);
 			assertFileCountConstraints(validationItems, answers);
 			assertTextConstraints(delivery.formAuthorization.form.items, answers);
+
+			const allFileIds = answers.flatMap(a =>
+				a.type === "FILE" ? a.fileIds : []
+			);
+			if (allFileIds.length > 0) {
+				const fileMap = await getConfirmedFileMap(prisma, allFileIds);
+				assertFileMimeTypeConstraints(validationItems, answers, fileMap);
+			}
 		}
 
 		const response = await prisma.$transaction(async tx => {
@@ -704,6 +715,14 @@ projectFormRoute.patch(
 			assertRequiredAnswered(validationItems, answers);
 			assertFileCountConstraints(validationItems, answers);
 			assertTextConstraints(delivery.formAuthorization.form.items, answers);
+
+			const allFileIds = answers.flatMap(a =>
+				a.type === "FILE" ? a.fileIds : []
+			);
+			if (allFileIds.length > 0) {
+				const fileMap = await getConfirmedFileMap(prisma, allFileIds);
+				assertFileMimeTypeConstraints(validationItems, answers, fileMap);
+			}
 		}
 
 		const response = await prisma.$transaction(async tx => {
