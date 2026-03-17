@@ -284,6 +284,31 @@ function RouteComponent() {
 		}
 	};
 
+	const formDetailSidebar = (
+		<FormDetailSidebar
+			form={form}
+			userId={user?.id ?? ""}
+			isOwner={isOwner}
+			canEdit={canEdit}
+			isViewer={isViewer}
+			availableMembers={availableMembers}
+			approvers={approvers}
+			committeeMembers={committeeMembers.map(m => ({
+				id: m.user.id,
+				name: m.user.name,
+			}))}
+			removingId={removingId}
+			onAddCollaborator={handleAddCollaborator}
+			onRemoveCollaborator={handleRemoveCollaborator}
+			onApprove={handleApprove}
+			onReject={handleReject}
+			onUpdateViewers={handleUpdateViewers}
+			onPublishSuccess={() => router.invalidate()}
+			onEdit={() => setEditDialogOpen(true)}
+			onDelete={() => setDeleteConfirmOpen(true)}
+		/>
+	);
+
 	return (
 		<div className={styles.layout}>
 			<div className={styles.main}>
@@ -327,7 +352,10 @@ function RouteComponent() {
 
 				{/* タブコンテンツ */}
 				{activeTab === "content" ? (
-					<ContentTab form={form} previewForm={previewForm} />
+					<div className={styles.contentLayout}>
+						<ContentTab form={form} previewForm={previewForm} />
+						{formDetailSidebar}
+					</div>
 				) : (
 					<AnswersTab
 						items={form.items}
@@ -336,29 +364,6 @@ function RouteComponent() {
 					/>
 				)}
 			</div>
-
-			<FormDetailSidebar
-				form={form}
-				userId={user?.id ?? ""}
-				isOwner={isOwner}
-				canEdit={canEdit}
-				isViewer={isViewer}
-				availableMembers={availableMembers}
-				approvers={approvers}
-				committeeMembers={committeeMembers.map(m => ({
-					id: m.user.id,
-					name: m.user.name,
-				}))}
-				removingId={removingId}
-				onAddCollaborator={handleAddCollaborator}
-				onRemoveCollaborator={handleRemoveCollaborator}
-				onApprove={handleApprove}
-				onReject={handleReject}
-				onUpdateViewers={handleUpdateViewers}
-				onPublishSuccess={() => router.invalidate()}
-				onEdit={() => setEditDialogOpen(true)}
-				onDelete={() => setDeleteConfirmOpen(true)}
-			/>
 
 			{/* 編集ダイアログ */}
 			<EditFormDialog

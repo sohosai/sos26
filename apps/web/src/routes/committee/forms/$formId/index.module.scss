@@ -1,12 +1,8 @@
 .layout {
-	display: grid;
-	grid-template-columns: 1fr 280px;
-	gap: var(--space-6);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-5);
 	max-width: 1100px;
-
-	@media (max-width: 768px) {
-		grid-template-columns: 1fr;
-	}
 }
 
 .main {
@@ -112,6 +108,17 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-5);
+}
+
+.contentLayout {
+	display: grid;
+	grid-template-columns: 1fr 280px;
+	gap: var(--space-6);
+	align-items: start;
+
+	@media (max-width: 768px) {
+		grid-template-columns: 1fr;
+	}
 }
 
 /* ─── Empty state ─── */
