@@ -41,6 +41,23 @@ export const fileSchema = z.object({
 export type FileInfo = z.infer<typeof fileSchema>;
 
 /**
+ * フォーム回答で返す実用的なファイル要約
+ */
+export const formAnswerFileSchema = fileSchema
+	.pick({
+		id: true,
+		fileName: true,
+		mimeType: true,
+		size: true,
+		isPublic: true,
+		createdAt: true,
+	})
+	.extend({
+		sortOrder: z.number().int().nonnegative(),
+	});
+export type FormAnswerFile = z.infer<typeof formAnswerFileSchema>;
+
+/**
  * アップロードURL要求
  */
 export const requestUploadUrlRequestSchema = z.object({

@@ -5,6 +5,10 @@ import type {
 	ViewerScope,
 } from "@prisma/client";
 import { Errors } from "../../lib/error";
+import {
+	formAnswerFileSelect,
+	mapAnswerFiles,
+} from "../../lib/form-answer-files";
 import { prisma } from "../../lib/prisma";
 
 // ─────────────────────────────────────────────────────────────
@@ -169,13 +173,23 @@ function computeCellStatus(
 export type FormResponseWithAnswers = Prisma.FormResponseGetPayload<{
 	include: {
 		answers: {
-			include: { selectedOptions: { select: { formItemOptionId: true } } };
+			include: {
+				files: {
+					orderBy: { sortOrder: "asc" };
+					include: { file: { select: typeof formAnswerFileSelect } };
+				};
+				selectedOptions: { select: { formItemOptionId: true } };
+			};
 		};
 	};
 }>;
 
 export type HistoryWithOptions = Prisma.FormItemEditHistoryGetPayload<{
 	include: {
+		files: {
+			orderBy: { sortOrder: "asc" };
+			include: { file: { select: typeof formAnswerFileSelect } };
+		};
 		selectedOptions: { select: { formItemOptionId: true } };
 	};
 }>;
@@ -191,6 +205,10 @@ export async function fetchLatestHistoryByCell(
 		where: { formItemId: { in: formItemIds } },
 		orderBy: { createdAt: "desc" },
 		include: {
+			files: {
+				orderBy: { sortOrder: "asc" },
+				include: { file: { select: formAnswerFileSelect } },
+			},
 			selectedOptions: { select: { formItemOptionId: true } },
 		},
 	});
@@ -229,7 +247,7 @@ export function buildFormItemCell(
 			formValue: {
 				textValue: latestHistory.textValue,
 				numberValue: latestHistory.numberValue,
-				fileId: latestHistory.fileId,
+				files: mapAnswerFiles(latestHistory.files),
 				selectedOptionIds: latestHistory.selectedOptions.map(
 					s => s.formItemOptionId
 				),
@@ -244,7 +262,7 @@ export function buildFormItemCell(
 		? {
 				textValue: answer.textValue,
 				numberValue: answer.numberValue,
-				fileId: answer.fileId,
+				files: mapAnswerFiles(answer.files),
 				selectedOptionIds: answer.selectedOptions.map(s => s.formItemOptionId),
 			}
 		: null;

@@ -63,18 +63,22 @@ type FormFileAssociation = {
 async function getFormAnswerAssociations(
 	fileId: string
 ): Promise<FormFileAssociation[]> {
-	const answers = await prisma.formAnswer.findMany({
+	const answerFiles = await prisma.formAnswerFile.findMany({
 		where: { fileId },
 		select: {
-			formResponse: {
+			answer: {
 				select: {
-					submittedAt: true,
-					formDelivery: {
+					formResponse: {
 						select: {
-							projectId: true,
-							formAuthorization: {
+							submittedAt: true,
+							formDelivery: {
 								select: {
-									formId: true,
+									projectId: true,
+									formAuthorization: {
+										select: {
+											formId: true,
+										},
+									},
 								},
 							},
 						},
@@ -84,31 +88,36 @@ async function getFormAnswerAssociations(
 		},
 	});
 
-	return answers.map(answer => ({
-		projectId: answer.formResponse.formDelivery.projectId,
-		formId: answer.formResponse.formDelivery.formAuthorization.formId,
-		committeeCanAccess: answer.formResponse.submittedAt !== null,
+	return answerFiles.map(answerFile => ({
+		projectId: answerFile.answer.formResponse.formDelivery.projectId,
+		formId:
+			answerFile.answer.formResponse.formDelivery.formAuthorization.formId,
+		committeeCanAccess: answerFile.answer.formResponse.submittedAt !== null,
 	}));
 }
 
 async function getEditHistoryAssociations(
 	fileId: string
 ): Promise<FormFileAssociation[]> {
-	const historyRows = await prisma.formItemEditHistory.findMany({
+	const historyFiles = await prisma.formItemEditHistoryFile.findMany({
 		where: { fileId },
 		select: {
-			projectId: true,
-			formItem: {
+			editHistory: {
 				select: {
-					formId: true,
+					projectId: true,
+					formItem: {
+						select: {
+							formId: true,
+						},
+					},
 				},
 			},
 		},
 	});
 
-	return historyRows.map(history => ({
-		projectId: history.projectId,
-		formId: history.formItem.formId,
+	return historyFiles.map(historyFile => ({
+		projectId: historyFile.editHistory.projectId,
+		formId: historyFile.editHistory.formItem.formId,
 		committeeCanAccess: true,
 	}));
 }

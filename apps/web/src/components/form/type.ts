@@ -1,15 +1,18 @@
 import type { FormItemType, TextConstraints } from "@sos26/shared";
 
 export type UploadedFileValue = {
-	fileId: string;
-	fileName: string | null;
-	mimeType: string | null;
-	isPublic: boolean | null;
+	id: string;
+	fileName: string;
+	mimeType: string;
+	size: number;
+	isPublic: boolean;
+	createdAt?: string;
+	sortOrder: number;
 };
 
 export type FileAnswerValue = {
-	pendingFile: File | null;
-	uploadedFile: UploadedFileValue | null;
+	pendingFiles: File[];
+	uploadedFiles: UploadedFileValue[];
 };
 
 export type DownloadFileNameContext = {
@@ -31,8 +34,8 @@ export type FormAnswers = {
 
 export function createEmptyFileAnswerValue(): FileAnswerValue {
 	return {
-		pendingFile: null,
-		uploadedFile: null,
+		pendingFiles: [],
+		uploadedFiles: [],
 	};
 }
 
@@ -42,8 +45,8 @@ export function isFileAnswerValue(
 	return (
 		typeof value === "object" &&
 		value !== null &&
-		"pendingFile" in value &&
-		"uploadedFile" in value
+		"pendingFiles" in value &&
+		"uploadedFiles" in value
 	);
 }
 

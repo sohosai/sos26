@@ -5,20 +5,18 @@ import styles from "./FileUploadField.module.scss";
 
 type FileUploadProps = {
 	label: string;
-	value?: File | null;
-	onChange: (file: File | null) => void;
+	value?: File[];
+	onChange: (files: File[]) => void;
 	required?: boolean;
 	disabled?: boolean;
-	uploadedFileName?: string;
+	uploadedFileNames?: string[];
 };
 
 export function FileUploadField({
 	label,
-	value,
 	onChange,
 	required,
 	disabled,
-	uploadedFileName,
 }: FileUploadProps) {
 	const id = useId();
 	const inputRef = useRef<HTMLInputElement>(null);
@@ -45,11 +43,12 @@ export function FileUploadField({
 					id={id}
 					ref={inputRef}
 					type="file"
+					multiple
 					className={styles.fileInput}
 					required={required}
 					onChange={e => {
-						const file = e.target.files?.[0] ?? null;
-						onChange(file);
+						onChange(Array.from(e.target.files ?? []));
+						e.currentTarget.value = "";
 					}}
 					disabled={disabled}
 				/>
@@ -60,9 +59,6 @@ export function FileUploadField({
 				>
 					ファイルを選択
 				</Button>
-				<Text size="2">
-					{value?.name ?? uploadedFileName ?? "選択されていません"}
-				</Text>
 			</div>
 		</div>
 	);

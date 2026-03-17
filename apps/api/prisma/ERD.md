@@ -247,9 +247,15 @@ erDiagram
   String formItemId FK
   String textValue "nullable"
   Float numberValue "nullable"
-  String fileId "nullable"
   DateTime createdAt
   DateTime updatedAt
+}
+"FormAnswerFile" {
+  String id PK
+  String answerId FK
+  String fileId FK
+  Int sortOrder
+  DateTime createdAt
 }
 "FormAnswerSelectedOption" {
   String id PK
@@ -360,9 +366,15 @@ erDiagram
   String projectId FK
   String textValue "nullable"
   Float numberValue "nullable"
-  String fileId "nullable"
   String actorId FK
   FormItemEditHistoryTrigger trigger
+  DateTime createdAt
+}
+"FormItemEditHistoryFile" {
+  String id PK
+  String editHistoryId FK
+  String fileId FK
+  Int sortOrder
   DateTime createdAt
 }
 "FormItemEditHistorySelectedOption" {
@@ -464,9 +476,15 @@ erDiagram
   String formItemId FK
   String textValue "nullable"
   Float numberValue "nullable"
-  String fileId FK "nullable"
   DateTime createdAt
   DateTime updatedAt
+}
+"ProjectRegistrationFormAnswerFile" {
+  String id PK
+  String answerId FK
+  String fileId FK
+  Int sortOrder
+  DateTime createdAt
 }
 "ProjectRegistrationFormAnswerSelectedOption" {
   String id PK
@@ -511,6 +529,8 @@ erDiagram
 "FormResponse" }o--|| "User" : respondent
 "FormAnswer" }o--|| "FormResponse" : formResponse
 "FormAnswer" }o--|| "FormItem" : formItem
+"FormAnswerFile" }o--|| "FormAnswer" : answer
+"FormAnswerFile" }o--|| "File" : file
 "FormAnswerSelectedOption" }o--|| "FormAnswer" : formAnswer
 "FormAnswerSelectedOption" }o--|| "FormItemOption" : formItemOption
 "NoticeReadStatus" }o--|| "NoticeDelivery" : noticeDelivery
@@ -540,6 +560,8 @@ erDiagram
 "FormItemEditHistory" }o--|| "FormItem" : formItem
 "FormItemEditHistory" }o--|| "Project" : project
 "FormItemEditHistory" }o--|| "User" : actor
+"FormItemEditHistoryFile" }o--|| "FormItemEditHistory" : editHistory
+"FormItemEditHistoryFile" }o--|| "File" : file
 "FormItemEditHistorySelectedOption" }o--|| "FormItemEditHistory" : editHistory
 "FormItemEditHistorySelectedOption" }o--|| "FormItemOption" : formItemOption
 "MastersheetColumnViewer" }o--|| "MastersheetColumn" : column
@@ -561,7 +583,8 @@ erDiagram
 "ProjectRegistrationFormResponse" }o--|| "Project" : project
 "ProjectRegistrationFormAnswer" }o--|| "ProjectRegistrationFormResponse" : response
 "ProjectRegistrationFormAnswer" }o--|| "ProjectRegistrationFormItem" : formItem
-"ProjectRegistrationFormAnswer" }o--o| "File" : file
+"ProjectRegistrationFormAnswerFile" }o--|| "ProjectRegistrationFormAnswer" : answer
+"ProjectRegistrationFormAnswerFile" }o--|| "File" : file
 "ProjectRegistrationFormAnswerSelectedOption" }o--|| "ProjectRegistrationFormAnswer" : answer
 "ProjectRegistrationFormAnswerSelectedOption" }o--|| "ProjectRegistrationFormItemOption" : formItemOption
 ```
@@ -880,9 +903,18 @@ Properties as follows:
 - `formItemId`:
 - `textValue`:
 - `numberValue`:
-- `fileId`:
 - `createdAt`:
 - `updatedAt`:
+
+### `FormAnswerFile`
+
+Properties as follows:
+
+- `id`:
+- `answerId`:
+- `fileId`:
+- `sortOrder`:
+- `createdAt`:
 
 ### `FormAnswerSelectedOption`
 
@@ -1032,9 +1064,18 @@ Properties as follows:
 - `projectId`:
 - `textValue`:
 - `numberValue`:
-- `fileId`:
 - `actorId`:
 - `trigger`:
+- `createdAt`:
+
+### `FormItemEditHistoryFile`
+
+Properties as follows:
+
+- `id`:
+- `editHistoryId`:
+- `fileId`:
+- `sortOrder`:
 - `createdAt`:
 
 ### `FormItemEditHistorySelectedOption`
@@ -1169,9 +1210,18 @@ Properties as follows:
 - `formItemId`:
 - `textValue`:
 - `numberValue`:
-- `fileId`:
 - `createdAt`:
 - `updatedAt`:
+
+### `ProjectRegistrationFormAnswerFile`
+
+Properties as follows:
+
+- `id`:
+- `answerId`:
+- `fileId`:
+- `sortOrder`:
+- `createdAt`:
 
 ### `ProjectRegistrationFormAnswerSelectedOption`
 

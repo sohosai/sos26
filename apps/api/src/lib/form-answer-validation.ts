@@ -105,7 +105,7 @@ export function assertRequiredAnswered(
 					return answer.numberValue == null;
 
 				case "FILE":
-					return !answer.fileId;
+					return !answer.fileIds || answer.fileIds.length === 0;
 
 				case "SELECT":
 				case "CHECKBOX":

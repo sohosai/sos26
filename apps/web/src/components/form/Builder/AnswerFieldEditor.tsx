@@ -154,7 +154,7 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 				<div className={styles.preview}>
 					<FileUploadField
 						label={""}
-						value={null}
+						value={[]}
 						onChange={() => {}}
 						required={false}
 						disabled

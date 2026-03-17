@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formAnswerFileSchema } from "./file";
 import {
 	formItemOptionSchema,
 	formItemSchema,
@@ -402,7 +403,7 @@ export const projectRegistrationFormResponseAnswerSchema = z.object({
 	formItemId: z.string(),
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileId: z.string().nullable(),
+	files: z.array(formAnswerFileSchema),
 	selectedOptions: z.array(
 		z.object({
 			id: z.string(),

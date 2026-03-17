@@ -1,5 +1,6 @@
+import { Flex, Text } from "@radix-ui/themes";
 import { IconFileSearch } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import FilePreviewDialog from "@/components/filePreview/FilePreviewDialog";
 import type { UploadedFileValue } from "@/components/form/type";
@@ -10,105 +11,88 @@ import styles from "./FileUploadFieldWithPreview.module.scss";
 
 type FileUploadProps = {
 	label: string;
-	value?: File | null;
-	uploadedFile?: UploadedFileValue | null;
-	downloadFileName?: string;
-	onChange: (file: File | null) => void;
+	value?: File[];
+	uploadedFiles?: UploadedFileValue[];
+	onChange: (files: File[]) => void;
 	required?: boolean;
 	disabled?: boolean;
+	"aria-label"?: string;
 };
-
-function canPreviewUploadedFile(
-	uploadedFile?: UploadedFileValue | null
-): uploadedFile is {
-	fileId: string;
-	fileName: string;
-	mimeType: string;
-	isPublic: boolean;
-} {
-	return (
-		uploadedFile?.fileName != null &&
-		uploadedFile.mimeType != null &&
-		uploadedFile.isPublic != null
-	);
-}
 
 export function FileUploadFieldWithPreview({
 	label,
-	value,
-	uploadedFile,
-	downloadFileName,
+	value = [],
+	uploadedFiles = [],
 	onChange,
 	required,
 	disabled,
+	"aria-label": ariaLabel,
 }: FileUploadProps) {
-	const [fetchedFile, setFetchedFile] = useState<File | null>(null);
+	const [previewFile, setPreviewFile] = useState<File | null>(null);
+	const [previewedUploadedFile, setPreviewedUploadedFile] =
+		useState<UploadedFileValue | null>(null);
 	const [open, setOpen] = useState(false);
-	const [isFetching, setIsFetching] = useState(false);
-	const uploadedFileId = uploadedFile?.fileId ?? null;
+	const [loadingFileId, setLoadingFileId] = useState<string | null>(null);
 
-	useEffect(() => {
-		if (uploadedFileId === null) {
-			setFetchedFile(null);
-			return;
-		}
-		setFetchedFile(null);
-	}, [uploadedFileId]);
+	const sortedUploadedFiles = useMemo(
+		() => uploadedFiles.slice().sort((a, b) => a.sortOrder - b.sortOrder),
+		[uploadedFiles]
+	);
+	const previewLabel = ariaLabel ?? (label || "ファイル");
 
-	const previewFile = value ?? fetchedFile;
-	const uploadedFileName =
-		uploadedFile?.fileName ?? (uploadedFile ? "アップロード済み" : undefined);
-
-	const handleDownload = async () => {
-		if (!canPreviewUploadedFile(uploadedFile)) {
-			return;
-		}
-
-		try {
-			await downloadFile(
-				uploadedFile.fileId,
-				uploadedFile.fileName,
-				uploadedFile.isPublic,
-				downloadFileName
-			);
-		} catch {
-			toast.error("ファイルのダウンロードに失敗しました");
-		}
+	const handlePendingFilePreview = (file: File) => {
+		setPreviewFile(file);
+		setPreviewedUploadedFile(null);
+		setOpen(true);
 	};
 
-	const handlePreviewOpen = async () => {
-		if (value) {
-			setOpen(true);
-			return;
-		}
-
-		if (fetchedFile) {
-			setOpen(true);
-			return;
-		}
-
-		if (!canPreviewUploadedFile(uploadedFile)) {
-			return;
-		}
-
-		setIsFetching(true);
+	const handleUploadedFilePreview = async (file: UploadedFileValue) => {
+		setLoadingFileId(file.id);
 		try {
-			const file = await fetchFile(
-				uploadedFile.fileId,
-				uploadedFile.fileName,
-				uploadedFile.mimeType,
-				uploadedFile.isPublic
+			const fetchedFile = await fetchFile(
+				file.id,
+				file.fileName,
+				file.mimeType,
+				file.isPublic
 			);
-			setFetchedFile(file);
+			setPreviewFile(fetchedFile);
+			setPreviewedUploadedFile(file);
 			setOpen(true);
 		} catch {
 			toast.error("ファイルの取得に失敗しました");
 		} finally {
-			setIsFetching(false);
+			setLoadingFileId(current => (current === file.id ? null : current));
 		}
 	};
 
-	const canPreview = Boolean(value) || canPreviewUploadedFile(uploadedFile);
+	const handleDownload = useCallback(() => {
+		if (!previewedUploadedFile) {
+			return;
+		}
+
+		downloadFile(
+			previewedUploadedFile.id,
+			previewedUploadedFile.fileName,
+			previewedUploadedFile.isPublic
+		).catch(() => toast.error("ファイルのダウンロードに失敗しました"));
+	}, [previewedUploadedFile]);
+
+	const previewItems = [
+		...value.map(file => ({
+			key: `${file.name}:${file.size}:${file.lastModified}`,
+			name: file.name,
+			disabled: false,
+			onClick: () => handlePendingFilePreview(file),
+		})),
+		...sortedUploadedFiles.map(file => ({
+			key: file.id,
+			name: file.fileName,
+			disabled: loadingFileId === file.id,
+			onClick: () => {
+				void handleUploadedFilePreview(file);
+			},
+		})),
+	];
 
 	return (
 		<div className={styles.container}>
@@ -118,30 +102,32 @@ export function FileUploadFieldWithPreview({
 				onChange={onChange}
 				required={required}
 				disabled={disabled}
-				uploadedFileName={uploadedFileName}
+				uploadedFileNames={uploadedFiles.map(file => file.fileName)}
 			/>
-			{canPreview && (
-				<div>
-					<IconButton
-						onClick={() => {
-							void handlePreviewOpen();
-						}}
-						disabled={isFetching}
-						aria-label="ファイルをプレビュー"
-					>
-						<IconFileSearch size={16} />
-					</IconButton>
-				</div>
+			{previewItems.length > 0 ? (
+				<Flex direction="column">
+					{previewItems.map(item => (
+						<div key={item.key}>
+							<Text size="2">{item.name}</Text>
+							<IconButton
+								size="1"
+								aria-label={`${previewLabel}「${item.name}」をプレビュー`}
+								disabled={item.disabled}
+								onClick={item.onClick}
+							>
+								<IconFileSearch size={16} />
+							</IconButton>
+						</div>
+					))}
+				</Flex>
+			) : (
+				<Text size="2">選択されていません</Text>
 			)}
 			<FilePreviewDialog
 				file={previewFile}
 				open={open}
 				onOpenChange={setOpen}
-				onDownload={
-					value === null && canPreviewUploadedFile(uploadedFile)
-						? handleDownload
-						: undefined
-				}
+				onDownload={previewedUploadedFile ? handleDownload : undefined}
 			/>
 		</div>
 	);

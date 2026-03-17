@@ -97,7 +97,7 @@ function validateItem(
 		if (item.type === "FILE") {
 			if (
 				!isFileAnswerValue(value) ||
-				(value.pendingFile === null && value.uploadedFile === null)
+				(value.pendingFiles.length === 0 && value.uploadedFiles.length === 0)
 			) {
 				return "この項目は必須です";
 			}
@@ -121,6 +121,33 @@ function validateItem(
 	}
 
 	return null;
+}
+
+function summarizeAnswersForLog(answers: FormAnswers) {
+	return Object.fromEntries(
+		Object.entries(answers).map(([itemId, value]) => {
+			if (isFileAnswerValue(value)) {
+				return [
+					itemId,
+					{
+						pendingFiles: value.pendingFiles.map(file => ({
+							name: file.name,
+							size: file.size,
+							type: file.type,
+						})),
+						uploadedFiles: value.uploadedFiles.map(file => ({
+							id: file.id,
+							fileName: file.fileName,
+							size: file.size,
+							mimeType: file.mimeType,
+							sortOrder: file.sortOrder,
+						})),
+					},
+				];
+			}
+			return [itemId, value];
+		})
+	);
 }
 
 export function FormViewer({
@@ -185,7 +212,13 @@ export function FormViewer({
 		try {
 			await onSubmit(answers);
 			toast.success("送信しました");
-		} catch {
+		} catch (error) {
+			console.error("Form submission failed", {
+				formId: form.id,
+				formName: form.name,
+				answers: summarizeAnswersForLog(answers),
+				error,
+			});
 			toast.error("送信に失敗しました");
 		} finally {
 			setIsSubmitting(false);

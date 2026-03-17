@@ -9,6 +9,7 @@ import {
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
+import { normalizeFileIds } from "../lib/form-answer-files";
 import {
 	assertFormAnswersValid,
 	assertRequiredAnswered,
@@ -37,7 +38,15 @@ const buildPrismaAnswerData = (
 	formItemId: answer.formItemId,
 	textValue: "textValue" in answer ? answer.textValue : undefined,
 	numberValue: "numberValue" in answer ? answer.numberValue : undefined,
-	fileId: "fileId" in answer ? answer.fileId : undefined,
+	files:
+		"fileIds" in answer && answer.fileIds.length > 0
+			? {
+					create: normalizeFileIds(answer.fileIds).map((fileId, sortOrder) => ({
+						fileId,
+						sortOrder,
+					})),
+				}
+			: undefined,
 	selectedOptions:
 		"selectedOptionIds" in answer && answer.selectedOptionIds?.length
 			? {

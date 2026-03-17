@@ -8,7 +8,7 @@ import {
 	projectTypeSchema,
 	viewerScopeSchema,
 } from "./common";
-import { fileSchema } from "./file";
+import { formAnswerFileSchema } from "./file";
 import { viewerInputSchema } from "./inquiry";
 import { userSchema } from "./user";
 
@@ -241,7 +241,7 @@ const numberAnswerSchema = z.object({
 const fileAnswerSchema = z.object({
 	...baseAnswerSchema,
 	type: z.literal("FILE"),
-	fileId: z.string().nullable(),
+	fileIds: z.array(z.string()),
 });
 
 const selectAnswerSchema = z.object({
@@ -494,17 +494,7 @@ export const formResponseAnswerSchema = z.object({
 	formItemId: z.string(),
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileId: z.string().nullable(),
-	fileMetadata: fileSchema
-		.pick({
-			id: true,
-			fileName: true,
-			mimeType: true,
-			size: true,
-			isPublic: true,
-		})
-		.nullable()
-		.optional(),
+	files: z.array(formAnswerFileSchema),
 	selectedOptions: z.array(
 		z.object({
 			id: z.string(),
@@ -612,13 +602,6 @@ const projectFormItemOptionSchema = z.object({
 	sortOrder: z.number().int(),
 });
 
-const projectFormFileMetadataSchema = fileSchema.pick({
-	id: true,
-	fileName: true,
-	mimeType: true,
-	isPublic: true,
-});
-
 const projectFormItemSchema = z.object({
 	id: z.string(),
 	label: z.string(),
@@ -635,8 +618,7 @@ const formAnswerSchema = z.object({
 	formItemId: z.string(),
 	textValue: z.string().nullable(),
 	numberValue: z.number().nullable(),
-	fileId: z.string().nullable(),
-	fileMetadata: projectFormFileMetadataSchema.nullable(),
+	files: z.array(formAnswerFileSchema),
 	selectedOptionIds: z.array(z.string()),
 });
 
