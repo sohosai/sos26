@@ -136,8 +136,7 @@ async function processFormAuthorizations(formAuthIds: Array<{ id: string }>) {
 
 		// Reserve this authorization for notification by setting deliveryNotifiedAt,
 		// guarding against concurrent workers processing the same record.
-		const updatedCount =
-			await prisma.$executeRaw<number>(Prisma.sql`
+		const updatedCount = await prisma.$executeRaw<number>(Prisma.sql`
 				UPDATE "FormAuthorization"
 				SET "deliveryNotifiedAt" = NOW()
 				WHERE "id" = ${auth.id}
