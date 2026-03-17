@@ -6,7 +6,7 @@ import {
 	IconTicket,
 } from "@tabler/icons-react";
 import Avatar from "boring-avatars";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, TextField } from "@/components/primitives";
 import styles from "./ProjectSelector.module.scss";
 
@@ -37,7 +37,16 @@ export function ProjectSelector({
 	const [open, setOpen] = useState(false);
 	const [showJoinInput, setShowJoinInput] = useState(false);
 	const [inviteCode, setInviteCode] = useState("");
+	const joinInputContainerRef = useRef<HTMLDivElement>(null);
 	const selectedProject = projects.find(p => p.id === selectedProjectId);
+
+	useEffect(() => {
+		if (!showJoinInput) return;
+		const timer = requestAnimationFrame(() => {
+			joinInputContainerRef.current?.querySelector("input")?.focus();
+		});
+		return () => cancelAnimationFrame(timer);
+	}, [showJoinInput]);
 
 	const handleSelectProject = (projectId: string) => {
 		onSelectProject(projectId);
@@ -135,7 +144,7 @@ export function ProjectSelector({
 							<Text size="2">招待コードで参加</Text>
 						</button>
 					) : (
-						<div className={styles.joinInput}>
+						<div className={styles.joinInput} ref={joinInputContainerRef}>
 							<TextField
 								placeholder="招待コードを入力"
 								value={inviteCode}
