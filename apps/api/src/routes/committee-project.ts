@@ -39,6 +39,16 @@ function getProjectDeletionStatusLabel(
 	return "";
 }
 
+function shouldNotifyDeletionStatusUpdate(
+	deletionStatus: "LOTTERY_LOSS" | "DELETED" | null,
+	beforeStatus: ProjectStatusFields
+): deletionStatus is "LOTTERY_LOSS" | "DELETED" {
+	return (
+		deletionStatus !== null &&
+		(beforeStatus.deletionStatus !== deletionStatus || beforeStatus.isActive)
+	);
+}
+
 async function resolveProjectPermissions(userId: string): Promise<{
 	canEdit: boolean;
 	canDelete: boolean;
@@ -505,10 +515,7 @@ committeeProjectRoute.patch(
 		const beforeStatus = getProjectStatusFields(projectBefore);
 		const status = getProjectStatusFields(project);
 
-		if (
-			deletionStatus !== null &&
-			(beforeStatus.deletionStatus !== deletionStatus || beforeStatus.isActive)
-		) {
+		if (shouldNotifyDeletionStatusUpdate(deletionStatus, beforeStatus)) {
 			await notifyProjectDeletionStatusUpdated({
 				ownerUserId: projectBefore.owner.id,
 				ownerEmail: projectBefore.owner.email,
@@ -525,7 +532,7 @@ committeeProjectRoute.patch(
 					telephoneNumber: permissions.canViewContacts
 						? project.owner.telephoneNumber
 						: null,
-			  }
+				}
 			: null;
 
 		const maskedSubOwner = project.subOwner
@@ -535,7 +542,7 @@ committeeProjectRoute.patch(
 					telephoneNumber: permissions.canViewContacts
 						? project.subOwner.telephoneNumber
 						: null,
-			  }
+				}
 			: null;
 
 		return c.json({
