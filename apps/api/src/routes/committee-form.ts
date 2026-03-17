@@ -612,30 +612,14 @@ committeeFormRoute.post(
 		}
 
 		const attachments = await Promise.all(
-			uniqueFileIds.map(async fileId => {
-				const existing = await prisma.formAttachment.findUnique({
+			uniqueFileIds.map(fileId =>
+				prisma.formAttachment.upsert({
 					where: { formId_fileId: { formId, fileId } },
-				});
-
-				if (existing) {
-					if (!existing.deletedAt) {
-						return prisma.formAttachment.findUniqueOrThrow({
-							where: { id: existing.id },
-							include: formAttachmentsInclude.include,
-						});
-					}
-					return prisma.formAttachment.update({
-						where: { id: existing.id },
-						data: { deletedAt: null },
-						include: formAttachmentsInclude.include,
-					});
-				}
-
-				return prisma.formAttachment.create({
-					data: { formId, fileId },
+					create: { formId, fileId },
+					update: { deletedAt: null },
 					include: formAttachmentsInclude.include,
-				});
-			})
+				})
+			)
 		);
 
 		return c.json(
