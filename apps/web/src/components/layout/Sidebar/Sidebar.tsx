@@ -39,7 +39,7 @@ const commonItems: MenuItem[] = [
 	{
 		label: "不具合報告",
 		icon: <IconBug size={18} />,
-		to: "https://forms.sohosai.com/support",
+		to: "/support",
 	},
 ];
 
