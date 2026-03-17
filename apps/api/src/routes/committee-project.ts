@@ -352,7 +352,7 @@ committeeProjectRoute.patch(
 			throw Errors.forbidden("企画編集権限がありません");
 		}
 
-		const body = await c.req.json();
+		const body = await c.req.json().catch(() => ({}));
 		const data = updateCommitteeProjectBaseInfoRequestSchema.parse(body);
 
 		const updated = await prisma.project.updateMany({
