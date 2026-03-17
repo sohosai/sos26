@@ -101,19 +101,26 @@ function createNoticeBodyPreview(body: string | null): string {
 async function processFormAuthorizations(formAuthIds: Array<{ id: string }>) {
 	let formNotified = 0;
 
-	for (const authId of formAuthIds) {
-		const auth = await prisma.formAuthorization.findUnique({
-			where: { id: authId.id },
-			select: {
-				id: true,
-				deliveryMode: true,
-				filterTypes: true,
-				filterLocations: true,
-				form: { select: { title: true, deletedAt: true } },
-				deliveries: { select: { projectId: true } },
-			},
-		});
-		if (!auth || auth.form.deletedAt) continue;
+	if (formAuthIds.length === 0) {
+		return formNotified;
+	}
+
+	const authIds = formAuthIds.map(auth => auth.id);
+
+	const auths = await prisma.formAuthorization.findMany({
+		where: { id: { in: authIds } },
+		select: {
+			id: true,
+			deliveryMode: true,
+			filterTypes: true,
+			filterLocations: true,
+			form: { select: { title: true, deletedAt: true } },
+			deliveries: { select: { projectId: true } },
+		},
+	});
+
+	for (const auth of auths) {
+		if (!auth.form || auth.form.deletedAt) continue;
 
 		const targetProjectIds = await resolveTargetProjectIds({
 			deliveryMode: auth.deliveryMode,
