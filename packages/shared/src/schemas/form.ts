@@ -1,12 +1,15 @@
 import { z } from "zod";
+import { bureauSchema } from "./committee-member";
 import {
 	approvalStatusSchema,
 	deliveryModeSchema,
 	deliveryTargetSchema,
 	projectLocationSchema,
 	projectTypeSchema,
+	viewerScopeSchema,
 } from "./common";
 import { fileSchema } from "./file";
+import { viewerInputSchema } from "./inquiry";
 import { userSchema } from "./user";
 
 // ─────────────────────────────────────────────────────────────
@@ -340,14 +343,42 @@ export type ListMyFormsResponse = z.infer<typeof listMyFormsResponseSchema>;
 // GET /committee/forms/:formId/detail
 // ─────────────────────────────────────────────────────────────
 
+/** 閲覧者情報 */
+const formViewerDetailSchema = z.object({
+	id: z.string(),
+	scope: viewerScopeSchema,
+	bureauValue: bureauSchema.nullable(),
+	createdAt: z.coerce.date(),
+	user: userSummarySchema.nullable(),
+});
+
 export const getFormDetailResponseSchema = z.object({
 	form: formSchema.extend({
 		owner: userSummarySchema,
 		collaborators: z.array(collaboratorWithUserSchema),
 		authorizationDetail: authorizationDetailSchema.nullable(),
+		viewers: z.array(formViewerDetailSchema),
 	}),
 });
 export type GetFormDetailResponse = z.infer<typeof getFormDetailResponseSchema>;
+
+// ─────────────────────────────────────────────────────────────
+// PUT /committee/forms/:formId/viewers
+// ─────────────────────────────────────────────────────────────
+
+export const updateFormViewersRequestSchema = z.object({
+	viewers: z.array(viewerInputSchema),
+});
+export type UpdateFormViewersRequest = z.infer<
+	typeof updateFormViewersRequestSchema
+>;
+
+export const updateFormViewersResponseSchema = z.object({
+	viewers: z.array(formViewerDetailSchema),
+});
+export type UpdateFormViewersResponse = z.infer<
+	typeof updateFormViewersResponseSchema
+>;
 
 // ─────────────────────────────────────────────────────────────
 // PATCH /committee/forms/:formId/detail
