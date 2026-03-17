@@ -3,9 +3,13 @@ import {
 	listCommitteeProjectMembersResponseSchema,
 	listCommitteeProjectsQuerySchema,
 	listCommitteeProjectsResponseSchema,
+	updateCommitteeProjectBaseInfoRequestSchema,
+	updateCommitteeProjectBaseInfoResponseSchema,
+	updateCommitteeProjectDeletionStatusRequestSchema,
+	updateCommitteeProjectDeletionStatusResponseSchema,
 } from "../schemas/committee-project";
 import { projectIdPathParamsSchema } from "../schemas/project";
-import type { GetEndpoint } from "./types";
+import type { BodyEndpoint, GetEndpoint } from "./types";
 
 /**
  * GET /committee/projects
@@ -65,4 +69,44 @@ export const listCommitteeProjectMembersEndpoint: GetEndpoint<
 	query: undefined,
 	request: undefined,
 	response: listCommitteeProjectMembersResponseSchema,
+} as const;
+
+/**
+ * PATCH /committee/projects/:projectId/base-info
+ * 企画の基礎情報を更新
+ */
+export const updateCommitteeProjectBaseInfoEndpoint: BodyEndpoint<
+	"PATCH",
+	"/committee/projects/:projectId/base-info",
+	typeof projectIdPathParamsSchema,
+	undefined,
+	typeof updateCommitteeProjectBaseInfoRequestSchema,
+	typeof updateCommitteeProjectBaseInfoResponseSchema
+> = {
+	method: "PATCH",
+	path: "/committee/projects/:projectId/base-info",
+	pathParams: projectIdPathParamsSchema,
+	query: undefined,
+	request: updateCommitteeProjectBaseInfoRequestSchema,
+	response: updateCommitteeProjectBaseInfoResponseSchema,
+} as const;
+
+/**
+ * PATCH /committee/projects/:projectId/deletion-status
+ * 企画の削除状態を更新（削除/抽選漏れ/取消）
+ */
+export const updateCommitteeProjectDeletionStatusEndpoint: BodyEndpoint<
+	"PATCH",
+	"/committee/projects/:projectId/deletion-status",
+	typeof projectIdPathParamsSchema,
+	undefined,
+	typeof updateCommitteeProjectDeletionStatusRequestSchema,
+	typeof updateCommitteeProjectDeletionStatusResponseSchema
+> = {
+	method: "PATCH",
+	path: "/committee/projects/:projectId/deletion-status",
+	pathParams: projectIdPathParamsSchema,
+	query: undefined,
+	request: updateCommitteeProjectDeletionStatusRequestSchema,
+	response: updateCommitteeProjectDeletionStatusResponseSchema,
 } as const;

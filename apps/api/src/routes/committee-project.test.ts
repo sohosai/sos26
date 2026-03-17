@@ -34,6 +34,15 @@ vi.mock("../lib/prisma", () => ({
 		projectMember: {
 			findMany: vi.fn(),
 		},
+		formDelivery: {
+			findMany: vi.fn(),
+		},
+		noticeDelivery: {
+			findMany: vi.fn(),
+		},
+		inquiry: {
+			findMany: vi.fn(),
+		},
 	},
 }));
 
@@ -96,6 +105,8 @@ const mockProject: Project = {
 	ownerId: "clxxxxxxxxxxxxxxxxx",
 	subOwnerId: "clzzzzzzzzzzzzzzzz",
 	inviteCode: "ABC123",
+	isActive: true,
+	deletionStatus: null,
 	createdAt: new Date(),
 	updatedAt: new Date(),
 	deletedAt: null,
@@ -115,6 +126,9 @@ function setupAuth() {
 	} as any);
 	mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 	mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+	mockPrisma.formDelivery.findMany.mockResolvedValue([] as any);
+	mockPrisma.noticeDelivery.findMany.mockResolvedValue([] as any);
+	mockPrisma.inquiry.findMany.mockResolvedValue([] as any);
 }
 
 describe("GET /committee/projects", () => {
@@ -293,7 +307,7 @@ describe("GET /committee/projects/:projectId", () => {
 		expect(body.project.inviteCode).toBeUndefined();
 		expect(body.project.deletedAt).toBeUndefined();
 		expect(body.project.owner.name).toBe("筑波太郎");
-		expect(body.project.owner.telephoneNumber).toBeUndefined();
+		expect(body.project.owner.telephoneNumber).toBeNull();
 		expect(body.project.owner.firebaseUid).toBeUndefined();
 		expect(body.project.subOwner.name).toBe("筑波花子");
 	});

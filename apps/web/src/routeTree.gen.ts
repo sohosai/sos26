@@ -45,6 +45,7 @@ import { Route as AuthRegisterIndexRouteImport } from './routes/auth/register/in
 import { Route as AuthLoginIndexRouteImport } from './routes/auth/login/index'
 import { Route as ProjectSupportInquiryIdRouteImport } from './routes/project/support/$inquiryId'
 import { Route as CommitteeSupportInquiryIdRouteImport } from './routes/committee/support/$inquiryId'
+import { Route as CommitteeInfoProjectIdRouteImport } from './routes/committee/info/$projectId'
 import { Route as DevUiComponentsIndexRouteImport } from './routes/dev/ui/components/index'
 import { Route as CommitteeProjectRegistrationFormIdIndexRouteImport } from './routes/committee/project-registration/$formId/index'
 import { Route as CommitteeNoticeNoticeIdIndexRouteImport } from './routes/committee/notice/$noticeId/index'
@@ -238,6 +239,11 @@ const CommitteeSupportInquiryIdRoute =
     path: '/support/$inquiryId',
     getParentRoute: () => CommitteeRouteRoute,
   } as any)
+const CommitteeInfoProjectIdRoute = CommitteeInfoProjectIdRouteImport.update({
+  id: '/info/$projectId',
+  path: '/info/$projectId',
+  getParentRoute: () => CommitteeRouteRoute,
+} as any)
 const DevUiComponentsIndexRoute = DevUiComponentsIndexRouteImport.update({
   id: '/ui/components/',
   path: '/ui/components/',
@@ -300,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/project/': typeof ProjectIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/support/': typeof SupportIndexRoute
+  '/committee/info/$projectId': typeof CommitteeInfoProjectIdRoute
   '/committee/support/$inquiryId': typeof CommitteeSupportInquiryIdRoute
   '/project/support/$inquiryId': typeof ProjectSupportInquiryIdRoute
   '/auth/login/': typeof AuthLoginIndexRoute
@@ -341,6 +348,7 @@ export interface FileRoutesByTo {
   '/project': typeof ProjectIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/support': typeof SupportIndexRoute
+  '/committee/info/$projectId': typeof CommitteeInfoProjectIdRoute
   '/committee/support/$inquiryId': typeof CommitteeSupportInquiryIdRoute
   '/project/support/$inquiryId': typeof ProjectSupportInquiryIdRoute
   '/auth/login': typeof AuthLoginIndexRoute
@@ -388,6 +396,7 @@ export interface FileRoutesById {
   '/project/': typeof ProjectIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/support/': typeof SupportIndexRoute
+  '/committee/info/$projectId': typeof CommitteeInfoProjectIdRoute
   '/committee/support/$inquiryId': typeof CommitteeSupportInquiryIdRoute
   '/project/support/$inquiryId': typeof ProjectSupportInquiryIdRoute
   '/auth/login/': typeof AuthLoginIndexRoute
@@ -436,6 +445,7 @@ export interface FileRouteTypes {
     | '/project/'
     | '/settings/'
     | '/support/'
+    | '/committee/info/$projectId'
     | '/committee/support/$inquiryId'
     | '/project/support/$inquiryId'
     | '/auth/login/'
@@ -477,6 +487,7 @@ export interface FileRouteTypes {
     | '/project'
     | '/settings'
     | '/support'
+    | '/committee/info/$projectId'
     | '/committee/support/$inquiryId'
     | '/project/support/$inquiryId'
     | '/auth/login'
@@ -523,6 +534,7 @@ export interface FileRouteTypes {
     | '/project/'
     | '/settings/'
     | '/support/'
+    | '/committee/info/$projectId'
     | '/committee/support/$inquiryId'
     | '/project/support/$inquiryId'
     | '/auth/login/'
@@ -820,6 +832,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CommitteeSupportInquiryIdRouteImport
       parentRoute: typeof CommitteeRouteRoute
     }
+    '/committee/info/$projectId': {
+      id: '/committee/info/$projectId'
+      path: '/info/$projectId'
+      fullPath: '/committee/info/$projectId'
+      preLoaderRoute: typeof CommitteeInfoProjectIdRouteImport
+      parentRoute: typeof CommitteeRouteRoute
+    }
     '/dev/ui/components/': {
       id: '/dev/ui/components/'
       path: '/ui/components'
@@ -901,6 +920,7 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
 
 interface CommitteeRouteRouteChildren {
   CommitteeIndexRoute: typeof CommitteeIndexRoute
+  CommitteeInfoProjectIdRoute: typeof CommitteeInfoProjectIdRoute
   CommitteeSupportInquiryIdRoute: typeof CommitteeSupportInquiryIdRoute
   CommitteeFormsIndexRoute: typeof CommitteeFormsIndexRoute
   CommitteeMastersheetIndexRoute: typeof CommitteeMastersheetIndexRoute
@@ -917,6 +937,7 @@ interface CommitteeRouteRouteChildren {
 
 const CommitteeRouteRouteChildren: CommitteeRouteRouteChildren = {
   CommitteeIndexRoute: CommitteeIndexRoute,
+  CommitteeInfoProjectIdRoute: CommitteeInfoProjectIdRoute,
   CommitteeSupportInquiryIdRoute: CommitteeSupportInquiryIdRoute,
   CommitteeFormsIndexRoute: CommitteeFormsIndexRoute,
   CommitteeMastersheetIndexRoute: CommitteeMastersheetIndexRoute,

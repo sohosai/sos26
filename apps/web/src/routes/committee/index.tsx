@@ -1,8 +1,10 @@
-import { Heading, Text } from "@radix-ui/themes";
-import { createFileRoute } from "@tanstack/react-router";
+import { Heading, Link, Table, Text } from "@radix-ui/themes";
+import { createFileRoute, Link as RouterLink } from "@tanstack/react-router";
+import { listCommitteeProjects } from "@/lib/api/committee-project";
 import { useAuthStore } from "@/lib/auth";
 
 export const Route = createFileRoute("/committee/")({
+	loader: async () => listCommitteeProjects({ limit: 20 }),
 	component: CommitteeIndexPage,
 	head: () => ({
 		meta: [
@@ -14,6 +16,7 @@ export const Route = createFileRoute("/committee/")({
 
 function CommitteeIndexPage() {
 	const { user } = useAuthStore();
+	const { projects } = Route.useLoaderData();
 
 	return (
 		<div>
@@ -21,6 +24,37 @@ function CommitteeIndexPage() {
 			<Text as="p" size="2" color="gray">
 				ようこそ、{user?.name} さん
 			</Text>
+
+			<Heading size="4" style={{ marginTop: 16 }}>
+				企画一覧
+			</Heading>
+			<Table.Root>
+				<Table.Header>
+					<Table.Row>
+						<Table.ColumnHeaderCell>企画番号</Table.ColumnHeaderCell>
+						<Table.ColumnHeaderCell>企画名</Table.ColumnHeaderCell>
+						<Table.ColumnHeaderCell>状態</Table.ColumnHeaderCell>
+					</Table.Row>
+				</Table.Header>
+				<Table.Body>
+					{projects.map(project => (
+						<Table.Row key={project.id}>
+							<Table.RowHeaderCell>{project.number}</Table.RowHeaderCell>
+							<Table.Cell>
+								<Link asChild>
+									<RouterLink
+										to="/committee/info/$projectId"
+										params={{ projectId: project.id }}
+									>
+										{project.name}
+									</RouterLink>
+								</Link>
+							</Table.Cell>
+							<Table.Cell>{project.isActive ? "有効" : "停止"}</Table.Cell>
+						</Table.Row>
+					))}
+				</Table.Body>
+			</Table.Root>
 		</div>
 	);
 }

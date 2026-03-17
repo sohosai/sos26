@@ -48,6 +48,8 @@ erDiagram
   String ownerId FK
   String subOwnerId FK "nullable"
   String(6) inviteCode UK
+  Boolean isActive
+  ProjectDeletionStatus deletionStatus "nullable"
   DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
@@ -659,6 +661,8 @@ Properties as follows:
 - `ownerId`:
 - `subOwnerId`:
 - `inviteCode`:
+- `isActive`:
+- `deletionStatus`:
 - `deletedAt`:
 - `createdAt`:
 - `updatedAt`:

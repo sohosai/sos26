@@ -181,6 +181,12 @@ model Project {
   //招待コード
   inviteCode String @unique @db.Char(6)
 
+  // 企画の有効状態（false の場合は企画画面で警告表示）
+  isActive Boolean @default(true)
+
+  // 非アクティブ化理由
+  deletionStatus ProjectDeletionStatus?
+
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -198,6 +204,12 @@ model Project {
   @@index([ownerId])
   @@index([subOwnerId])
   @@index([deletedAt])
+  @@index([isActive])
+}
+
+enum ProjectDeletionStatus {
+  LOTTERY_LOSS // 抽選漏れ
+  DELETED // 削除
 }
 
 //プロジェクトに参加している責任者と副責任者以外のユーザーのTable
@@ -287,6 +299,9 @@ enum CommitteePermission {
   NOTICE_DELIVER // お知らせ配信・承認
   FORM_DELIVER // 申請配信
   INQUIRY_ADMIN // お問い合わせ管理
+  PROJECT_EDIT // 企画編集
+  PROJECT_DELETE // 企画削除
+  PROJECT_VIEW // 企画詳細閲覧（責任者連絡先を含む）
   PROJECT_REGISTRATION_FORM_CREATE // 企画登録フォーム作成・編集・公開申請
   PROJECT_REGISTRATION_FORM_DELIVER // 企画登録フォーム承認
 }

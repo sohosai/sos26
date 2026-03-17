@@ -13,6 +13,8 @@
 - [各 API 詳細](#各-api-詳細)
   - [GET `/committee/projects`](#get-committeeprojects)
   - [GET `/committee/projects/:projectId`](#get-committeeprojectsprojectid)
+  - [PATCH `/committee/projects/:projectId/base-info`](#patch-committeeprojectsprojectidbase-info)
+  - [PATCH `/committee/projects/:projectId/deletion-status`](#patch-committeeprojectsprojectiddeletion-status)
   - [GET `/committee/projects/:projectId/members`](#get-committeeprojectsprojectidmembers)
 
 ---
@@ -24,6 +26,9 @@
 - 削除データ: `deletedAt` を持つモデルは、基本的に `deletedAt: null` を対象に扱う
 - 実委人であれば任意の企画を閲覧可能（`requireProjectMember` は不要）
 - レスポンスに `inviteCode`・`deletedAt` は含まない
+- 連絡先（owner/subOwner の `email` と `telephoneNumber`）は `PROJECT_VIEW` 権限がない場合 `null` を返す
+- 企画基礎情報更新には `PROJECT_EDIT` 権限が必要
+- 企画削除状態更新には `PROJECT_DELETE` 権限が必要
 
 ---
 
@@ -32,7 +37,9 @@
 | Method | Path | 概要 |
 |---|---|---|
 | GET | `/committee/projects` | 全企画一覧（フィルタ・検索・ページネーション） |
-| GET | `/committee/projects/:projectId` | 企画詳細（owner/subOwner/メンバー数含む） |
+| GET | `/committee/projects/:projectId` | 企画詳細（permissions/連絡先マスキング/アクション履歴含む） |
+| PATCH | `/committee/projects/:projectId/base-info` | 企画基礎情報を更新 |
+| PATCH | `/committee/projects/:projectId/deletion-status` | 企画削除状態を更新（削除/抽選漏れ/取消） |
 | GET | `/committee/projects/:projectId/members` | 企画メンバー一覧（ロール付き） |
 
 ---
@@ -59,13 +66,17 @@
   "projects": [
     {
       "id": "clxxx...",
+      "number": 12,
       "name": "企画名",
       "namePhonetic": "きかくめい",
       "organizationName": "団体名",
       "organizationNamePhonetic": "だんたいめい",
       "type": "NORMAL",
+      "location": "INDOOR",
       "ownerId": "clxxx...",
       "subOwnerId": "clyyy...",  // null の場合あり
+      "isActive": true,
+      "deletionStatus": null,
       "createdAt": "2026-...",
       "updatedAt": "2026-...",
       "memberCount": 5,
@@ -89,7 +100,7 @@
 
 ### GET `/committee/projects/:projectId`
 
-企画の詳細情報を返します。責任者・副責任者のユーザー情報（id, name, email のみ）とメンバー数を含みます。
+企画の詳細情報を返します。責任者・副責任者情報、メンバー数、アクション履歴、操作権限を含みます。
 
 #### パスパラメータ
 
@@ -103,24 +114,168 @@
 {
   "project": {
     "id": "clxxx...",
+    "number": 12,
     "name": "企画名",
     "namePhonetic": "きかくめい",
     "organizationName": "団体名",
     "organizationNamePhonetic": "だんたいめい",
     "type": "NORMAL",
+    "location": "INDOOR",
     "ownerId": "clxxx...",
     "subOwnerId": "clyyy...",  // null の場合あり
+    "isActive": true,
+    "deletionStatus": null,
     "createdAt": "2026-...",
     "updatedAt": "2026-...",
     "memberCount": 5,
-    "owner": { "id": "clxxx...", "name": "筑波太郎", "email": "s1234567@u.tsukuba.ac.jp" },
-    "subOwner": { "id": "clyyy...", "name": "筑波花子", "email": "s7654321@u.tsukuba.ac.jp" }  // null の場合あり
+    "owner": {
+      "id": "clxxx...",
+      "name": "筑波太郎",
+      "email": "s1234567@u.tsukuba.ac.jp",      // PROJECT_VIEW なしなら null
+      "telephoneNumber": "090-1234-5678"         // PROJECT_VIEW なしなら null
+    },
+    "subOwner": {
+      "id": "clyyy...",
+      "name": "筑波花子",
+      "email": "s7654321@u.tsukuba.ac.jp",
+      "telephoneNumber": "090-8765-4321"
+    },
+    "actions": {
+      "forms": [
+        { "id": "fd_xxx", "title": "食品衛生申請", "sentAt": "2026-..." }
+      ],
+      "notices": [
+        { "id": "nd_xxx", "title": "提出期限のお知らせ", "sentAt": "2026-..." }
+      ],
+      "inquiries": [
+        { "id": "iq_xxx", "title": "提出物について", "sentAt": "2026-..." }
+      ]
+    },
+    "permissions": {
+      "canEdit": true,
+      "canDelete": false,
+      "canViewContacts": true
+    }
+  }
+}
+```
+
+#### 動作
+
+- `PROJECT_VIEW` 権限がない場合、owner/subOwner の `email`・`telephoneNumber` は `null`
+- `actions.forms` / `actions.notices` は最新20件を返却
+  - 紐づくフォーム/お知らせ本体が論理削除済み（`deletedAt != null`）の配信は除外
+- `actions.inquiries` は下書き除外（`isDraft: false`）の最新20件を返却
+- `permissions` は実委メンバー権限から算出
+  - `canEdit` = `PROJECT_EDIT`
+  - `canDelete` = `PROJECT_DELETE`
+  - `canViewContacts` = `PROJECT_VIEW`
+
+#### エラー
+
+- 企画が存在しない場合: `NOT_FOUND`
+
+---
+
+### PATCH `/committee/projects/:projectId/base-info`
+
+企画の基礎情報を更新します。
+
+#### 権限
+
+- `PROJECT_EDIT` が必要
+
+#### リクエスト
+
+部分更新（1項目以上必須）。
+
+```json
+{
+  "name": "新しい企画名",
+  "namePhonetic": "あたらしいきかくめい",
+  "organizationName": "新しい団体名",
+  "organizationNamePhonetic": "あたらしいだんたいめい",
+  "type": "NORMAL",
+  "location": "INDOOR"
+}
+```
+
+#### レスポンス
+
+```json
+{
+  "project": {
+    "id": "clxxx...",
+    "number": 12,
+    "name": "新しい企画名",
+    "namePhonetic": "あたらしいきかくめい",
+    "organizationName": "新しい団体名",
+    "organizationNamePhonetic": "あたらしいだんたいめい",
+    "type": "NORMAL",
+    "location": "INDOOR",
+    "ownerId": "clxxx...",
+    "subOwnerId": "clyyy...",
+    "isActive": true,
+    "deletionStatus": null,
+    "createdAt": "2026-...",
+    "updatedAt": "2026-...",
+    "memberCount": 5,
+    "owner": {
+      "id": "clxxx...",
+      "name": "筑波太郎",
+      "email": "s1234567@u.tsukuba.ac.jp",
+      "telephoneNumber": "090-1234-5678"
+    },
+    "subOwner": null
   }
 }
 ```
 
 #### エラー
 
+- 権限がない場合: `FORBIDDEN`
+- 企画が存在しない場合: `NOT_FOUND`
+
+---
+
+### PATCH `/committee/projects/:projectId/deletion-status`
+
+企画の削除状態を更新します。
+
+- `"DELETED"` または `"LOTTERY_LOSS"` を指定すると `isActive` は `false`
+- `null` を指定すると削除状態を取り消し、`isActive` は `true`
+
+#### 権限
+
+- `PROJECT_DELETE` が必要
+
+#### リクエスト
+
+```json
+{
+  "deletionStatus": "DELETED"
+}
+```
+
+取り消し時:
+
+```json
+{
+  "deletionStatus": null
+}
+```
+
+#### レスポンス
+
+`PATCH /committee/projects/:projectId/base-info` と同じ形式（`project`）を返します。
+
+#### 動作
+
+- 削除状態を新たに設定した場合、企画責任者へメール通知と Push 通知を送信
+
+#### エラー
+
+- 権限がない場合: `FORBIDDEN`
 - 企画が存在しない場合: `NOT_FOUND`
 
 ---

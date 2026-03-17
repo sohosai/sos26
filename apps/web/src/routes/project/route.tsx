@@ -1,3 +1,4 @@
+import { Callout } from "@radix-ui/themes";
 import type { Project } from "@sos26/shared";
 import {
 	createFileRoute,
@@ -18,6 +19,12 @@ import {
 } from "@/lib/auth";
 import { useProjectStore } from "@/lib/project/store";
 import styles from "./route.module.scss";
+
+function projectDeletionStatusLabel(status: Project["deletionStatus"]): string {
+	if (status === "LOTTERY_LOSS") return "抽選漏れ";
+	if (status === "DELETED") return "削除";
+	return "";
+}
 
 export const Route = createFileRoute("/project")({
 	beforeLoad: async ({ location }) => {
@@ -45,6 +52,8 @@ function ProjectLayout() {
 	const router = useRouter();
 	const { projects, selectedProjectId, setSelectedProjectId, setProjects } =
 		useProjectStore();
+	const selectedProject =
+		projects.find(p => p.id === selectedProjectId) ?? null;
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const { user } = useAuthStore();
@@ -100,6 +109,15 @@ function ProjectLayout() {
 			<main
 				className={`${styles.main} ${sidebarCollapsed ? styles.collapsed : ""}`}
 			>
+				{selectedProject && !selectedProject.isActive && (
+					<Callout.Root color="red" style={{ marginBottom: 12 }}>
+						<Callout.Text>
+							この企画は「
+							{projectDeletionStatusLabel(selectedProject.deletionStatus)}
+							」として扱われています。
+						</Callout.Text>
+					</Callout.Root>
+				)}
 				{selectedProjectId && <Outlet key={selectedProjectId} />}
 			</main>
 			<ProjectCreateDialog

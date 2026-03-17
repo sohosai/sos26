@@ -20,6 +20,9 @@ const PERMISSIONS: CommitteePermission[] = [
 	"NOTICE_DELIVER",
 	"FORM_DELIVER",
 	"INQUIRY_ADMIN",
+	"PROJECT_EDIT",
+	"PROJECT_DELETE",
+	"PROJECT_VIEW",
 ];
 
 function printUsage() {
