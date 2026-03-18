@@ -7,6 +7,14 @@ function formatProjectNumberForUrl(projectNumber: number): string {
 	return String(projectNumber).padStart(3, "0");
 }
 
+function formatDeletionStatusLabel(
+	deletionStatus: "LOTTERY_LOSS" | "DELETED" | null
+): string {
+	if (deletionStatus === "LOTTERY_LOSS") return "抽選漏れ";
+	if (deletionStatus === "DELETED") return "削除";
+	return "有効";
+}
+
 export const Route = createFileRoute("/committee/")({
 	loader: async () => listCommitteeProjects({ limit: 20 }),
 	component: CommitteeIndexPage,
@@ -57,7 +65,7 @@ function CommitteeIndexPage() {
 								</Link>
 							</Table.Cell>
 							<Table.Cell>
-								{project.deletionStatus === null ? "有効" : "停止"}
+								{formatDeletionStatusLabel(project.deletionStatus)}
 							</Table.Cell>
 						</Table.Row>
 					))}
