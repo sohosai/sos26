@@ -203,7 +203,7 @@ function RouteComponent() {
 			: null
 	);
 	const canViewAnswers =
-		canEdit &&
+		(canEdit || isViewer) &&
 		(statusInfo.code === "PUBLISHED" || statusInfo.code === "EXPIRED");
 
 	// 回答データ
