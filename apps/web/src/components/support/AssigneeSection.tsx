@@ -121,26 +121,39 @@ export function AssigneeList({
 
 	return (
 		<div className={styles.assigneeList}>
-			{assignees.map(a => (
-				<div key={a.id} className={styles.assigneeItem}>
-					<span className={styles.sidebarAvatar} data-variant={variant}>
-						<Avatar size={20} name={a.user.name} variant="beam" />
-					</span>
-					<div>
-						<Text size="2">{a.user.name}</Text>
+			{assignees.map(a => {
+				const affiliation =
+					variant === "committee"
+						? a.user.committeeBureau
+						: a.user.affiliatedProjects.length > 0
+							? a.user.affiliatedProjects.join("・")
+							: undefined;
+				return (
+					<div key={a.id} className={styles.assigneeItem}>
+						<span className={styles.sidebarAvatar} data-variant={variant}>
+							<Avatar size={28} name={a.user.name} variant="beam" />
+						</span>
+						<div className={styles.assigneeNameBlock}>
+							<Text size="2">{a.user.name}</Text>
+							{affiliation && (
+								<Text size="1" color="gray">
+									{affiliation}
+								</Text>
+							)}
+						</div>
+						{canEdit && !a.isCreator && (
+							<IconButton
+								variant="ghost"
+								size="1"
+								color="red"
+								onClick={() => onRemove(a.id, a.user.id)}
+							>
+								<IconTrash size={12} />
+							</IconButton>
+						)}
 					</div>
-					{canEdit && !a.isCreator && (
-						<IconButton
-							variant="ghost"
-							size="1"
-							color="red"
-							onClick={() => onRemove(a.id, a.user.id)}
-						>
-							<IconTrash size={12} />
-						</IconButton>
-					)}
-				</div>
-			))}
+				);
+			})}
 		</div>
 	);
 }

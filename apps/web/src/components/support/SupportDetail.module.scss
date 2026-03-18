@@ -342,12 +342,19 @@
 	gap: var(--space-2);
 }
 
+.assigneeNameBlock {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	flex: 1;
+}
+
 .sidebarAvatar {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 20px;
-	height: 20px;
+	width: 28px;
+	height: 28px;
 	flex-shrink: 0;
 
 	svg {
