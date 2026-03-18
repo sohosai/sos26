@@ -71,7 +71,7 @@
       "namePhonetic": "きかくめい",
       "organizationName": "団体名",
       "organizationNamePhonetic": "だんたいめい",
-"type": "NORMAL",
+      "type": "NORMAL",
       "location": "INDOOR",
       "ownerId": "clxxx...",
       "subOwnerId": "clyyy...",  // null の場合あり
