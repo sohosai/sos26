@@ -1,10 +1,29 @@
 import { bureauLabelMap } from "@sos26/shared";
 import { prisma } from "./prisma";
 
-type UserAffiliation = {
+export type UserAffiliation = {
 	committeeBureau?: string;
 	affiliatedProjects: string[];
 };
+
+export function withAffiliation(
+	user: { id: string; name: string },
+	affiliations: Map<string, UserAffiliation>
+) {
+	const aff = affiliations.get(user.id) ?? { affiliatedProjects: [] };
+	return {
+		...user,
+		committeeBureau: aff.committeeBureau,
+		affiliatedProjects: aff.affiliatedProjects,
+	};
+}
+
+export function withAffiliationNullable(
+	user: { id: string; name: string } | null,
+	affiliations: Map<string, UserAffiliation>
+) {
+	return user ? withAffiliation(user, affiliations) : null;
+}
 
 function createUserAffiliation(
 	committeeBureau?: string,
@@ -22,7 +41,7 @@ function createUserAffiliation(
  * affiliatedProjects には owner / subOwner / projectMember として所属する
  * 有効な企画名をすべて含める。
  */
-function getProjectSet(
+function getOrCreateProjectSet(
 	projectMap: Map<string, Set<string>>,
 	userId: string
 ): Set<string> {
@@ -67,14 +86,16 @@ async function getProjectAffiliations(
 	const projectMap = new Map<string, Set<string>>();
 
 	for (const project of ownedProjects) {
-		getProjectSet(projectMap, project.ownerId).add(project.name);
+		getOrCreateProjectSet(projectMap, project.ownerId).add(project.name);
 		if (project.subOwnerId) {
-			getProjectSet(projectMap, project.subOwnerId).add(project.name);
+			getOrCreateProjectSet(projectMap, project.subOwnerId).add(project.name);
 		}
 	}
 
 	for (const membership of joinedProjects) {
-		getProjectSet(projectMap, membership.userId).add(membership.project.name);
+		getOrCreateProjectSet(projectMap, membership.userId).add(
+			membership.project.name
+		);
 	}
 
 	return new Map(

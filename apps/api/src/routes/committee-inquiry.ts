@@ -19,7 +19,11 @@ import {
 	notifyInquiryCreatedByCommittee,
 } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
-import { getUserAffiliations } from "../lib/user-affiliation";
+import {
+	getUserAffiliations,
+	withAffiliation,
+	withAffiliationNullable,
+} from "../lib/user-affiliation";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -265,30 +269,6 @@ function formatAttachment(a: {
 
 function getCommentSentAt(comment: { createdAt: Date; sentAt: Date | null }) {
 	return comment.sentAt ?? comment.createdAt;
-}
-
-type UserAffiliation = {
-	committeeBureau?: string;
-	affiliatedProjects: string[];
-};
-
-function withAffiliation(
-	user: { id: string; name: string },
-	affiliations: Map<string, UserAffiliation>
-) {
-	const aff = affiliations.get(user.id) ?? { affiliatedProjects: [] };
-	return {
-		...user,
-		committeeBureau: aff.committeeBureau,
-		affiliatedProjects: aff.affiliatedProjects,
-	};
-}
-
-function withAffiliationNullable(
-	user: { id: string; name: string } | null,
-	affiliations: Map<string, UserAffiliation>
-) {
-	return user ? withAffiliation(user, affiliations) : null;
 }
 
 // ─────────────────────────────────────────────────────────────
