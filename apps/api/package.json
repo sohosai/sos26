@@ -27,6 +27,7 @@
     "@aws-sdk/s3-request-presigner": "^3.988.0",
     "@prisma/client": "^6.8.2",
     "@sendgrid/mail": "^8.1.6",
+    "@sentry/bun": "^10.43.0",
     "@sos26/shared": "workspace:*",
     "firebase-admin": "^13.6.0",
     "hono": "^4.11.3",

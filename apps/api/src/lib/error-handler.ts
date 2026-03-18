@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/bun";
 import type { ApiErrorResponse } from "@sos26/shared";
 import type { ErrorHandler } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -36,6 +37,7 @@ export const errorHandler: ErrorHandler = (err, c) => {
 	}
 
 	// その他の予期しないエラー: 詳細を隠蔽してINTERNALとして返却
+	Sentry.captureException(err);
 	console.error("[Internal Error]", err);
 	const response: ApiErrorResponse = {
 		error: {

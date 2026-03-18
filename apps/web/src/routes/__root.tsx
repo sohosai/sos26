@@ -1,4 +1,5 @@
 import { Dialog, Heading, Text, Theme } from "@radix-ui/themes";
+import * as Sentry from "@sentry/react";
 import {
 	createRootRoute,
 	HeadContent,
@@ -107,6 +108,10 @@ function NotFoundComponent() {
 function ErrorComponent({ error }: { error: unknown }) {
 	const message =
 		error instanceof Error ? error.message : String(error ?? "Unknown error");
+
+	useEffect(() => {
+		Sentry.captureException(error);
+	}, [error]);
 
 	return (
 		<div className={styles.errorContainer}>
