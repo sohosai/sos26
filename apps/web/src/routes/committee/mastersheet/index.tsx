@@ -103,7 +103,7 @@ function MastersheetPage() {
 				<IconHistory size={16} /> 履歴
 			</Button>
 			<Button intent="secondary" onClick={() => setColumnPanelOpen(true)}>
-				<IconLayoutColumns size={16} /> カラム
+				<IconLayoutColumns size={16} /> カラム編集
 			</Button>
 		</>
 	);
