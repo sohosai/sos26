@@ -91,6 +91,17 @@ function buildInitialAnswers(
 	return merged;
 }
 
+function buildErrors(form: Form, answers: FormAnswers): Record<string, string> {
+	const nextErrors: Record<string, string> = {};
+	for (const item of form.items) {
+		const error = validateItem(item, answers[item.id]);
+		if (error) {
+			nextErrors[item.id] = error;
+		}
+	}
+	return nextErrors;
+}
+
 function resolvePatternRegex(
 	pattern: string,
 	customPattern?: string | null
@@ -240,29 +251,17 @@ export function FormViewer({
 	disableSaveDraft = false,
 	onDirtyChange,
 }: Props) {
-	const [answers, setAnswers] = useState<FormAnswers>(() =>
-		buildInitialAnswers(form, initialAnswers)
+	// ダイアログを開いている間は、編集中のローカル state を正とする。
+	// ファイル選択やバックグラウンド再取得で親 props が再生成されても上書きしない。
+	const initialFormAnswers = buildInitialAnswers(form, initialAnswers);
+	const [answers, setAnswers] = useState<FormAnswers>(initialFormAnswers);
+	const [baselineAnswers, setBaselineAnswers] =
+		useState<FormAnswers>(initialFormAnswers);
+	const [errors, setErrors] = useState<Record<string, string>>(() =>
+		buildErrors(form, initialFormAnswers)
 	);
-	const [baselineAnswers, setBaselineAnswers] = useState<FormAnswers>(() =>
-		buildInitialAnswers(form, initialAnswers)
-	);
-	const [errors, setErrors] = useState<Record<string, string>>({});
 	const [isSavingDraft, setIsSavingDraft] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-
-	useEffect(() => {
-		const nextInitialAnswers = buildInitialAnswers(form, initialAnswers);
-		setAnswers(nextInitialAnswers);
-		setBaselineAnswers(nextInitialAnswers);
-		const nextErrors: Record<string, string> = {};
-		for (const item of form.items) {
-			const error = validateItem(item, nextInitialAnswers[item.id]);
-			if (error) {
-				nextErrors[item.id] = error;
-			}
-		}
-		setErrors(nextErrors);
-	}, [form, initialAnswers]);
 
 	const isDirty = useMemo(
 		() =>
@@ -300,11 +299,7 @@ export function FormViewer({
 	};
 
 	const validate = (): boolean => {
-		const newErrors: Record<string, string> = {};
-		for (const item of form.items) {
-			const error = validateItem(item, answers[item.id]);
-			if (error) newErrors[item.id] = error;
-		}
+		const newErrors = buildErrors(form, answers);
 		setErrors(newErrors);
 		return Object.keys(newErrors).length === 0;
 	};
