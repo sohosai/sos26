@@ -77,6 +77,11 @@ export function TextField({
 				value={value}
 				defaultValue={defaultValue}
 				onChange={e => onChange?.(e.target.value)}
+				onKeyDown={e => {
+					if (e.key === "Enter") {
+						e.preventDefault();
+					}
+				}}
 				required={required}
 				disabled={disabled}
 				name={name}
