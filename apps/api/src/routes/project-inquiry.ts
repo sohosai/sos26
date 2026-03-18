@@ -185,6 +185,27 @@ function getCommentSentAt(comment: { createdAt: Date; sentAt: Date | null }) {
 	return comment.sentAt ?? comment.createdAt;
 }
 
+function getLatestCommitteeActivityAt(inquiry: {
+	creatorRole: "PROJECT" | "COMMITTEE";
+	createdAt: Date;
+	comments: Array<{ createdAt: Date; sentAt: Date | null }>;
+}) {
+	const latestCommitteeComment = inquiry.comments[0] ?? null;
+	const latestCommitteeCommentAt = latestCommitteeComment
+		? getCommentSentAt(latestCommitteeComment)
+		: null;
+	const committeeCreatedAt =
+		inquiry.creatorRole === "COMMITTEE" ? inquiry.createdAt : null;
+
+	if (latestCommitteeCommentAt && committeeCreatedAt) {
+		return latestCommitteeCommentAt.getTime() > committeeCreatedAt.getTime()
+			? latestCommitteeCommentAt
+			: committeeCreatedAt;
+	}
+
+	return latestCommitteeCommentAt ?? committeeCreatedAt;
+}
+
 // ─────────────────────────────────────────────────────────────
 // POST /project/:projectId/inquiries
 // お問い合わせを作成
@@ -367,10 +388,7 @@ projectInquiryRoute.get(
 		});
 
 		const formatted = inquiries.map(inq => {
-			const latestCommitteeComment = inq.comments[0] ?? null;
-			const latestCommitteeCommentAt = latestCommitteeComment
-				? getCommentSentAt(latestCommitteeComment)
-				: null;
+			const latestCommitteeActivityAt = getLatestCommitteeActivityAt(inq);
 			const lastReadAt = inq.commentReadStatuses[0]?.lastReadAt ?? null;
 
 			return {
@@ -381,9 +399,9 @@ projectInquiryRoute.get(
 				createdAt: inq.createdAt,
 				updatedAt: inq.updatedAt,
 				isDraft: inq.isDraft,
-				hasUnreadComments: latestCommitteeCommentAt
+				hasUnreadComments: latestCommitteeActivityAt
 					? !lastReadAt ||
-						latestCommitteeCommentAt.getTime() > lastReadAt.getTime()
+						latestCommitteeActivityAt.getTime() > lastReadAt.getTime()
 					: false,
 				createdBy: inq.createdBy,
 				project: inq.project,
