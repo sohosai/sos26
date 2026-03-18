@@ -352,6 +352,9 @@ projectInquiryRoute.get(
 				projectId: project.id,
 				deletedAt: null,
 				isDraft: false,
+				assignees: {
+					some: { userId: user.id, side: "PROJECT", deletedAt: null },
+				},
 			},
 			include: {
 				createdBy: { select: userSelect },
@@ -434,6 +437,9 @@ projectInquiryRoute.get(
 			projectId: c.req.param("projectId"),
 			inquiryId: c.req.param("inquiryId"),
 		});
+
+		// 企画側担当者チェック
+		await requireProjectAssignee(inquiryId, user.id);
 
 		const inquiry = await prisma.inquiry.findFirst({
 			where: {
