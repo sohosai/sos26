@@ -316,7 +316,7 @@ projectInquiryRoute.post(
 
 // ─────────────────────────────────────────────────────────────
 // GET /project/:projectId/inquiries
-// 自分が企画側担当者のお問い合わせ一覧
+// 企画メンバーが閲覧可能なお問い合わせ一覧
 // ─────────────────────────────────────────────────────────────
 projectInquiryRoute.get(
 	"/:projectId/inquiries",
@@ -331,9 +331,6 @@ projectInquiryRoute.get(
 				projectId: project.id,
 				deletedAt: null,
 				isDraft: false,
-				assignees: {
-					some: { userId: user.id, side: "PROJECT", deletedAt: null },
-				},
 			},
 			include: {
 				createdBy: { select: userSelect },
@@ -349,7 +346,10 @@ projectInquiryRoute.get(
 						senderRole: "COMMITTEE",
 					},
 					select: { createdAt: true, sentAt: true },
-					orderBy: [{ sentAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+					orderBy: [
+						{ sentAt: { sort: "desc", nulls: "last" } },
+						{ createdAt: "desc" },
+					],
 					take: 1,
 				},
 				commentReadStatuses: {
@@ -416,9 +416,6 @@ projectInquiryRoute.get(
 			projectId: c.req.param("projectId"),
 			inquiryId: c.req.param("inquiryId"),
 		});
-
-		// 企画側担当者チェック
-		await requireProjectAssignee(inquiryId, user.id);
 
 		const inquiry = await prisma.inquiry.findFirst({
 			where: {

@@ -5,7 +5,7 @@ import {
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
@@ -80,9 +80,10 @@ export const Route = createFileRoute("/project")({
 		});
 
 		const hasUncheckedNotices = notices.some(notice => !notice.isRead);
-		const hasUnreadInquiryComments = inquiries.some(
-			inquiry => inquiry.hasUnreadComments
-		);
+		const hasUnreadInquiryComments =
+			inquiriesResult.status === "rejected"
+				? true
+				: inquiries.some(inquiry => inquiry.hasUnreadComments);
 
 		return {
 			hasUnansweredForms,
@@ -114,6 +115,25 @@ function ProjectLayout() {
 			(item.to === "/project/notice" && hasUncheckedNotices) ||
 			(item.to === "/project/support" && hasUnreadInquiryComments),
 	}));
+
+	useEffect(() => {
+		const intervalId = window.setInterval(() => {
+			void router.invalidate();
+		}, 60_000);
+
+		const handleFocus = () => {
+			void router.invalidate();
+		};
+
+		window.addEventListener("focus", handleFocus);
+		document.addEventListener("visibilitychange", handleFocus);
+
+		return () => {
+			window.clearInterval(intervalId);
+			window.removeEventListener("focus", handleFocus);
+			document.removeEventListener("visibilitychange", handleFocus);
+		};
+	}, [router]);
 
 	const handleSelectProject = (projectId: string) => {
 		setSelectedProjectId(projectId);
