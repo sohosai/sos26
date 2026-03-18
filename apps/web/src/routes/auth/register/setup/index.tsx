@@ -9,7 +9,7 @@ import {
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
-import { Button, TextField } from "@/components/primitives";
+import { Button, Checkbox, TextField } from "@/components/primitives";
 import { register } from "@/lib/api/auth";
 import { useAuthStore } from "@/lib/auth";
 import { auth } from "@/lib/firebase";
@@ -37,10 +37,14 @@ function SetupPage() {
 	const [password, setPassword] = useState("");
 	const [passwordConfirm, setPasswordConfirm] = useState("");
 	const [error, setError] = useState<string | null>(null);
+	const [termsAccepted, setTermsAccepted] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [sessionExpired, setSessionExpired] = useState(false);
 
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: 各フィールドのバリデーションを順次チェックしているだけで実質的に複雑ではない
 	const validate = (): string | null => {
+		if (!termsAccepted) return "利用規約に同意してください";
+
 		const nameResult = nameSchema.safeParse(name);
 		if (!nameResult.success) {
 			return nameResult.error.issues[0]?.message ?? "名前を入力してください";
@@ -186,6 +190,13 @@ function SetupPage() {
 					onChange={setPasswordConfirm}
 					required
 					autoComplete="new-password"
+				/>
+
+				<Checkbox
+					label="利用規約に同意する"
+					checked={termsAccepted}
+					onCheckedChange={setTermsAccepted}
+					required
 				/>
 
 				{error && (
