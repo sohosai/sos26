@@ -640,25 +640,11 @@ committeeProjectRoute.patch(
 		}
 
 		const owner = project.owner
-			? {
-					id: project.owner.id,
-					name: project.owner.name,
-					email: permissions.canViewContacts ? project.owner.email : null,
-					telephoneNumber: permissions.canViewContacts
-						? project.owner.telephoneNumber
-						: null,
-				}
+			? maskContact(project.owner, permissions.canViewContacts)
 			: null;
 
 		const subOwner = project.subOwner
-			? {
-					id: project.subOwner.id,
-					name: project.subOwner.name,
-					email: permissions.canViewContacts ? project.subOwner.email : null,
-					telephoneNumber: permissions.canViewContacts
-						? project.subOwner.telephoneNumber
-						: null,
-				}
+			? maskContact(project.subOwner, permissions.canViewContacts)
 			: null;
 
 		const status = getProjectStatusFields(project);
