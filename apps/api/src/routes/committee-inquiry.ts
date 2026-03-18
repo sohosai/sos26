@@ -427,7 +427,10 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 					senderRole: "PROJECT",
 				},
 				select: { createdAt: true, sentAt: true },
-				orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
+				orderBy: [
+					{ sentAt: { sort: "desc", nulls: "last" } },
+					{ createdAt: "desc" },
+				],
 				take: 1,
 			},
 			commentReadStatuses: {
