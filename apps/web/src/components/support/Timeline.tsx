@@ -12,6 +12,8 @@ import type { ActivityInfo } from "./types";
 
 type TimelineItemProps = {
 	name: string;
+	committeeBureau?: string;
+	affiliatedProjects?: string[];
 	role: "project" | "committee";
 	date: Date;
 	body: string;
@@ -23,13 +25,36 @@ type TimelineItemProps = {
 	onUpdateDraft?: (body: string) => Promise<void>;
 };
 
+function formatDisplayName(
+	name: string,
+	role: "project" | "committee",
+	committeeBureau?: string,
+	affiliatedProjects?: string[]
+): string {
+	if (role === "committee" && committeeBureau) {
+		return `${name} (${committeeBureau})`;
+	}
+	if (
+		role === "project" &&
+		affiliatedProjects &&
+		affiliatedProjects.length > 0
+	) {
+		return `${name} (${affiliatedProjects.join("・")})`;
+	}
+	return name;
+}
+
 function TimelineHeader({
 	name,
+	committeeBureau,
+	affiliatedProjects,
 	role,
 	isDraft,
 	date,
 }: {
 	name: string;
+	committeeBureau?: string;
+	affiliatedProjects?: string[];
 	role: "project" | "committee";
 	isDraft?: boolean;
 	date: Date;
@@ -37,7 +62,7 @@ function TimelineHeader({
 	return (
 		<div className={styles.timelineHeader}>
 			<Text size="2" weight="medium">
-				{name}
+				{formatDisplayName(name, role, committeeBureau, affiliatedProjects)}
 			</Text>
 			<Badge
 				size="1"
@@ -175,6 +200,8 @@ function DraftActionButtons({
 
 export function TimelineItem({
 	name,
+	committeeBureau,
+	affiliatedProjects,
 	role,
 	date,
 	body,
@@ -261,7 +288,14 @@ export function TimelineItem({
 				<Avatar size={28} name={name} variant="beam" />
 			</span>
 			<div className={styles.timelineContent}>
-				<TimelineHeader name={name} role={role} isDraft={isDraft} date={date} />
+				<TimelineHeader
+					name={name}
+					committeeBureau={committeeBureau}
+					affiliatedProjects={affiliatedProjects}
+					role={role}
+					isDraft={isDraft}
+					date={date}
+				/>
 				<TimelineBodySection
 					isEditingDraft={isEditingDraft}
 					draftBody={draftBody}

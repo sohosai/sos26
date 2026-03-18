@@ -19,6 +19,11 @@ import {
 	notifyInquiryCreatedByCommittee,
 } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
+import {
+	getUserAffiliations,
+	withAffiliation,
+	withAffiliationNullable,
+} from "../lib/user-affiliation";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -546,6 +551,17 @@ committeeInquiryRoute.get(
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
 
+		// 全ユーザーIDを収集して所属情報を一括取得
+		const allUserIds = [
+			inquiry.createdBy.id,
+			...inquiry.assignees.map(a => a.user.id),
+			...inquiry.comments.map(cm => cm.createdBy.id),
+			...inquiry.activities.map(act => act.actor.id),
+			...inquiry.activities.flatMap(act => (act.target ? [act.target.id] : [])),
+			...inquiry.viewers.flatMap(v => (v.user ? [v.user.id] : [])),
+		];
+		const affiliations = await getUserAffiliations(allUserIds);
+
 		// コメントを整形し、通常コメントの後に下書きを表示する
 		const formattedComments = inquiry.comments.map(cm => ({
 			id: cm.id,
@@ -554,7 +570,7 @@ committeeInquiryRoute.get(
 			isDraft: cm.isDraft,
 			createdAt: cm.createdAt,
 			sentAt: cm.sentAt,
-			createdBy: cm.createdBy,
+			createdBy: withAffiliation(cm.createdBy, affiliations),
 			attachments: cm.attachments.map(formatAttachment),
 		}));
 
@@ -585,29 +601,35 @@ committeeInquiryRoute.get(
 			isDraft: inquiry.isDraft,
 			createdAt: inquiry.createdAt,
 			updatedAt: inquiry.updatedAt,
-			createdBy: inquiry.createdBy,
+			createdBy: withAffiliation(inquiry.createdBy, affiliations),
 			project: inquiry.project,
 			relatedForm: inquiry.relatedForm,
 			projectAssignees: inquiry.assignees
 				.filter(a => a.side === "PROJECT")
-				.map(formatAssignee),
+				.map(a => ({
+					...formatAssignee(a),
+					user: withAffiliation(a.user, affiliations),
+				})),
 			committeeAssignees: inquiry.assignees
 				.filter(a => a.side === "COMMITTEE")
-				.map(formatAssignee),
+				.map(a => ({
+					...formatAssignee(a),
+					user: withAffiliation(a.user, affiliations),
+				})),
 			viewers: inquiry.viewers.map(v => ({
 				id: v.id,
 				scope: v.scope,
 				bureauValue: v.bureauValue,
 				createdAt: v.createdAt,
-				user: v.user,
+				user: withAffiliationNullable(v.user, affiliations),
 			})),
 			comments: sortedComments,
 			activities: inquiry.activities.map(act => ({
 				id: act.id,
 				type: act.type,
 				createdAt: act.createdAt,
-				actor: act.actor,
-				target: act.target,
+				actor: withAffiliation(act.actor, affiliations),
+				target: withAffiliationNullable(act.target, affiliations),
 			})),
 			attachments: inquiry.attachments.map(formatAttachment),
 		};
@@ -794,7 +816,10 @@ committeeInquiryRoute.post(
 				inquiryId,
 				deletedAt: null,
 			},
-			include: { inquiry: true, createdBy: { select: userSelect } },
+			include: {
+				inquiry: true,
+				createdBy: { select: userSelect },
+			},
 		});
 
 		if (!existingComment) {
@@ -891,7 +916,10 @@ committeeInquiryRoute.patch(
 				inquiryId,
 				deletedAt: null,
 			},
-			include: { inquiry: true, createdBy: { select: userSelect } },
+			include: {
+				inquiry: true,
+				createdBy: { select: userSelect },
+			},
 		});
 		if (!existingComment) {
 			throw Errors.notFound("コメントが見つかりません");
@@ -1196,7 +1224,14 @@ committeeInquiryRoute.post(
 			side,
 		});
 
-		return c.json({ assignee: formatAssignee(assignee) }, 201);
+		return c.json(
+			{
+				assignee: {
+					...formatAssignee(assignee),
+				},
+			},
+			201
+		);
 	}
 );
 

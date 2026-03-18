@@ -137,6 +137,8 @@ function InquiryTimeline({
 		<div className={styles.timeline}>
 			<TimelineItem
 				name={inquiry.createdBy.name}
+				committeeBureau={inquiry.createdBy.committeeBureau}
+				affiliatedProjects={inquiry.createdBy.affiliatedProjects}
 				role={inquiry.creatorRole === "COMMITTEE" ? "committee" : "project"}
 				date={inquiry.createdAt}
 				body={inquiry.body}
@@ -152,6 +154,8 @@ function InquiryTimeline({
 						<TimelineItem
 							key={entry.data.id}
 							name={entry.data.createdBy.name}
+							committeeBureau={entry.data.createdBy.committeeBureau}
+							affiliatedProjects={entry.data.createdBy.affiliatedProjects}
 							role={toTimelineRole(entry.data.senderRole)}
 							date={getCommentDisplayDate(entry.data)}
 							body={entry.data.body}
@@ -220,6 +224,8 @@ function DraftCommentItem({
 	return (
 		<TimelineItem
 			name={comment.createdBy.name}
+			committeeBureau={comment.createdBy.committeeBureau}
+			affiliatedProjects={comment.createdBy.affiliatedProjects}
 			role={toTimelineRole(comment.senderRole)}
 			date={comment.createdAt}
 			body={comment.body}
