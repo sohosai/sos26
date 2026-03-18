@@ -1,8 +1,8 @@
 import { Heading, Separator, Text } from "@radix-ui/themes";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AnswerField } from "@/components/form/Answer/AnswerField";
 import { DownloadFileNameProvider } from "@/components/form/Answer/DownloadFileNameContext";
+import { EditableAnswerItem } from "@/components/form/Answer/EditableAnswerItem";
 import { getFormDetail, getFormResponse } from "@/lib/api/committee-form";
 import { formDetailToForm } from "@/lib/form/convert";
 import { responseToAnswers } from "@/lib/form/utils";
@@ -76,11 +76,11 @@ function RouteComponent() {
 				<ul className={styles.itemList}>
 					{form.items.map(item => (
 						<li key={item.id} className={styles.itemCard}>
-							<AnswerField
+							<EditableAnswerItem
 								item={item}
-								value={answers[item.id]}
-								onChange={() => {}}
-								disabled
+								initialValue={answers[item.id]}
+								formId={formId}
+								projectId={response.project.id}
 							/>
 						</li>
 					))}

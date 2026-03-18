@@ -737,6 +737,38 @@ export type GetFormResponseResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
+// PUT /committee/forms/:formId/answers/:formItemId/:projectId
+// 申請回答の編集（委員会側）
+// ─────────────────────────────────────────────────────────────
+
+export const editFormAnswerPathParamsSchema = z.object({
+	formId: z.cuid(),
+	formItemId: z.cuid(),
+	projectId: z.cuid(),
+});
+
+export const editFormAnswerRequestSchema = z.object({
+	textValue: z.string().nullable().optional(),
+	numberValue: z.number().nullable().optional(),
+	fileIds: z.array(z.string()).optional(),
+	selectedOptionIds: z.array(z.string()).optional(),
+});
+export type EditFormAnswerRequest = z.infer<typeof editFormAnswerRequestSchema>;
+
+export const editFormAnswerResponseSchema = z.object({
+	answer: z.object({
+		formItemId: z.string(),
+		textValue: z.string().nullable(),
+		numberValue: z.number().nullable(),
+		files: z.array(formAnswerFileSchema),
+		selectedOptions: z.array(z.object({ id: z.string(), label: z.string() })),
+	}),
+});
+export type EditFormAnswerResponse = z.infer<
+	typeof editFormAnswerResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
 // 企画側
 // ─────────────────────────────────────────────────────────────
 

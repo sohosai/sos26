@@ -6,7 +6,7 @@ import {
 	VisuallyHidden,
 } from "@radix-ui/themes";
 import { useEffect, useState } from "react";
-import { AnswerField } from "@/components/form/Answer/AnswerField";
+import { EditableAnswerItem } from "@/components/form/Answer/EditableAnswerItem";
 import type { Form, FormAnswers } from "@/components/form/type";
 import { getFormResponse } from "@/lib/api/committee-form";
 import { responseToAnswers } from "@/lib/form/utils";
@@ -23,6 +23,7 @@ type Props = {
 };
 
 type ResponseData = {
+	projectId: string;
 	projectName: string;
 	submittedAt: Date | null;
 	answers: FormAnswers;
@@ -52,6 +53,7 @@ export function AnswerDetailDialog({
 				if (controller.signal.aborted) return;
 				const answers = responseToAnswers(res.response, form);
 				setData({
+					projectId: res.response.project.id,
 					projectName: res.response.project.name,
 					submittedAt: res.response.submittedAt,
 					answers,
@@ -103,11 +105,11 @@ export function AnswerDetailDialog({
 							<ul className={styles.itemList}>
 								{form.items.map(item => (
 									<li key={item.id} className={styles.itemCard}>
-										<AnswerField
+										<EditableAnswerItem
 											item={item}
-											value={data.answers[item.id]}
-											onChange={() => {}}
-											disabled
+											initialValue={data.answers[item.id]}
+											formId={formId}
+											projectId={data.projectId}
 										/>
 									</li>
 								))}
