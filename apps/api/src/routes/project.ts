@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import {
 	createProjectRequestSchema,
 	type FormAnswerValidationItem,
@@ -34,8 +35,14 @@ import type { AuthEnv } from "../types/auth-env";
 const projectRoute = new Hono<AuthEnv>();
 
 // 招待コード生成
+const INVITE_CODE_LENGTH = 6;
+const INVITE_CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
 const generateInviteCode = () =>
-	Math.random().toString(36).substring(2, 8).toUpperCase();
+	Array.from({ length: INVITE_CODE_LENGTH }, () => {
+		const idx = randomInt(0, INVITE_CODE_CHARS.length);
+		return INVITE_CODE_CHARS[idx];
+	}).join("");
 
 // 企画登録フォーム回答をPrisma用データに変換
 const buildPrismaAnswerData = (

@@ -14,6 +14,8 @@ export type { ProjectLocation, ProjectType } from "./common";
 export const projectDeletionStatusSchema = z.enum(["LOTTERY_LOSS", "DELETED"]);
 export type ProjectDeletionStatus = z.infer<typeof projectDeletionStatusSchema>;
 
+const INVITE_CODE_LENGTH = 6;
+
 export const projectSchema = z.object({
 	id: z.cuid(),
 	number: z.number().int().positive(),
@@ -25,7 +27,7 @@ export const projectSchema = z.object({
 	location: projectLocationSchema,
 	ownerId: z.string().min(1),
 	subOwnerId: z.string().nullable(),
-	inviteCode: z.string().length(6),
+	inviteCode: z.string().length(INVITE_CODE_LENGTH),
 	deletionStatus: projectDeletionStatusSchema.nullable(),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
@@ -134,7 +136,7 @@ export type ListProjectMembersResponse = z.infer<
 // ─────────────────────────────────────────────
 
 export const joinProjectRequestSchema = z.object({
-	inviteCode: z.string().length(6),
+	inviteCode: z.string().length(INVITE_CODE_LENGTH),
 });
 
 export type JoinProjectRequest = z.infer<typeof joinProjectRequestSchema>;
@@ -266,7 +268,7 @@ export type UpdateProjectDetailResponse = z.infer<
 export const regenerateInviteCodeRequestSchema = z.undefined();
 
 export const regenerateInviteCodeResponseSchema = z.object({
-	inviteCode: z.string().length(6),
+	inviteCode: z.string().length(INVITE_CODE_LENGTH),
 });
 
 export type RegenerateInviteCodeResponse = z.infer<
