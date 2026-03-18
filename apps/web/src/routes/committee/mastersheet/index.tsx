@@ -34,11 +34,19 @@ export const Route = createFileRoute("/committee/mastersheet/")({
 const FIXED_COLUMN_IDS = [
 	"number",
 	"name",
+	"namePhonetic",
 	"type",
 	"organizationName",
+	"organizationNamePhonetic",
 	"ownerName",
 	"subOwnerName",
 ] as const;
+
+/** デフォルトで非表示にする固定カラム */
+const DEFAULT_HIDDEN_FIXED_COLUMNS: Record<string, boolean> = {
+	namePhonetic: false,
+	organizationNamePhonetic: false,
+};
 
 function MastersheetPage() {
 	const { columns, rows } = Route.useLoaderData();
@@ -49,7 +57,9 @@ function MastersheetPage() {
 	const [selectedCells, setSelectedCells] = useState<SelectedCell[]>([]);
 	const [tableKey, setTableKey] = useState(0);
 	const [sorting, setSorting] = useState<SortingState | undefined>(undefined);
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
+		DEFAULT_HIDDEN_FIXED_COLUMNS
+	);
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 	const [activeViewId, setActiveViewId] = useState<string | null>(null);
 
