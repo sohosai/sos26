@@ -212,10 +212,17 @@ export function Sidebar({
 		return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches;
 	});
 	const [mobileOpen, setMobileOpen] = useState(false);
-	const { isCommitteeMember, hasMemberEditPermission, signOut } =
-		useAuthStore();
+	const {
+		isCommitteeMember,
+		hasMemberEditPermission,
+		hasProjectRegistrationPermission,
+		signOut,
+	} = useAuthStore();
 	const shouldCheckMemberEdit = menuItems.some(
 		item => item.to === "/committee/members"
+	);
+	const shouldCheckProjectRegistration = menuItems.some(
+		item => item.to === "/committee/project-registration"
 	);
 
 	useEffect(() => {
@@ -265,10 +272,23 @@ export function Sidebar({
 	const footerItems = roleSwitchItem
 		? [roleSwitchItem, ...commonItems]
 		: commonItems;
-	const visibleMenuItems =
-		shouldCheckMemberEdit && hasMemberEditPermission !== true
-			? menuItems.filter(item => item.to !== "/committee/members")
-			: menuItems;
+	const visibleMenuItems = menuItems.filter(item => {
+		if (
+			shouldCheckMemberEdit &&
+			hasMemberEditPermission !== true &&
+			item.to === "/committee/members"
+		) {
+			return false;
+		}
+		if (
+			shouldCheckProjectRegistration &&
+			hasProjectRegistrationPermission !== true &&
+			item.to === "/committee/project-registration"
+		) {
+			return false;
+		}
+		return true;
+	});
 	const sidebarCollapsed = !isMobile && collapsed;
 
 	const logoutButton = (
