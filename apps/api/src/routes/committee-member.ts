@@ -6,7 +6,7 @@ import {
 	updateCommitteeMemberRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
-import { requireDeliverPermission } from "../lib/committee-permission";
+import { requirePermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
@@ -33,7 +33,7 @@ committeeMemberRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 // ─────────────────────────────────────────────────────────────
 committeeMemberRoute.post("/", requireAuth, requireCommitteeMember, async c => {
 	const user = c.get("user");
-	await requireDeliverPermission(
+	await requirePermission(
 		prisma,
 		user.id,
 		"MEMBER_EDIT",
@@ -98,7 +98,7 @@ committeeMemberRoute.patch(
 	requireCommitteeMember,
 	async c => {
 		const user = c.get("user");
-		await requireDeliverPermission(
+		await requirePermission(
 			prisma,
 			user.id,
 			"MEMBER_EDIT",
@@ -136,7 +136,7 @@ committeeMemberRoute.delete(
 	requireCommitteeMember,
 	async c => {
 		const user = c.get("user");
-		await requireDeliverPermission(
+		await requirePermission(
 			prisma,
 			user.id,
 			"MEMBER_EDIT",
@@ -172,7 +172,7 @@ committeeMemberRoute.get(
 	requireCommitteeMember,
 	async c => {
 		const user = c.get("user");
-		await requireDeliverPermission(
+		await requirePermission(
 			prisma,
 			user.id,
 			"MEMBER_EDIT",
@@ -213,7 +213,7 @@ committeeMemberRoute.post(
 		const permission = rawPermission as CommitteePermission;
 
 		const user = c.get("user");
-		await requireDeliverPermission(
+		await requirePermission(
 			prisma,
 			user.id,
 			"MEMBER_EDIT",
@@ -267,7 +267,7 @@ committeeMemberRoute.delete(
 		) as CommitteePermission;
 
 		const user = c.get("user");
-		await requireDeliverPermission(
+		await requirePermission(
 			prisma,
 			user.id,
 			"MEMBER_EDIT",

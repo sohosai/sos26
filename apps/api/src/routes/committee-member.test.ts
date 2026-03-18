@@ -75,7 +75,7 @@ const mockCommitteeMember: CommitteeMember = {
 	deletedAt: null,
 };
 
-/** requireDeliverPermission 用: MEMBER_EDIT 権限付きメンバー */
+/** requirePermission 用: MEMBER_EDIT 権限付きメンバー */
 const mockCommitteeMemberWithPermissions = {
 	...mockCommitteeMember,
 	permissions: [
@@ -111,7 +111,7 @@ function setupAuthWithMemberEdit() {
 		uid: "firebase-uid-123",
 	} as any);
 	mockPrisma.user.findFirst.mockResolvedValue(mockUser);
-	// requireCommitteeMember 用 + requireDeliverPermission 用（権限付き）
+	// requireCommitteeMember 用 + requirePermission 用（権限付き）
 	mockPrisma.committeeMember.findFirst.mockResolvedValue(
 		mockCommitteeMemberWithPermissions as any
 	);
@@ -178,7 +178,7 @@ describe("POST /committee/members", () => {
 			uid: "firebase-uid-123",
 		} as any);
 		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
-		// requireCommitteeMember + requireDeliverPermission（権限なし）
+		// requireCommitteeMember + requirePermission（権限なし）
 		mockPrisma.committeeMember.findFirst.mockResolvedValue({
 			...mockCommitteeMember,
 			permissions: [],
@@ -290,7 +290,7 @@ describe("POST /committee/members", () => {
 		} as any);
 		// requireAuth: user.findFirst
 		mockPrisma.user.findFirst.mockResolvedValueOnce(mockUser);
-		// requireCommitteeMember + requireDeliverPermission: committeeMember.findFirst
+		// requireCommitteeMember + requirePermission: committeeMember.findFirst
 		mockPrisma.committeeMember.findFirst.mockResolvedValue(
 			mockCommitteeMemberWithPermissions as any
 		);
@@ -377,7 +377,7 @@ describe("PATCH /committee/members/:id", () => {
 		// requireCommitteeMember: findFirst 1回目
 		mockPrisma.committeeMember.findFirst
 			.mockResolvedValueOnce(mockCommitteeMember)
-			// requireDeliverPermission: findFirst 2回目
+			// requirePermission: findFirst 2回目
 			.mockResolvedValueOnce(mockCommitteeMemberWithPermissions)
 			// ハンドラ内: findFirst 3回目
 			.mockResolvedValueOnce(null);
@@ -431,7 +431,7 @@ describe("DELETE /committee/members/:id", () => {
 		// requireCommitteeMember: findFirst 1回目
 		mockPrisma.committeeMember.findFirst
 			.mockResolvedValueOnce(mockCommitteeMember)
-			// requireDeliverPermission: findFirst 2回目
+			// requirePermission: findFirst 2回目
 			.mockResolvedValueOnce(mockCommitteeMemberWithPermissions)
 			// ハンドラ内: findFirst 3回目
 			.mockResolvedValueOnce(null);
@@ -490,7 +490,7 @@ describe("GET /committee/members/:id/permissions", () => {
 		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 		mockPrisma.committeeMember.findFirst
 			.mockResolvedValueOnce(mockCommitteeMember)
-			// requireDeliverPermission
+			// requirePermission
 			.mockResolvedValueOnce(mockCommitteeMemberWithPermissions)
 			// ハンドラ内: メンバー存在確認
 			.mockResolvedValueOnce(null);
@@ -569,7 +569,7 @@ describe("POST /committee/members/:id/permissions", () => {
 		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 		mockPrisma.committeeMember.findFirst
 			.mockResolvedValueOnce(mockCommitteeMember)
-			// requireDeliverPermission
+			// requirePermission
 			.mockResolvedValueOnce(mockCommitteeMemberWithPermissions)
 			// ハンドラ内: メンバー存在確認
 			.mockResolvedValueOnce(null);
@@ -645,7 +645,7 @@ describe("DELETE /committee/members/:id/permissions/:permission", () => {
 		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 		mockPrisma.committeeMember.findFirst
 			.mockResolvedValueOnce(mockCommitteeMember)
-			// requireDeliverPermission
+			// requirePermission
 			.mockResolvedValueOnce(mockCommitteeMemberWithPermissions)
 			// ハンドラ内: メンバー存在確認
 			.mockResolvedValueOnce(null);

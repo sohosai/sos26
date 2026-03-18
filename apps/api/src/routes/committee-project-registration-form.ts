@@ -9,7 +9,7 @@ import {
 	updateProjectRegistrationFormRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
-import { requireDeliverPermission } from "../lib/committee-permission";
+import { requirePermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
 import { formAnswerFileSelect, mapAnswerFiles } from "../lib/form-answer-files";
 import {
@@ -469,7 +469,7 @@ committeeProjectRegistrationFormRoute.post(
 			throw Errors.notFound("承認依頼先のユーザーが見つかりません");
 
 		// PROJECT_REGISTRATION_FORM_DELIVER 権限または委員長であることを確認
-		await requireDeliverPermission(
+		await requirePermission(
 			prisma,
 			requestedToId,
 			"PROJECT_REGISTRATION_FORM_DELIVER",
@@ -551,7 +551,7 @@ committeeProjectRegistrationFormRoute.patch(
 					throw Errors.invalidRequest("この承認依頼は既に処理済みです");
 
 				// 承認依頼作成後に DELIVER 権限が剥奪されていないか再確認
-				await requireDeliverPermission(
+				await requirePermission(
 					tx,
 					user.id,
 					"PROJECT_REGISTRATION_FORM_DELIVER",
