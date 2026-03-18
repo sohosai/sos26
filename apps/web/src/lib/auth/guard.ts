@@ -72,6 +72,32 @@ export async function preloadMemberEditPermission(): Promise<void> {
 }
 
 /**
+ * サイドバー表示制御用に企画登録関連権限を事前取得する
+ * beforeLoad で呼び出すことで、初回描画時のチラつきを防ぐ
+ */
+export async function preloadProjectRegistrationPermission(): Promise<void> {
+	const { committeeMember, isCommitteeMember } = useAuthStore.getState();
+
+	if (!isCommitteeMember || !committeeMember?.id) {
+		useAuthStore.setState({ hasProjectRegistrationPermission: false });
+		return;
+	}
+
+	try {
+		const res = await listCommitteeMemberPermissions(committeeMember.id);
+		useAuthStore.setState({
+			hasProjectRegistrationPermission: res.permissions.some(
+				p =>
+					p.permission === "PROJECT_REGISTRATION_FORM_CREATE" ||
+					p.permission === "PROJECT_REGISTRATION_FORM_DELIVER"
+			),
+		});
+	} catch {
+		useAuthStore.setState({ hasProjectRegistrationPermission: false });
+	}
+}
+
+/**
  * returnTo パラメータのバリデーション
  * オープンリダイレクト脆弱性を防ぐため、内部パスのみ許可
  *
