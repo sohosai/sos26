@@ -38,7 +38,12 @@ const FIXED_COLUMN_IDS = [
 	"organizationName",
 	"ownerName",
 	"subOwnerName",
+	"deletionStatus",
 ] as const;
+
+const DEFAULT_COLUMN_FILTERS: ColumnFiltersState = [
+	{ id: "deletionStatus", value: ["ACTIVE"] },
+];
 
 function MastersheetPage() {
 	const { columns, rows } = Route.useLoaderData();
@@ -50,7 +55,9 @@ function MastersheetPage() {
 	const [tableKey, setTableKey] = useState(0);
 	const [sorting, setSorting] = useState<SortingState | undefined>(undefined);
 	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(
+		DEFAULT_COLUMN_FILTERS
+	);
 	const [activeViewId, setActiveViewId] = useState<string | null>(null);
 
 	async function handleColumnSuccess() {
@@ -86,7 +93,7 @@ function MastersheetPage() {
 			completeVisibility[col.id] = knownIds.has(col.id);
 		}
 		setColumnVisibility(completeVisibility);
-		setColumnFilters(viewState.columnFilters ?? []);
+		setColumnFilters(viewState.columnFilters ?? DEFAULT_COLUMN_FILTERS);
 		setTableKey(k => k + 1);
 	}
 

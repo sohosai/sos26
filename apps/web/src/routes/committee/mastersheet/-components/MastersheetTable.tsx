@@ -1,7 +1,8 @@
-import { Link, Text, Tooltip } from "@radix-ui/themes";
+import { Badge, Link, Text, Tooltip } from "@radix-ui/themes";
 import type {
 	EditFormItemCellRequest,
 	GetMastersheetDataResponse,
+	ProjectDeletionStatus,
 	UpsertMastersheetCellRequest,
 } from "@sos26/shared";
 import { type ProjectType, projectTypeSchema } from "@sos26/shared";
@@ -69,6 +70,15 @@ const PROJECT_TYPE_LABEL = {
 	NORMAL: "普通企画",
 } satisfies Record<ProjectType, string>;
 
+type ProjectDeletionFilterValue = "ACTIVE" | "DELETED" | "LOTTERY_LOSS";
+
+function projectDeletionStatusLabel(
+	status: ProjectDeletionStatus | null
+): string {
+	if (status === "LOTTERY_LOSS") return "抽選漏れ";
+	if (status === "DELETED") return "削除";
+	return "有効";
+}
 const columnHelper = createColumnHelper<MastersheetRow>();
 
 function ColHeader({ col }: { col: ApiColumn }) {
@@ -168,9 +178,33 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 		},
 		meta: { filterVariant: "text" },
 	}),
+	columnHelper.accessor(
+		row =>
+			(row.project.deletionStatus ??
+				"ACTIVE") satisfies ProjectDeletionFilterValue,
+		{
+			id: "deletionStatus",
+			header: "削除状況",
+			cell: ctx => (
+				<Badge
+					color={ctx.row.original.project.deletionStatus ? "red" : "green"}
+				>
+					{projectDeletionStatusLabel(ctx.row.original.project.deletionStatus)}
+				</Badge>
+			),
+			meta: {
+				filterVariant: "select",
+				selectOptions: [
+					{ value: "ACTIVE", label: "有効" },
+					{ value: "DELETED", label: "削除" },
+					{ value: "LOTTERY_LOSS", label: "抽選漏れ" },
+				],
+			},
+		}
+	),
 ];
 
-/** FORM_ITEM セルが編集不可かどうか */
+/** FORM_ITEM セルが編集可能か否か */
 function isFormItemInactive(row: MastersheetRow, colId: string): boolean {
 	const status = row.cells[colId]?.status;
 	return (

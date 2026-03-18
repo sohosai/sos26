@@ -254,6 +254,7 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 				name: project.name,
 				type: project.type,
 				organizationName: project.organizationName,
+				deletionStatus: project.deletionStatus ?? null,
 				owner: project.owner,
 				subOwner: project.subOwner ?? null,
 			},
