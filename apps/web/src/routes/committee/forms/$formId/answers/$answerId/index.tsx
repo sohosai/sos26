@@ -75,7 +75,7 @@ function RouteComponent() {
 
 				<ul className={styles.itemList}>
 					{form.items.map(item => (
-						<li key={item.id} className={styles.itemCard}>
+						<li key={item.id}>
 							<EditableAnswerItem
 								item={item}
 								initialValue={answers[item.id]}

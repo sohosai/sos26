@@ -1133,8 +1133,10 @@ committeeFormRoute.put(
 		if (!form) throw Errors.notFound("申請が見つかりません");
 
 		const isOwner = form.ownerId === userId;
-		const isCollaborator = form.collaborators.some(c => c.userId === userId);
-		if (!isOwner && !isCollaborator) {
+		const isWriteCollaborator = form.collaborators.some(
+			c => c.userId === userId && c.isWrite
+		);
+		if (!isOwner && !isWriteCollaborator) {
 			throw Errors.forbidden("回答の編集権限がありません");
 		}
 
