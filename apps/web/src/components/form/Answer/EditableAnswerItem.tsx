@@ -62,10 +62,13 @@ export function EditableAnswerItem({
 	projectId,
 }: Props) {
 	const [value, setValue] = useState<FormAnswerValue | undefined>(initialValue);
-	const savedRef = useRef(serializeValue(initialValue));
+	const [savedValue, setSavedValue] = useState<FormAnswerValue | undefined>(
+		initialValue
+	);
+	const savedSerializedRef = useRef(serializeValue(initialValue));
 	const [saving, setSaving] = useState(false);
 
-	const isDirty = serializeValue(value) !== savedRef.current;
+	const isDirty = serializeValue(value) !== savedSerializedRef.current;
 
 	const handleSave = useCallback(async () => {
 		if (saving || value === undefined) return;
@@ -74,7 +77,8 @@ export function EditableAnswerItem({
 		try {
 			const payload = buildEditPayload(item, value);
 			await editFormAnswer(formId, item.id, projectId, payload);
-			savedRef.current = serializeValue(value);
+			setSavedValue(value);
+			savedSerializedRef.current = serializeValue(value);
 			toast.success("回答を保存しました");
 		} catch (error) {
 			toast.error(
@@ -86,9 +90,8 @@ export function EditableAnswerItem({
 	}, [formId, item, projectId, value, saving]);
 
 	const handleCancel = useCallback(() => {
-		setValue(initialValue);
-		savedRef.current = serializeValue(initialValue);
-	}, [initialValue]);
+		setValue(savedValue);
+	}, [savedValue]);
 
 	return (
 		<Flex direction="column" gap="2">
