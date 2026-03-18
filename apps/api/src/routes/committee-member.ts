@@ -6,6 +6,7 @@ import {
 	updateCommitteeMemberRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
+import { requireDeliverPermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
@@ -31,15 +32,23 @@ committeeMemberRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 // 委員メンバーを作成
 // ─────────────────────────────────────────────────────────────
 committeeMemberRoute.post("/", requireAuth, requireCommitteeMember, async c => {
+	const user = c.get("user");
+	await requireDeliverPermission(
+		prisma,
+		user.id,
+		"MEMBER_EDIT",
+		"メンバー編集権限がありません"
+	);
+
 	const body = await c.req.json().catch(() => ({}));
 	const { userId, Bureau, isExecutive } =
 		createCommitteeMemberRequestSchema.parse(body);
 
 	// ユーザー存在確認
-	const user = await prisma.user.findFirst({
+	const targetUser = await prisma.user.findFirst({
 		where: { id: userId, deletedAt: null },
 	});
-	if (!user) {
+	if (!targetUser) {
 		throw Errors.notFound("ユーザーが見つかりません");
 	}
 
@@ -88,6 +97,14 @@ committeeMemberRoute.patch(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
+		const user = c.get("user");
+		await requireDeliverPermission(
+			prisma,
+			user.id,
+			"MEMBER_EDIT",
+			"メンバー編集権限がありません"
+		);
+
 		const id = c.req.param("id");
 		const body = await c.req.json().catch(() => ({}));
 		const data = updateCommitteeMemberRequestSchema.parse(body);
@@ -118,6 +135,14 @@ committeeMemberRoute.delete(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
+		const user = c.get("user");
+		await requireDeliverPermission(
+			prisma,
+			user.id,
+			"MEMBER_EDIT",
+			"メンバー編集権限がありません"
+		);
+
 		const id = c.req.param("id");
 
 		// 存在確認
@@ -146,9 +171,16 @@ committeeMemberRoute.get(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
+		const user = c.get("user");
+		await requireDeliverPermission(
+			prisma,
+			user.id,
+			"MEMBER_EDIT",
+			"メンバー編集権限がありません"
+		);
+
 		const id = c.req.param("id");
 
-		// TODO: 権限チェックの調整
 		// 対象メンバーの存在確認
 		const member = await prisma.committeeMember.findFirst({
 			where: { id, deletedAt: null },
@@ -180,7 +212,14 @@ committeeMemberRoute.post(
 			grantCommitteeMemberPermissionRequestSchema.parse(body);
 		const permission = rawPermission as CommitteePermission;
 
-		// TODO: 権限チェックの調整
+		const user = c.get("user");
+		await requireDeliverPermission(
+			prisma,
+			user.id,
+			"MEMBER_EDIT",
+			"メンバー編集権限がありません"
+		);
+
 		// 対象メンバーの存在確認
 		const member = await prisma.committeeMember.findFirst({
 			where: { id, deletedAt: null },
@@ -227,7 +266,14 @@ committeeMemberRoute.delete(
 			c.req.param("permission")
 		) as CommitteePermission;
 
-		// TODO: 権限チェックの調整
+		const user = c.get("user");
+		await requireDeliverPermission(
+			prisma,
+			user.id,
+			"MEMBER_EDIT",
+			"メンバー編集権限がありません"
+		);
+
 		// 対象メンバーの存在確認
 		const member = await prisma.committeeMember.findFirst({
 			where: { id, deletedAt: null },
