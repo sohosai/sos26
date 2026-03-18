@@ -88,14 +88,14 @@ model User {
   files File[]
 
   // Inquiry関連
-  createdInquiries          Inquiry[]                @relation("InquiryCreatedBy")
-  inquiryAssignments        InquiryAssignee[]        @relation("InquiryAssignee")
-  inquiryViewerEntries      InquiryViewer[]          @relation("InquiryViewer")
-  inquiryComments           InquiryComment[]         @relation("InquiryCommentCreatedBy")
+  createdInquiries           Inquiry[]                  @relation("InquiryCreatedBy")
+  inquiryAssignments         InquiryAssignee[]          @relation("InquiryAssignee")
+  inquiryViewerEntries       InquiryViewer[]            @relation("InquiryViewer")
+  inquiryComments            InquiryComment[]           @relation("InquiryCommentCreatedBy")
   inquiryCommentReadStatuses InquiryCommentReadStatus[]
-  inquiryActivitiesAsActor  InquiryActivity[]        @relation("InquiryActivityActor")
-  inquiryActivitiesAsTarget InquiryActivity[]        @relation("InquiryActivityTarget")
-  projectSubOwnerRequests   ProjectSubOwnerRequest[]
+  inquiryActivitiesAsActor   InquiryActivity[]          @relation("InquiryActivityActor")
+  inquiryActivitiesAsTarget  InquiryActivity[]          @relation("InquiryActivityTarget")
+  projectSubOwnerRequests    ProjectSubOwnerRequest[]
 
   //Project ProjectRegistration Form関連
   requestedProjectRegistrationFormAuthorizations ProjectRegistrationFormAuthorization[] @relation("ProjectRegFormRequestedBy")
@@ -980,12 +980,12 @@ model Inquiry {
   // 下書き機能（実委が作成時に下書きとして保存可能）
   isDraft Boolean @default(false)
 
-  assignees   InquiryAssignee[]
-  viewers     InquiryViewer[]
-  comments    InquiryComment[]
+  assignees           InquiryAssignee[]
+  viewers             InquiryViewer[]
+  comments            InquiryComment[]
   commentReadStatuses InquiryCommentReadStatus[]
-  activities  InquiryActivity[]
-  attachments InquiryAttachment[]
+  activities          InquiryActivity[]
+  attachments         InquiryAttachment[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
