@@ -938,7 +938,7 @@ enum InquiryStatus {
 }
 
 enum InquiryCreatorRole {
-  PROJECT // 企画人
+  PROJECT // 企画者
   COMMITTEE // 実委人
 }
 

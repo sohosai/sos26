@@ -13,7 +13,7 @@ export type DocArticle = {
 
 export const categoryLabels: Record<DocCategory, string> = {
 	general: "全体",
-	project: "企画人向け",
+	project: "企画者向け",
 	committee: "実委人向け",
 };
 
@@ -28,7 +28,7 @@ export const articles: DocArticle[] = [
 	},
 	{
 		slug: "project-guide",
-		title: "企画人ガイド",
+		title: "企画者ガイド",
 		category: "project",
 		content: projectGuide,
 	},

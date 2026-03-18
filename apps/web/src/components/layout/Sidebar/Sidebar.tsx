@@ -73,7 +73,7 @@ function getRoleSwitchItem(
 		(!pathname.startsWith("/project") && hasCommitteeMenu)
 	) {
 		return {
-			label: "企画人に切り替え",
+			label: "企画者に切り替え",
 			icon: <IconArrowsExchange size={18} />,
 			to: "/project",
 		};
