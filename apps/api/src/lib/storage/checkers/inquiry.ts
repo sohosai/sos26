@@ -89,7 +89,13 @@ registerFileAccessChecker(async (fileId, user) => {
 	});
 
 	if (committeeMember) {
-		return checkCommitteeAccess(inquiryId, user.id, committeeMember);
+		const hasCommitteeAccess = await checkCommitteeAccess(
+			inquiryId,
+			user.id,
+			committeeMember
+		);
+		if (hasCommitteeAccess) return true;
+		// 実委人でも企画側担当者として参加している場合があるためフォールスルー
 	}
 
 	// 下書きコメント添付は企画側に公開しない
