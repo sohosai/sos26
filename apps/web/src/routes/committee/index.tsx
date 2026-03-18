@@ -3,6 +3,10 @@ import { createFileRoute, Link as RouterLink } from "@tanstack/react-router";
 import { listCommitteeProjects } from "@/lib/api/committee-project";
 import { useAuthStore } from "@/lib/auth";
 
+function formatProjectNumberForUrl(projectNumber: number): string {
+	return String(projectNumber).padStart(3, "0");
+}
+
 export const Route = createFileRoute("/committee/")({
 	loader: async () => listCommitteeProjects({ limit: 20 }),
 	component: CommitteeIndexPage,
@@ -44,13 +48,17 @@ function CommitteeIndexPage() {
 								<Link asChild>
 									<RouterLink
 										to="/committee/info/$projectId"
-										params={{ projectId: project.id }}
+										params={{
+											projectId: formatProjectNumberForUrl(project.number),
+										}}
 									>
 										{project.name}
 									</RouterLink>
 								</Link>
 							</Table.Cell>
-							<Table.Cell>{project.isActive ? "有効" : "停止"}</Table.Cell>
+							<Table.Cell>
+								{project.deletionStatus === null ? "有効" : "停止"}
+							</Table.Cell>
 						</Table.Row>
 					))}
 				</Table.Body>

@@ -150,7 +150,7 @@ function CommitteeProjectInfoPage() {
 						<Text size="2" color="gray">
 							企画番号 {project.number}
 						</Text>
-						<Badge color={project.isActive ? "green" : "red"}>
+						<Badge color={project.deletionStatus === null ? "green" : "red"}>
 							{statusLabel(project.deletionStatus)}
 						</Badge>
 					</div>
@@ -167,7 +167,7 @@ function CommitteeProjectInfoPage() {
 				</div>
 			</header>
 
-			{!project.isActive && (
+			{project.deletionStatus !== null && (
 				<Callout.Root color="red">
 					<Callout.Text>
 						この企画は「{statusLabel(project.deletionStatus)}
@@ -316,7 +316,7 @@ function CommitteeProjectInfoPage() {
 						>
 							<Select.Trigger />
 							<Select.Content>
-								<Select.Item value="ACTIVE">有効（削除を取り消す）</Select.Item>
+								<Select.Item value="ACTIVE">有効</Select.Item>
 								<Select.Item value="DELETED">削除</Select.Item>
 								<Select.Item value="LOTTERY_LOSS">抽選漏れ</Select.Item>
 							</Select.Content>

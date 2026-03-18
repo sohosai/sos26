@@ -5,7 +5,7 @@ import {
 	updateCommitteeProjectBaseInfoRequestSchema,
 	updateCommitteeProjectDeletionStatusRequestSchema,
 } from "@sos26/shared";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { sendEmail } from "../lib/emails/providers/sendgridClient";
 import { textToHtml } from "../lib/emails/templates/textToHtml";
 import { env } from "../lib/env";
@@ -18,7 +18,6 @@ import type { AuthEnv } from "../types/auth-env";
 const committeeProjectRoute = new Hono<AuthEnv>();
 
 type ProjectStatusFields = {
-	isActive: boolean;
 	deletionStatus: "LOTTERY_LOSS" | "DELETED" | null;
 };
 
@@ -30,10 +29,10 @@ type ProjectActionItem = {
 
 function getProjectStatusFields(project: object): ProjectStatusFields {
 	const candidate = project as Partial<ProjectStatusFields>;
+	const deletionStatus = candidate.deletionStatus ?? null;
 
 	return {
-		isActive: candidate.isActive ?? true,
-		deletionStatus: candidate.deletionStatus ?? null,
+		deletionStatus,
 	};
 }
 
@@ -50,8 +49,7 @@ function shouldNotifyDeletionStatusUpdate(
 	beforeStatus: ProjectStatusFields
 ): deletionStatus is "LOTTERY_LOSS" | "DELETED" {
 	return (
-		deletionStatus !== null &&
-		(beforeStatus.deletionStatus !== deletionStatus || beforeStatus.isActive)
+		deletionStatus !== null && beforeStatus.deletionStatus !== deletionStatus
 	);
 }
 
@@ -120,76 +118,101 @@ function maskContact<
 	};
 }
 
-async function fetchCommitteeProjectDetailData(projectId: string) {
-	const [project, formDeliveries, noticeDeliveries, inquiries] =
-		await Promise.all([
-			prisma.project.findFirst({
-				where: { id: projectId, deletedAt: null },
-				include: {
-					owner: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							telephoneNumber: true,
-						},
-					},
-					subOwner: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							telephoneNumber: true,
-						},
-					},
-					_count: {
-						select: { projectMembers: { where: { deletedAt: null } } },
-					},
-				},
-			}),
-			prisma.formDelivery.findMany({
-				where: { projectId },
+async function fetchCommitteeProjectDetailData(projectParam: string) {
+	if (!/^\d{3}$/.test(projectParam)) {
+		return {
+			project: null,
+			formDeliveries: [],
+			noticeDeliveries: [],
+			inquiries: [],
+		};
+	}
+
+	const projectNumber = Number.parseInt(projectParam, 10);
+
+	const projectWhere: Prisma.ProjectWhereInput = {
+		deletedAt: null,
+		number: projectNumber,
+	};
+
+	const project = await prisma.project.findFirst({
+		where: projectWhere,
+		include: {
+			owner: {
 				select: {
 					id: true,
-					createdAt: true,
-					formAuthorization: {
-						select: {
-							form: {
-								select: { title: true, deletedAt: true },
-							},
+					name: true,
+					email: true,
+					telephoneNumber: true,
+				},
+			},
+			subOwner: {
+				select: {
+					id: true,
+					name: true,
+					email: true,
+					telephoneNumber: true,
+				},
+			},
+			_count: {
+				select: { projectMembers: { where: { deletedAt: null } } },
+			},
+		},
+	});
+
+	if (!project) {
+		return {
+			project: null,
+			formDeliveries: [],
+			noticeDeliveries: [],
+			inquiries: [],
+		};
+	}
+
+	const [formDeliveries, noticeDeliveries, inquiries] = await Promise.all([
+		prisma.formDelivery.findMany({
+			where: { projectId: project.id },
+			select: {
+				id: true,
+				createdAt: true,
+				formAuthorization: {
+					select: {
+						form: {
+							select: { title: true, deletedAt: true },
 						},
 					},
 				},
-				orderBy: { createdAt: "desc" },
-				take: 20,
-			}),
-			prisma.noticeDelivery.findMany({
-				where: { projectId },
-				select: {
-					id: true,
-					createdAt: true,
-					noticeAuthorization: {
-						select: {
-							notice: {
-								select: { title: true, deletedAt: true },
-							},
+			},
+			orderBy: { createdAt: "desc" },
+			take: 20,
+		}),
+		prisma.noticeDelivery.findMany({
+			where: { projectId: project.id },
+			select: {
+				id: true,
+				createdAt: true,
+				noticeAuthorization: {
+					select: {
+						notice: {
+							select: { title: true, deletedAt: true },
 						},
 					},
 				},
-				orderBy: { createdAt: "desc" },
-				take: 20,
-			}),
-			prisma.inquiry.findMany({
-				where: { projectId, deletedAt: null, isDraft: false },
-				select: {
-					id: true,
-					title: true,
-					createdAt: true,
-				},
-				orderBy: { createdAt: "desc" },
-				take: 20,
-			}),
-		]);
+			},
+			orderBy: { createdAt: "desc" },
+			take: 20,
+		}),
+		prisma.inquiry.findMany({
+			where: { projectId: project.id, deletedAt: null, isDraft: false },
+			select: {
+				id: true,
+				title: true,
+				createdAt: true,
+			},
+			orderBy: { createdAt: "desc" },
+			take: 20,
+		}),
+	]);
 
 	return { project, formDeliveries, noticeDeliveries, inquiries };
 }
@@ -221,6 +244,8 @@ async function resolveProjectPermissions(userId: string): Promise<{
 async function notifyProjectDeletionStatusUpdated(input: {
 	ownerUserId: string;
 	ownerEmail: string;
+	subOwnerUserId: string | null;
+	subOwnerEmail: string | null;
 	projectName: string;
 	status: "LOTTERY_LOSS" | "DELETED";
 	updatedByName: string;
@@ -228,6 +253,14 @@ async function notifyProjectDeletionStatusUpdated(input: {
 	try {
 		const statusLabel = getProjectDeletionStatusLabel(input.status);
 		const url = `${env.APP_URL}/project`;
+		const notifyEmails = [input.ownerEmail, input.subOwnerEmail].filter(
+			(email): email is string => Boolean(email)
+		);
+		const notifyUserIds = [input.ownerUserId, input.subOwnerUserId].filter(
+			(userId): userId is string => Boolean(userId)
+		);
+		const uniqueNotifyEmails = [...new Set(notifyEmails)];
+		const uniqueNotifyUserIds = [...new Set(notifyUserIds)];
 		const body = `あなたの企画の状態が変更されました。
 
 企画名: ${input.projectName}
@@ -241,22 +274,26 @@ ${url}
 筑波大学学園祭実行委員会 雙峰祭オンラインシステム
 このメールは送信専用です。返信いただいてもお応えできません。`;
 
-		await sendEmail({
-			to: input.ownerEmail,
-			subject: `【雙峰祭オンラインシステム】企画状態が「${statusLabel}」に更新されました`,
-			html: textToHtml(body),
-			text: body,
-		});
+		await Promise.all(
+			uniqueNotifyEmails.map(to =>
+				sendEmail({
+					to,
+					subject: `【雙峰祭オンラインシステム】企画状態が「${statusLabel}」に更新されました`,
+					html: textToHtml(body),
+					text: body,
+				})
+			)
+		);
 
 		await sendPushToUsers({
-			userIds: [input.ownerUserId],
+			userIds: uniqueNotifyUserIds,
 			payload: {
 				title: "企画状態が更新されました",
 				body: `${input.projectName}: ${statusLabel}`,
 				icon: "/sos.svg",
 				badge: "/sos.svg",
 				lang: "ja-JP",
-				tag: `project-status:${input.ownerUserId}:${input.status}`,
+				tag: `project-status:${input.projectName}:${input.status}`,
 				renotify: true,
 				timestamp: Date.now(),
 				data: { url, type: "PROJECT_DELETION_STATUS_UPDATED" },
@@ -268,6 +305,156 @@ ${url}
 			err
 		);
 	}
+}
+
+async function maybeNotifyProjectDeletionStatusUpdated(input: {
+	deletionStatus: "LOTTERY_LOSS" | "DELETED" | null;
+	beforeStatus: ProjectStatusFields;
+	projectBefore: {
+		name: string;
+		owner: { id: string; email: string };
+		subOwner: { id: string; email: string } | null;
+	};
+	updatedByName: string;
+}): Promise<void> {
+	if (
+		!shouldNotifyDeletionStatusUpdate(input.deletionStatus, input.beforeStatus)
+	) {
+		return;
+	}
+
+	await notifyProjectDeletionStatusUpdated({
+		ownerUserId: input.projectBefore.owner.id,
+		ownerEmail: input.projectBefore.owner.email,
+		subOwnerUserId: input.projectBefore.subOwner?.id ?? null,
+		subOwnerEmail: input.projectBefore.subOwner?.email ?? null,
+		projectName: input.projectBefore.name,
+		status: input.deletionStatus,
+		updatedByName: input.updatedByName,
+	});
+}
+
+async function findProjectBeforeDeletionStatusUpdate(projectId: string) {
+	const projectBefore = await prisma.project.findFirst({
+		where: { id: projectId, deletedAt: null },
+		include: {
+			owner: {
+				select: {
+					id: true,
+					email: true,
+				},
+			},
+			subOwner: {
+				select: {
+					id: true,
+					email: true,
+				},
+			},
+		},
+	});
+
+	if (!projectBefore) {
+		throw Errors.notFound("企画が見つかりません");
+	}
+
+	return projectBefore;
+}
+
+async function findProjectAfterDeletionStatusUpdate(projectId: string) {
+	const project = await prisma.project.findFirst({
+		where: { id: projectId, deletedAt: null },
+		include: {
+			owner: {
+				select: {
+					id: true,
+					name: true,
+					email: true,
+					telephoneNumber: true,
+				},
+			},
+			subOwner: {
+				select: {
+					id: true,
+					name: true,
+					email: true,
+					telephoneNumber: true,
+				},
+			},
+			_count: {
+				select: { projectMembers: { where: { deletedAt: null } } },
+			},
+		},
+	});
+
+	if (!project) {
+		throw Errors.notFound("企画が見つかりません");
+	}
+
+	return project;
+}
+
+function buildDeletionStatusProjectResponse(
+	project: Awaited<ReturnType<typeof findProjectAfterDeletionStatusUpdate>>,
+	status: ProjectStatusFields,
+	permissions: { canViewContacts: boolean }
+) {
+	const owner = maskContact(project.owner, permissions.canViewContacts);
+	const subOwner = maskContact(project.subOwner, permissions.canViewContacts);
+
+	return {
+		...status,
+		id: project.id,
+		number: project.number,
+		name: project.name,
+		namePhonetic: project.namePhonetic,
+		organizationName: project.organizationName,
+		organizationNamePhonetic: project.organizationNamePhonetic,
+		type: project.type,
+		location: project.location,
+		ownerId: project.ownerId,
+		subOwnerId: project.subOwnerId,
+		createdAt: project.createdAt,
+		updatedAt: project.updatedAt,
+		memberCount: project._count.projectMembers,
+		owner,
+		subOwner,
+	};
+}
+
+async function handleUpdateProjectDeletionStatus(c: Context<AuthEnv>) {
+	const projectId = c.req.param("projectId");
+	const user = c.get("user");
+	const permissions = await resolveProjectPermissions(user.id);
+
+	if (!permissions.canDelete) {
+		throw Errors.forbidden("企画削除権限がありません");
+	}
+
+	const body = await c.req.json().catch(() => ({}));
+	const { deletionStatus } =
+		updateCommitteeProjectDeletionStatusRequestSchema.parse(body);
+
+	const projectBefore = await findProjectBeforeDeletionStatusUpdate(projectId);
+
+	await prisma.project.update({
+		where: { id: projectId },
+		data: { deletionStatus } as Prisma.ProjectUpdateInput,
+	});
+
+	const project = await findProjectAfterDeletionStatusUpdate(projectId);
+	const beforeStatus = getProjectStatusFields(projectBefore);
+	const status = getProjectStatusFields(project);
+
+	await maybeNotifyProjectDeletionStatusUpdated({
+		deletionStatus,
+		beforeStatus,
+		projectBefore,
+		updatedByName: user.name,
+	});
+
+	return c.json({
+		project: buildDeletionStatusProjectResponse(project, status, permissions),
+	});
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -496,128 +683,7 @@ committeeProjectRoute.patch(
 	"/:projectId/deletion-status",
 	requireAuth,
 	requireCommitteeMember,
-	async c => {
-		const projectId = c.req.param("projectId");
-		const user = c.get("user");
-		const permissions = await resolveProjectPermissions(user.id);
-
-		if (!permissions.canDelete) {
-			throw Errors.forbidden("企画削除権限がありません");
-		}
-
-		const body = await c.req.json().catch(() => ({}));
-		const { deletionStatus } =
-			updateCommitteeProjectDeletionStatusRequestSchema.parse(body);
-
-		const projectBefore = await prisma.project.findFirst({
-			where: { id: projectId, deletedAt: null },
-			include: {
-				owner: {
-					select: {
-						id: true,
-						email: true,
-					},
-				},
-			},
-		});
-
-		if (!projectBefore) {
-			throw Errors.notFound("企画が見つかりません");
-		}
-
-		const updateData: Prisma.ProjectUpdateInput = {
-			isActive: deletionStatus === null,
-			deletionStatus,
-		};
-
-		await prisma.project.update({
-			where: { id: projectId },
-			data: updateData,
-		});
-
-		const project = await prisma.project.findFirst({
-			where: { id: projectId, deletedAt: null },
-			include: {
-				owner: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						telephoneNumber: true,
-					},
-				},
-				subOwner: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						telephoneNumber: true,
-					},
-				},
-				_count: {
-					select: { projectMembers: { where: { deletedAt: null } } },
-				},
-			},
-		});
-
-		if (!project) {
-			throw Errors.notFound("企画が見つかりません");
-		}
-
-		const beforeStatus = getProjectStatusFields(projectBefore);
-		const status = getProjectStatusFields(project);
-
-		if (shouldNotifyDeletionStatusUpdate(deletionStatus, beforeStatus)) {
-			await notifyProjectDeletionStatusUpdated({
-				ownerUserId: projectBefore.owner.id,
-				ownerEmail: projectBefore.owner.email,
-				projectName: projectBefore.name,
-				status: deletionStatus,
-				updatedByName: user.name,
-			});
-		}
-
-		const maskedOwner = project.owner
-			? {
-					...project.owner,
-					email: permissions.canViewContacts ? project.owner.email : null,
-					telephoneNumber: permissions.canViewContacts
-						? project.owner.telephoneNumber
-						: null,
-				}
-			: null;
-
-		const maskedSubOwner = project.subOwner
-			? {
-					...project.subOwner,
-					email: permissions.canViewContacts ? project.subOwner.email : null,
-					telephoneNumber: permissions.canViewContacts
-						? project.subOwner.telephoneNumber
-						: null,
-				}
-			: null;
-
-		return c.json({
-			project: {
-				...status,
-				id: project.id,
-				number: project.number,
-				name: project.name,
-				namePhonetic: project.namePhonetic,
-				organizationName: project.organizationName,
-				organizationNamePhonetic: project.organizationNamePhonetic,
-				type: project.type,
-				location: project.location,
-				ownerId: project.ownerId,
-				subOwnerId: project.subOwnerId,
-				createdAt: project.createdAt,
-				updatedAt: project.updatedAt,
-				memberCount: project._count.projectMembers,
-				owner: maskedOwner,
-				subOwner: maskedSubOwner,
-			},
-		});
-	}
+	async c => handleUpdateProjectDeletionStatus(c)
 );
 
 // ─────────────────────────────────────────────────────────────

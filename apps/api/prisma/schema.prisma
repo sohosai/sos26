@@ -181,9 +181,6 @@ model Project {
   //招待コード
   inviteCode String @unique @db.Char(6)
 
-  // 企画の有効状態（false の場合は企画画面で警告表示）
-  isActive Boolean @default(true)
-
   // 非アクティブ化理由
   deletionStatus ProjectDeletionStatus?
 
@@ -204,7 +201,6 @@ model Project {
   @@index([ownerId])
   @@index([subOwnerId])
   @@index([deletedAt])
-  @@index([isActive])
 }
 
 enum ProjectDeletionStatus {

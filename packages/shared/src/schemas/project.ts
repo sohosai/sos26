@@ -26,7 +26,6 @@ export const projectSchema = z.object({
 	ownerId: z.string().min(1),
 	subOwnerId: z.string().nullable(),
 	inviteCode: z.string().length(6),
-	isActive: z.boolean(),
 	deletionStatus: projectDeletionStatusSchema.nullable(),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),

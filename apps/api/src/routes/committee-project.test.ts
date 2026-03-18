@@ -105,7 +105,6 @@ const mockProject: Project = {
 	ownerId: "clxxxxxxxxxxxxxxxxx",
 	subOwnerId: "clzzzzzzzzzzzzzzzz",
 	inviteCode: "ABC123",
-	isActive: true,
 	deletionStatus: null,
 	createdAt: new Date(),
 	updatedAt: new Date(),

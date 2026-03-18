@@ -109,7 +109,7 @@ function ProjectLayout() {
 			<main
 				className={`${styles.main} ${sidebarCollapsed ? styles.collapsed : ""}`}
 			>
-				{selectedProject && !selectedProject.isActive && (
+				{selectedProject && selectedProject.deletionStatus !== null && (
 					<Callout.Root color="red" style={{ marginBottom: 12 }}>
 						<Callout.Text>
 							この企画は「
