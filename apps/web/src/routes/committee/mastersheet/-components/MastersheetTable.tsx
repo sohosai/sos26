@@ -184,7 +184,7 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 				"ACTIVE") satisfies ProjectDeletionFilterValue,
 		{
 			id: "deletionStatus",
-			header: "削除状況",
+			header: "企画状況",
 			cell: ctx => (
 				<Badge
 					color={ctx.row.original.project.deletionStatus ? "red" : "green"}
