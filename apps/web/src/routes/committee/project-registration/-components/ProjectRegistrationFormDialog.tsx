@@ -8,15 +8,11 @@ import type { FormItem } from "@/components/form/type";
 import { DiscardChangesDialog } from "@/components/patterns";
 import {
 	Button,
-	Checkbox,
 	IconButton,
 	TextArea,
 	TextField,
 } from "@/components/primitives";
-import {
-	PROJECT_LOCATION_OPTIONS,
-	PROJECT_TYPE_OPTIONS,
-} from "@/lib/project/options";
+import { ProjectCategorySelector } from "@/components/project/ProjectCategorySelector";
 import styles from "./ProjectRegistrationFormDialog.module.scss";
 import { ReorderFormsDialog } from "./ReorderFormsDialog";
 
@@ -144,44 +140,12 @@ export function ProjectRegistrationFormDialog({
 		onOpenChange(false);
 	};
 
-	// タイプと場所の選択ロジック
-	const handleStageTypeToggle = () => {
-		if (!filterTypes.includes("STAGE")) {
-			setFilterTypes(["STAGE"]);
-			setFilterLocations(["STAGE"]);
-		} else {
-			setFilterTypes(prev => prev.filter(t => t !== "STAGE"));
-			setFilterLocations(prev => prev.filter(l => l !== "STAGE"));
-		}
-	};
-
-	const handleNormalTypeToggle = (value: ProjectType) => {
-		if (filterTypes.includes("STAGE")) {
-			setFilterTypes([value]);
-			setFilterLocations(prev => prev.filter(l => l !== "STAGE"));
-		} else {
-			const newTypes = filterTypes.includes(value)
-				? filterTypes.filter(t => t !== value)
-				: [...filterTypes, value];
-			setFilterTypes(newTypes);
-			if (newTypes.length > 0 && !newTypes.includes("STAGE")) {
-				setFilterLocations(prev => prev.filter(l => l !== "STAGE"));
-			}
-		}
-	};
-
-	const toggleType = (value: ProjectType) => {
-		if (value === "STAGE") {
-			handleStageTypeToggle();
-		} else {
-			handleNormalTypeToggle(value);
-		}
-	};
-
-	const toggleLocation = (value: ProjectLocation) => {
-		setFilterLocations(prev =>
-			prev.includes(value) ? prev.filter(l => l !== value) : [...prev, value]
-		);
+	const handleCategoryChange = (next: {
+		types: ProjectType[];
+		locations: ProjectLocation[];
+	}) => {
+		setFilterTypes(next.types);
+		setFilterLocations(next.locations);
 	};
 
 	const addItem = () => {
@@ -359,50 +323,15 @@ export function ProjectRegistrationFormDialog({
 							</div>
 						</div>
 
-						<div className={styles.field}>
-							<Text as="label" size="2" weight="medium">
-								対象企画区分（空=全区分）
-							</Text>
-							<div className={styles.checkboxGroup}>
-								{PROJECT_TYPE_OPTIONS.map(opt => (
-									<Checkbox
-										key={opt.value}
-										label={opt.label}
-										checked={filterTypes.includes(opt.value)}
-										onCheckedChange={() => toggleType(opt.value)}
-									/>
-								))}
-							</div>
-						</div>
-
-						<div className={styles.field}>
-							<Text as="label" size="2" weight="medium">
-								対象実施場所（空=全場所）
-							</Text>
-							<div className={styles.checkboxGroup}>
-								{PROJECT_LOCATION_OPTIONS.map(opt => {
-									const isStageOpt = opt.value === "STAGE";
-									const stageTypeSelected = filterTypes.includes("STAGE");
-									const nonStageTypeSelected = filterTypes.some(
-										t => t !== "STAGE"
-									);
-									const disabled = isStageOpt
-										? filterTypes.length > 0 && !stageTypeSelected
-										: stageTypeSelected && !nonStageTypeSelected;
-									return (
-										<Checkbox
-											key={opt.value}
-											label={opt.label}
-											checked={filterLocations.includes(opt.value)}
-											onCheckedChange={() =>
-												!disabled && toggleLocation(opt.value)
-											}
-											disabled={disabled}
-										/>
-									);
-								})}
-							</div>
-						</div>
+						<ProjectCategorySelector
+							selectedTypes={filterTypes}
+							selectedLocations={filterLocations}
+							onChange={handleCategoryChange}
+							typeLabel="対象企画区分（空=全区分）"
+							locationLabel="対象実施場所（空=全場所）"
+							fieldClassName={styles.field}
+							checkboxGroupClassName={styles.checkboxGroup}
+						/>
 
 						<div className={styles.itemsSection}>
 							<Text size="2" weight="medium">
