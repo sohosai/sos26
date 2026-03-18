@@ -242,8 +242,8 @@
 
 企画の削除状態を更新します。
 
-- `"DELETED"` または `"LOTTERY_LOSS"` を指定すると `isActive` は `false`
-- `null` を指定すると削除状態を取り消し、`isActive` は `true`
+- `"DELETED"` または `"LOTTERY_LOSS"` を指定すると、企画は「停止中」として扱われる（`deletionStatus != null` が停止状態を表す）
+- `null` を指定すると削除状態を取り消し、企画は「有効」として扱われる（`deletionStatus == null` が有効状態を表す）
 
 #### 権限
 
