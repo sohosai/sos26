@@ -252,6 +252,7 @@ async function processNoticeAuthorizations(
 
 internalNotificationRoute.post("/sync", async c => {
 	assertPassword(c.req.header("x-notification-password"));
+	const now = new Date();
 
 	const [formAuthIds, noticeAuthIds] = await Promise.all([
 		prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
@@ -259,7 +260,7 @@ internalNotificationRoute.post("/sync", async c => {
 			FROM "FormAuthorization" fa
 			JOIN "Form" f ON f."id" = fa."formId"
 			WHERE fa."status" = 'APPROVED'
-				AND fa."scheduledSendAt" <= NOW()
+				AND fa."scheduledSendAt" <= ${now}
 				AND fa."deliveryNotifiedAt" IS NULL
 				AND f."deletedAt" IS NULL
 		`),
@@ -268,7 +269,7 @@ internalNotificationRoute.post("/sync", async c => {
 			FROM "NoticeAuthorization" na
 			JOIN "Notice" n ON n."id" = na."noticeId"
 			WHERE na."status" = 'APPROVED'
-				AND na."deliveredAt" <= NOW()
+				AND na."deliveredAt" <= ${now}
 				AND na."deliveryNotifiedAt" IS NULL
 				AND n."deletedAt" IS NULL
 		`),
