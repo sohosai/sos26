@@ -294,10 +294,13 @@ describe("GET /committee/projects/:projectId", () => {
 			_count: { projectMembers: 5 },
 		} as any);
 
-		const res = await app.request(`/committee/projects/${mockProject.id}`, {
-			method: "GET",
-			headers: { Authorization: "Bearer valid-token" },
-		});
+		const res = await app.request(
+			`/committee/projects/${String(mockProject.number).padStart(3, "0")}`,
+			{
+				method: "GET",
+				headers: { Authorization: "Bearer valid-token" },
+			}
+		);
 
 		expect(res.status).toBe(200);
 		const body = await res.json();
