@@ -214,7 +214,6 @@
     "location": "INDOOR",
     "ownerId": "clxxx...",
     "subOwnerId": "clyyy...",
-    "isActive": true,
     "deletionStatus": null,
     "createdAt": "2026-...",
     "updatedAt": "2026-...",
