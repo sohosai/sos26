@@ -119,20 +119,13 @@ function maskContact<
 }
 
 async function fetchCommitteeProjectDetailData(projectParam: string) {
-	if (!/^\d{3}$/.test(projectParam)) {
-		return {
-			project: null,
-			formDeliveries: [],
-			noticeDeliveries: [],
-			inquiries: [],
-		};
-	}
-
-	const projectNumber = Number.parseInt(projectParam, 10);
+	const isNumericProjectNumber = /^\d{1,3}$/.test(projectParam);
 
 	const projectWhere: Prisma.ProjectWhereInput = {
 		deletedAt: null,
-		number: projectNumber,
+		...(isNumericProjectNumber
+			? { number: Number.parseInt(projectParam, 10) }
+			: { id: projectParam }),
 	};
 
 	const project = await prisma.project.findFirst({
