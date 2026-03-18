@@ -443,8 +443,8 @@ async function handleUpdateProjectDeletionStatus(c: Context<AuthEnv>) {
 
 	const projectBefore = await findProjectBeforeDeletionStatusUpdate(projectId);
 
-	await prisma.project.update({
-		where: { id: projectId },
+	await prisma.project.updateMany({
+		where: { id: projectId, deletedAt: null },
 		data: { deletionStatus } as Prisma.ProjectUpdateInput,
 	});
 
