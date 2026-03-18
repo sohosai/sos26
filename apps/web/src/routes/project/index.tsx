@@ -3,7 +3,7 @@ import type { GetProjectRegistrationFormResponsesResponse } from "@sos26/shared"
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { getProjectRegistrationFormResponses } from "@/lib/api/project";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatProjectNumber } from "@/lib/format";
 import {
 	PROJECT_LOCATION_LABELS,
 	PROJECT_TYPE_LABELS,
@@ -73,7 +73,7 @@ function ProjectIndexPage() {
 	const project = useProject();
 	const { registrationFormResponses } = Route.useLoaderData();
 	const rows = [
-		{ label: "企画番号", value: project.number },
+		{ label: "企画番号", value: formatProjectNumber(project.number) },
 		{ label: "登録日", value: formatDate(project.createdAt, "date") },
 		{ label: "企画名", value: project.name },
 		{ label: "企画名（ふりがな）", value: project.namePhonetic },

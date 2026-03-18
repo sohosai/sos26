@@ -24,7 +24,7 @@ import {
 	updateCommitteeProjectBaseInfo,
 	updateCommitteeProjectDeletionStatus,
 } from "@/lib/api/committee-project";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatProjectNumber } from "@/lib/format";
 import {
 	PROJECT_LOCATION_LABELS,
 	PROJECT_TYPE_LABELS,
@@ -161,7 +161,7 @@ function CommitteeProjectInfoPage() {
 					<Heading size="6">企画詳細</Heading>
 					<div className={styles.meta}>
 						<Text size="2" color="gray">
-							企画番号 {project.number}
+							企画番号 {formatProjectNumber(project.number)}
 						</Text>
 						<Badge color={project.deletionStatus === null ? "green" : "red"}>
 							{statusLabel(project.deletionStatus)}

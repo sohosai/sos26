@@ -32,6 +32,7 @@ import {
 	editFormItemCell,
 	upsertMastersheetCell,
 } from "@/lib/api/committee-mastersheet";
+import { formatProjectNumber } from "@/lib/format";
 import { isClientError } from "@/lib/http/error";
 import { useStorageUrl } from "@/lib/storage";
 import styles from "./MastersheetTable.module.scss";
@@ -120,7 +121,7 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 			<RouterLink
 				to="/committee/info/$projectId"
 				params={{
-					projectId: String(row.original.project.number).padStart(3, "0"),
+					projectId: formatProjectNumber(row.original.project.number),
 				}}
 			>
 				<Button intent="ghost" size="1">
@@ -136,7 +137,7 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 		header: "企画番号",
 		cell: ctx => (
 			<Text size="2" weight="medium">
-				{ctx.getValue() as number}
+				{formatProjectNumber(ctx.getValue() as number)}
 			</Text>
 		),
 		meta: { filterVariant: "text" },
