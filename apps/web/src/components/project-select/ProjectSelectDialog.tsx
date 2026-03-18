@@ -77,6 +77,18 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 			</Text>
 		),
 		meta: { filterVariant: "text" },
+		filterFn: (row, columnId, filterValue) => {
+			const raw = row.getValue(columnId) as number | null | undefined;
+			if (raw == null) return false;
+
+			const query = String(filterValue ?? "").trim();
+			if (query === "") return true;
+
+			const valueStr = String(raw);
+			const formatted = formatProjectNumber(raw);
+
+			return valueStr.includes(query) || formatted.includes(query);
+		},
 	}),
 	columnHelper.accessor(row => row.project.name, {
 		id: "name",
