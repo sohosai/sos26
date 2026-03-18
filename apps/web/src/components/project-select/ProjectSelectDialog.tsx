@@ -25,6 +25,7 @@ import {
 	getMastersheetData,
 	listMastersheetViews,
 } from "@/lib/api/committee-mastersheet";
+import { formatProjectNumber } from "@/lib/format";
 import styles from "./ProjectSelectDialog.module.scss";
 
 // ─── マスターシート行型 ─────────────────────────────────
@@ -72,10 +73,22 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 		header: "企画番号",
 		cell: ctx => (
 			<Text size="2" weight="medium">
-				{ctx.getValue() as number}
+				{formatProjectNumber(ctx.getValue() as number)}
 			</Text>
 		),
 		meta: { filterVariant: "text" },
+		filterFn: (row, columnId, filterValue) => {
+			const raw = row.getValue(columnId) as number | null | undefined;
+			if (raw == null) return false;
+
+			const query = String(filterValue ?? "").trim();
+			if (query === "") return true;
+
+			const valueStr = String(raw);
+			const formatted = formatProjectNumber(raw);
+
+			return valueStr.includes(query) || formatted.includes(query);
+		},
 	}),
 	columnHelper.accessor(row => row.project.name, {
 		id: "name",

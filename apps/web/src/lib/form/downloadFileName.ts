@@ -1,3 +1,5 @@
+import { formatProjectNumber } from "@/lib/format";
+
 const INVALID_FILE_NAME_CHARS = /[<>:"/\\|?*]/g;
 const LEADING_OR_TRAILING_PUNCTUATION = /^[.\s_]+|[.\s_]+$/g;
 
@@ -36,7 +38,7 @@ export function buildFormDownloadFileName(params: {
 	const { baseName, extension } = splitFileName(params.originalFileName);
 
 	return [
-		String(params.projectNumber).padStart(3, "0"),
+		formatProjectNumber(params.projectNumber),
 		sanitizeFileNameSegment(params.formTitle),
 		sanitizeFileNameSegment(params.projectName),
 		`${sanitizeFileNameSegment(baseName)}${extension}`,
