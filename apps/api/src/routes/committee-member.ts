@@ -1,3 +1,4 @@
+import type { CommitteePermission } from "@prisma/client";
 import {
 	committeePermissionSchema,
 	createCommitteeMemberRequestSchema,
@@ -175,8 +176,9 @@ committeeMemberRoute.post(
 	async c => {
 		const id = c.req.param("id");
 		const body = await c.req.json().catch(() => ({}));
-		const { permission } =
+		const { permission: rawPermission } =
 			grantCommitteeMemberPermissionRequestSchema.parse(body);
+		const permission = rawPermission as CommitteePermission;
 
 		// TODO: 権限チェックの調整
 		// 対象メンバーの存在確認
@@ -223,7 +225,7 @@ committeeMemberRoute.delete(
 		const id = c.req.param("id");
 		const permission = committeePermissionSchema.parse(
 			c.req.param("permission")
-		);
+		) as CommitteePermission;
 
 		// TODO: 権限チェックの調整
 		// 対象メンバーの存在確認

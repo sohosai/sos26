@@ -93,6 +93,9 @@
 | `NOTICE_DELIVER` | お知らせ配信・承認 |
 | `FORM_DELIVER` | 申請配信 |
 | `INQUIRY_ADMIN` | お問い合わせ管理 |
+| `PROJECT_EDIT` | 企画編集 |
+| `PROJECT_DELETE` | 企画削除状態の変更 |
+| `PROJECT_VIEW` | 企画詳細の連絡先閲覧（責任者・副責任者） |
 | `PROJECT_REGISTRATION_FORM_CREATE` | 企画登録フォーム作成 |
 | `PROJECT_REGISTRATION_FORM_DELIVER` | 企画登録フォーム配信・承認 |
 
@@ -106,13 +109,13 @@
 
 委員メンバーに権限を付与します。
 
-- 入力: `permission`（`MEMBER_EDIT` | `NOTICE_DELIVER` | `FORM_DELIVER` | `INQUIRY_ADMIN` | `PROJECT_REGISTRATION_FORM_CREATE` | `PROJECT_REGISTRATION_FORM_DELIVER`）
+- 入力: `permission`（`MEMBER_EDIT` | `NOTICE_DELIVER` | `FORM_DELIVER` | `INQUIRY_ADMIN` | `PROJECT_EDIT` | `PROJECT_DELETE` | `PROJECT_VIEW` | `PROJECT_REGISTRATION_FORM_CREATE` | `PROJECT_REGISTRATION_FORM_DELIVER`）
 - 対象メンバーが存在しない場合: `NOT_FOUND`
 - 同じ権限が既に付与されている場合: `ALREADY_EXISTS`
 
 ### DELETE `/committee/members/:id/permissions/:permission`
 
-委員メンバーの権限を削除します。`:permission` には権限名（`MEMBER_EDIT` | `NOTICE_DELIVER` | `FORM_DELIVER` | `INQUIRY_ADMIN` | `PROJECT_REGISTRATION_FORM_CREATE` | `PROJECT_REGISTRATION_FORM_DELIVER`）を指定します。
+委員メンバーの権限を削除します。`:permission` には権限名（`MEMBER_EDIT` | `NOTICE_DELIVER` | `FORM_DELIVER` | `INQUIRY_ADMIN` | `PROJECT_EDIT` | `PROJECT_DELETE` | `PROJECT_VIEW` | `PROJECT_REGISTRATION_FORM_CREATE` | `PROJECT_REGISTRATION_FORM_DELIVER`）を指定します。
 
 - 不正な権限名の場合: `VALIDATION_ERROR`
 - 対象メンバーが存在しない場合: `NOT_FOUND`

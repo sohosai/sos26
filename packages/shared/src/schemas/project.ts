@@ -11,6 +11,9 @@ import { formAnswerInputSchema, formItemTypeSchema } from "./form";
 export { projectTypeSchema, projectLocationSchema };
 export type { ProjectLocation, ProjectType } from "./common";
 
+export const projectDeletionStatusSchema = z.enum(["LOTTERY_LOSS", "DELETED"]);
+export type ProjectDeletionStatus = z.infer<typeof projectDeletionStatusSchema>;
+
 export const projectSchema = z.object({
 	id: z.cuid(),
 	number: z.number().int().positive(),
@@ -23,6 +26,7 @@ export const projectSchema = z.object({
 	ownerId: z.string().min(1),
 	subOwnerId: z.string().nullable(),
 	inviteCode: z.string().length(6),
+	deletionStatus: projectDeletionStatusSchema.nullable(),
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 	deletedAt: z.coerce.date().nullable(),

@@ -7,8 +7,14 @@ import {
 	type ListCommitteeProjectsResponse,
 	listCommitteeProjectMembersEndpoint,
 	listCommitteeProjectsEndpoint,
+	type UpdateCommitteeProjectBaseInfoRequest,
+	type UpdateCommitteeProjectBaseInfoResponse,
+	type UpdateCommitteeProjectDeletionStatusRequest,
+	type UpdateCommitteeProjectDeletionStatusResponse,
+	updateCommitteeProjectBaseInfoEndpoint,
+	updateCommitteeProjectDeletionStatusEndpoint,
 } from "@sos26/shared";
-import { callGetApi } from "./core";
+import { callBodyApi, callGetApi } from "./core";
 
 /**
  * GET /committee/projects
@@ -46,6 +52,32 @@ export async function listCommitteeProjectMembers(
 	projectId: string
 ): Promise<ListCommitteeProjectMembersResponse> {
 	return callGetApi(listCommitteeProjectMembersEndpoint, {
+		pathParams: { projectId },
+	});
+}
+
+/**
+ * PATCH /committee/projects/:projectId/base-info
+ * 企画の基礎情報を更新
+ */
+export async function updateCommitteeProjectBaseInfo(
+	projectId: string,
+	body: UpdateCommitteeProjectBaseInfoRequest
+): Promise<UpdateCommitteeProjectBaseInfoResponse> {
+	return callBodyApi(updateCommitteeProjectBaseInfoEndpoint, body, {
+		pathParams: { projectId },
+	});
+}
+
+/**
+ * PATCH /committee/projects/:projectId/deletion-status
+ * 企画の削除状態を更新（削除/抽選漏れ/取消）
+ */
+export async function updateCommitteeProjectDeletionStatus(
+	projectId: string,
+	body: UpdateCommitteeProjectDeletionStatusRequest
+): Promise<UpdateCommitteeProjectDeletionStatusResponse> {
+	return callBodyApi(updateCommitteeProjectDeletionStatusEndpoint, body, {
 		pathParams: { projectId },
 	});
 }

@@ -1,5 +1,12 @@
 import { z } from "zod";
+import { toHiragana } from "../lib/phonetic";
 import {
+	isValidProjectDisplayName,
+	PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+} from "../lib/project-display-name";
+import {
+	projectDeletionStatusSchema,
+	projectLocationSchema,
 	projectMemberSchema,
 	projectSchema,
 	projectTypeSchema,
@@ -11,10 +18,29 @@ import { userSchema } from "./user";
 // ─────────────────────────────────────────────────────────────
 
 /** owner/subOwner 用のユーザーサマリー */
-const userSummarySchema = userSchema.pick({
-	id: true,
-	name: true,
-	email: true,
+const userSummarySchema = userSchema
+	.pick({
+		id: true,
+		name: true,
+		email: true,
+		telephoneNumber: true,
+	})
+	.extend({
+		// マスキングのために nullable にするが、userSchema と同じ制約を維持する
+		email: userSchema.shape.email.nullable(),
+		telephoneNumber: userSchema.shape.telephoneNumber.nullable(),
+	});
+
+const committeeProjectActionSchema = z.object({
+	id: z.string(),
+	title: z.string(),
+	sentAt: z.coerce.date(),
+});
+
+const committeeProjectPermissionsSchema = z.object({
+	canEdit: z.boolean(),
+	canDelete: z.boolean(),
+	canViewContacts: z.boolean(),
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -82,6 +108,12 @@ export const committeeProjectDetailSchema = projectSchema
 		memberCount: z.number().int(),
 		owner: userSummarySchema,
 		subOwner: userSummarySchema.nullable(),
+		actions: z.object({
+			forms: z.array(committeeProjectActionSchema),
+			notices: z.array(committeeProjectActionSchema),
+			inquiries: z.array(committeeProjectActionSchema),
+		}),
+		permissions: committeeProjectPermissionsSchema,
 	});
 export type CommitteeProjectDetail = z.infer<
 	typeof committeeProjectDetailSchema
@@ -95,6 +127,94 @@ export const getCommitteeProjectDetailResponseSchema = z.object({
 });
 export type GetCommitteeProjectDetailResponse = z.infer<
 	typeof getCommitteeProjectDetailResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// PATCH /committee/projects/:projectId/base-info
+// ─────────────────────────────────────────────────────────────
+
+export const updateCommitteeProjectBaseInfoRequestSchema = z
+	.object({
+		name: z
+			.string()
+			.min(1)
+			.refine(isValidProjectDisplayName, {
+				message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+			})
+			.optional(),
+		namePhonetic: z.string().min(1).transform(toHiragana).optional(),
+		organizationName: z
+			.string()
+			.min(1)
+			.refine(isValidProjectDisplayName, {
+				message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
+			})
+			.optional(),
+		organizationNamePhonetic: z
+			.string()
+			.min(1)
+			.transform(toHiragana)
+			.optional(),
+		type: projectTypeSchema.optional(),
+		location: projectLocationSchema.optional(),
+	})
+	.refine(data => Object.keys(data).length > 0, {
+		message: "更新する項目を指定してください",
+	})
+	.superRefine((data, ctx) => {
+		const { type, location } = data;
+
+		// ステージ企画は location=STAGE のみ許可する
+		if (type === "STAGE" && location !== undefined && location !== "STAGE") {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["location"],
+				message: "ステージ企画の location は STAGE のみ指定できます",
+			});
+		}
+
+		// location=STAGE の場合は type=STAGE を要求する
+		if (location === "STAGE" && type !== undefined && type !== "STAGE") {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["type"],
+				message: "location=STAGE の場合、type も STAGE を指定してください",
+			});
+		}
+	});
+export type UpdateCommitteeProjectBaseInfoRequest = z.infer<
+	typeof updateCommitteeProjectBaseInfoRequestSchema
+>;
+
+export const updateCommitteeProjectBaseInfoResponseSchema = z.object({
+	project: committeeProjectDetailSchema.omit({
+		actions: true,
+		permissions: true,
+	}),
+});
+export type UpdateCommitteeProjectBaseInfoResponse = z.infer<
+	typeof updateCommitteeProjectBaseInfoResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// PATCH /committee/projects/:projectId/deletion-status
+// ─────────────────────────────────────────────────────────────
+
+export const updateCommitteeProjectDeletionStatusRequestSchema = z.object({
+	deletionStatus: projectDeletionStatusSchema.nullable(),
+});
+export type UpdateCommitteeProjectDeletionStatusRequest = z.infer<
+	typeof updateCommitteeProjectDeletionStatusRequestSchema
+>;
+
+export const updateCommitteeProjectDeletionStatusResponseSchema = z.object({
+	project: committeeProjectDetailSchema.omit({
+		actions: true,
+		permissions: true,
+	}),
+});
+export type UpdateCommitteeProjectDeletionStatusResponse = z.infer<
+	typeof updateCommitteeProjectDeletionStatusResponseSchema
 >;
 
 // ─────────────────────────────────────────────────────────────
