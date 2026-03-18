@@ -6,12 +6,15 @@ import {
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
 import { joinProject, listMyProjects } from "@/lib/api/project";
+import { listProjectForms } from "@/lib/api/project-form";
+import { listProjectInquiries } from "@/lib/api/project-inquiry";
+import { listProjectNotices } from "@/lib/api/project-notice";
 import {
 	preloadMemberEditPermission,
 	requireAuth,
@@ -44,10 +47,63 @@ export const Route = createFileRoute("/project")({
 			store.setSelectedProjectId(res.projects[0].id);
 		}
 	},
+	loader: async () => {
+		const { selectedProjectId } = useProjectStore.getState();
+
+		if (!selectedProjectId) {
+			return {
+				hasUnansweredForms: false,
+				hasUncheckedNotices: false,
+				hasUnreadInquiryComments: false,
+			};
+		}
+
+		const [formsResult, noticesResult, inquiriesResult] =
+			await Promise.allSettled([
+				listProjectForms(selectedProjectId),
+				listProjectNotices(selectedProjectId),
+				listProjectInquiries(selectedProjectId),
+			]);
+
+		const forms =
+			formsResult.status === "fulfilled" ? formsResult.value.forms : [];
+		const notices =
+			noticesResult.status === "fulfilled" ? noticesResult.value.notices : [];
+		const inquiries =
+			inquiriesResult.status === "fulfilled"
+				? inquiriesResult.value.inquiries
+				: [];
+
+		const now = new Date();
+		const hasUnansweredForms = forms.some(form => {
+			if (form.restricted) return false;
+			if (form.response?.submittedAt) return false;
+
+			const isExpired =
+				form.deadlineAt && !form.allowLateResponse && now > form.deadlineAt;
+			if (isExpired) return false;
+
+			return !form.response?.submittedAt;
+		});
+
+		const hasUncheckedNotices = notices.some(notice => !notice.isRead);
+		const hasUnreadInquiryComments =
+			inquiriesResult.status === "rejected"
+				? true
+				: inquiries.some(inquiry => inquiry.hasUnreadComments);
+
+		return {
+			hasUnansweredForms,
+			hasUncheckedNotices,
+			hasUnreadInquiryComments,
+		};
+	},
 	component: ProjectLayout,
 });
 
 function ProjectLayout() {
+	const { hasUnansweredForms, hasUncheckedNotices, hasUnreadInquiryComments } =
+		Route.useLoaderData();
 	const navigate = useNavigate();
 	const router = useRouter();
 	const { projects, selectedProjectId, setSelectedProjectId, setProjects } =
@@ -61,6 +117,32 @@ function ProjectLayout() {
 	const hasPrivilegedProject = projects.some(
 		project => project.ownerId === user?.id || project.subOwnerId === user?.id
 	);
+	const projectMenuItemsWithDot = projectMenuItems.map(item => ({
+		...item,
+		showNotificationDot:
+			(item.to === "/project/forms" && hasUnansweredForms) ||
+			(item.to === "/project/notice" && hasUncheckedNotices) ||
+			(item.to === "/project/support" && hasUnreadInquiryComments),
+	}));
+
+	useEffect(() => {
+		const intervalId = window.setInterval(() => {
+			void router.invalidate();
+		}, 60_000);
+
+		const handleFocus = () => {
+			void router.invalidate();
+		};
+
+		window.addEventListener("focus", handleFocus);
+		document.addEventListener("visibilitychange", handleFocus);
+
+		return () => {
+			window.clearInterval(intervalId);
+			window.removeEventListener("focus", handleFocus);
+			document.removeEventListener("visibilitychange", handleFocus);
+		};
+	}, [router]);
 
 	const handleSelectProject = (projectId: string) => {
 		setSelectedProjectId(projectId);
@@ -87,7 +169,7 @@ function ProjectLayout() {
 			<Sidebar
 				collapsed={sidebarCollapsed}
 				onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-				menuItems={projectMenuItems}
+				menuItems={projectMenuItemsWithDot}
 				projectId={selectedProjectId}
 				projectSelector={
 					<ProjectSelector

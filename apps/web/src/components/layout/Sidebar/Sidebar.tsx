@@ -18,6 +18,7 @@ export type MenuItem = {
 	icon: ReactNode;
 	to: string;
 	exact?: boolean;
+	showNotificationDot?: boolean;
 };
 
 type SidebarProps = {
@@ -101,10 +102,18 @@ function SidebarItem({ item, collapsed, pathname, onClick }: SidebarItemProps) {
 		: item.exact
 			? normalizePathname(pathname) === normalizePathname(item.to)
 			: pathname.startsWith(item.to);
+	const linkAriaLabel = item.showNotificationDot
+		? `${item.label} (has notifications)`
+		: item.label;
 
 	const itemInner = (
 		<div className={`${styles.item} ${active ? styles.active : ""}`}>
-			<span className={styles.icon}>{item.icon}</span>
+			<span className={styles.icon}>
+				{item.icon}
+				{item.showNotificationDot && (
+					<span className={styles.notificationDot} aria-hidden="true" />
+				)}
+			</span>
 			{!collapsed && <Text size="2">{item.label}</Text>}
 		</div>
 	);
@@ -116,12 +125,19 @@ function SidebarItem({ item, collapsed, pathname, onClick }: SidebarItemProps) {
 			target="_blank"
 			rel="noopener noreferrer"
 			className={styles.link}
+			aria-label={linkAriaLabel}
 			onClick={onClick}
 		>
 			{itemInner}
 		</a>
 	) : (
-		<Link key={item.to} to={item.to} className={styles.link} onClick={onClick}>
+		<Link
+			key={item.to}
+			to={item.to}
+			className={styles.link}
+			aria-label={linkAriaLabel}
+			onClick={onClick}
+		>
 			{itemInner}
 		</Link>
 	);
