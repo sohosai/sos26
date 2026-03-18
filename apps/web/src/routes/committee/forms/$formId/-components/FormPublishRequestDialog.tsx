@@ -10,14 +10,11 @@ import {
 	Select,
 	TextField,
 } from "@/components/primitives";
+import { ProjectCategorySelector } from "@/components/project/ProjectCategorySelector";
 import { ProjectSelectDialog } from "@/components/project-select";
 import { requestFormAuthorization } from "@/lib/api/committee-form";
 import { validateAuthorizationDates } from "@/lib/form/AuthDateCheck";
 import { isClientError } from "@/lib/http/error";
-import {
-	PROJECT_LOCATION_OPTIONS,
-	PROJECT_TYPE_OPTIONS,
-} from "@/lib/project/options";
 import styles from "./FormPublishRequestDialog.module.scss";
 
 type Approver = {
@@ -86,9 +83,9 @@ export function FormPublishRequestDialog({
 	);
 
 	// カテゴリ指定
-	const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
-	const [selectedLocations, setSelectedLocations] = useState<Set<string>>(
-		new Set()
+	const [selectedTypes, setSelectedTypes] = useState<ProjectType[]>([]);
+	const [selectedLocations, setSelectedLocations] = useState<ProjectLocation[]>(
+		[]
 	);
 
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -111,8 +108,8 @@ export function FormPublishRequestDialog({
 		deliveryMode === "CATEGORY"
 			? {
 					mode: "CATEGORY" as const,
-					projectTypes: [...selectedTypes] as ProjectType[],
-					projectLocations: [...selectedLocations] as ProjectLocation[],
+					projectTypes: selectedTypes,
+					projectLocations: selectedLocations,
 				}
 			: {
 					mode: "INDIVIDUAL" as const,
@@ -175,28 +172,18 @@ export function FormPublishRequestDialog({
 			setOwnerOnly(false);
 			setDeliveryMode("CATEGORY");
 			setSelectedProjectIds(new Set());
-			setSelectedTypes(new Set());
-			setSelectedLocations(new Set());
+			setSelectedTypes([]);
+			setSelectedLocations([]);
 			setError(null);
 		}
 	};
 
-	const toggleType = (type: string) => {
-		setSelectedTypes(prev => {
-			const next = new Set(prev);
-			if (next.has(type)) next.delete(type);
-			else next.add(type);
-			return next;
-		});
-	};
-
-	const toggleLocation = (location: string) => {
-		setSelectedLocations(prev => {
-			const next = new Set(prev);
-			if (next.has(location)) next.delete(location);
-			else next.add(location);
-			return next;
-		});
+	const handleCategoryChange = (next: {
+		types: ProjectType[];
+		locations: ProjectLocation[];
+	}) => {
+		setSelectedTypes(next.types);
+		setSelectedLocations(next.locations);
 	};
 
 	return (
@@ -360,36 +347,15 @@ export function FormPublishRequestDialog({
 						) : (
 							/* カテゴリ指定モード */
 							<>
-								<div className={styles.field}>
-									<Text as="label" size="2" weight="medium">
-										企画区分
-									</Text>
-									<div className={styles.checkboxGroup}>
-										{PROJECT_TYPE_OPTIONS.map(opt => (
-											<Checkbox
-												key={opt.value}
-												label={opt.label}
-												checked={selectedTypes.has(opt.value)}
-												onCheckedChange={() => toggleType(opt.value)}
-											/>
-										))}
-									</div>
-								</div>
-								<div className={styles.field}>
-									<Text as="label" size="2" weight="medium">
-										実施場所
-									</Text>
-									<div className={styles.checkboxGroup}>
-										{PROJECT_LOCATION_OPTIONS.map(opt => (
-											<Checkbox
-												key={opt.value}
-												label={opt.label}
-												checked={selectedLocations.has(opt.value)}
-												onCheckedChange={() => toggleLocation(opt.value)}
-											/>
-										))}
-									</div>
-								</div>
+								<ProjectCategorySelector
+									selectedTypes={selectedTypes}
+									selectedLocations={selectedLocations}
+									onChange={handleCategoryChange}
+									typeLabel="企画区分"
+									locationLabel="実施場所"
+									fieldClassName={styles.field}
+									checkboxGroupClassName={styles.checkboxGroup}
+								/>
 								<Text size="1" color="gray">
 									企画区分と実施場所の両方の条件を満たす企画に配信されます。片方のみ選択した場合はその条件のみで絞り込みます。両方未選択の場合は全企画に配信されます。
 								</Text>
