@@ -349,7 +349,7 @@ projectInquiryRoute.get(
 						senderRole: "COMMITTEE",
 					},
 					select: { createdAt: true, sentAt: true },
-					orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
+					orderBy: [{ sentAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
 					take: 1,
 				},
 				commentReadStatuses: {
