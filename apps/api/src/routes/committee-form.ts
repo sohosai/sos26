@@ -3,6 +3,8 @@ import {
 	addFormAttachmentRequestSchema,
 	addFormCollaboratorRequestSchema,
 	createFormRequestSchema,
+	editFormAnswerPathParamsSchema,
+	editFormAnswerRequestSchema,
 	formAttachmentPathParamsSchema,
 	formAuthorizationPathParamsSchema,
 	formIdPathParamsSchema,
@@ -15,7 +17,11 @@ import {
 import { Hono } from "hono";
 import { requireDeliverPermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
-import { formAnswerFileSelect, mapAnswerFiles } from "../lib/form-answer-files";
+import {
+	formAnswerFileSelect,
+	mapAnswerFiles,
+	normalizeFileIds,
+} from "../lib/form-answer-files";
 import {
 	formAttachmentsInclude,
 	mapFormAttachments,
@@ -1097,6 +1103,146 @@ committeeFormRoute.get(
 						})),
 					};
 				}),
+			},
+		});
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// PUT /committee/forms/:formId/answers/:formItemId/:projectId
+// 申請回答の編集（作成者 or 共同編集者のみ）
+// ─────────────────────────────────────────────────────────────
+
+committeeFormRoute.put(
+	"/:formId/answers/:formItemId/:projectId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const userId = c.get("user").id;
+		const { formId, formItemId, projectId } =
+			editFormAnswerPathParamsSchema.parse(c.req.param());
+
+		// 作成者 or 共同編集者のみ編集可（閲覧者は不可）
+		const form = await prisma.form.findFirst({
+			where: { id: formId, deletedAt: null },
+			include: {
+				collaborators: { where: { deletedAt: null } },
+				items: { include: { options: true } },
+			},
+		});
+		if (!form) throw Errors.notFound("申請が見つかりません");
+
+		const isOwner = form.ownerId === userId;
+		const isWriteCollaborator = form.collaborators.some(
+			c => c.userId === userId && c.isWrite
+		);
+		if (!isOwner && !isWriteCollaborator) {
+			throw Errors.forbidden("回答の編集権限がありません");
+		}
+
+		// formItemId がこの form に属しているか確認
+		const formItem = form.items.find(item => item.id === formItemId);
+		if (!formItem)
+			throw Errors.invalidRequest("この申請に属する項目ではありません");
+
+		const project = await prisma.project.findFirst({
+			where: { id: projectId, deletedAt: null },
+		});
+		if (!project) throw Errors.notFound("企画が見つかりません");
+
+		const body = await c.req.json().catch(() => ({}));
+		const data = editFormAnswerRequestSchema.parse(body);
+
+		// 未回答（未提出 かつ 履歴なし）は編集不可
+		const [response, latestHistory] = await Promise.all([
+			prisma.formResponse.findFirst({
+				where: {
+					formDelivery: {
+						projectId,
+						formAuthorization: {
+							form: { items: { some: { id: formItemId } } },
+						},
+					},
+					submittedAt: { not: null },
+				},
+				select: { id: true },
+			}),
+			prisma.formItemEditHistory.findFirst({
+				where: { formItemId, projectId },
+				select: { id: true },
+			}),
+		]);
+		if (!response && !latestHistory) {
+			throw Errors.invalidRequest(
+				"未回答の企画は編集できません。提出後に編集してください"
+			);
+		}
+
+		const history = await prisma.$transaction(
+			async tx => {
+				const created = await tx.formItemEditHistory.create({
+					data: {
+						formItemId,
+						projectId,
+						textValue: data.textValue ?? null,
+						numberValue: data.numberValue ?? null,
+						actorId: userId,
+						trigger: "COMMITTEE_EDIT",
+					},
+				});
+
+				const fileIds = normalizeFileIds(data.fileIds);
+				if (fileIds.length > 0) {
+					await tx.formItemEditHistoryFile.createMany({
+						data: fileIds.map((fileId, sortOrder) => ({
+							editHistoryId: created.id,
+							fileId,
+							sortOrder,
+						})),
+					});
+				}
+
+				if (data.selectedOptionIds?.length) {
+					const validIds = new Set(formItem.options.map(o => o.id));
+					const invalid = data.selectedOptionIds.filter(
+						id => !validIds.has(id)
+					);
+					if (invalid.length > 0)
+						throw Errors.invalidRequest("無効な選択肢が含まれています");
+
+					await tx.formItemEditHistorySelectedOption.createMany({
+						data: data.selectedOptionIds.map(optionId => ({
+							editHistoryId: created.id,
+							formItemOptionId: optionId,
+						})),
+					});
+				}
+
+				return tx.formItemEditHistory.findUniqueOrThrow({
+					where: { id: created.id },
+					include: {
+						files: answerFilesInclude,
+						selectedOptions: {
+							include: {
+								formItemOption: { select: { id: true, label: true } },
+							},
+						},
+					},
+				});
+			},
+			{ isolationLevel: "Serializable" }
+		);
+
+		return c.json({
+			answer: {
+				formItemId,
+				textValue: history.textValue,
+				numberValue: history.numberValue,
+				files: mapAnswerFiles(history.files),
+				selectedOptions: history.selectedOptions.map(s => ({
+					id: s.formItemOption.id,
+					label: s.formItemOption.label,
+				})),
 			},
 		});
 	}

@@ -1,6 +1,4 @@
 import {
-	pushSendRequestSchema,
-	pushSendResponseSchema,
 	pushSubscribeRequestSchema,
 	pushSubscribeResponseSchema,
 	pushUnsubscribeRequestSchema,
@@ -44,23 +42,4 @@ export const pushUnsubscribeEndpoint: BodyEndpoint<
 	query: undefined,
 	request: pushUnsubscribeRequestSchema,
 	response: pushUnsubscribeResponseSchema,
-} as const;
-
-/**
- * POST /push/send
- */
-export const pushSendEndpoint: BodyEndpoint<
-	"POST",
-	"/push/send",
-	undefined,
-	undefined,
-	typeof pushSendRequestSchema,
-	typeof pushSendResponseSchema
-> = {
-	method: "POST",
-	path: "/push/send",
-	pathParams: undefined,
-	query: undefined,
-	request: pushSendRequestSchema,
-	response: pushSendResponseSchema,
 } as const;

@@ -88,13 +88,14 @@ model User {
   files File[]
 
   // Inquiry関連
-  createdInquiries          Inquiry[]                @relation("InquiryCreatedBy")
-  inquiryAssignments        InquiryAssignee[]        @relation("InquiryAssignee")
-  inquiryViewerEntries      InquiryViewer[]          @relation("InquiryViewer")
-  inquiryComments           InquiryComment[]         @relation("InquiryCommentCreatedBy")
-  inquiryActivitiesAsActor  InquiryActivity[]        @relation("InquiryActivityActor")
-  inquiryActivitiesAsTarget InquiryActivity[]        @relation("InquiryActivityTarget")
-  projectSubOwnerRequests   ProjectSubOwnerRequest[]
+  createdInquiries           Inquiry[]                  @relation("InquiryCreatedBy")
+  inquiryAssignments         InquiryAssignee[]          @relation("InquiryAssignee")
+  inquiryViewerEntries       InquiryViewer[]            @relation("InquiryViewer")
+  inquiryComments            InquiryComment[]           @relation("InquiryCommentCreatedBy")
+  inquiryCommentReadStatuses InquiryCommentReadStatus[]
+  inquiryActivitiesAsActor   InquiryActivity[]          @relation("InquiryActivityActor")
+  inquiryActivitiesAsTarget  InquiryActivity[]          @relation("InquiryActivityTarget")
+  projectSubOwnerRequests    ProjectSubOwnerRequest[]
 
   //Project ProjectRegistration Form関連
   requestedProjectRegistrationFormAuthorizations ProjectRegistrationFormAuthorization[] @relation("ProjectRegFormRequestedBy")
@@ -269,7 +270,7 @@ enum Bureau {
   STAGE_MANAGEMENT // ステージ管理局 (stage)
   HQ_PLANNING // 本部企画局 (honki)
   INFO_SYSTEM // 情報メディアシステム局 (jsys)
-  INFORMATION // 案内所運営部会 (au)
+  EXECUTIVE_BOARD // 委員長団
 }
 
 //実委人の管理用Table
@@ -937,7 +938,7 @@ enum InquiryStatus {
 }
 
 enum InquiryCreatorRole {
-  PROJECT // 企画人
+  PROJECT // 企画者
   COMMITTEE // 実委人
 }
 
@@ -990,11 +991,12 @@ model Inquiry {
   // 下書き機能（実委が作成時に下書きとして保存可能）
   isDraft Boolean @default(false)
 
-  assignees   InquiryAssignee[]
-  viewers     InquiryViewer[]
-  comments    InquiryComment[]
-  activities  InquiryActivity[]
-  attachments InquiryAttachment[]
+  assignees           InquiryAssignee[]
+  viewers             InquiryViewer[]
+  comments            InquiryComment[]
+  commentReadStatuses InquiryCommentReadStatus[]
+  activities          InquiryActivity[]
+  attachments         InquiryAttachment[]
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -1078,6 +1080,24 @@ model InquiryComment {
 
   @@index([inquiryId])
   @@index([deletedAt])
+}
+
+model InquiryCommentReadStatus {
+  id String @id @default(cuid())
+
+  inquiryId String
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  lastReadAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([inquiryId, userId])
+  @@index([userId])
 }
 
 model InquiryActivity {

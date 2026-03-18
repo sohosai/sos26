@@ -12,6 +12,7 @@ type AuthStore = {
 	user: User | null;
 	committeeMember: CommitteeMember | null;
 	hasMemberEditPermission: boolean | null;
+	hasProjectRegistrationPermission: boolean | null;
 	activePortal: "project" | "committee" | null;
 	firebaseUser: FirebaseUser | null;
 	isLoading: boolean;
@@ -27,6 +28,7 @@ const UNAUTHENTICATED_STATE = {
 	user: null,
 	committeeMember: null,
 	hasMemberEditPermission: null,
+	hasProjectRegistrationPermission: null,
 	activePortal: null,
 	isLoggedIn: false,
 	isCommitteeMember: false,
@@ -72,6 +74,7 @@ async function fetchAndSetUser(fbUser: FirebaseUser | null): Promise<void> {
 			user: response.user,
 			committeeMember: response.committeeMember,
 			hasMemberEditPermission: null,
+			hasProjectRegistrationPermission: null,
 			isLoggedIn: true,
 			isCommitteeMember: !!response.committeeMember,
 		});

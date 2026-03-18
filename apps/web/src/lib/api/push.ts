@@ -1,13 +1,5 @@
-import type {
-	PushSendRequest,
-	PushSubscription,
-	PushUnsubscribeRequest,
-} from "@sos26/shared";
-import {
-	pushSendEndpoint,
-	pushSubscribeEndpoint,
-	pushUnsubscribeEndpoint,
-} from "@sos26/shared";
+import type { PushSubscription, PushUnsubscribeRequest } from "@sos26/shared";
+import { pushSubscribeEndpoint, pushUnsubscribeEndpoint } from "@sos26/shared";
 import { env } from "../env";
 import { callBodyApi } from "./core";
 
@@ -55,11 +47,4 @@ export async function disablePush(): Promise<void> {
 	if (unsubscribeError) {
 		throw unsubscribeError;
 	}
-}
-
-/**
- * Push通知を送信
- */
-export async function sendPush(param: PushSendRequest): Promise<void> {
-	await callBodyApi(pushSendEndpoint, param);
 }

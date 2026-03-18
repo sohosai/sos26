@@ -18,6 +18,7 @@ export type MenuItem = {
 	icon: ReactNode;
 	to: string;
 	exact?: boolean;
+	showNotificationDot?: boolean;
 };
 
 type SidebarProps = {
@@ -72,7 +73,7 @@ function getRoleSwitchItem(
 		(!pathname.startsWith("/project") && hasCommitteeMenu)
 	) {
 		return {
-			label: "企画人に切り替え",
+			label: "企画者に切り替え",
 			icon: <IconArrowsExchange size={18} />,
 			to: "/project",
 		};
@@ -101,10 +102,18 @@ function SidebarItem({ item, collapsed, pathname, onClick }: SidebarItemProps) {
 		: item.exact
 			? normalizePathname(pathname) === normalizePathname(item.to)
 			: pathname.startsWith(item.to);
+	const linkAriaLabel = item.showNotificationDot
+		? `${item.label} (has notifications)`
+		: item.label;
 
 	const itemInner = (
 		<div className={`${styles.item} ${active ? styles.active : ""}`}>
-			<span className={styles.icon}>{item.icon}</span>
+			<span className={styles.icon}>
+				{item.icon}
+				{item.showNotificationDot && (
+					<span className={styles.notificationDot} aria-hidden="true" />
+				)}
+			</span>
 			{!collapsed && <Text size="2">{item.label}</Text>}
 		</div>
 	);
@@ -116,12 +125,19 @@ function SidebarItem({ item, collapsed, pathname, onClick }: SidebarItemProps) {
 			target="_blank"
 			rel="noopener noreferrer"
 			className={styles.link}
+			aria-label={linkAriaLabel}
 			onClick={onClick}
 		>
 			{itemInner}
 		</a>
 	) : (
-		<Link key={item.to} to={item.to} className={styles.link} onClick={onClick}>
+		<Link
+			key={item.to}
+			to={item.to}
+			className={styles.link}
+			aria-label={linkAriaLabel}
+			onClick={onClick}
+		>
 			{itemInner}
 		</Link>
 	);
@@ -196,10 +212,17 @@ export function Sidebar({
 		return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches;
 	});
 	const [mobileOpen, setMobileOpen] = useState(false);
-	const { isCommitteeMember, hasMemberEditPermission, signOut } =
-		useAuthStore();
+	const {
+		isCommitteeMember,
+		hasMemberEditPermission,
+		hasProjectRegistrationPermission,
+		signOut,
+	} = useAuthStore();
 	const shouldCheckMemberEdit = menuItems.some(
 		item => item.to === "/committee/members"
+	);
+	const shouldCheckProjectRegistration = menuItems.some(
+		item => item.to === "/committee/project-registration"
 	);
 
 	useEffect(() => {
@@ -249,10 +272,23 @@ export function Sidebar({
 	const footerItems = roleSwitchItem
 		? [roleSwitchItem, ...commonItems]
 		: commonItems;
-	const visibleMenuItems =
-		shouldCheckMemberEdit && hasMemberEditPermission !== true
-			? menuItems.filter(item => item.to !== "/committee/members")
-			: menuItems;
+	const visibleMenuItems = menuItems.filter(item => {
+		if (
+			shouldCheckMemberEdit &&
+			hasMemberEditPermission !== true &&
+			item.to === "/committee/members"
+		) {
+			return false;
+		}
+		if (
+			shouldCheckProjectRegistration &&
+			hasProjectRegistrationPermission !== true &&
+			item.to === "/committee/project-registration"
+		) {
+			return false;
+		}
+		return true;
+	});
 	const sidebarCollapsed = !isMobile && collapsed;
 
 	const logoutButton = (

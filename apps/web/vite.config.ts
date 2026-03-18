@@ -2,7 +2,7 @@ import path from "node:path";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react-swc";
-import { defineConfig } from "vite";
+import { defineConfig, type PluginOption } from "vite";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -19,7 +19,7 @@ export default defineConfig({
 			org: process.env.VITE_SENTRY_ORG,
 			project: process.env.VITE_SENTRY_PROJECT,
 			disable: !process.env.VITE_SENTRY_AUTH_TOKEN,
-		}),
+		}) as unknown as PluginOption,
 	],
 	resolve: {
 		alias: {

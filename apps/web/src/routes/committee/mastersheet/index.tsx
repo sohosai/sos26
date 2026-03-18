@@ -34,8 +34,10 @@ export const Route = createFileRoute("/committee/mastersheet/")({
 const FIXED_COLUMN_IDS = [
 	"number",
 	"name",
+	"namePhonetic",
 	"type",
 	"organizationName",
+	"organizationNamePhonetic",
 	"ownerName",
 	"subOwnerName",
 	"deletionStatus",
@@ -44,6 +46,11 @@ const FIXED_COLUMN_IDS = [
 const DEFAULT_COLUMN_FILTERS: ColumnFiltersState = [
 	{ id: "deletionStatus", value: ["ACTIVE"] },
 ];
+/** デフォルトで非表示にする固定カラム */
+const DEFAULT_HIDDEN_FIXED_COLUMNS: Record<string, boolean> = {
+	namePhonetic: false,
+	organizationNamePhonetic: false,
+};
 
 function MastersheetPage() {
 	const { columns, rows } = Route.useLoaderData();
@@ -54,9 +61,11 @@ function MastersheetPage() {
 	const [selectedCells, setSelectedCells] = useState<SelectedCell[]>([]);
 	const [tableKey, setTableKey] = useState(0);
 	const [sorting, setSorting] = useState<SortingState | undefined>(undefined);
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(
 		DEFAULT_COLUMN_FILTERS
+	);
+	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
+		DEFAULT_HIDDEN_FIXED_COLUMNS
 	);
 	const [activeViewId, setActiveViewId] = useState<string | null>(null);
 
@@ -110,7 +119,7 @@ function MastersheetPage() {
 				<IconHistory size={16} /> 履歴
 			</Button>
 			<Button intent="secondary" onClick={() => setColumnPanelOpen(true)}>
-				<IconLayoutColumns size={16} /> カラム
+				<IconLayoutColumns size={16} /> カラム編集
 			</Button>
 		</>
 	);

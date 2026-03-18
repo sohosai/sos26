@@ -68,17 +68,16 @@ const permissionLabelMap: Record<CommitteePermission, string> = {
 	PROJECT_REGISTRATION_FORM_DELIVER: "企画登録フォーム配信",
 };
 
-const bureauColorMap: Record<string, string> = {
-	財務局: "red",
-	総務局: "orange",
-	広報宣伝局: "yellow",
-	渉外局: "green",
-	推進局: "teal",
-	総合計画局: "blue",
-	ステージ管理局: "purple",
-	本部企画局: "pink",
-	情報メディアシステム局: "indigo",
-	案内所運営部会: "gray",
+const bureauColorMap: Partial<Record<Bureau, BadgeProps["color"]>> = {
+	FINANCE: "red",
+	GENERAL_AFFAIRS: "orange",
+	PUBLIC_RELATIONS: "yellow",
+	EXTERNAL: "green",
+	PROMOTION: "teal",
+	PLANNING: "blue",
+	STAGE_MANAGEMENT: "purple",
+	HQ_PLANNING: "pink",
+	INFO_SYSTEM: "indigo",
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -107,10 +106,16 @@ function BureauCell({ member, onChange }: BureauCellProps) {
 					<Badge
 						size="1"
 						variant="soft"
+						className={
+							member.bureau === "EXECUTIVE_BOARD"
+								? styles.executiveBoardBadge
+								: undefined
+						}
 						color={
-							(bureauColorMap[
-								bureauLabelMap[member.bureau]
-							] as BadgeProps["color"]) ?? "gray"
+							member.bureau === "EXECUTIVE_BOARD"
+								? undefined
+								: ((bureauColorMap[member.bureau] as BadgeProps["color"]) ??
+									"gray")
 						}
 					>
 						{bureauLabelMap[member.bureau]}

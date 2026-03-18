@@ -2,7 +2,7 @@ import { Badge, Heading, Text } from "@radix-ui/themes";
 import type { Bureau } from "@sos26/shared";
 import { bureauLabelMap } from "@sos26/shared";
 import { IconEye } from "@tabler/icons-react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useCallback, useEffect, useState } from "react";
 import { DataTable, DateCell } from "@/components/patterns";
@@ -50,6 +50,7 @@ export const Route = createFileRoute("/project/notice/")({
 
 function RouteComponent() {
 	const { notices: initialNotices } = Route.useLoaderData();
+	const router = useRouter();
 	const [notices, setNotices] = useState<NoticeRow[]>(initialNotices);
 	const { selectedProjectId } = useProjectStore();
 
@@ -59,11 +60,15 @@ function RouteComponent() {
 
 	const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
 
-	const handleRead = useCallback((noticeId: string) => {
-		setNotices(prev =>
-			prev.map(n => (n.id === noticeId ? { ...n, isRead: true } : n))
-		);
-	}, []);
+	const handleRead = useCallback(
+		(noticeId: string) => {
+			setNotices(prev =>
+				prev.map(n => (n.id === noticeId ? { ...n, isRead: true } : n))
+			);
+			void router.invalidate();
+		},
+		[router]
+	);
 
 	const columns = [
 		noticeColumnHelper.accessor("title", {

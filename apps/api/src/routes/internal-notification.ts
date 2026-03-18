@@ -98,7 +98,10 @@ function createNoticeBodyPreview(body: string | null): string {
 	return plain.length <= 120 ? plain : `${plain.slice(0, 120)}...`;
 }
 
-async function processFormAuthorizations(formAuthIds: Array<{ id: string }>) {
+async function processFormAuthorizations(
+	formAuthIds: Array<{ id: string }>,
+	now: Date
+) {
 	let formNotified = 0;
 
 	if (formAuthIds.length === 0) {
@@ -111,6 +114,7 @@ async function processFormAuthorizations(formAuthIds: Array<{ id: string }>) {
 		where: { id: { in: authIds } },
 		select: {
 			id: true,
+			scheduledSendAt: true,
 			deliveryMode: true,
 			filterTypes: true,
 			filterLocations: true,
@@ -120,6 +124,7 @@ async function processFormAuthorizations(formAuthIds: Array<{ id: string }>) {
 	});
 
 	for (const auth of auths) {
+		if (auth.scheduledSendAt > now) continue;
 		if (!auth.form || auth.form.deletedAt) continue;
 
 		const targetProjectIds = await resolveTargetProjectIds({
@@ -140,6 +145,8 @@ async function processFormAuthorizations(formAuthIds: Array<{ id: string }>) {
 				UPDATE "FormAuthorization"
 				SET "deliveryNotifiedAt" = NOW()
 				WHERE "id" = ${auth.id}
+					AND "status" = 'APPROVED'
+					AND "scheduledSendAt" <= ${now}
 					AND "deliveryNotifiedAt" IS NULL
 			`);
 
@@ -170,7 +177,8 @@ async function processFormAuthorizations(formAuthIds: Array<{ id: string }>) {
 }
 
 async function processNoticeAuthorizations(
-	noticeAuthIds: Array<{ id: string }>
+	noticeAuthIds: Array<{ id: string }>,
+	now: Date
 ) {
 	let noticeNotified = 0;
 
@@ -186,6 +194,7 @@ async function processNoticeAuthorizations(
 		},
 		select: {
 			id: true,
+			deliveredAt: true,
 			deliveryMode: true,
 			filterTypes: true,
 			filterLocations: true,
@@ -195,6 +204,7 @@ async function processNoticeAuthorizations(
 	});
 
 	for (const auth of auths) {
+		if (auth.deliveredAt > now) continue;
 		if (auth.notice.deletedAt) continue;
 
 		const targetProjectIds = await resolveTargetProjectIds({
@@ -216,6 +226,8 @@ async function processNoticeAuthorizations(
 			UPDATE "NoticeAuthorization"
 			SET "deliveryNotifiedAt" = NOW()
 			WHERE "id" = ${auth.id}
+				AND "status" = 'APPROVED'
+				AND "deliveredAt" <= ${now}
 				AND "deliveryNotifiedAt" IS NULL
 			RETURNING "deliveryNotifiedAt"
 		`);
@@ -252,6 +264,7 @@ async function processNoticeAuthorizations(
 
 internalNotificationRoute.post("/sync", async c => {
 	assertPassword(c.req.header("x-notification-password"));
+	const now = new Date();
 
 	const [formAuthIds, noticeAuthIds] = await Promise.all([
 		prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
@@ -259,7 +272,7 @@ internalNotificationRoute.post("/sync", async c => {
 			FROM "FormAuthorization" fa
 			JOIN "Form" f ON f."id" = fa."formId"
 			WHERE fa."status" = 'APPROVED'
-				AND fa."scheduledSendAt" <= NOW()
+				AND fa."scheduledSendAt" <= ${now}
 				AND fa."deliveryNotifiedAt" IS NULL
 				AND f."deletedAt" IS NULL
 		`),
@@ -268,15 +281,15 @@ internalNotificationRoute.post("/sync", async c => {
 			FROM "NoticeAuthorization" na
 			JOIN "Notice" n ON n."id" = na."noticeId"
 			WHERE na."status" = 'APPROVED'
-				AND na."deliveredAt" <= NOW()
+				AND na."deliveredAt" <= ${now}
 				AND na."deliveryNotifiedAt" IS NULL
 				AND n."deletedAt" IS NULL
 		`),
 	]);
 
 	const [formNotified, noticeNotified] = await Promise.all([
-		processFormAuthorizations(formAuthIds),
-		processNoticeAuthorizations(noticeAuthIds),
+		processFormAuthorizations(formAuthIds, now),
+		processNoticeAuthorizations(noticeAuthIds, now),
 	]);
 
 	return c.json({

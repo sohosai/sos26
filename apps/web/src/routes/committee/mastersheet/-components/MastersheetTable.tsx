@@ -8,10 +8,11 @@ import type {
 import { type ProjectType, projectTypeSchema } from "@sos26/shared";
 import {
 	IconClipboardText,
+	IconEye,
 	IconFileText,
 	IconPencil,
 } from "@tabler/icons-react";
-import { useRouter } from "@tanstack/react-router";
+import { Link as RouterLink, useRouter } from "@tanstack/react-router";
 import type { ColumnFiltersState } from "@tanstack/react-table";
 import {
 	type ColumnDef,
@@ -27,10 +28,12 @@ import {
 	MultiSelectEditCell,
 	SelectCell,
 } from "@/components/patterns";
+import { Button } from "@/components/primitives";
 import {
 	editFormItemCell,
 	upsertMastersheetCell,
 } from "@/lib/api/committee-mastersheet";
+import { formatProjectNumber } from "@/lib/format";
 import { isClientError } from "@/lib/http/error";
 import { useStorageUrl } from "@/lib/storage";
 import styles from "./MastersheetTable.module.scss";
@@ -121,12 +124,30 @@ function ColHeader({ col }: { col: ApiColumn }) {
 
 // biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
 const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
-	columnHelper.accessor(row => row.project.number, {
+	columnHelper.display({
+		id: "actions",
+		header: "操作",
+		cell: ({ row }) => (
+			<RouterLink
+				to="/committee/info/$projectId"
+				params={{
+					projectId: formatProjectNumber(row.original.project.number),
+				}}
+			>
+				<Button intent="ghost" size="1">
+					<IconEye size={16} />
+					詳細
+				</Button>
+			</RouterLink>
+		),
+		enableSorting: false,
+	}),
+	columnHelper.accessor(row => formatProjectNumber(row.project.number), {
 		id: "number",
 		header: "企画番号",
 		cell: ctx => (
 			<Text size="2" weight="medium">
-				{ctx.getValue() as number}
+				{ctx.getValue() as string}
 			</Text>
 		),
 		meta: { filterVariant: "text" },
@@ -134,6 +155,12 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 	columnHelper.accessor(row => row.project.name, {
 		id: "name",
 		header: "企画名",
+		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
+		meta: { filterVariant: "text" },
+	}),
+	columnHelper.accessor(row => row.project.namePhonetic, {
+		id: "namePhonetic",
+		header: "企画名（ふりがな）",
 		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
 		meta: { filterVariant: "text" },
 	}),
@@ -154,6 +181,12 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 	columnHelper.accessor(row => row.project.organizationName, {
 		id: "organizationName",
 		header: "団体名",
+		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
+		meta: { filterVariant: "text" },
+	}),
+	columnHelper.accessor(row => row.project.organizationNamePhonetic, {
+		id: "organizationNamePhonetic",
+		header: "団体名（ふりがな）",
 		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
 		meta: { filterVariant: "text" },
 	}),

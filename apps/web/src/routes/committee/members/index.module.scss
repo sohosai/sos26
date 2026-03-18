@@ -114,6 +114,11 @@
 	flex-shrink: 0;
 }
 
+.executiveBoardBadge {
+	background-color: var(--pink-9);
+	color: var(--pink-1);
+}
+
 .confirmActions {
 	display: flex;
 	justify-content: flex-end;

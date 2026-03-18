@@ -7,6 +7,7 @@ import {
 } from "@radix-ui/themes";
 import { useEffect, useState } from "react";
 import { AnswerField } from "@/components/form/Answer/AnswerField";
+import { EditableAnswerItem } from "@/components/form/Answer/EditableAnswerItem";
 import type { Form, FormAnswers } from "@/components/form/type";
 import { getFormResponse } from "@/lib/api/committee-form";
 import { responseToAnswers } from "@/lib/form/utils";
@@ -20,9 +21,12 @@ type Props = {
 	responseId: string | null;
 	/** formDetailToForm 済みの Form を渡す（再取得を避ける） */
 	form: Form;
+	/** 回答編集権限があるか */
+	canEditAnswers: boolean;
 };
 
 type ResponseData = {
+	projectId: string;
 	projectName: string;
 	submittedAt: Date | null;
 	answers: FormAnswers;
@@ -34,6 +38,7 @@ export function AnswerDetailDialog({
 	formId,
 	responseId,
 	form,
+	canEditAnswers,
 }: Props) {
 	const [data, setData] = useState<ResponseData | null>(null);
 	const [loading, setLoading] = useState(false);
@@ -52,6 +57,7 @@ export function AnswerDetailDialog({
 				if (controller.signal.aborted) return;
 				const answers = responseToAnswers(res.response, form);
 				setData({
+					projectId: res.response.project.id,
 					projectName: res.response.project.name,
 					submittedAt: res.response.submittedAt,
 					answers,
@@ -102,13 +108,22 @@ export function AnswerDetailDialog({
 
 							<ul className={styles.itemList}>
 								{form.items.map(item => (
-									<li key={item.id} className={styles.itemCard}>
-										<AnswerField
-											item={item}
-											value={data.answers[item.id]}
-											onChange={() => {}}
-											disabled
-										/>
+									<li key={item.id}>
+										{canEditAnswers ? (
+											<EditableAnswerItem
+												item={item}
+												initialValue={data.answers[item.id]}
+												formId={formId}
+												projectId={data.projectId}
+											/>
+										) : (
+											<AnswerField
+												item={item}
+												value={data.answers[item.id]}
+												onChange={() => {}}
+												disabled
+											/>
+										)}
 									</li>
 								))}
 							</ul>

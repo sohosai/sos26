@@ -18,7 +18,7 @@ describe("bureauSchema", () => {
 			"STAGE_MANAGEMENT",
 			"HQ_PLANNING",
 			"INFO_SYSTEM",
-			"INFORMATION",
+			"EXECUTIVE_BOARD",
 		];
 		for (const bureau of validBureaus) {
 			const result = bureauSchema.safeParse(bureau);

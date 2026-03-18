@@ -4,6 +4,7 @@ import { ForbiddenErrorBoundary } from "@/components/layout/ForbiddenContent";
 import { committeeMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import {
 	preloadMemberEditPermission,
+	preloadProjectRegistrationPermission,
 	requireAuth,
 	requireCommitteeMember,
 	useAuthStore,
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/committee")({
 		await requireCommitteeMember();
 		useAuthStore.getState().setActivePortal("committee");
 		await preloadMemberEditPermission();
+		await preloadProjectRegistrationPermission();
 	},
 	errorComponent: ForbiddenErrorBoundary,
 	component: CommitteeLayout,
