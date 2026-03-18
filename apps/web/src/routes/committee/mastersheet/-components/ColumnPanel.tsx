@@ -64,8 +64,10 @@ const DATA_TYPE_LABEL: Record<string, string> = {
 const FIXED_COLUMNS = [
 	{ id: "number", name: "企画番号" },
 	{ id: "name", name: "企画名" },
+	{ id: "namePhonetic", name: "企画名（ふりがな）" },
 	{ id: "type", name: "種別" },
 	{ id: "organizationName", name: "団体名" },
+	{ id: "organizationNamePhonetic", name: "団体名（ふりがな）" },
 	{ id: "ownerName", name: "責任者" },
 	{ id: "subOwnerName", name: "副責任者" },
 ];

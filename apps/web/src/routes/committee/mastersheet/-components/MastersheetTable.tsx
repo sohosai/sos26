@@ -148,6 +148,12 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
 		meta: { filterVariant: "text" },
 	}),
+	columnHelper.accessor(row => row.project.namePhonetic, {
+		id: "namePhonetic",
+		header: "企画名（ふりがな）",
+		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
+		meta: { filterVariant: "text" },
+	}),
 	columnHelper.accessor(row => row.project.type, {
 		id: "type",
 		header: "企画区分",
@@ -165,6 +171,12 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 	columnHelper.accessor(row => row.project.organizationName, {
 		id: "organizationName",
 		header: "団体名",
+		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
+		meta: { filterVariant: "text" },
+	}),
+	columnHelper.accessor(row => row.project.organizationNamePhonetic, {
+		id: "organizationNamePhonetic",
+		header: "団体名（ふりがな）",
 		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
 		meta: { filterVariant: "text" },
 	}),
