@@ -132,12 +132,12 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 		),
 		enableSorting: false,
 	}),
-	columnHelper.accessor(row => row.project.number, {
+	columnHelper.accessor(row => formatProjectNumber(row.project.number), {
 		id: "number",
 		header: "企画番号",
 		cell: ctx => (
 			<Text size="2" weight="medium">
-				{formatProjectNumber(ctx.getValue() as number)}
+				{ctx.getValue() as string}
 			</Text>
 		),
 		meta: { filterVariant: "text" },
