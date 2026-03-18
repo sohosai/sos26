@@ -279,7 +279,7 @@ const userSummarySchema = userSchema.pick({ id: true, name: true });
 
 /** 共同編集者 + ユーザー情報（詳細で使用: id は削除APIのパスに必要） */
 const collaboratorWithUserSchema = formCollaboratorSchema
-	.pick({ id: true })
+	.pick({ id: true, isWrite: true })
 	.extend({
 		user: userSummarySchema,
 	});
