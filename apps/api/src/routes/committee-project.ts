@@ -171,7 +171,14 @@ async function fetchCommitteeProjectDetailData(projectParam: string) {
 
 	const [formDeliveries, noticeDeliveries, inquiries] = await Promise.all([
 		prisma.formDelivery.findMany({
-			where: { projectId: project.id },
+			where: {
+				projectId: project.id,
+				formAuthorization: {
+					form: {
+						deletedAt: null,
+					},
+				},
+			},
 			select: {
 				id: true,
 				createdAt: true,
@@ -187,7 +194,14 @@ async function fetchCommitteeProjectDetailData(projectParam: string) {
 			take: 20,
 		}),
 		prisma.noticeDelivery.findMany({
-			where: { projectId: project.id },
+			where: {
+				projectId: project.id,
+				noticeAuthorization: {
+					notice: {
+						deletedAt: null,
+					},
+				},
+			},
 			select: {
 				id: true,
 				createdAt: true,
