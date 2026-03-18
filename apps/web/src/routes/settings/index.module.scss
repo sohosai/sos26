@@ -15,6 +15,10 @@
 	max-width: 720px;
 }
 
+.settingRow {
+	flex-wrap: wrap;
+}
+
 .settingLabel {
 	flex: 1;
 	min-width: 0;
@@ -34,4 +38,18 @@
 
 .fileInput {
 	display: none;
+}
+
+@media (max-width: 900px) {
+	.page {
+		gap: var(--space-4);
+	}
+
+	.card {
+		max-width: 100%;
+	}
+
+	.settingRow {
+		align-items: flex-start;
+	}
 }
