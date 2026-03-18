@@ -160,6 +160,27 @@ export const updateCommitteeProjectBaseInfoRequestSchema = z
 	})
 	.refine(data => Object.keys(data).length > 0, {
 		message: "更新する項目を指定してください",
+	})
+	.superRefine((data, ctx) => {
+		const { type, location } = data;
+
+		// ステージ企画は location=STAGE のみ許可する
+		if (type === "STAGE" && location !== undefined && location !== "STAGE") {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["location"],
+				message: "ステージ企画の location は STAGE のみ指定できます",
+			});
+		}
+
+		// location=STAGE の場合は type=STAGE を要求する
+		if (location === "STAGE" && type !== undefined && type !== "STAGE") {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["type"],
+				message: "location=STAGE の場合、type も STAGE を指定してください",
+			});
+		}
 	});
 export type UpdateCommitteeProjectBaseInfoRequest = z.infer<
 	typeof updateCommitteeProjectBaseInfoRequestSchema
