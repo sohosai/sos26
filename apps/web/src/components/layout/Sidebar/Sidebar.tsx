@@ -48,14 +48,12 @@ const commonItems: MenuItem[] = [
 function getRoleSwitchItem(
 	pathname: string,
 	menuItems: MenuItem[],
-	isCommitteeMember: boolean,
+	isCommitteeMember: boolean
 ): MenuItem | null {
 	// menuItems のパスからどのロールか判定（/settings 等でも正しく動作）
-	const hasProjectMenu = menuItems.some((item) =>
-		item.to.startsWith("/project"),
-	);
-	const hasCommitteeMenu = menuItems.some((item) =>
-		item.to.startsWith("/committee"),
+	const hasProjectMenu = menuItems.some(item => item.to.startsWith("/project"));
+	const hasCommitteeMenu = menuItems.some(item =>
+		item.to.startsWith("/committee")
 	);
 
 	if (
@@ -217,7 +215,7 @@ export function Sidebar({
 	const { isCommitteeMember, hasMemberEditPermission, signOut } =
 		useAuthStore();
 	const shouldCheckMemberEdit = menuItems.some(
-		(item) => item.to === "/committee/members",
+		item => item.to === "/committee/members"
 	);
 
 	useEffect(() => {
@@ -253,7 +251,7 @@ export function Sidebar({
 
 	const toggleSidebar = () => {
 		if (isMobile) {
-			setMobileOpen((prev) => !prev);
+			setMobileOpen(prev => !prev);
 			return;
 		}
 		onToggle();
@@ -262,14 +260,14 @@ export function Sidebar({
 	const roleSwitchItem = getRoleSwitchItem(
 		pathname,
 		menuItems,
-		isCommitteeMember,
+		isCommitteeMember
 	);
 	const footerItems = roleSwitchItem
 		? [roleSwitchItem, ...commonItems]
 		: commonItems;
 	const visibleMenuItems =
 		shouldCheckMemberEdit && hasMemberEditPermission !== true
-			? menuItems.filter((item) => item.to !== "/committee/members")
+			? menuItems.filter(item => item.to !== "/committee/members")
 			: menuItems;
 	const sidebarCollapsed = !isMobile && collapsed;
 
@@ -327,7 +325,7 @@ export function Sidebar({
 				)}
 
 				<nav className={styles.nav}>
-					{visibleMenuItems.map((item) => (
+					{visibleMenuItems.map(item => (
 						<SidebarItem
 							key={item.to}
 							item={item}
@@ -339,7 +337,7 @@ export function Sidebar({
 				</nav>
 
 				<div className={styles.footer}>
-					{footerItems.map((item) => (
+					{footerItems.map(item => (
 						<SidebarItem
 							key={item.to}
 							item={item}
