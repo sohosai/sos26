@@ -47,7 +47,7 @@ export const Route = createFileRoute("/project")({
 			return {
 				hasUnansweredForms: false,
 				hasUncheckedNotices: false,
-				hasPendingInquiries: false,
+				hasUnreadInquiryComments: false,
 			};
 		}
 
@@ -80,21 +80,21 @@ export const Route = createFileRoute("/project")({
 		});
 
 		const hasUncheckedNotices = notices.some(notice => !notice.isRead);
-		const hasPendingInquiries = inquiries.some(
-			inquiry => !inquiry.isDraft && inquiry.status !== "RESOLVED"
+		const hasUnreadInquiryComments = inquiries.some(
+			inquiry => inquiry.hasUnreadComments
 		);
 
 		return {
 			hasUnansweredForms,
 			hasUncheckedNotices,
-			hasPendingInquiries,
+			hasUnreadInquiryComments,
 		};
 	},
 	component: ProjectLayout,
 });
 
 function ProjectLayout() {
-	const { hasUnansweredForms, hasUncheckedNotices, hasPendingInquiries } =
+	const { hasUnansweredForms, hasUncheckedNotices, hasUnreadInquiryComments } =
 		Route.useLoaderData();
 	const navigate = useNavigate();
 	const router = useRouter();
@@ -112,7 +112,7 @@ function ProjectLayout() {
 		showNotificationDot:
 			(item.to === "/project/forms" && hasUnansweredForms) ||
 			(item.to === "/project/notice" && hasUncheckedNotices) ||
-			(item.to === "/project/support" && hasPendingInquiries),
+			(item.to === "/project/support" && hasUnreadInquiryComments),
 	}));
 
 	const handleSelectProject = (projectId: string) => {

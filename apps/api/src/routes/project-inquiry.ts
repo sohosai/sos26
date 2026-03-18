@@ -342,6 +342,21 @@ projectInquiryRoute.get(
 					where: { deletedAt: null },
 					include: assigneeInclude,
 				},
+				comments: {
+					where: {
+						deletedAt: null,
+						isDraft: false,
+						senderRole: "COMMITTEE",
+					},
+					select: { createdAt: true, sentAt: true },
+					orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
+					take: 1,
+				},
+				commentReadStatuses: {
+					where: { userId: user.id },
+					select: { lastReadAt: true },
+					take: 1,
+				},
 				_count: {
 					select: {
 						comments: { where: { deletedAt: null, isDraft: false } },
@@ -351,24 +366,36 @@ projectInquiryRoute.get(
 			orderBy: { updatedAt: "desc" },
 		});
 
-		const formatted = inquiries.map(inq => ({
-			id: inq.id,
-			title: inq.title,
-			status: inq.status,
-			creatorRole: inq.creatorRole,
-			createdAt: inq.createdAt,
-			updatedAt: inq.updatedAt,
-			isDraft: inq.isDraft,
-			createdBy: inq.createdBy,
-			project: inq.project,
-			projectAssignees: inq.assignees
-				.filter(a => a.side === "PROJECT")
-				.map(formatAssignee),
-			committeeAssignees: inq.assignees
-				.filter(a => a.side === "COMMITTEE")
-				.map(formatAssignee),
-			commentCount: inq._count.comments,
-		}));
+		const formatted = inquiries.map(inq => {
+			const latestCommitteeComment = inq.comments[0] ?? null;
+			const latestCommitteeCommentAt = latestCommitteeComment
+				? getCommentSentAt(latestCommitteeComment)
+				: null;
+			const lastReadAt = inq.commentReadStatuses[0]?.lastReadAt ?? null;
+
+			return {
+				id: inq.id,
+				title: inq.title,
+				status: inq.status,
+				creatorRole: inq.creatorRole,
+				createdAt: inq.createdAt,
+				updatedAt: inq.updatedAt,
+				isDraft: inq.isDraft,
+				hasUnreadComments: latestCommitteeCommentAt
+					? !lastReadAt ||
+						latestCommitteeCommentAt.getTime() > lastReadAt.getTime()
+					: false,
+				createdBy: inq.createdBy,
+				project: inq.project,
+				projectAssignees: inq.assignees
+					.filter(a => a.side === "PROJECT")
+					.map(formatAssignee),
+				committeeAssignees: inq.assignees
+					.filter(a => a.side === "COMMITTEE")
+					.map(formatAssignee),
+				commentCount: inq._count.comments,
+			};
+		});
 
 		return c.json({ inquiries: formatted });
 	}
@@ -437,6 +464,23 @@ projectInquiryRoute.get(
 		if (!inquiry) {
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
+
+		await prisma.inquiryCommentReadStatus.upsert({
+			where: {
+				inquiryId_userId: {
+					inquiryId,
+					userId: user.id,
+				},
+			},
+			create: {
+				inquiryId,
+				userId: user.id,
+				lastReadAt: new Date(),
+			},
+			update: {
+				lastReadAt: new Date(),
+			},
+		});
 
 		const sortedComments = inquiry.comments
 			.map(cm => ({

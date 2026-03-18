@@ -332,6 +332,14 @@ erDiagram
   DateTime createdAt
   DateTime sentAt "nullable"
 }
+"InquiryCommentReadStatus" {
+  String id PK
+  String inquiryId FK
+  String userId FK
+  DateTime lastReadAt
+  DateTime createdAt
+  DateTime updatedAt
+}
 "InquiryActivity" {
   String id PK
   String inquiryId FK
@@ -566,6 +574,8 @@ erDiagram
 "InquiryViewer" }o--o| "User" : user
 "InquiryComment" }o--|| "Inquiry" : inquiry
 "InquiryComment" }o--|| "User" : createdBy
+"InquiryCommentReadStatus" }o--|| "Inquiry" : inquiry
+"InquiryCommentReadStatus" }o--|| "User" : user
 "InquiryActivity" }o--|| "Inquiry" : inquiry
 "InquiryActivity" }o--|| "User" : actor
 "InquiryActivity" }o--o| "User" : target
@@ -1034,6 +1044,17 @@ Properties as follows:
 - `deletedAt`:
 - `createdAt`:
 - `sentAt`:
+
+### `InquiryCommentReadStatus`
+
+Properties as follows:
+
+- `id`:
+- `inquiryId`:
+- `userId`:
+- `lastReadAt`:
+- `createdAt`:
+- `updatedAt`:
 
 ### `InquiryActivity`
 

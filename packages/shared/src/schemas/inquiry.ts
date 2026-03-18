@@ -189,6 +189,7 @@ const inquirySummarySchema = z.object({
 	createdAt: z.coerce.date(),
 	updatedAt: z.coerce.date(),
 	isDraft: z.boolean(),
+	hasUnreadComments: z.boolean(),
 	createdBy: userSummarySchema,
 	project: z.object({ id: z.cuid(), name: z.string() }),
 	projectAssignees: z.array(assigneeWithUserSchema),

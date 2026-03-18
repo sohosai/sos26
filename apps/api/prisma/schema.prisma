@@ -92,6 +92,7 @@ model User {
   inquiryAssignments        InquiryAssignee[]        @relation("InquiryAssignee")
   inquiryViewerEntries      InquiryViewer[]          @relation("InquiryViewer")
   inquiryComments           InquiryComment[]         @relation("InquiryCommentCreatedBy")
+  inquiryCommentReadStatuses InquiryCommentReadStatus[]
   inquiryActivitiesAsActor  InquiryActivity[]        @relation("InquiryActivityActor")
   inquiryActivitiesAsTarget InquiryActivity[]        @relation("InquiryActivityTarget")
   projectSubOwnerRequests   ProjectSubOwnerRequest[]
@@ -982,6 +983,7 @@ model Inquiry {
   assignees   InquiryAssignee[]
   viewers     InquiryViewer[]
   comments    InquiryComment[]
+  commentReadStatuses InquiryCommentReadStatus[]
   activities  InquiryActivity[]
   attachments InquiryAttachment[]
 
@@ -1067,6 +1069,24 @@ model InquiryComment {
 
   @@index([inquiryId])
   @@index([deletedAt])
+}
+
+model InquiryCommentReadStatus {
+  id String @id @default(cuid())
+
+  inquiryId String
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  lastReadAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([inquiryId, userId])
+  @@index([userId])
 }
 
 model InquiryActivity {
