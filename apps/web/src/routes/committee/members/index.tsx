@@ -68,7 +68,7 @@ const permissionLabelMap: Record<CommitteePermission, string> = {
 	PROJECT_REGISTRATION_FORM_DELIVER: "企画登録フォーム配信",
 };
 
-const bureauColorMap: Record<string, string> = {
+const bureauColorMap: Partial<Record<Bureau, BadgeProps["color"]>> = {
 	FINANCE: "red",
 	GENERAL_AFFAIRS: "orange",
 	PUBLIC_RELATIONS: "yellow",
