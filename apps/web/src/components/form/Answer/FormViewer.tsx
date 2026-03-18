@@ -254,7 +254,14 @@ export function FormViewer({
 		const nextInitialAnswers = buildInitialAnswers(form, initialAnswers);
 		setAnswers(nextInitialAnswers);
 		setBaselineAnswers(nextInitialAnswers);
-		setErrors({});
+		const nextErrors: Record<string, string> = {};
+		for (const item of form.items) {
+			const error = validateItem(item, nextInitialAnswers[item.id]);
+			if (error) {
+				nextErrors[item.id] = error;
+			}
+		}
+		setErrors(nextErrors);
 	}, [form, initialAnswers]);
 
 	const isDirty = useMemo(
@@ -265,19 +272,31 @@ export function FormViewer({
 		[form.items, answers, baselineAnswers]
 	);
 
+	const isSubmittable = useMemo(() => {
+		if (disableSubmit) return false;
+		return form.items.every(item => !errors[item.id]);
+	}, [form.items, errors, disableSubmit]);
+
 	useEffect(() => {
 		onDirtyChange?.(isDirty);
 	}, [isDirty, onDirtyChange]);
 
 	const updateAnswer = (itemId: string, value: FormAnswerValue) => {
 		setAnswers(prev => ({ ...prev, [itemId]: value }));
-		if (errors[itemId]) {
-			setErrors(prev => {
-				const next = { ...prev };
-				delete next[itemId];
+		setErrors(prev => {
+			const next = { ...prev };
+			const item = form.items.find(i => i.id === itemId);
+			if (!item) {
 				return next;
-			});
-		}
+			}
+			const error = validateItem(item, value);
+			if (error) {
+				next[itemId] = error;
+			} else {
+				delete next[itemId];
+			}
+			return next;
+		});
 	};
 
 	const validate = (): boolean => {
@@ -384,8 +403,9 @@ export function FormViewer({
 				)}
 				<Button
 					type="submit"
+					intent={isSubmittable ? "primary" : "secondary"}
 					loading={isSubmitting}
-					disabled={isSavingDraft || disableSubmit}
+					disabled={isSubmitting || isSavingDraft || disableSubmit}
 				>
 					送信する
 				</Button>
