@@ -56,6 +56,10 @@ const envSchema = z.object({
 
 	// ファイルトークン署名用秘密鍵
 	FILE_TOKEN_SECRET: z.string().min(32),
+
+	// Sentry
+	SENTRY_DSN: z.string().url().optional(),
+	SENTRY_ENVIRONMENT: z.string().default("development"),
 });
 
 export const env = envSchema.parse({
@@ -81,6 +85,8 @@ export const env = envSchema.parse({
 	S3_PRESIGNED_URL_EXPIRES: process.env.S3_PRESIGNED_URL_EXPIRES,
 	S3_MAX_FILE_SIZE: process.env.S3_MAX_FILE_SIZE,
 	FILE_TOKEN_SECRET: process.env.FILE_TOKEN_SECRET,
+	SENTRY_DSN: process.env.SENTRY_DSN,
+	SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT,
 });
 
 export type Env = z.infer<typeof envSchema>;
