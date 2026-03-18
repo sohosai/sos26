@@ -37,6 +37,7 @@ apps/apiで使用する環境変数の設定方法とリファレンスです。
 | `VAPID_PUBLIC_KEY` | VAPID 公開鍵（Web Push 用） | なし | ✅ |
 | `VAPID_PRIVATE_KEY` | VAPID 秘密鍵（Web Push 用） | なし | ✅ |
 | `PUSH_SEND_BATCH_SIZE` | プッシュ通知の一括送信数 | `50` | ❌ |
+| `NOTIFICATION_SYNC_PASSWORD` | 内部通知同期エンドポイントのパスワード | なし | ✅ |
 | `S3_ENDPOINT` | S3互換ストレージのエンドポイント URL | なし | ✅ |
 | `S3_REGION` | S3 リージョン | `jp-north-1` | ❌ |
 | `S3_BUCKET` | S3 バケット名 | なし | ✅ |
@@ -75,6 +76,9 @@ ADMIN_MAIL=admin@example.com
 VAPID_PUBLIC_KEY=your_vapid_public_key_here
 VAPID_PRIVATE_KEY=your_vapid_private_key_here
 # PUSH_SEND_BATCH_SIZE=50  # デフォルト50
+
+# 内部通知同期
+NOTIFICATION_SYNC_PASSWORD=change-this-to-a-long-random-string
 
 # S3互換オブジェクトストレージ
 S3_ENDPOINT=https://s3.isk01.sakurastorage.jp
@@ -145,6 +149,11 @@ FILE_TOKEN_SECRET=your-file-token-secret-at-least-32-chars
 **PUSH_SEND_BATCH_SIZE:**
 - 1以上の整数
 - 既定は `50`
+
+**NOTIFICATION_SYNC_PASSWORD:**
+- 空であってはならない必須文字列
+- 内部エンドポイント `POST /internal/notifications/sync` の認証に使用
+- 十分長いランダム文字列を推奨
 
 **S3_ENDPOINT:**
 - 空であってはならない必須文字列

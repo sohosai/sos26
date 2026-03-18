@@ -42,6 +42,9 @@ const envSchema = z.object({
 	VAPID_PRIVATE_KEY: z.string().min(1),
 	PUSH_SEND_BATCH_SIZE: z.coerce.number().min(1).default(50),
 
+	// 内部通知同期エンドポイント
+	NOTIFICATION_SYNC_PASSWORD: z.string().min(1),
+
 	// S3互換オブジェクトストレージ
 	S3_ENDPOINT: z.string().min(1),
 	S3_REGION: z.string().default("jp-north-1"),
@@ -69,6 +72,7 @@ export const env = envSchema.parse({
 	VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
 	VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
 	PUSH_SEND_BATCH_SIZE: process.env.PUSH_SEND_BATCH_SIZE,
+	NOTIFICATION_SYNC_PASSWORD: process.env.NOTIFICATION_SYNC_PASSWORD,
 	S3_ENDPOINT: process.env.S3_ENDPOINT,
 	S3_REGION: process.env.S3_REGION,
 	S3_BUCKET: process.env.S3_BUCKET,

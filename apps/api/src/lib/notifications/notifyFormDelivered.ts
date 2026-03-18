@@ -1,11 +1,10 @@
-import { sendNoticeDeliveredEmail } from "../emails";
+import { sendFormDeliveredEmail } from "../emails";
 import { env } from "../env";
 import { prisma } from "../prisma";
-import { sendNoticeDeliveredPush } from "../push";
+import { sendFormDeliveredPush } from "../push";
 
-export async function notifyNoticeDelivered(input: {
-	noticeTitle: string;
-	noticeBodyPreview: string;
+export async function notifyFormDelivered(input: {
+	formTitle: string;
 	projectIds: string[];
 }): Promise<boolean> {
 	try {
@@ -42,27 +41,26 @@ export async function notifyNoticeDelivered(input: {
 			select: { email: true },
 		});
 
-		const url = `${env.APP_URL}/project/notice/`;
+		const url = `${env.APP_URL}/project/forms/`;
 
 		await Promise.all(
 			users.map(user =>
-				sendNoticeDeliveredEmail({
+				sendFormDeliveredEmail({
 					email: user.email,
-					noticeTitle: input.noticeTitle,
-					noticeBodyPreview: input.noticeBodyPreview,
+					formTitle: input.formTitle,
 					url,
 				})
 			)
 		);
-		await sendNoticeDeliveredPush({
+		await sendFormDeliveredPush({
 			userIds: [...userIds],
-			noticeTitle: input.noticeTitle,
+			formTitle: input.formTitle,
 			url,
 		});
 
 		return true;
 	} catch (err) {
-		console.error("[Notification] notifyNoticeDelivered failed", err);
+		console.error("[Notification] notifyFormDelivered failed", err);
 		return false;
 	}
 }
