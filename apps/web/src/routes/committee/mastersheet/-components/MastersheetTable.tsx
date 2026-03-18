@@ -7,10 +7,11 @@ import type {
 import { type ProjectType, projectTypeSchema } from "@sos26/shared";
 import {
 	IconClipboardText,
+	IconEye,
 	IconFileText,
 	IconPencil,
 } from "@tabler/icons-react";
-import { useRouter } from "@tanstack/react-router";
+import { Link as RouterLink, useRouter } from "@tanstack/react-router";
 import type { ColumnFiltersState } from "@tanstack/react-table";
 import {
 	type ColumnDef,
@@ -26,6 +27,7 @@ import {
 	MultiSelectEditCell,
 	SelectCell,
 } from "@/components/patterns";
+import { Button } from "@/components/primitives";
 import {
 	editFormItemCell,
 	upsertMastersheetCell,
@@ -111,6 +113,24 @@ function ColHeader({ col }: { col: ApiColumn }) {
 
 // biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
 const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
+	columnHelper.display({
+		id: "actions",
+		header: "操作",
+		cell: ({ row }) => (
+			<RouterLink
+				to="/committee/info/$projectId"
+				params={{
+					projectId: String(row.original.project.number).padStart(3, "0"),
+				}}
+			>
+				<Button intent="ghost" size="1">
+					<IconEye size={16} />
+					詳細
+				</Button>
+			</RouterLink>
+		),
+		enableSorting: false,
+	}),
 	columnHelper.accessor(row => row.project.number, {
 		id: "number",
 		header: "企画番号",
