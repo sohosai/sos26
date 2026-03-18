@@ -10,7 +10,7 @@ const BUREAUS = [
 	"STAGE_MANAGEMENT",
 	"HQ_PLANNING",
 	"INFO_SYSTEM",
-	"INFORMATION",
+	"EXECUTIVE_BOARD",
 ] as const;
 
 type Bureau = (typeof BUREAUS)[number];

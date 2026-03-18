@@ -15,7 +15,7 @@ export const bureauSchema = z.enum([
 	"STAGE_MANAGEMENT",
 	"HQ_PLANNING",
 	"INFO_SYSTEM",
-	"INFORMATION",
+	"EXECUTIVE_BOARD",
 ]);
 export type Bureau = z.infer<typeof bureauSchema>;
 
@@ -29,7 +29,7 @@ export const bureauLabelMap: Record<Bureau, string> = {
 	STAGE_MANAGEMENT: "ステージ管理局",
 	HQ_PLANNING: "本部企画局",
 	INFO_SYSTEM: "情報メディアシステム局",
-	INFORMATION: "案内所運営部会",
+	EXECUTIVE_BOARD: "委員長団",
 } as const;
 
 /**

@@ -33,7 +33,7 @@ bun run make-committee-member --email user@example.com --permissions NOTICE_DELI
 | `STAGE_MANAGEMENT` | ステージ管理局 |
 | `HQ_PLANNING` | 本部企画局 |
 | `INFO_SYSTEM` | 情報メディアシステム局 |
-| `INFORMATION` | 案内所運営部会 |
+| `EXECUTIVE_BOARD` | 委員長団 |
 
 ### 指定可能な権限
 
