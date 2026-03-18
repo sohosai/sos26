@@ -75,6 +75,12 @@ PENDING → REJECTED（却下）
 - お知らせが削除された場合、PENDING の申請は自動的に REJECTED になる
 - 承認時に deliveredAt が過去の場合はエラー
 
+### 配信時通知（メール / Push）
+
+- 承認通知（申請者・承認者向け）とは別に、企画メンバー向けの配信時通知は内部運用エンドポイントで同期する
+- `POST /internal/notifications/sync` が `deliveredAt <= now` かつ `deliveryNotifiedAt IS NULL` の承認済みお知らせを検出し、通知送信後に `deliveryNotifiedAt` を更新する
+- 運用手順は `docs/apps/api/notification-recovery.md` を参照
+
 ---
 
 ## 委員向け API（`/committee/notices`）

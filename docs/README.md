@@ -27,6 +27,7 @@
   - Committee Member API 仕様: `docs/apps/api/committee-member.md`
   - Notice API 仕様: `docs/apps/api/notice.md`
   - Form API 仕様: `docs/apps/api/form.md`
+  - 配信通知同期（内部運用）: `docs/apps/api/notification-recovery.md`
   - Committee Project API 仕様: `docs/apps/api/committee-project.md`
   - テストガイド: `docs/apps/api/testing.md`
   - Prisma: `docs/apps/api/prisma.md`

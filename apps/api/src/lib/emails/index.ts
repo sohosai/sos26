@@ -3,6 +3,7 @@ export { sendAccessRequestReceivedEmail } from "./usecases/sendAccessRequestRece
 export { sendAlreadyRegisteredEmail } from "./usecases/sendAlreadyRegisteredEmail";
 export { sendFormAuthorizationDecidedEmail } from "./usecases/sendFormAuthorizationDecidedEmail";
 export { sendFormAuthorizationRequestedEmail } from "./usecases/sendFormAuthorizationRequestedEmail";
+export { sendFormDeliveredEmail } from "./usecases/sendFormDeliveredEmail";
 export { sendInquiryAssigneeAddedEmail } from "./usecases/sendInquiryAssigneeAddedEmail";
 export { sendInquiryCommentAddedEmail } from "./usecases/sendInquiryCommentAddedEmail";
 export { sendInquiryCreatedEmail } from "./usecases/sendInquiryCreatedEmail";

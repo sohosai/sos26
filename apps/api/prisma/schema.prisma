@@ -365,6 +365,7 @@ model File {
 
   noticeAttachments                  NoticeAttachment[]
   inquiryAttachments                 InquiryAttachment[]
+  formAttachments                    FormAttachment[]
   formAnswerFiles                    FormAnswerFile[]
   formItemEditHistoryFiles           FormItemEditHistoryFile[]
   projectRegistrationFormAnswerFiles ProjectRegistrationFormAnswerFile[]
@@ -457,6 +458,9 @@ model NoticeAuthorization {
   //承認を求める側があらかじめここを埋める
   deliveredAt DateTime
 
+  // 配信通知（メール/Push）を送信した日時
+  deliveryNotifiedAt DateTime?
+
   //配信先指定モード
   deliveryMode DeliveryMode @default(INDIVIDUAL)
 
@@ -473,6 +477,7 @@ model NoticeAuthorization {
 
   @@index([noticeId, status])
   @@index([deliveryMode, status, deliveredAt])
+  @@index([status, deliveredAt, deliveryNotifiedAt])
 }
 
 //Noticeの配信
@@ -542,6 +547,9 @@ model Form {
   //申請項目
   items FormItem[]
 
+  // 添付ファイル
+  attachments FormAttachment[]
+
   // お問い合わせ関連
   inquiries Inquiry[]
 
@@ -551,6 +559,23 @@ model Form {
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+}
+
+model FormAttachment {
+  id String @id @default(cuid())
+
+  formId String
+  fileId String
+
+  form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@unique([formId, fileId])
+  @@index([formId])
+  @@index([fileId])
 }
 
 model FormViewer {
@@ -720,6 +745,9 @@ model FormAuthorization {
   //配信したい日時
   scheduledSendAt DateTime
 
+  // 配信通知（メール/Push）を送信した日時
+  deliveryNotifiedAt DateTime?
+
   //回答期限
   deadlineAt DateTime?
 
@@ -747,6 +775,7 @@ model FormAuthorization {
 
   @@index([formId, createdAt(sort: Desc)])
   @@index([deliveryMode, status, scheduledSendAt])
+  @@index([status, scheduledSendAt, deliveryNotifiedAt])
 }
 
 //申請の配信

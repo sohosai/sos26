@@ -2,6 +2,7 @@ export { sendAccessRequestDecidedPush } from "./usecases/sendAccessRequestDecide
 export { sendAccessRequestReceivedPush } from "./usecases/sendAccessRequestReceivedPush";
 export { sendFormAuthorizationDecidedPush } from "./usecases/sendFormAuthorizationDecidedPush";
 export { sendFormAuthorizationRequestedPush } from "./usecases/sendFormAuthorizationRequestedPush";
+export { sendFormDeliveredPush } from "./usecases/sendFormDeliveredPush";
 export { sendInquiryAssigneeAddedPush } from "./usecases/sendInquiryAssigneeAddedPush";
 export { sendInquiryCommentAddedPush } from "./usecases/sendInquiryCommentAddedPush";
 export { sendInquiryCreatedPush } from "./usecases/sendInquiryCreatedPush";

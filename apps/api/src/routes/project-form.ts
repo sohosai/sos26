@@ -23,6 +23,10 @@ import {
 	assertRequiredAnswered,
 } from "../lib/form-answer-validation";
 import {
+	formAttachmentsInclude,
+	mapFormAttachments,
+} from "../lib/form-attachments";
+import {
 	constraintsFromPrisma,
 	mapItemToApiShape,
 } from "../lib/form-constraints";
@@ -58,6 +62,7 @@ const getDeliveryOrThrow = async (
 				include: {
 					form: {
 						include: {
+							attachments: formAttachmentsInclude,
 							items: {
 								select: {
 									id: true,
@@ -534,11 +539,12 @@ projectFormRoute.get(
 				formId: form.id,
 				title: form.title,
 				description: form.description,
+				attachments: mapFormAttachments(form.attachments),
 				scheduledSendAt: delivery.formAuthorization.scheduledSendAt,
 				deadlineAt: delivery.formAuthorization.deadlineAt,
 				allowLateResponse: delivery.formAuthorization.allowLateResponse,
 				required: delivery.formAuthorization.required,
-				ownerOnly: false,
+				ownerOnly: delivery.formAuthorization.ownerOnly,
 				items: form.items.map(item => ({
 					id: item.id,
 					label: item.label,

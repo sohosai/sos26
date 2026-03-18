@@ -71,7 +71,10 @@ export function SupportList({
 	return (
 		<div className={styles.container}>
 			<div className={styles.header}>
-				<div className={styles.titleRow}>
+				<div
+					className={styles.titleRow}
+					data-mobile-stack={isCommittee ? "true" : "false"}
+				>
 					<Heading size="6">お問い合わせ</Heading>
 					<Button onClick={onNewInquiry}>
 						<IconPlus size={16} />

@@ -2,6 +2,7 @@ import { Text } from "@radix-ui/themes";
 import { PATTERN_LABELS, PATTERN_REGEXES } from "@sos26/shared";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { AttachmentPreviewButton } from "@/components/filePreview/AttachmentPreviewButton";
 import { Button } from "@/components/primitives";
 import {
 	createEmptyFileAnswerValue,
@@ -333,6 +334,21 @@ export function FormViewer({
 						{form.name || "無題の申請"}
 					</Text>
 					{form.description && <Text size="2">{form.description}</Text>}
+					{form.attachments && form.attachments.length > 0 && (
+						<div className={styles.attachmentSection}>
+							<Text size="2" weight="medium" color="gray">
+								添付ファイル
+							</Text>
+							<div className={styles.attachmentList}>
+								{form.attachments.map(attachment => (
+									<AttachmentPreviewButton
+										key={attachment.id}
+										attachment={attachment}
+									/>
+								))}
+							</div>
+						</div>
+					)}
 				</div>
 
 				<ul className={styles.itemList}>

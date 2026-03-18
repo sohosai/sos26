@@ -1,0 +1,295 @@
+import type {
+	DeliveryMode,
+	ProjectLocation,
+	ProjectType,
+} from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import { Hono } from "hono";
+import { env } from "../lib/env";
+import { Errors } from "../lib/error";
+import {
+	notifyFormDelivered,
+	notifyNoticeDelivered,
+} from "../lib/notifications";
+import { prisma } from "../lib/prisma";
+
+type AuthEnv = {
+	Variables: Record<string, never>;
+};
+
+const internalNotificationRoute = new Hono<AuthEnv>();
+
+function assertPassword(password: string | undefined) {
+	if (!password || password !== env.NOTIFICATION_SYNC_PASSWORD) {
+		throw Errors.unauthorized("通知同期パスワードが不正です");
+	}
+}
+
+async function resolveTargetProjectIds(input: {
+	deliveryMode: DeliveryMode;
+	filterTypes: ProjectType[];
+	filterLocations: ProjectLocation[];
+	deliveryProjectIds: string[];
+}) {
+	if (input.deliveryMode === "INDIVIDUAL") {
+		return [...new Set(input.deliveryProjectIds)];
+	}
+
+	const projects = await prisma.project.findMany({
+		where: {
+			deletedAt: null,
+			type:
+				input.filterTypes.length > 0 ? { in: input.filterTypes } : undefined,
+			location:
+				input.filterLocations.length > 0
+					? { in: input.filterLocations }
+					: undefined,
+		},
+		select: { id: true },
+	});
+
+	return projects.map(project => project.id);
+}
+
+async function ensureFormDeliveries(
+	formAuthorizationId: string,
+	projectIds: string[]
+): Promise<string[]> {
+	if (projectIds.length === 0) return [];
+
+	const uniqueProjectIds = [...new Set(projectIds)];
+
+	await prisma.formDelivery.createMany({
+		data: uniqueProjectIds.map(projectId => ({
+			formAuthorizationId,
+			projectId,
+		})),
+		skipDuplicates: true,
+	});
+
+	return uniqueProjectIds;
+}
+
+async function ensureNoticeDeliveries(
+	noticeAuthorizationId: string,
+	projectIds: string[]
+): Promise<string[]> {
+	if (projectIds.length === 0) return [];
+
+	const uniqueProjectIds = [...new Set(projectIds)];
+
+	await prisma.noticeDelivery.createMany({
+		data: uniqueProjectIds.map(projectId => ({
+			noticeAuthorizationId,
+			projectId,
+		})),
+		skipDuplicates: true,
+	});
+
+	return uniqueProjectIds;
+}
+
+function createNoticeBodyPreview(body: string | null): string {
+	if (!body) return "";
+	const plain = body
+		.replace(/<[^>]*>/g, " ")
+		.replace(/\s+/g, " ")
+		.trim();
+	return plain.length <= 120 ? plain : `${plain.slice(0, 120)}...`;
+}
+
+async function processFormAuthorizations(formAuthIds: Array<{ id: string }>) {
+	let formNotified = 0;
+
+	if (formAuthIds.length === 0) {
+		return formNotified;
+	}
+
+	const authIds = formAuthIds.map(auth => auth.id);
+
+	const auths = await prisma.formAuthorization.findMany({
+		where: { id: { in: authIds } },
+		select: {
+			id: true,
+			deliveryMode: true,
+			filterTypes: true,
+			filterLocations: true,
+			form: { select: { title: true, deletedAt: true } },
+			deliveries: { select: { projectId: true } },
+		},
+	});
+
+	for (const auth of auths) {
+		if (!auth.form || auth.form.deletedAt) continue;
+
+		const targetProjectIds = await resolveTargetProjectIds({
+			deliveryMode: auth.deliveryMode,
+			filterTypes: auth.filterTypes,
+			filterLocations: auth.filterLocations,
+			deliveryProjectIds: auth.deliveries.map(delivery => delivery.projectId),
+		});
+
+		const projectIds = await ensureFormDeliveries(auth.id, targetProjectIds);
+		if (projectIds.length === 0) {
+			continue;
+		}
+
+		// Reserve this authorization for notification by setting deliveryNotifiedAt,
+		// guarding against concurrent workers processing the same record.
+		const updatedCount = await prisma.$executeRaw<number>(Prisma.sql`
+				UPDATE "FormAuthorization"
+				SET "deliveryNotifiedAt" = NOW()
+				WHERE "id" = ${auth.id}
+					AND "deliveryNotifiedAt" IS NULL
+			`);
+
+		// If no row was updated, another process has already reserved or processed it.
+		if (updatedCount === 0) {
+			continue;
+		}
+
+		const ok = await notifyFormDelivered({
+			formTitle: auth.form.title,
+			projectIds,
+		});
+
+		if (!ok) {
+			// Revert the reservation so that failed notifications can be retried.
+			await prisma.$executeRaw(Prisma.sql`
+				UPDATE "FormAuthorization"
+				SET "deliveryNotifiedAt" = NULL
+				WHERE "id" = ${auth.id}
+			`);
+			continue;
+		}
+
+		formNotified += 1;
+	}
+
+	return formNotified;
+}
+
+async function processNoticeAuthorizations(
+	noticeAuthIds: Array<{ id: string }>
+) {
+	let noticeNotified = 0;
+
+	if (noticeAuthIds.length === 0) {
+		return noticeNotified;
+	}
+
+	const ids = noticeAuthIds.map(authId => authId.id);
+
+	const auths = await prisma.noticeAuthorization.findMany({
+		where: {
+			id: { in: ids },
+		},
+		select: {
+			id: true,
+			deliveryMode: true,
+			filterTypes: true,
+			filterLocations: true,
+			notice: { select: { title: true, body: true, deletedAt: true } },
+			deliveries: { select: { projectId: true } },
+		},
+	});
+
+	for (const auth of auths) {
+		if (auth.notice.deletedAt) continue;
+
+		const targetProjectIds = await resolveTargetProjectIds({
+			deliveryMode: auth.deliveryMode,
+			filterTypes: auth.filterTypes,
+			filterLocations: auth.filterLocations,
+			deliveryProjectIds: auth.deliveries.map(delivery => delivery.projectId),
+		});
+
+		const projectIds = await ensureNoticeDeliveries(auth.id, targetProjectIds);
+		if (projectIds.length === 0) {
+			continue;
+		}
+
+		// Claim this authorization for processing to avoid duplicate notifications
+		const claimResult = await prisma.$queryRaw<
+			{ deliveryNotifiedAt: Date }[]
+		>(Prisma.sql`
+			UPDATE "NoticeAuthorization"
+			SET "deliveryNotifiedAt" = NOW()
+			WHERE "id" = ${auth.id}
+				AND "deliveryNotifiedAt" IS NULL
+			RETURNING "deliveryNotifiedAt"
+		`);
+		if (claimResult.length === 0) {
+			// Another worker has already processed (or is processing) this authorization
+			continue;
+		}
+		const claimedAt = claimResult[0]?.deliveryNotifiedAt;
+
+		const ok = await notifyNoticeDelivered({
+			noticeTitle: auth.notice.title,
+			noticeBodyPreview: createNoticeBodyPreview(auth.notice.body),
+			projectIds,
+		});
+
+		if (ok) {
+			noticeNotified += 1;
+		} else if (claimedAt) {
+			// Roll back claim so that this authorization can be retried later.
+			await prisma.noticeAuthorization.updateMany({
+				where: {
+					id: auth.id,
+					deliveryNotifiedAt: claimedAt,
+				},
+				data: {
+					deliveryNotifiedAt: null,
+				},
+			});
+		}
+	}
+
+	return noticeNotified;
+}
+
+internalNotificationRoute.post("/sync", async c => {
+	assertPassword(c.req.header("x-notification-password"));
+
+	const [formAuthIds, noticeAuthIds] = await Promise.all([
+		prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+			SELECT fa."id"
+			FROM "FormAuthorization" fa
+			JOIN "Form" f ON f."id" = fa."formId"
+			WHERE fa."status" = 'APPROVED'
+				AND fa."scheduledSendAt" <= NOW()
+				AND fa."deliveryNotifiedAt" IS NULL
+				AND f."deletedAt" IS NULL
+		`),
+		prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+			SELECT na."id"
+			FROM "NoticeAuthorization" na
+			JOIN "Notice" n ON n."id" = na."noticeId"
+			WHERE na."status" = 'APPROVED'
+				AND na."deliveredAt" <= NOW()
+				AND na."deliveryNotifiedAt" IS NULL
+				AND n."deletedAt" IS NULL
+		`),
+	]);
+
+	const [formNotified, noticeNotified] = await Promise.all([
+		processFormAuthorizations(formAuthIds),
+		processNoticeAuthorizations(noticeAuthIds),
+	]);
+
+	return c.json({
+		success: true as const,
+		notified: {
+			forms: formNotified,
+			notices: noticeNotified,
+		},
+		pending: {
+			forms: formAuthIds.length - formNotified,
+			notices: noticeAuthIds.length - noticeNotified,
+		},
+	});
+});
+
+export { internalNotificationRoute };

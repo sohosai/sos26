@@ -2,6 +2,7 @@ export { notifyAccessRequestDecided } from "./notifyAccessRequestDecided";
 export { notifyAccessRequestReceived } from "./notifyAccessRequestReceived";
 export { notifyFormAuthorizationDecided } from "./notifyFormAuthorizationDecided";
 export { notifyFormAuthorizationRequested } from "./notifyFormAuthorizationRequested";
+export { notifyFormDelivered } from "./notifyFormDelivered";
 export { notifyInquiryAssigneeAdded } from "./notifyInquiryAssigneeAdded";
 export { notifyInquiryCommentAdded } from "./notifyInquiryCommentAdded";
 export { notifyInquiryCreatedByCommittee } from "./notifyInquiryCreatedByCommittee";

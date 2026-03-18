@@ -3,11 +3,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../prisma", () => ({
 	prisma: {
+		committeeMember: {
+			findFirst: vi.fn(),
+		},
 		project: {
 			findFirst: vi.fn(),
 		},
 		form: {
 			findFirst: vi.fn(),
+		},
+		formAttachment: {
+			findMany: vi.fn(),
 		},
 		formAnswerFile: {
 			findMany: vi.fn(),
@@ -27,8 +33,10 @@ const mockUser = { id: "user-1" } as User;
 describe("canAccessFormFile", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockPrisma.committeeMember.findFirst.mockResolvedValue(null);
 		mockPrisma.formAnswerFile.findMany.mockResolvedValue([]);
 		mockPrisma.formItemEditHistoryFile.findMany.mockResolvedValue([]);
+		mockPrisma.formAttachment.findMany.mockResolvedValue([]);
 		mockPrisma.project.findFirst.mockResolvedValue(null);
 		mockPrisma.form.findFirst.mockResolvedValue(null);
 	});
@@ -118,6 +126,83 @@ describe("canAccessFormFile", () => {
 		] as never);
 		mockPrisma.project.findFirst.mockResolvedValue(null);
 		mockPrisma.form.findFirst.mockResolvedValue({ id: "form-1" } as never);
+
+		await expect(canAccessFormFile("file-1", mockUser)).resolves.toBe(true);
+	});
+
+	it("FormAttachment 経由で実委人なら true", async () => {
+		mockPrisma.formAttachment.findMany.mockResolvedValue([
+			{
+				form: {
+					id: "form-1",
+					authorizations: [],
+				},
+			},
+		] as never);
+		mockPrisma.committeeMember.findFirst.mockResolvedValue({
+			id: "cm-1",
+		} as never);
+
+		await expect(canAccessFormFile("file-1", mockUser)).resolves.toBe(true);
+	});
+
+	it("FormAttachment 経由で配信先企画メンバーなら true", async () => {
+		mockPrisma.formAttachment.findMany.mockResolvedValue([
+			{
+				form: {
+					id: "form-1",
+					authorizations: [
+						{
+							ownerOnly: false,
+							deliveries: [{ projectId: "project-1" }],
+						},
+					],
+				},
+			},
+		] as never);
+		mockPrisma.project.findFirst.mockResolvedValue({
+			id: "project-1",
+		} as never);
+
+		await expect(canAccessFormFile("file-1", mockUser)).resolves.toBe(true);
+	});
+
+	it("ownerOnly の FormAttachment は一般メンバーだと false", async () => {
+		mockPrisma.formAttachment.findMany.mockResolvedValue([
+			{
+				form: {
+					id: "form-1",
+					authorizations: [
+						{
+							ownerOnly: true,
+							deliveries: [{ projectId: "project-1" }],
+						},
+					],
+				},
+			},
+		] as never);
+		mockPrisma.project.findFirst.mockResolvedValue(null);
+
+		await expect(canAccessFormFile("file-1", mockUser)).resolves.toBe(false);
+	});
+
+	it("ownerOnly の FormAttachment は責任者/副責任者なら true", async () => {
+		mockPrisma.formAttachment.findMany.mockResolvedValue([
+			{
+				form: {
+					id: "form-1",
+					authorizations: [
+						{
+							ownerOnly: true,
+							deliveries: [{ projectId: "project-1" }],
+						},
+					],
+				},
+			},
+		] as never);
+		mockPrisma.project.findFirst.mockResolvedValue({
+			id: "project-1",
+		} as never);
 
 		await expect(canAccessFormFile("file-1", mockUser)).resolves.toBe(true);
 	});

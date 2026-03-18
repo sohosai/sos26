@@ -138,6 +138,7 @@ erDiagram
   NoticeAuthorizationStatus status
   DateTime decidedAt "nullable"
   DateTime deliveredAt
+  DateTime deliveryNotifiedAt "nullable"
   DeliveryMode deliveryMode
   ProjectType filterTypes
   ProjectLocation filterLocations
@@ -158,6 +159,13 @@ erDiagram
   DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
+}
+"FormAttachment" {
+  String id PK
+  String formId FK
+  String fileId FK
+  DateTime deletedAt "nullable"
+  DateTime createdAt
 }
 "FormViewer" {
   String id PK
@@ -220,6 +228,7 @@ erDiagram
   ApprovalStatus status
   DateTime decidedAt "nullable"
   DateTime scheduledSendAt
+  DateTime deliveryNotifiedAt "nullable"
   DateTime deadlineAt "nullable"
   Boolean allowLateResponse
   Boolean required
@@ -521,6 +530,8 @@ erDiagram
 "NoticeDelivery" }o--|| "NoticeAuthorization" : noticeAuthorization
 "NoticeDelivery" }o--|| "Project" : project
 "Form" }o--|| "User" : owner
+"FormAttachment" }o--|| "Form" : form
+"FormAttachment" }o--|| "File" : file
 "FormViewer" }o--|| "Form" : form
 "FormViewer" }o--o| "User" : user
 "FormItem" }o--|| "Form" : form
@@ -770,6 +781,7 @@ Properties as follows:
 - `status`:
 - `decidedAt`:
 - `deliveredAt`:
+- `deliveryNotifiedAt`:
 - `deliveryMode`:
 - `filterTypes`:
 - `filterLocations`:
@@ -796,6 +808,16 @@ Properties as follows:
 - `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
+
+### `FormAttachment`
+
+Properties as follows:
+
+- `id`:
+- `formId`:
+- `fileId`:
+- `deletedAt`:
+- `createdAt`:
 
 ### `FormViewer`
 
@@ -876,6 +898,7 @@ Properties as follows:
 - `status`:
 - `decidedAt`:
 - `scheduledSendAt`:
+- `deliveryNotifiedAt`:
 - `deadlineAt`:
 - `allowLateResponse`:
 - `required`:

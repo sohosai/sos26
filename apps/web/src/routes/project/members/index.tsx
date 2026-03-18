@@ -310,7 +310,13 @@ function RouteComponent() {
 
 	return (
 		<div>
-			<Heading size="6">メンバー管理</Heading>
+			<div className={styles.pageHeader}>
+				<Heading size="6">メンバー管理</Heading>
+				<Button intent="primary" size="2" onClick={() => setDialogOpen(true)}>
+					<IconPlus size={16} stroke={1.5} />
+					メンバーを追加
+				</Button>
+			</div>
 
 			<DataTable<MemberRow>
 				data={members}
@@ -329,12 +335,6 @@ function RouteComponent() {
 						desc: false,
 					},
 				]}
-				toolbarExtra={
-					<Button intent="primary" size="2" onClick={() => setDialogOpen(true)}>
-						<IconPlus size={16} stroke={1.5} />
-						メンバーを追加
-					</Button>
-				}
 			/>
 
 			<InviteMemberDialog open={dialogOpen} onOpenChange={setDialogOpen} />

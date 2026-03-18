@@ -180,6 +180,12 @@
 - `FormAuthorization.status = APPROVED`
 - `scheduledSendAt <= now`
 
+### 配信時通知（メール / Push）
+
+- 承認通知（申請者・承認者向け）とは別に、企画メンバー向けの配信時通知は内部運用エンドポイントで同期する
+- `POST /internal/notifications/sync` が `scheduledSendAt <= now` かつ `deliveryNotifiedAt IS NULL` の承認済み申請を検出し、通知送信後に `deliveryNotifiedAt` を更新する
+- 運用手順は `docs/apps/api/notification-recovery.md` を参照
+
 ### 回答作成/更新
 
 - 1企画につき 1 `formDeliveryId` に対して 1回答
