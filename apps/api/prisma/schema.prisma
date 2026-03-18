@@ -270,7 +270,7 @@ enum Bureau {
   STAGE_MANAGEMENT // ステージ管理局 (stage)
   HQ_PLANNING // 本部企画局 (honki)
   INFO_SYSTEM // 情報メディアシステム局 (jsys)
-  INFORMATION // 案内所運営部会 (au)
+  EXECUTIVE_BOARD // 委員長団
 }
 
 //実委人の管理用Table
