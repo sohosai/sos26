@@ -4,6 +4,7 @@ import {
 	createFileRoute,
 	Link,
 	Outlet,
+	useNavigate,
 	useRouterState,
 } from "@tanstack/react-router";
 import {
@@ -19,6 +20,18 @@ export const Route = createFileRoute("/docs")({
 
 function DocsLayout() {
 	const { location } = useRouterState();
+	const navigate = useNavigate();
+	const currentSlug = location.pathname.startsWith("/docs/")
+		? location.pathname.slice("/docs/".length)
+		: "";
+
+	const handleChangeArticle = (slug: string) => {
+		if (!slug) return;
+		navigate({
+			to: "/docs/$slug",
+			params: { slug },
+		});
+	};
 
 	return (
 		<div className={styles.layout}>
@@ -61,6 +74,28 @@ function DocsLayout() {
 				</nav>
 			</aside>
 			<main className={styles.main}>
+				<div className={styles.switcherBar}>
+					<select
+						id="docs-article-switcher"
+						className={styles.switcherSelect}
+						value={currentSlug}
+						onChange={e => handleChangeArticle(e.target.value)}
+					>
+						{categoryOrder.map(category => {
+							const categoryArticles = getArticlesByCategory(category);
+							if (categoryArticles.length === 0) return null;
+							return (
+								<optgroup key={category} label={categoryLabels[category]}>
+									{categoryArticles.map(article => (
+										<option key={article.slug} value={article.slug}>
+											{article.title}
+										</option>
+									))}
+								</optgroup>
+							);
+						})}
+					</select>
+				</div>
 				<Outlet />
 			</main>
 		</div>
