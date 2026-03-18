@@ -143,7 +143,7 @@ function SettingsPage() {
 					<Text color="gray" size="2">
 						プロフィールに表示されるアイコンを設定します
 					</Text>
-					<Flex align="center" gap="4">
+					<Flex align="center" gap="4" className={styles.settingRow}>
 						<div className={styles.avatarContainer}>
 							<AvatarPreview
 								avatarFileId={avatarFileId}
@@ -196,7 +196,12 @@ function SettingsPage() {
 
 			{/* Push通知設定 */}
 			<Card className={styles.card}>
-				<Flex justify="between" align="center" gap="4">
+				<Flex
+					justify="between"
+					align="center"
+					gap="4"
+					className={styles.settingRow}
+				>
 					<div>
 						<Heading size="4">Push通知</Heading>
 						<Text color="gray" size="2">
