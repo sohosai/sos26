@@ -115,7 +115,7 @@ function BureauCell({ member, onChange }: BureauCellProps) {
 							member.bureau === "EXECUTIVE_BOARD"
 								? undefined
 								: ((bureauColorMap[member.bureau] as BadgeProps["color"]) ??
-								   "gray")
+									"gray")
 						}
 					>
 						{bureauLabelMap[member.bureau]}
