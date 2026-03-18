@@ -40,8 +40,12 @@ const FIXED_COLUMN_IDS = [
 	"organizationNamePhonetic",
 	"ownerName",
 	"subOwnerName",
+	"deletionStatus",
 ] as const;
 
+const DEFAULT_COLUMN_FILTERS: ColumnFiltersState = [
+	{ id: "deletionStatus", value: ["ACTIVE"] },
+];
 /** デフォルトで非表示にする固定カラム */
 const DEFAULT_HIDDEN_FIXED_COLUMNS: Record<string, boolean> = {
 	namePhonetic: false,
@@ -57,10 +61,12 @@ function MastersheetPage() {
 	const [selectedCells, setSelectedCells] = useState<SelectedCell[]>([]);
 	const [tableKey, setTableKey] = useState(0);
 	const [sorting, setSorting] = useState<SortingState | undefined>(undefined);
+	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(
+		DEFAULT_COLUMN_FILTERS
+	);
 	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
 		DEFAULT_HIDDEN_FIXED_COLUMNS
 	);
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 	const [activeViewId, setActiveViewId] = useState<string | null>(null);
 
 	async function handleColumnSuccess() {
@@ -96,7 +102,7 @@ function MastersheetPage() {
 			completeVisibility[col.id] = knownIds.has(col.id);
 		}
 		setColumnVisibility(completeVisibility);
-		setColumnFilters(viewState.columnFilters ?? []);
+		setColumnFilters(viewState.columnFilters ?? DEFAULT_COLUMN_FILTERS);
 		setTableKey(k => k + 1);
 	}
 

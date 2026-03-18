@@ -3,6 +3,7 @@ import { bureauSchema } from "./committee-member";
 import { viewerScopeSchema } from "./common";
 import { formAnswerFileSchema } from "./file";
 import { formItemTypeSchema } from "./form";
+import { projectDeletionStatusSchema } from "./project";
 import { userSchema } from "./user";
 
 // ─────────────────────────────────────────────────────────────
@@ -177,6 +178,7 @@ export const getMastersheetDataResponseSchema = z.object({
 				namePhonetic: z.string(),
 				type: z.string(),
 				organizationName: z.string(),
+				deletionStatus: projectDeletionStatusSchema.nullable(),
 				organizationNamePhonetic: z.string(),
 				owner: userSummarySchema,
 				subOwner: userSummarySchema.nullable(),
