@@ -10,6 +10,9 @@ import {
 	createFormEndpoint,
 	type DeleteFormResponse,
 	deleteFormEndpoint,
+	type EditFormAnswerRequest,
+	type EditFormAnswerResponse,
+	editFormAnswerEndpoint,
 	type GetFormDetailResponse,
 	type GetFormResponseResponse,
 	getFormDetailEndpoint,
@@ -234,5 +237,20 @@ export async function getFormResponse(
 ): Promise<GetFormResponseResponse> {
 	return callGetApi(getFormResponseEndpoint, {
 		pathParams: { formId, responseId },
+	});
+}
+
+/**
+ * PUT /committee/forms/:formId/answers/:formItemId/:projectId
+ * 申請回答を編集
+ */
+export async function editFormAnswer(
+	formId: string,
+	formItemId: string,
+	projectId: string,
+	body: EditFormAnswerRequest
+): Promise<EditFormAnswerResponse> {
+	return callBodyApi(editFormAnswerEndpoint, body, {
+		pathParams: { formId, formItemId, projectId },
 	});
 }

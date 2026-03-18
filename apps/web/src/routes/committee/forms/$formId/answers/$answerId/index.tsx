@@ -3,7 +3,9 @@ import { IconArrowLeft } from "@tabler/icons-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnswerField } from "@/components/form/Answer/AnswerField";
 import { DownloadFileNameProvider } from "@/components/form/Answer/DownloadFileNameContext";
+import { EditableAnswerItem } from "@/components/form/Answer/EditableAnswerItem";
 import { getFormDetail, getFormResponse } from "@/lib/api/committee-form";
+import { useAuthStore } from "@/lib/auth";
 import { formDetailToForm } from "@/lib/form/convert";
 import { responseToAnswers } from "@/lib/form/utils";
 import { formatDate } from "@/lib/format";
@@ -26,13 +28,24 @@ export const Route = createFileRoute(
 		const form = formDetailToForm(formRes);
 		const answers = responseToAnswers(responseRes.response, form);
 
-		return { form, response: responseRes.response, answers };
+		return {
+			formDetail: formRes,
+			form,
+			response: responseRes.response,
+			answers,
+		};
 	},
 });
 
 function RouteComponent() {
 	const { formId } = Route.useParams();
-	const { form, response, answers } = Route.useLoaderData();
+	const { formDetail, form, response, answers } = Route.useLoaderData();
+	const { user } = useAuthStore();
+	const canEditAnswers =
+		formDetail.form.ownerId === user?.id ||
+		formDetail.form.collaborators.some(
+			c => c.user.id === user?.id && c.isWrite
+		);
 	const downloadFileNameContext = {
 		projectNumber: response.project.number,
 		formTitle: form.name,
@@ -75,13 +88,22 @@ function RouteComponent() {
 
 				<ul className={styles.itemList}>
 					{form.items.map(item => (
-						<li key={item.id} className={styles.itemCard}>
-							<AnswerField
-								item={item}
-								value={answers[item.id]}
-								onChange={() => {}}
-								disabled
-							/>
+						<li key={item.id}>
+							{canEditAnswers ? (
+								<EditableAnswerItem
+									item={item}
+									initialValue={answers[item.id]}
+									formId={formId}
+									projectId={response.project.id}
+								/>
+							) : (
+								<AnswerField
+									item={item}
+									value={answers[item.id]}
+									onChange={() => {}}
+									disabled
+								/>
+							)}
 						</li>
 					))}
 				</ul>

@@ -168,6 +168,9 @@ function RouteComponent() {
 	const isOwner = form.ownerId === user?.id;
 	const isCollaborator = form.collaborators.some(c => c.user.id === user?.id);
 	const canEdit = isOwner || isCollaborator;
+	const canEditAnswers =
+		isOwner ||
+		form.collaborators.some(c => c.user.id === user?.id && c.isWrite);
 
 	const currentMember = committeeMembers.find(m => m.user.id === user?.id);
 	const isViewer = form.viewers.some(v => {
@@ -412,6 +415,7 @@ function RouteComponent() {
 				formId={formId}
 				responseId={answerDialogResponseId}
 				form={previewForm}
+				canEditAnswers={canEditAnswers}
 			/>
 		</div>
 	);

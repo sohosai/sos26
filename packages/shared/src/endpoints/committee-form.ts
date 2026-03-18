@@ -6,6 +6,9 @@ import {
 	createFormRequestSchema,
 	createFormResponseSchema,
 	deleteFormResponseSchema,
+	editFormAnswerPathParamsSchema,
+	editFormAnswerRequestSchema,
+	editFormAnswerResponseSchema,
 	formAttachmentPathParamsSchema,
 	formAuthorizationPathParamsSchema,
 	formCollaboratorPathParamsSchema,
@@ -298,6 +301,30 @@ export const listFormResponsesEndpoint: GetEndpoint<
 	query: undefined,
 	request: undefined,
 	response: listFormResponsesResponseSchema,
+} as const;
+
+// ─────────────────────────────────────────────────────────────
+// 回答編集
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * PUT /committee/forms/:formId/answers/:formItemId/:projectId
+ * 申請回答を編集（作成者または共同編集者のみ）
+ */
+export const editFormAnswerEndpoint: BodyEndpoint<
+	"PUT",
+	"/committee/forms/:formId/answers/:formItemId/:projectId",
+	typeof editFormAnswerPathParamsSchema,
+	undefined,
+	typeof editFormAnswerRequestSchema,
+	typeof editFormAnswerResponseSchema
+> = {
+	method: "PUT",
+	path: "/committee/forms/:formId/answers/:formItemId/:projectId",
+	pathParams: editFormAnswerPathParamsSchema,
+	query: undefined,
+	request: editFormAnswerRequestSchema,
+	response: editFormAnswerResponseSchema,
 } as const;
 
 // ─────────────────────────────────────────────────────────────
