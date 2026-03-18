@@ -7,7 +7,7 @@ import { Errors } from "./error";
  *
  * @param errorType "forbidden"（自分自身の権限チェック）または "invalidRequest"（依頼先の権限チェック）
  */
-export const requireDeliverPermission = async (
+export const requirePermission = async (
 	tx: Prisma.TransactionClient,
 	userId: string,
 	permission: string,

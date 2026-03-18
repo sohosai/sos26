@@ -126,7 +126,7 @@ export const deleteCommitteeMemberEndpoint: NoBodyEndpoint<
  * 委員メンバーの権限一覧を取得
  *
  * - 認証 + 実委メンバー必須
- * - TODO: 権限チェックの調整
+ * - MEMBER_EDIT 権限必須
  */
 export const listCommitteeMemberPermissionsEndpoint: GetEndpoint<
 	"/committee/members/:id/permissions",
@@ -147,7 +147,7 @@ export const listCommitteeMemberPermissionsEndpoint: GetEndpoint<
  * 委員メンバーに権限を付与
  *
  * - 認証 + 実委メンバー必須
- * - TODO: 権限チェックの調整
+ * - MEMBER_EDIT 権限必須
  */
 export const grantCommitteeMemberPermissionEndpoint: BodyEndpoint<
 	"POST",
@@ -170,7 +170,7 @@ export const grantCommitteeMemberPermissionEndpoint: BodyEndpoint<
  * 委員メンバーの権限を削除
  *
  * - 認証 + 実委メンバー必須
- * - TODO: 権限チェックの調整
+ * - MEMBER_EDIT 権限必須
  */
 export const revokeCommitteeMemberPermissionEndpoint: NoBodyEndpoint<
 	"DELETE",

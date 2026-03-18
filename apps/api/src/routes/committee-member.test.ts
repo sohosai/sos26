@@ -75,6 +75,19 @@ const mockCommitteeMember: CommitteeMember = {
 	deletedAt: null,
 };
 
+/** requirePermission 用: MEMBER_EDIT 権限付きメンバー */
+const mockCommitteeMemberWithPermissions = {
+	...mockCommitteeMember,
+	permissions: [
+		{
+			id: "clppppppppppppppppp",
+			committeeMemberId: "clyyyyyyyyyyyyyyyyy",
+			permission: "MEMBER_EDIT" as const,
+			createdAt: new Date(),
+		},
+	],
+};
+
 function makeApp() {
 	const app = new Hono();
 	app.onError(errorHandler);
@@ -82,7 +95,7 @@ function makeApp() {
 	return app;
 }
 
-/** 認証 + 実委メンバーチェックをセットアップ */
+/** 認証 + 実委メンバーチェックをセットアップ（権限チェックなし） */
 function setupAuth() {
 	mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 		uid: "firebase-uid-123",
@@ -90,6 +103,18 @@ function setupAuth() {
 	mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 	// requireCommitteeMember 用
 	mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+}
+
+/** 認証 + 実委メンバーチェック + MEMBER_EDIT 権限チェックをセットアップ */
+function setupAuthWithMemberEdit() {
+	mockFirebaseAuth.verifyIdToken.mockResolvedValue({
+		uid: "firebase-uid-123",
+	} as any);
+	mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+	// requireCommitteeMember 用 + requirePermission 用（権限付き）
+	mockPrisma.committeeMember.findFirst.mockResolvedValue(
+		mockCommitteeMemberWithPermissions as any
+	);
 }
 
 describe("GET /committee/members", () => {
@@ -147,9 +172,36 @@ describe("POST /committee/members", () => {
 		vi.clearAllMocks();
 	});
 
+	it("MEMBER_EDIT権限なしで403エラー", async () => {
+		const app = makeApp();
+		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
+			uid: "firebase-uid-123",
+		} as any);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		// requireCommitteeMember + requirePermission（権限なし）
+		mockPrisma.committeeMember.findFirst.mockResolvedValue({
+			...mockCommitteeMember,
+			permissions: [],
+		} as any);
+
+		const res = await app.request("/committee/members", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: "Bearer valid-token",
+			},
+			body: JSON.stringify({
+				userId: "clxxxxxxxxxxxxxxxxx",
+				Bureau: "INFO_SYSTEM",
+			}),
+		});
+
+		expect(res.status).toBe(403);
+	});
+
 	it("正常系: 委員メンバーを作成", async () => {
 		const app = makeApp();
-		setupAuth();
+		setupAuthWithMemberEdit();
 		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 		mockPrisma.committeeMember.findUnique.mockResolvedValue(null);
 		mockPrisma.committeeMember.create.mockResolvedValue(mockCommitteeMember);
@@ -174,7 +226,7 @@ describe("POST /committee/members", () => {
 
 	it("既存メンバーでエラー", async () => {
 		const app = makeApp();
-		setupAuth();
+		setupAuthWithMemberEdit();
 		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 		mockPrisma.committeeMember.findUnique.mockResolvedValue(
 			mockCommitteeMember
@@ -199,7 +251,7 @@ describe("POST /committee/members", () => {
 
 	it("ソフトデリート済みのメンバーを再有効化", async () => {
 		const app = makeApp();
-		setupAuth();
+		setupAuthWithMemberEdit();
 		const deletedMember = {
 			...mockCommitteeMember,
 			deletedAt: new Date(),
@@ -238,8 +290,10 @@ describe("POST /committee/members", () => {
 		} as any);
 		// requireAuth: user.findFirst
 		mockPrisma.user.findFirst.mockResolvedValueOnce(mockUser);
-		// requireCommitteeMember: committeeMember.findFirst
-		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		// requireCommitteeMember + requirePermission: committeeMember.findFirst
+		mockPrisma.committeeMember.findFirst.mockResolvedValue(
+			mockCommitteeMemberWithPermissions as any
+		);
 		// POST内のユーザー存在確認: user.findFirst
 		mockPrisma.user.findFirst.mockResolvedValueOnce(null);
 
@@ -260,7 +314,7 @@ describe("POST /committee/members", () => {
 
 	it("不正なBureauでバリデーションエラー", async () => {
 		const app = makeApp();
-		setupAuth();
+		setupAuthWithMemberEdit();
 
 		const res = await app.request("/committee/members", {
 			method: "POST",
@@ -285,9 +339,7 @@ describe("PATCH /committee/members/:id", () => {
 
 	it("正常系: 委員メンバーを更新", async () => {
 		const app = makeApp();
-		setupAuth();
-		// ハンドラ内の存在確認用
-		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		setupAuthWithMemberEdit();
 		mockPrisma.committeeMember.update.mockResolvedValue({
 			...mockCommitteeMember,
 			Bureau: "FINANCE",
@@ -325,7 +377,9 @@ describe("PATCH /committee/members/:id", () => {
 		// requireCommitteeMember: findFirst 1回目
 		mockPrisma.committeeMember.findFirst
 			.mockResolvedValueOnce(mockCommitteeMember)
-			// ハンドラ内: findFirst 2回目
+			// requirePermission: findFirst 2回目
+			.mockResolvedValueOnce(mockCommitteeMemberWithPermissions)
+			// ハンドラ内: findFirst 3回目
 			.mockResolvedValueOnce(null);
 
 		const res = await app.request("/committee/members/nonexistent-id", {
@@ -348,9 +402,7 @@ describe("DELETE /committee/members/:id", () => {
 
 	it("正常系: 委員メンバーをソフトデリート", async () => {
 		const app = makeApp();
-		setupAuth();
-		// ハンドラ内の存在確認用
-		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		setupAuthWithMemberEdit();
 		mockPrisma.committeeMember.update.mockResolvedValue({
 			...mockCommitteeMember,
 			deletedAt: new Date(),
@@ -379,7 +431,9 @@ describe("DELETE /committee/members/:id", () => {
 		// requireCommitteeMember: findFirst 1回目
 		mockPrisma.committeeMember.findFirst
 			.mockResolvedValueOnce(mockCommitteeMember)
-			// ハンドラ内: findFirst 2回目
+			// requirePermission: findFirst 2回目
+			.mockResolvedValueOnce(mockCommitteeMemberWithPermissions)
+			// ハンドラ内: findFirst 3回目
 			.mockResolvedValueOnce(null);
 
 		const res = await app.request("/committee/members/nonexistent-id", {
@@ -409,9 +463,7 @@ describe("GET /committee/members/:id/permissions", () => {
 
 	it("正常系: 権限一覧を取得", async () => {
 		const app = makeApp();
-		setupAuth();
-		// ハンドラ内: メンバー存在確認
-		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		setupAuthWithMemberEdit();
 		mockPrisma.committeeMemberPermission.findMany.mockResolvedValue([
 			mockPermission,
 		]);
@@ -438,6 +490,9 @@ describe("GET /committee/members/:id/permissions", () => {
 		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 		mockPrisma.committeeMember.findFirst
 			.mockResolvedValueOnce(mockCommitteeMember)
+			// requirePermission
+			.mockResolvedValueOnce(mockCommitteeMemberWithPermissions)
+			// ハンドラ内: メンバー存在確認
 			.mockResolvedValueOnce(null);
 
 		const res = await app.request(
@@ -459,8 +514,7 @@ describe("POST /committee/members/:id/permissions", () => {
 
 	it("正常系: 権限を付与", async () => {
 		const app = makeApp();
-		setupAuth();
-		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		setupAuthWithMemberEdit();
 		mockPrisma.committeeMemberPermission.findUnique.mockResolvedValue(null);
 		mockPrisma.committeeMemberPermission.create.mockResolvedValue(
 			mockPermission
@@ -485,8 +539,7 @@ describe("POST /committee/members/:id/permissions", () => {
 
 	it("既に付与済みの権限でエラー", async () => {
 		const app = makeApp();
-		setupAuth();
-		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		setupAuthWithMemberEdit();
 		mockPrisma.committeeMemberPermission.findUnique.mockResolvedValue(
 			mockPermission
 		);
@@ -516,6 +569,9 @@ describe("POST /committee/members/:id/permissions", () => {
 		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 		mockPrisma.committeeMember.findFirst
 			.mockResolvedValueOnce(mockCommitteeMember)
+			// requirePermission
+			.mockResolvedValueOnce(mockCommitteeMemberWithPermissions)
+			// ハンドラ内: メンバー存在確認
 			.mockResolvedValueOnce(null);
 
 		const res = await app.request(
@@ -535,7 +591,7 @@ describe("POST /committee/members/:id/permissions", () => {
 
 	it("不正な権限名でバリデーションエラー", async () => {
 		const app = makeApp();
-		setupAuth();
+		setupAuthWithMemberEdit();
 
 		const res = await app.request(
 			`/committee/members/${mockCommitteeMember.id}/permissions`,
@@ -560,8 +616,7 @@ describe("DELETE /committee/members/:id/permissions/:permission", () => {
 
 	it("正常系: 権限を削除", async () => {
 		const app = makeApp();
-		setupAuth();
-		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		setupAuthWithMemberEdit();
 		mockPrisma.committeeMemberPermission.findUnique.mockResolvedValue(
 			mockPermission
 		);
@@ -590,6 +645,9 @@ describe("DELETE /committee/members/:id/permissions/:permission", () => {
 		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 		mockPrisma.committeeMember.findFirst
 			.mockResolvedValueOnce(mockCommitteeMember)
+			// requirePermission
+			.mockResolvedValueOnce(mockCommitteeMemberWithPermissions)
+			// ハンドラ内: メンバー存在確認
 			.mockResolvedValueOnce(null);
 
 		const res = await app.request(
@@ -605,8 +663,7 @@ describe("DELETE /committee/members/:id/permissions/:permission", () => {
 
 	it("存在しない権限でエラー", async () => {
 		const app = makeApp();
-		setupAuth();
-		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		setupAuthWithMemberEdit();
 		mockPrisma.committeeMemberPermission.findUnique.mockResolvedValue(null);
 
 		const res = await app.request(
@@ -622,7 +679,7 @@ describe("DELETE /committee/members/:id/permissions/:permission", () => {
 
 	it("不正な権限名でバリデーションエラー", async () => {
 		const app = makeApp();
-		setupAuth();
+		setupAuthWithMemberEdit();
 
 		const res = await app.request(
 			`/committee/members/${mockCommitteeMember.id}/permissions/INVALID_PERMISSION`,

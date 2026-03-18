@@ -15,7 +15,7 @@ import {
 	updateFormViewersRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
-import { requireDeliverPermission } from "../lib/committee-permission";
+import { requirePermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
 import {
 	formAnswerFileSelect,
@@ -831,7 +831,7 @@ committeeFormRoute.patch(
 				throw Errors.invalidRequest("この承認依頼は既に処理済みです");
 
 			// 承認依頼作成後に FORM_DELIVER 権限が剥奪されていないか再確認
-			await requireDeliverPermission(
+			await requirePermission(
 				tx,
 				user.id,
 				"FORM_DELIVER",
