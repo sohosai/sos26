@@ -126,14 +126,27 @@ export const committeeInquiryAssigneeIdPathParamsSchema = z.object({
 // レスポンス組み立て用の内部ヘルパー（export しない）
 // ─────────────────────────────────────────────────────────────
 
-/** ユーザーの最小表示情報（id + name のみ） */
+/** ユーザーの最小表示情報（id + name） */
 const userSummarySchema = userSchema.pick({ id: true, name: true });
+
+/** ユーザーの最小表示情報（id + name + 所属） */
+const userSummaryWithAffiliationSchema = userSummarySchema.extend({
+	committeeBureau: z.string().optional(),
+	affiliatedProjects: z.array(z.string()),
+});
 
 /** 担当者 + ユーザー情報 */
 const assigneeWithUserSchema = inquiryAssigneeSchema
 	.pick({ id: true, side: true, isCreator: true, assignedAt: true })
 	.extend({
 		user: userSummarySchema,
+	});
+
+/** 担当者 + ユーザー情報（所属付き） */
+const assigneeWithUserWithAffiliationSchema = inquiryAssigneeSchema
+	.pick({ id: true, side: true, isCreator: true, assignedAt: true })
+	.extend({
+		user: userSummaryWithAffiliationSchema,
 	});
 
 /** コメント + 投稿者情報（Committee側用 - 下書き含む） */
@@ -151,8 +164,23 @@ const commentWithUserSchema = inquiryCommentSchema
 		attachments: z.array(inquiryAttachmentSchema),
 	});
 
-/** コメント + 投稿者情報（Project側用 - 下書き除外） */
-const commentWithUserSchemaForProject = inquiryCommentSchema
+/** コメント + 投稿者情報（Committee側用 - 下書き含む・所属付き） */
+const commentWithUserWithAffiliationSchema = inquiryCommentSchema
+	.pick({
+		id: true,
+		body: true,
+		senderRole: true,
+		isDraft: true,
+		createdAt: true,
+		sentAt: true,
+	})
+	.extend({
+		createdBy: userSummaryWithAffiliationSchema,
+		attachments: z.array(inquiryAttachmentSchema),
+	});
+
+/** コメント + 投稿者情報（Project側用 - 下書き除外・所属付き） */
+const commentWithUserWithAffiliationSchemaForProject = inquiryCommentSchema
 	.pick({
 		id: true,
 		body: true,
@@ -161,16 +189,16 @@ const commentWithUserSchemaForProject = inquiryCommentSchema
 		sentAt: true,
 	})
 	.extend({
-		createdBy: userSummarySchema,
+		createdBy: userSummaryWithAffiliationSchema,
 		attachments: z.array(inquiryAttachmentSchema),
 	});
 
-/** アクティビティ + 操作者・対象者情報 */
-const activityWithUserSchema = inquiryActivitySchema
+/** アクティビティ + 操作者・対象者情報（所属付き） */
+const activityWithUserWithAffiliationSchema = inquiryActivitySchema
 	.pick({ id: true, type: true, createdAt: true })
 	.extend({
-		actor: userSummarySchema,
-		target: userSummarySchema.nullable(),
+		actor: userSummaryWithAffiliationSchema,
+		target: userSummaryWithAffiliationSchema.nullable(),
 	});
 
 /** 閲覧者情報 */
@@ -178,6 +206,13 @@ const viewerDetailSchema = inquiryViewerSchema
 	.pick({ id: true, scope: true, bureauValue: true, createdAt: true })
 	.extend({
 		user: userSummarySchema.nullable(),
+	});
+
+/** 閲覧者情報（所属付き） */
+const viewerDetailWithAffiliationSchema = inquiryViewerSchema
+	.pick({ id: true, scope: true, bureauValue: true, createdAt: true })
+	.extend({
+		user: userSummaryWithAffiliationSchema.nullable(),
 	});
 
 /** 一覧用のお問い合わせ要約 */
@@ -244,13 +279,13 @@ const relatedFormSummarySchema = z
 
 export const getProjectInquiryResponseSchema = z.object({
 	inquiry: inquirySchema.extend({
-		createdBy: userSummarySchema,
+		createdBy: userSummaryWithAffiliationSchema,
 		project: z.object({ id: z.cuid(), name: z.string() }),
 		relatedForm: relatedFormSummarySchema,
-		projectAssignees: z.array(assigneeWithUserSchema),
-		committeeAssignees: z.array(assigneeWithUserSchema),
-		comments: z.array(commentWithUserSchemaForProject),
-		activities: z.array(activityWithUserSchema),
+		projectAssignees: z.array(assigneeWithUserWithAffiliationSchema),
+		committeeAssignees: z.array(assigneeWithUserWithAffiliationSchema),
+		comments: z.array(commentWithUserWithAffiliationSchemaForProject),
+		activities: z.array(activityWithUserWithAffiliationSchema),
 		attachments: z.array(inquiryAttachmentSchema),
 	}),
 });
@@ -471,14 +506,14 @@ export type ListCommitteeInquiriesResponse = z.infer<
 
 export const getCommitteeInquiryResponseSchema = z.object({
 	inquiry: inquirySchema.extend({
-		createdBy: userSummarySchema,
+		createdBy: userSummaryWithAffiliationSchema,
 		project: z.object({ id: z.cuid(), name: z.string() }),
 		relatedForm: relatedFormSummarySchema,
-		projectAssignees: z.array(assigneeWithUserSchema),
-		committeeAssignees: z.array(assigneeWithUserSchema),
-		viewers: z.array(viewerDetailSchema),
-		comments: z.array(commentWithUserSchema),
-		activities: z.array(activityWithUserSchema),
+		projectAssignees: z.array(assigneeWithUserWithAffiliationSchema),
+		committeeAssignees: z.array(assigneeWithUserWithAffiliationSchema),
+		viewers: z.array(viewerDetailWithAffiliationSchema),
+		comments: z.array(commentWithUserWithAffiliationSchema),
+		activities: z.array(activityWithUserWithAffiliationSchema),
 		attachments: z.array(inquiryAttachmentSchema),
 	}),
 });

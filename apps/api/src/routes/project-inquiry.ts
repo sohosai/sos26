@@ -13,6 +13,7 @@ import {
 	notifyInquiryCreatedByProject,
 } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
+import { getUserAffiliations } from "../lib/user-affiliation";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -183,6 +184,30 @@ function formatAssignee(a: {
 
 function getCommentSentAt(comment: { createdAt: Date; sentAt: Date | null }) {
 	return comment.sentAt ?? comment.createdAt;
+}
+
+type UserAffiliation = {
+	committeeBureau?: string;
+	affiliatedProjects: string[];
+};
+
+function withAffiliation(
+	user: { id: string; name: string },
+	affiliations: Map<string, UserAffiliation>
+) {
+	const aff = affiliations.get(user.id) ?? { affiliatedProjects: [] };
+	return {
+		...user,
+		committeeBureau: aff.committeeBureau,
+		affiliatedProjects: aff.affiliatedProjects,
+	};
+}
+
+function withAffiliationNullable(
+	user: { id: string; name: string } | null,
+	affiliations: Map<string, UserAffiliation>
+) {
+	return user ? withAffiliation(user, affiliations) : null;
 }
 
 function getLatestCommitteeActivityAt(inquiry: {
@@ -503,6 +528,15 @@ projectInquiryRoute.get(
 			},
 		});
 
+		const allUserIds = [
+			inquiry.createdBy.id,
+			...inquiry.assignees.map(a => a.user.id),
+			...inquiry.comments.map(cm => cm.createdBy.id),
+			...inquiry.activities.map(act => act.actor.id),
+			...inquiry.activities.flatMap(act => (act.target ? [act.target.id] : [])),
+		];
+		const affiliations = await getUserAffiliations(allUserIds);
+
 		const sortedComments = inquiry.comments
 			.map(cm => ({
 				id: cm.id,
@@ -510,7 +544,7 @@ projectInquiryRoute.get(
 				senderRole: cm.senderRole,
 				createdAt: cm.createdAt,
 				sentAt: cm.sentAt,
-				createdBy: cm.createdBy,
+				createdBy: withAffiliation(cm.createdBy, affiliations),
 				attachments: cm.attachments.map(formatAttachment),
 			}))
 			.sort(
@@ -529,22 +563,28 @@ projectInquiryRoute.get(
 			isDraft: inquiry.isDraft,
 			createdAt: inquiry.createdAt,
 			updatedAt: inquiry.updatedAt,
-			createdBy: inquiry.createdBy,
+			createdBy: withAffiliation(inquiry.createdBy, affiliations),
 			project: inquiry.project,
 			relatedForm: inquiry.relatedForm,
 			projectAssignees: inquiry.assignees
 				.filter(a => a.side === "PROJECT")
-				.map(formatAssignee),
+				.map(a => ({
+					...formatAssignee(a),
+					user: withAffiliation(a.user, affiliations),
+				})),
 			committeeAssignees: inquiry.assignees
 				.filter(a => a.side === "COMMITTEE")
-				.map(formatAssignee),
+				.map(a => ({
+					...formatAssignee(a),
+					user: withAffiliation(a.user, affiliations),
+				})),
 			comments: sortedComments,
 			activities: inquiry.activities.map(act => ({
 				id: act.id,
 				type: act.type,
 				createdAt: act.createdAt,
-				actor: act.actor,
-				target: act.target,
+				actor: withAffiliation(act.actor, affiliations),
+				target: withAffiliationNullable(act.target, affiliations),
 			})),
 			attachments: inquiry.attachments.map(formatAttachment),
 		};
@@ -819,7 +859,14 @@ projectInquiryRoute.post(
 			return created;
 		});
 
-		return c.json({ assignee: formatAssignee(assignee) }, 201);
+		return c.json(
+			{
+				assignee: {
+					...formatAssignee(assignee),
+				},
+			},
+			201
+		);
 	}
 );
 
