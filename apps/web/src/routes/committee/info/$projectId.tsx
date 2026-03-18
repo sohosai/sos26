@@ -17,7 +17,7 @@ import type {
 	UpdateCommitteeProjectBaseInfoRequest,
 } from "@sos26/shared";
 import { createFileRoute } from "@tanstack/react-router";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
 	getCommitteeProjectDetail,
@@ -64,6 +64,19 @@ function CommitteeProjectInfoPage() {
 		type: project.type,
 		location: project.location,
 	});
+
+	useEffect(() => {
+		if (!editOpen) return;
+
+		setForm({
+			name: project.name,
+			namePhonetic: project.namePhonetic,
+			organizationName: project.organizationName,
+			organizationNamePhonetic: project.organizationNamePhonetic,
+			type: project.type,
+			location: project.location,
+		});
+	}, [editOpen, project]);
 
 	const mixedActions = useMemo(() => {
 		return [
