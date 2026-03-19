@@ -20,7 +20,7 @@ import {
 	updateDraftInquiry,
 } from "@/lib/api/committee-inquiry";
 import {
-	listCommitteeMemberPermissions,
+	getMyPermissions,
 	listCommitteeMembers,
 } from "@/lib/api/committee-member";
 import { listCommitteeProjectMembers } from "@/lib/api/committee-project";
@@ -46,9 +46,7 @@ export const Route = createFileRoute("/committee/support/$inquiryId")({
 		let isAdmin = false;
 		if (committeeMember) {
 			try {
-				const permRes = await listCommitteeMemberPermissions(
-					committeeMember.id
-				);
+				const permRes = await getMyPermissions();
 				isAdmin = permRes.permissions.some(
 					p => p.permission === "INQUIRY_ADMIN"
 				);
