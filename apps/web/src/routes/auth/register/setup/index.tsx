@@ -43,8 +43,6 @@ function SetupPage() {
 
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: 各フィールドのバリデーションを順次チェックしているだけで実質的に複雑ではない
 	const validate = (): string | null => {
-		if (!termsAccepted) return "利用規約に同意してください";
-
 		const nameResult = nameSchema.safeParse(name);
 		if (!nameResult.success) {
 			return nameResult.error.issues[0]?.message ?? "名前を入力してください";
@@ -79,11 +77,12 @@ function SetupPage() {
 			return "パスワードが一致しません";
 		}
 
+		if (!termsAccepted) return "利用規約に同意してください";
+
 		return null;
 	};
 
 	const getErrorMessage = (err: unknown): string => {
-		console.error(err);
 		if (isClientError(err)) {
 			switch (err.code) {
 				case ErrorCode.TOKEN_INVALID:
@@ -154,7 +153,6 @@ function SetupPage() {
 					label="名前"
 					value={name}
 					onChange={setName}
-					required
 					autoComplete="name"
 				/>
 
@@ -162,7 +160,6 @@ function SetupPage() {
 					label="名前（ふりがな）"
 					value={namePhonetic}
 					onChange={setNamePhonetic}
-					required
 				/>
 
 				<TextField
@@ -170,7 +167,6 @@ function SetupPage() {
 					type="tel"
 					value={telephoneNumber}
 					onChange={setTelephoneNumber}
-					required
 					autoComplete="tel"
 				/>
 
@@ -179,7 +175,6 @@ function SetupPage() {
 					type="password"
 					value={password}
 					onChange={setPassword}
-					required
 					autoComplete="new-password"
 				/>
 
@@ -188,7 +183,6 @@ function SetupPage() {
 					type="password"
 					value={passwordConfirm}
 					onChange={setPasswordConfirm}
-					required
 					autoComplete="new-password"
 				/>
 
@@ -196,7 +190,6 @@ function SetupPage() {
 					label="利用規約に同意する"
 					checked={termsAccepted}
 					onCheckedChange={setTermsAccepted}
-					required
 				/>
 
 				{error && (
