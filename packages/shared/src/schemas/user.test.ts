@@ -91,6 +91,30 @@ describe("userSchema", () => {
 			);
 			expect(result.success).toBe(false);
 		});
+
+		it("カタカナのふりがなを受け入れてひらがなに変換する", () => {
+			const result = userSchema.safeParse(
+				createValidUser({ namePhonetic: "ツクバタロウ" })
+			);
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.namePhonetic).toBe("つくばたろう");
+			}
+		});
+
+		it("漢字のふりがなを拒否する", () => {
+			const result = userSchema.safeParse(
+				createValidUser({ namePhonetic: "筑波太郎" })
+			);
+			expect(result.success).toBe(false);
+		});
+
+		it("英数字のふりがなを拒否する", () => {
+			const result = userSchema.safeParse(
+				createValidUser({ namePhonetic: "test123" })
+			);
+			expect(result.success).toBe(false);
+		});
 	});
 
 	describe("telephoneNumber", () => {
