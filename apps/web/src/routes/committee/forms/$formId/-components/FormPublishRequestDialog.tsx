@@ -200,7 +200,7 @@ export function FormPublishRequestDialog({
 						</IconButton>
 					</div>
 					<Dialog.Description size="2" mb="4" color="gray">
-						配信日時・回答期限・配信先プロジェクトを指定し、承認を依頼します。
+						配信日時・回答期限・配信先企画を指定し、承認を依頼します。
 					</Dialog.Description>
 
 					<div className={styles.form}>
@@ -331,7 +331,7 @@ export function FormPublishRequestDialog({
 							/* 個別指定モード */
 							<div className={styles.field}>
 								<Text as="label" size="2" weight="medium">
-									配信先プロジェクト
+									配信先企画
 								</Text>
 								<Button
 									intent="secondary"
@@ -397,7 +397,7 @@ export function FormPublishRequestDialog({
 				onOpenChange={setProjectSelectOpen}
 				selectedIds={selectedProjectIds}
 				onConfirm={setSelectedProjectIds}
-				title="配信先プロジェクトを選択"
+				title="配信先企画を選択"
 			/>
 		</>
 	);
