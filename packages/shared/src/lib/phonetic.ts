@@ -10,3 +10,9 @@ export function toHiragana(str: string): string {
 		String.fromCharCode(ch.charCodeAt(0) - 0x60)
 	);
 }
+
+/** かな（ひらがな・カタカナ・長音ー・スペース）のみかを判定 */
+const KANA_REGEX = /^[\u3040-\u309F\u30A0-\u30FF\u3000 ]+$/;
+export function isKana(str: string): boolean {
+	return KANA_REGEX.test(str);
+}

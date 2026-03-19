@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { toHiragana } from "../lib/phonetic";
+import { isKana, toHiragana } from "../lib/phonetic";
 import {
 	isValidProjectDisplayName,
 	PROJECT_DISPLAY_NAME_RULE_MESSAGE,
@@ -142,7 +142,12 @@ export const updateCommitteeProjectBaseInfoRequestSchema = z
 				message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
 			})
 			.optional(),
-		namePhonetic: z.string().min(1).transform(toHiragana).optional(),
+		namePhonetic: z
+			.string()
+			.min(1)
+			.refine(isKana, "ひらがなで入力してください")
+			.transform(toHiragana)
+			.optional(),
 		organizationName: z
 			.string()
 			.min(1)
@@ -153,6 +158,7 @@ export const updateCommitteeProjectBaseInfoRequestSchema = z
 		organizationNamePhonetic: z
 			.string()
 			.min(1)
+			.refine(isKana, "ひらがなで入力してください")
 			.transform(toHiragana)
 			.optional(),
 		type: projectTypeSchema.optional(),

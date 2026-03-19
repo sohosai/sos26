@@ -8,6 +8,7 @@ import type {
 } from "@sos26/shared";
 import {
 	isBlankProjectDisplayName,
+	isKana,
 	isValidProjectDisplayName,
 	PROJECT_DISPLAY_NAME_RULE_MESSAGE,
 	projectLocationSchema,
@@ -417,6 +418,8 @@ function buildStep1Errors(step1: Step1State): Step1Errors {
 		errs.name = PROJECT_DISPLAY_NAME_RULE_MESSAGE;
 	}
 	if (!step1.namePhonetic) errs.namePhonetic = "企画名（ふりがな）は必須です";
+	else if (!isKana(step1.namePhonetic))
+		errs.namePhonetic = "ひらがなで入力してください";
 	if (isBlankProjectDisplayName(step1.organizationName))
 		errs.organizationName = "企画団体名は必須です";
 	else if (!isValidProjectDisplayName(step1.organizationName)) {
@@ -424,6 +427,8 @@ function buildStep1Errors(step1: Step1State): Step1Errors {
 	}
 	if (!step1.organizationNamePhonetic)
 		errs.organizationNamePhonetic = "企画団体名（ふりがな）は必須です";
+	else if (!isKana(step1.organizationNamePhonetic))
+		errs.organizationNamePhonetic = "ひらがなで入力してください";
 	if (!step1.type) errs.type = "企画区分は必須です";
 	if (!step1.location) errs.location = "企画実施場所は必須です";
 	return errs;

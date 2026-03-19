@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { toHiragana } from "../lib/phonetic";
+import { isKana, toHiragana } from "../lib/phonetic";
 import {
 	isValidProjectDisplayName,
 	PROJECT_DISPLAY_NAME_RULE_MESSAGE,
@@ -20,9 +20,17 @@ export const projectSchema = z.object({
 	id: z.cuid(),
 	number: z.number().int().positive(),
 	name: z.string().min(1),
-	namePhonetic: z.string().min(1).transform(toHiragana),
+	namePhonetic: z
+		.string()
+		.min(1)
+		.refine(isKana, "ひらがなで入力してください")
+		.transform(toHiragana),
 	organizationName: z.string().min(1),
-	organizationNamePhonetic: z.string().min(1).transform(toHiragana),
+	organizationNamePhonetic: z
+		.string()
+		.min(1)
+		.refine(isKana, "ひらがなで入力してください")
+		.transform(toHiragana),
 	type: projectTypeSchema,
 	location: projectLocationSchema,
 	ownerId: z.string().min(1),
@@ -63,11 +71,19 @@ export const createProjectRequestSchema = z
 		name: z.string().min(1).refine(isValidProjectDisplayName, {
 			message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
 		}),
-		namePhonetic: z.string().min(1).transform(toHiragana),
+		namePhonetic: z
+			.string()
+			.min(1)
+			.refine(isKana, "ひらがなで入力してください")
+			.transform(toHiragana),
 		organizationName: z.string().min(1).refine(isValidProjectDisplayName, {
 			message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
 		}),
-		organizationNamePhonetic: z.string().min(1).transform(toHiragana),
+		organizationNamePhonetic: z
+			.string()
+			.min(1)
+			.refine(isKana, "ひらがなで入力してください")
+			.transform(toHiragana),
 		type: projectTypeSchema,
 		location: projectLocationSchema,
 		registrationFormAnswers: z
@@ -215,7 +231,12 @@ export const updateProjectDetailRequestSchema = z
 				message: PROJECT_DISPLAY_NAME_RULE_MESSAGE,
 			})
 			.optional(),
-		namePhonetic: z.string().min(1).transform(toHiragana).optional(),
+		namePhonetic: z
+			.string()
+			.min(1)
+			.refine(isKana, "ひらがなで入力してください")
+			.transform(toHiragana)
+			.optional(),
 		organizationName: z
 			.string()
 			.min(1)
@@ -226,6 +247,7 @@ export const updateProjectDetailRequestSchema = z
 		organizationNamePhonetic: z
 			.string()
 			.min(1)
+			.refine(isKana, "ひらがなで入力してください")
 			.transform(toHiragana)
 			.optional(),
 		type: projectTypeSchema.optional(),
