@@ -12,7 +12,7 @@ import {
 	listCommitteeInquiries,
 } from "@/lib/api/committee-inquiry";
 import {
-	listCommitteeMemberPermissions,
+	getMyPermissions,
 	listCommitteeMembers,
 } from "@/lib/api/committee-member";
 import {
@@ -45,9 +45,7 @@ export const Route = createFileRoute("/committee/support/")({
 		let isAdmin = false;
 		if (committeeMember) {
 			try {
-				const permRes = await listCommitteeMemberPermissions(
-					committeeMember.id
-				);
+				const permRes = await getMyPermissions();
 				isAdmin = permRes.permissions.some(
 					p => p.permission === "INQUIRY_ADMIN"
 				);
