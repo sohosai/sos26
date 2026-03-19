@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/bun";
 import { FirebaseAuthError } from "firebase-admin/auth";
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
@@ -16,27 +17,56 @@ import type { AuthEnv } from "../types/auth-env";
 export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
 	const authHeader = c.req.header("Authorization");
 	if (!authHeader?.startsWith("Bearer ")) {
+		console.warn("[Auth] Missing or invalid Authorization header", {
+			method: c.req.method,
+			path: c.req.path,
+			origin: c.req.header("Origin") ?? null,
+		});
 		throw Errors.unauthorized("認証が必要です");
 	}
 
 	const idToken = authHeader.slice(7);
+	let firebaseUid: string | null = null;
 
 	try {
 		const decodedToken = await auth.verifyIdToken(idToken);
+		firebaseUid = decodedToken.uid;
 		const user = await prisma.user.findFirst({
 			where: { firebaseUid: decodedToken.uid, deletedAt: null },
 		});
 
 		if (!user) {
+			console.warn(
+				"[Auth] Verified Firebase token but app user was not found",
+				{
+					method: c.req.method,
+					path: c.req.path,
+					firebaseUid,
+				}
+			);
 			throw Errors.notFound("ユーザーが見つかりません");
 		}
 
 		c.set("user", user);
 	} catch (e) {
 		if (e instanceof AppError) {
+			console.warn("[Auth] Authentication rejected with application error", {
+				method: c.req.method,
+				path: c.req.path,
+				firebaseUid,
+				code: e.code,
+				message: e.message,
+			});
 			throw e;
 		}
 		if (e instanceof FirebaseAuthError) {
+			console.warn("[Auth] Firebase token verification failed", {
+				method: c.req.method,
+				path: c.req.path,
+				firebaseUid,
+				code: e.code,
+				message: e.message,
+			});
 			switch (e.code) {
 				case "auth/id-token-expired":
 					throw Errors.unauthorized("トークンの有効期限が切れています");
@@ -48,6 +78,22 @@ export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
 					throw Errors.unauthorized("無効なトークンです");
 			}
 		}
+		console.error("[Auth] Unexpected error while authenticating request", {
+			method: c.req.method,
+			path: c.req.path,
+			firebaseUid,
+			error: e,
+		});
+		Sentry.withScope(scope => {
+			scope.setLevel("error");
+			scope.setTag("error_kind", "auth_unexpected");
+			scope.setContext("request", {
+				method: c.req.method,
+				path: c.req.path,
+				firebaseUid,
+			});
+			Sentry.captureException(e);
+		});
 		throw Errors.unauthorized("無効なトークンです");
 	}
 
