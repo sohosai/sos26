@@ -16,7 +16,7 @@ export const useProjectStore = create<ProjectStore>(set => ({
 }));
 
 /**
- * 選択中のプロジェクトを返す。未選択の場合は例外を投げる。
+ * 選択中の企画を返す。未選択の場合は例外を投げる。
  */
 export function useProject(): Project {
 	const project = useProjectStore(s =>

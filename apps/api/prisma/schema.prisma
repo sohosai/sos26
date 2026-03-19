@@ -209,7 +209,7 @@ enum ProjectDeletionStatus {
   DELETED // 削除
 }
 
-//プロジェクトに参加している責任者と副責任者以外のユーザーのTable
+//企画に参加している責任者と副責任者以外のユーザーのTable
 model ProjectMember {
   id        String @id @default(cuid())
   projectId String
@@ -237,7 +237,7 @@ enum SubOwnerRequestStatus {
 model ProjectSubOwnerRequest {
   id String @id @default(cuid())
 
-  // 対象プロジェクト
+  // 対象企画
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 

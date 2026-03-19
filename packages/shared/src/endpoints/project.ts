@@ -183,7 +183,7 @@ export const regenerateInviteCodeEndpoint: BodyEndpoint<
 
 /**
  * POST /project/:projectId/members/:userId/remove
- * プロジェクトメンバーを論理削除
+ * 企画メンバーを論理削除
  */
 export const removeProjectMemberEndpoint: BodyEndpoint<
 	"POST",
@@ -203,7 +203,7 @@ export const removeProjectMemberEndpoint: BodyEndpoint<
 
 /**
  * POST /project/:projectId/members/:userId/assign
- * プロジェクトメンバーに副責任者リクエストを送信
+ * 企画メンバーに副責任者リクエストを送信
  */
 export const assignSubOwnerEndpoint: BodyEndpoint<
 	"POST",
