@@ -1,8 +1,73 @@
-import type { Endpoint } from "@sos26/shared";
+import * as Sentry from "@sentry/react";
+import type { Endpoint, HttpMethod } from "@sos26/shared";
 import type { Options } from "ky";
 import type { z } from "zod";
 import { httpClient } from "../http/client";
 import { throwClientError } from "../http/error";
+
+function getResponseSummary(response: unknown): Record<string, unknown> {
+	if (response && typeof response === "object" && !Array.isArray(response)) {
+		return {
+			type: "object",
+			keys: Object.keys(response),
+		};
+	}
+
+	if (Array.isArray(response)) {
+		return {
+			type: "array",
+			length: response.length,
+		};
+	}
+
+	return {
+		type: typeof response,
+	};
+}
+
+function parseResponseWithLogging<Response extends z.ZodTypeAny>(
+	endpoint: Endpoint<
+		HttpMethod,
+		string,
+		z.ZodTypeAny | undefined,
+		z.ZodTypeAny | undefined,
+		z.ZodTypeAny | undefined,
+		Response
+	>,
+	response: unknown
+): z.infer<Response> {
+	const parsed = endpoint.response.safeParse(response);
+	if (!parsed.success) {
+		const issues = parsed.error.issues.map(issue => ({
+			path: issue.path.join("."),
+			message: issue.message,
+			code: issue.code,
+		}));
+
+		console.error("[API] Response validation failed", {
+			method: endpoint.method,
+			path: endpoint.path,
+			issues,
+			response,
+		});
+
+		Sentry.withScope(scope => {
+			scope.setLevel("error");
+			scope.setTag("error_kind", "api_response_validation");
+			scope.setContext("endpoint", {
+				method: endpoint.method,
+				path: endpoint.path,
+			});
+			scope.setContext("response", getResponseSummary(response));
+			scope.setExtra("issues", issues);
+			Sentry.captureException(parsed.error);
+		});
+
+		throw parsed.error;
+	}
+
+	return parsed.data;
+}
 
 /** 正規表現の特殊文字をエスケープ */
 function escapeRegExp(str: string): string {
@@ -98,7 +163,7 @@ export async function callGetApi<
 			.json();
 
 		// レスポンスを実行時検証
-		return endpoint.response.parse(response);
+		return parseResponseWithLogging(endpoint, response);
 	} catch (error) {
 		return throwClientError(error);
 	}
@@ -139,7 +204,7 @@ export async function callBodyApi<
 		}).json();
 
 		// レスポンスを実行時検証
-		return endpoint.response.parse(response);
+		return parseResponseWithLogging(endpoint, response);
 	} catch (error) {
 		return throwClientError(error);
 	}
@@ -172,7 +237,7 @@ export async function callNoBodyApi<
 		}).json();
 
 		// レスポンスを実行時検証
-		return endpoint.response.parse(response);
+		return parseResponseWithLogging(endpoint, response);
 	} catch (error) {
 		return throwClientError(error);
 	}
