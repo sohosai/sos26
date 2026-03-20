@@ -1,7 +1,7 @@
 import type { ProjectRegistrationFormDetail } from "@sos26/shared";
 import { useMemo } from "react";
-import { toast } from "sonner";
 import { updateProjectRegistrationForm } from "@/lib/api/committee-project-registration-form";
+import { reportHandledError } from "@/lib/error/report";
 import {
 	ProjectRegistrationFormDialog,
 	type ProjectRegistrationFormValues,
@@ -78,7 +78,16 @@ export function EditProjectRegistrationFormDialog({
 				})),
 			});
 		} catch (error) {
-			toast.error("フォームの更新に失敗しました");
+			reportHandledError({
+				error,
+				operation: "save",
+				userMessage: "フォームの更新に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId,
+					formTitle: values.title.trim(),
+				},
+			});
 			throw error;
 		}
 	};

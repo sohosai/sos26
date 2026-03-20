@@ -1,29 +1,9 @@
-import * as Sentry from "@sentry/react";
 import type { Endpoint, HttpMethod } from "@sos26/shared";
 import type { Options } from "ky";
 import type { z } from "zod";
+import { reportHandledError } from "../error/report";
 import { httpClient } from "../http/client";
 import { throwClientError } from "../http/error";
-
-function getResponseSummary(response: unknown): Record<string, unknown> {
-	if (response && typeof response === "object" && !Array.isArray(response)) {
-		return {
-			type: "object",
-			keys: Object.keys(response),
-		};
-	}
-
-	if (Array.isArray(response)) {
-		return {
-			type: "array",
-			length: response.length,
-		};
-	}
-
-	return {
-		type: typeof response,
-	};
-}
 
 function parseResponseWithLogging<Response extends z.ZodTypeAny>(
 	endpoint: Endpoint<
@@ -44,23 +24,15 @@ function parseResponseWithLogging<Response extends z.ZodTypeAny>(
 			code: issue.code,
 		}));
 
-		console.error("[API] Response validation failed", {
-			method: endpoint.method,
-			path: endpoint.path,
-			issues,
-			response,
-		});
-
-		Sentry.withScope(scope => {
-			scope.setLevel("error");
-			scope.setTag("error_kind", "api_response_validation");
-			scope.setContext("endpoint", {
+		reportHandledError({
+			error: parsed.error,
+			operation: "api_response_validation",
+			userMessage: "APIレスポンスの検証に失敗しました",
+			context: {
 				method: endpoint.method,
 				path: endpoint.path,
-			});
-			scope.setContext("response", getResponseSummary(response));
-			scope.setExtra("issues", issues);
-			Sentry.captureException(parsed.error);
+				issues,
+			},
 		});
 
 		throw parsed.error;
