@@ -25,6 +25,7 @@ import {
 } from "@/lib/api/committee-member";
 import { listCommitteeProjectMembers } from "@/lib/api/committee-project";
 import { useAuthStore } from "@/lib/auth";
+import { reportHandledError } from "@/lib/error/report";
 
 export const Route = createFileRoute("/committee/support/$inquiryId")({
 	component: CommitteeSupportDetailPage,
@@ -121,8 +122,17 @@ function CommitteeSupportDetailPage() {
 						await reopenCommitteeInquiry(inquiryId);
 					}
 					await router.invalidate();
-				} catch {
-					toast.error("ステータスの更新に失敗しました");
+				} catch (error) {
+					reportHandledError({
+						error,
+						operation: "save",
+						userMessage: "ステータスの更新に失敗しました",
+						ui: { type: "toast" },
+						context: {
+							inquiryId,
+							status,
+						},
+					});
 				}
 			}}
 			onAddComment={async (body, fileIds, isDraft) => {
@@ -136,12 +146,20 @@ function CommitteeSupportDetailPage() {
 					if (isDraft) {
 						toast.success("下書きを保存しました");
 					}
-				} catch {
-					toast.error(
-						isDraft
+				} catch (error) {
+					reportHandledError({
+						error,
+						operation: isDraft ? "draft_save" : "comment_submit",
+						userMessage: isDraft
 							? "下書きの保存に失敗しました"
-							: "コメントの送信に失敗しました"
-					);
+							: "コメントの送信に失敗しました",
+						ui: { type: "toast" },
+						context: {
+							inquiryId,
+							isDraft,
+							fileCount: fileIds?.length ?? 0,
+						},
+					});
 				}
 			}}
 			onAddAssignee={async (userId, side) => {
@@ -151,8 +169,18 @@ function CommitteeSupportDetailPage() {
 						side,
 					});
 					await router.invalidate();
-				} catch {
-					toast.error("担当者の追加に失敗しました");
+				} catch (error) {
+					reportHandledError({
+						error,
+						operation: "assignee_update",
+						userMessage: "担当者の追加に失敗しました",
+						ui: { type: "toast" },
+						context: {
+							inquiryId,
+							userId,
+							side,
+						},
+					});
 				}
 			}}
 			onRemoveAssignee={async assigneeId => {
@@ -164,8 +192,17 @@ function CommitteeSupportDetailPage() {
 					await publishDraftComment(inquiryId, commentId);
 					await router.invalidate();
 					toast.success("コメントを送信しました");
-				} catch {
-					toast.error("コメントの送信に失敗しました");
+				} catch (error) {
+					reportHandledError({
+						error,
+						operation: "comment_submit",
+						userMessage: "コメントの送信に失敗しました",
+						ui: { type: "toast" },
+						context: {
+							inquiryId,
+							commentId,
+						},
+					});
 				}
 			}}
 			onDeleteComment={async commentId => {
@@ -173,8 +210,17 @@ function CommitteeSupportDetailPage() {
 					await deleteCommitteeInquiryComment(inquiryId, commentId);
 					await router.invalidate();
 					toast.success("コメントを削除しました");
-				} catch {
-					toast.error("コメントの削除に失敗しました");
+				} catch (error) {
+					reportHandledError({
+						error,
+						operation: "delete",
+						userMessage: "コメントの削除に失敗しました",
+						ui: { type: "toast" },
+						context: {
+							inquiryId,
+							commentId,
+						},
+					});
 				}
 			}}
 			onUpdateDraft={async (commentId, body) => {
@@ -182,16 +228,34 @@ function CommitteeSupportDetailPage() {
 					await updateCommitteeDraftComment(inquiryId, commentId, { body });
 					await router.invalidate();
 					toast.success("下書きを更新しました");
-				} catch {
-					toast.error("下書きの更新に失敗しました");
+				} catch (error) {
+					reportHandledError({
+						error,
+						operation: "save",
+						userMessage: "下書きの更新に失敗しました",
+						ui: { type: "toast" },
+						context: {
+							inquiryId,
+							commentId,
+						},
+					});
 				}
 			}}
 			onUpdateViewers={async viewers => {
 				try {
 					await updateCommitteeInquiryViewers(inquiryId, { viewers });
 					await router.invalidate();
-				} catch {
-					toast.error("閲覧者設定の更新に失敗しました");
+				} catch (error) {
+					reportHandledError({
+						error,
+						operation: "save",
+						userMessage: "閲覧者設定の更新に失敗しました",
+						ui: { type: "toast" },
+						context: {
+							inquiryId,
+							viewerCount: viewers.length,
+						},
+					});
 				}
 			}}
 			onPublishDraftInquiry={async () => {
@@ -199,8 +263,16 @@ function CommitteeSupportDetailPage() {
 					await publishDraftInquiry(inquiryId);
 					await router.invalidate();
 					toast.success("お問い合わせを送信しました");
-				} catch {
-					toast.error("お問い合わせの送信に失敗しました");
+				} catch (error) {
+					reportHandledError({
+						error,
+						operation: "inquiry_create",
+						userMessage: "お問い合わせの送信に失敗しました",
+						ui: { type: "toast" },
+						context: {
+							inquiryId,
+						},
+					});
 				}
 			}}
 			onDeleteDraftInquiry={async () => {
@@ -208,8 +280,16 @@ function CommitteeSupportDetailPage() {
 					await deleteDraftInquiry(inquiryId);
 					toast.success("下書きを削除しました");
 					router.navigate({ to: "/committee/support" });
-				} catch {
-					toast.error("下書きの削除に失敗しました");
+				} catch (error) {
+					reportHandledError({
+						error,
+						operation: "delete",
+						userMessage: "下書きの削除に失敗しました",
+						ui: { type: "toast" },
+						context: {
+							inquiryId,
+						},
+					});
 				}
 			}}
 			onUpdateDraftInquiry={async (title, body, fileIds) => {
@@ -223,8 +303,17 @@ function CommitteeSupportDetailPage() {
 						await router.invalidate();
 					}
 					toast.success("下書きを更新しました");
-				} catch {
-					toast.error("下書きの更新に失敗しました");
+				} catch (error) {
+					reportHandledError({
+						error,
+						operation: "draft_save",
+						userMessage: "下書きの更新に失敗しました",
+						ui: { type: "toast" },
+						context: {
+							inquiryId,
+							fileCount: fileIds?.length ?? 0,
+						},
+					});
 				}
 			}}
 		/>

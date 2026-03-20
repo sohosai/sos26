@@ -12,6 +12,7 @@ import { useState } from "react";
 import { Button, Checkbox, TextField } from "@/components/primitives";
 import { register } from "@/lib/api/auth";
 import { useAuthStore } from "@/lib/auth";
+import { reportHandledError } from "@/lib/error/report";
 import { auth } from "@/lib/firebase";
 import { isFirebaseError, mapFirebaseAuthError } from "@/lib/firebaseError";
 import { isClientError } from "@/lib/http/error";
@@ -82,25 +83,6 @@ function SetupPage() {
 		return null;
 	};
 
-	const getErrorMessage = (err: unknown): string => {
-		if (isClientError(err)) {
-			switch (err.code) {
-				case ErrorCode.TOKEN_INVALID:
-					return "セッションが期限切れです。最初から登録をやり直してください。";
-				case ErrorCode.ALREADY_EXISTS:
-					return "このメールアドレスは既に登録されています。ログインしてください。";
-				case ErrorCode.VALIDATION_ERROR:
-					return "入力内容に問題があります。確認してください。";
-				default:
-					return err.message;
-			}
-		}
-		if (isFirebaseError(err)) {
-			return mapFirebaseAuthError(err);
-		}
-		return "エラーが発生しました";
-	};
-
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setError(null);
@@ -133,7 +115,35 @@ function SetupPage() {
 			if (isClientError(err) && err.code === ErrorCode.TOKEN_INVALID) {
 				setSessionExpired(true);
 			}
-			setError(getErrorMessage(err));
+			reportHandledError({
+				error: err,
+				operation: "create",
+				userMessage: "エラーが発生しました",
+				ui: { type: "inline", setError },
+				resolveMessage: ({ error, fallbackMessage }) => {
+					if (isClientError(error)) {
+						switch (error.code) {
+							case ErrorCode.TOKEN_INVALID:
+								return "セッションが期限切れです。最初から登録をやり直してください。";
+							case ErrorCode.ALREADY_EXISTS:
+								return "このメールアドレスは既に登録されています。ログインしてください。";
+							case ErrorCode.VALIDATION_ERROR:
+								return "入力内容に問題があります。確認してください。";
+							default:
+								return error.message;
+						}
+					}
+
+					if (isFirebaseError(error)) {
+						return mapFirebaseAuthError(error);
+					}
+
+					return fallbackMessage;
+				},
+				context: {
+					flow: "auth_register_setup",
+				},
+			});
 		} finally {
 			setLoading(false);
 		}
