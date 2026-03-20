@@ -2,23 +2,7 @@ import * as Sentry from "@sentry/react";
 import { toast } from "sonner";
 import { isClientError } from "../http/error";
 
-export type ErrorOperation =
-	| "read"
-	| "create"
-	| "save"
-	| "draft_save"
-	| "submit"
-	| "publish_request"
-	| "approve"
-	| "reject"
-	| "delete"
-	| "join_project"
-	| "collaborator_update"
-	| "inquiry_create"
-	| "comment_submit"
-	| "assignee_update";
-
-export const IMPORTANT_ERROR_OPERATIONS: readonly ErrorOperation[] = [
+const IMPORTANT_ERROR_OPERATIONS = [
 	"create",
 	"save",
 	"draft_save",
@@ -32,11 +16,14 @@ export const IMPORTANT_ERROR_OPERATIONS: readonly ErrorOperation[] = [
 	"inquiry_create",
 	"comment_submit",
 	"assignee_update",
+	"api_response_validation",
 ] as const;
 
-const importantOperationSet = new Set<ErrorOperation>(
-	IMPORTANT_ERROR_OPERATIONS
-);
+type ImportantErrorOperation = (typeof IMPORTANT_ERROR_OPERATIONS)[number];
+
+export type ErrorOperation = ImportantErrorOperation | "read";
+
+const importantOperationSet: Set<string> = new Set(IMPORTANT_ERROR_OPERATIONS);
 
 type ErrorUi =
 	| { type: "none" }
@@ -74,10 +61,16 @@ function getErrorCode(error: unknown): string | undefined {
 	return error.code;
 }
 
+/**
+ * エラーから表示メッセージを決定する
+ *
+ * preferErrorMessage=true の場合、ClientErrorが持つメッセージ（HTTPレイヤーで変換済み）を優先する。
+ * デフォルトは false で、呼び出し側が指定した userMessage を使う。
+ */
 function getDefaultDisplayMessage({
 	error,
 	fallbackMessage,
-	preferErrorMessage = true,
+	preferErrorMessage = false,
 }: ResolveMessageInput & { preferErrorMessage?: boolean }): string {
 	if (!preferErrorMessage) {
 		return fallbackMessage;
@@ -112,7 +105,7 @@ export function reportHandledError({
 	userMessage,
 	context,
 	ui = { type: "none" },
-	preferErrorMessage = true,
+	preferErrorMessage = false,
 	resolveMessage,
 }: ReportHandledErrorOptions): string {
 	const message =

@@ -86,6 +86,7 @@ describe("reportHandledError", () => {
 			error,
 			operation: "submit",
 			userMessage: "送信に失敗しました",
+			preferErrorMessage: true,
 			context: { formId: "form-1" },
 		});
 

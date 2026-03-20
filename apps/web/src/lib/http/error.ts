@@ -34,12 +34,12 @@ export class ClientErrorClass extends Error {
 			clientError.kind === "api"
 				? clientError.error.error.message
 				: clientError.message;
-		super(message);
+		super(
+			message,
+			clientError.cause !== undefined ? { cause: clientError.cause } : undefined
+		);
 		this.name = "ClientError";
 		this.clientError = clientError;
-		if (clientError.cause !== undefined) {
-			(this as Error & { cause?: unknown }).cause = clientError.cause;
-		}
 	}
 
 	/** ClientError 型にアクセスするためのgetter */

@@ -1,6 +1,7 @@
 import type { Endpoint, HttpMethod } from "@sos26/shared";
 import type { Options } from "ky";
 import type { z } from "zod";
+import { reportHandledError } from "../error/report";
 import { httpClient } from "../http/client";
 import { throwClientError } from "../http/error";
 
@@ -23,11 +24,15 @@ function parseResponseWithLogging<Response extends z.ZodTypeAny>(
 			code: issue.code,
 		}));
 
-		console.error("[API] Response validation failed", {
-			method: endpoint.method,
-			path: endpoint.path,
-			issues,
-			response,
+		reportHandledError({
+			error: parsed.error,
+			operation: "api_response_validation",
+			userMessage: "APIレスポンスの検証に失敗しました",
+			context: {
+				method: endpoint.method,
+				path: endpoint.path,
+				issues,
+			},
 		});
 
 		throw parsed.error;
