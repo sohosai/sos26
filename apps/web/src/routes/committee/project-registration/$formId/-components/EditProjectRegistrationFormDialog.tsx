@@ -2,6 +2,7 @@ import type { ProjectRegistrationFormDetail } from "@sos26/shared";
 import { useMemo } from "react";
 import { toast } from "sonner";
 import { updateProjectRegistrationForm } from "@/lib/api/committee-project-registration-form";
+import { normalizeItemConstraintsForType } from "@/lib/form/constraints";
 import {
 	ProjectRegistrationFormDialog,
 	type ProjectRegistrationFormValues,
@@ -70,7 +71,10 @@ export function EditProjectRegistrationFormDialog({
 					type: item.type,
 					required: item.required,
 					sortOrder: index,
-					constraints: item.constraints,
+					constraints: normalizeItemConstraintsForType(
+						item.type,
+						item.constraints
+					),
 					options: item.options?.map((opt, i) => ({
 						label: opt.label,
 						sortOrder: i,

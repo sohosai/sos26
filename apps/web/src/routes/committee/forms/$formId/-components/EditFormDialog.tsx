@@ -12,6 +12,7 @@ import {
 	updateFormDetail,
 } from "@/lib/api/committee-form";
 import { uploadFile } from "@/lib/api/files";
+import { normalizeItemConstraintsForType } from "@/lib/form/constraints";
 import { formatFileSize } from "@/lib/format";
 import styles from "./EditFormDialog.module.scss";
 
@@ -89,7 +90,10 @@ export function EditFormDialog({
 						label: opt.label,
 						sortOrder: i,
 					})),
-					constraints: item.constraints ?? null,
+					constraints: normalizeItemConstraintsForType(
+						item.type,
+						item.constraints
+					),
 				})),
 			});
 

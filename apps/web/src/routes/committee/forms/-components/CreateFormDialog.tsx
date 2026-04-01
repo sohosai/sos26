@@ -8,6 +8,7 @@ import type { Form } from "@/components/form/type";
 import { Button, IconButton } from "@/components/primitives";
 import { addFormAttachments, createForm } from "@/lib/api/committee-form";
 import { uploadFile } from "@/lib/api/files";
+import { normalizeItemConstraintsForType } from "@/lib/form/constraints";
 import { formatFileSize } from "@/lib/format";
 import styles from "./CreateFormDialog.module.scss";
 
@@ -70,7 +71,10 @@ export function CreateFormDialog({ open, onOpenChange, onSuccess }: Props) {
 						label: opt.label,
 						sortOrder: i,
 					})),
-					constraints: item.constraints ?? null,
+					constraints: normalizeItemConstraintsForType(
+						item.type,
+						item.constraints
+					),
 				})),
 			});
 
