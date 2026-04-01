@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/bun";
+import type { ApiErrorResponse } from "@sos26/shared";
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -38,7 +39,7 @@ describe("errorHandler", () => {
 		const app = makeApp();
 
 		const res = await app.request("/app-error");
-		const body = await res.json();
+		const body = (await res.json()) as ApiErrorResponse;
 
 		expect(res.status).toBe(403);
 		expect(body.error.code).toBe("FORBIDDEN");
@@ -57,7 +58,7 @@ describe("errorHandler", () => {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ name: "" }),
 		});
-		const body = await res.json();
+		const body = (await res.json()) as ApiErrorResponse;
 
 		expect(res.status).toBe(400);
 		expect(body.error.code).toBe("VALIDATION_ERROR");
@@ -72,7 +73,7 @@ describe("errorHandler", () => {
 		const app = makeApp();
 
 		const res = await app.request("/unexpected");
-		const body = await res.json();
+		const body = (await res.json()) as ApiErrorResponse;
 
 		expect(res.status).toBe(500);
 		expect(body.error.code).toBe("INTERNAL");
