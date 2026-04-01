@@ -10,7 +10,9 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
+import { EmptyProjectState } from "@/components/project/EmptyProjectState";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
+import { ProjectJoinDialog } from "@/components/project/ProjectJoinDialog";
 import { joinProject, listMyProjects } from "@/lib/api/project";
 import { listProjectForms } from "@/lib/api/project-form";
 import { listProjectInquiries } from "@/lib/api/project-inquiry";
@@ -111,7 +113,8 @@ function ProjectLayout() {
 	const selectedProject =
 		projects.find(p => p.id === selectedProjectId) ?? null;
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-	const [dialogOpen, setDialogOpen] = useState(false);
+	const [createDialogOpen, setCreateDialogOpen] = useState(false);
+	const [joinDialogOpen, setJoinDialogOpen] = useState(false);
 	const { user } = useAuthStore();
 
 	const hasPrivilegedProject = projects.some(
@@ -158,9 +161,11 @@ function ProjectLayout() {
 			}
 
 			setSelectedProjectId(project.id);
-			router.invalidate();
-		} catch {
+			await router.invalidate();
+			toast.success("企画に参加しました");
+		} catch (error) {
 			toast.error("企画への参加に失敗しました。招待コードを確認してください。");
+			throw error;
 		}
 	};
 
@@ -169,7 +174,7 @@ function ProjectLayout() {
 			<Sidebar
 				collapsed={sidebarCollapsed}
 				onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-				menuItems={projectMenuItemsWithDot}
+				menuItems={projects.length > 0 ? projectMenuItemsWithDot : []}
 				projectId={selectedProjectId}
 				projectSelector={
 					<ProjectSelector
@@ -182,7 +187,7 @@ function ProjectLayout() {
 						selectedProjectId={selectedProjectId}
 						collapsed={sidebarCollapsed}
 						onSelectProject={handleSelectProject}
-						onCreateProject={() => setDialogOpen(true)}
+						onCreateProject={() => setCreateDialogOpen(true)}
 						onJoinProject={handleJoinProject}
 						hasPrivilegedProject={hasPrivilegedProject}
 					/>
@@ -200,16 +205,28 @@ function ProjectLayout() {
 						</Callout.Text>
 					</Callout.Root>
 				)}
-				{selectedProjectId && <Outlet key={selectedProjectId} />}
+				{projects.length === 0 ? (
+					<EmptyProjectState
+						onCreateProject={() => setCreateDialogOpen(true)}
+						onJoinProject={() => setJoinDialogOpen(true)}
+					/>
+				) : (
+					selectedProjectId && <Outlet key={selectedProjectId} />
+				)}
 			</main>
 			<ProjectCreateDialog
-				open={dialogOpen}
-				onOpenChange={setDialogOpen}
+				open={createDialogOpen}
+				onOpenChange={setCreateDialogOpen}
 				onCreated={project => {
 					setProjects([...projects, project]);
 					setSelectedProjectId(project.id);
 					router.invalidate();
 				}}
+			/>
+			<ProjectJoinDialog
+				open={joinDialogOpen}
+				onOpenChange={setJoinDialogOpen}
+				onJoin={handleJoinProject}
 			/>
 		</div>
 	);
