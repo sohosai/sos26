@@ -2,7 +2,6 @@ import { Text } from "@radix-ui/themes";
 import { allowedMimeTypes } from "@sos26/shared";
 import { IconPaperclip, IconTrash, IconX } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { FormEditDialog } from "@/components/form/Builder/EditDialog";
 import type { Form } from "@/components/form/type";
 import { Button, IconButton } from "@/components/primitives";
@@ -12,6 +11,7 @@ import {
 	updateFormDetail,
 } from "@/lib/api/committee-form";
 import { uploadFile } from "@/lib/api/files";
+import { reportHandledError } from "@/lib/error/report";
 import { formatFileSize } from "@/lib/format";
 import styles from "./EditFormDialog.module.scss";
 
@@ -119,8 +119,17 @@ export function EditFormDialog({
 
 			await onSuccess?.();
 			onOpenChange(false);
-		} catch {
-			toast.error("申請の保存に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "save",
+				userMessage: "申請の保存に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId,
+					formName: submitted.name,
+				},
+			});
 		} finally {
 			setIsSubmitting(false);
 		}

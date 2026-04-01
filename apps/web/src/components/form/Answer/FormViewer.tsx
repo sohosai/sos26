@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AttachmentPreviewButton } from "@/components/filePreview/AttachmentPreviewButton";
 import { Button } from "@/components/primitives";
+import { reportHandledError } from "@/lib/error/report";
 import {
 	createEmptyFileAnswerValue,
 	type Form,
@@ -311,8 +312,17 @@ export function FormViewer({
 			await onSaveDraft(answers);
 			setBaselineAnswers(answers);
 			toast.success("下書きを保存しました");
-		} catch {
-			toast.error("下書きの保存に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "draft_save",
+				userMessage: "下書きの保存に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId: form.id,
+					formName: form.name,
+				},
+			});
 		} finally {
 			setIsSavingDraft(false);
 		}
@@ -328,13 +338,17 @@ export function FormViewer({
 			setBaselineAnswers(answers);
 			toast.success("送信しました");
 		} catch (error) {
-			console.error("Form submission failed", {
-				formId: form.id,
-				formName: form.name,
-				answers: summarizeAnswersForLog(answers),
+			reportHandledError({
 				error,
+				operation: "submit",
+				userMessage: "送信に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId: form.id,
+					formName: form.name,
+					answers: summarizeAnswersForLog(answers),
+				},
 			});
-			toast.error("送信に失敗しました");
 		} finally {
 			setIsSubmitting(false);
 		}

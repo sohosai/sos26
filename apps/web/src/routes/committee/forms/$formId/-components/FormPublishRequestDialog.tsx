@@ -13,6 +13,7 @@ import {
 import { ProjectCategorySelector } from "@/components/project/ProjectCategorySelector";
 import { ProjectSelectDialog } from "@/components/project-select";
 import { requestFormAuthorization } from "@/lib/api/committee-form";
+import { reportHandledError } from "@/lib/error/report";
 import { validateAuthorizationDates } from "@/lib/form/AuthDateCheck";
 import { isClientError } from "@/lib/http/error";
 import styles from "./FormPublishRequestDialog.module.scss";
@@ -149,11 +150,24 @@ export function FormPublishRequestDialog({
 			onOpenChange(false);
 			onSuccess();
 		} catch (e) {
-			if (isClientError(e) && e.apiError) {
-				setError(e.apiError.error.message);
-			} else {
-				setError("公開申請の送信に失敗しました。");
-			}
+			reportHandledError({
+				error: e,
+				operation: "publish_request",
+				userMessage: "公開申請の送信に失敗しました。",
+				ui: { type: "inline", setError },
+				resolveMessage: ({ error, fallbackMessage }) => {
+					if (isClientError(error) && error.apiError) {
+						return error.apiError.error.message;
+					}
+
+					return fallbackMessage;
+				},
+				context: {
+					formId,
+					approverId,
+					deliveryMode,
+				},
+			});
 		} finally {
 			setIsSubmitting(false);
 		}

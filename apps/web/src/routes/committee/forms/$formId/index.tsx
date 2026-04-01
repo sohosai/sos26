@@ -23,7 +23,6 @@ import {
 } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 import { z } from "zod";
 import { AttachmentPreviewButton } from "@/components/filePreview/AttachmentPreviewButton";
 import { DataTable, DateCell, NameCell } from "@/components/patterns";
@@ -40,6 +39,7 @@ import {
 } from "@/lib/api/committee-form";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { useAuthStore } from "@/lib/auth";
+import { reportHandledError } from "@/lib/error/report";
 import { formDetailToForm } from "@/lib/form/convert";
 import { getFormStatusFromAuth } from "@/lib/form/form-status";
 import { formatDate } from "@/lib/format";
@@ -228,8 +228,17 @@ function RouteComponent() {
 		try {
 			await addFormCollaborator(form.id, userId, { isWrite: true });
 			await router.invalidate();
-		} catch {
-			toast.error("共同編集者の追加に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "collaborator_update",
+				userMessage: "共同編集者の追加に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId: form.id,
+					userId,
+				},
+			});
 		}
 	};
 
@@ -238,8 +247,17 @@ function RouteComponent() {
 		try {
 			await removeFormCollaborator(form.id, userId);
 			await router.invalidate();
-		} catch {
-			toast.error("共同編集者の削除に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "collaborator_update",
+				userMessage: "共同編集者の削除に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId: form.id,
+					userId,
+				},
+			});
 		} finally {
 			setRemovingId(null);
 		}
@@ -253,8 +271,17 @@ function RouteComponent() {
 				viewers: viewers as Parameters<typeof updateFormViewers>[1]["viewers"],
 			});
 			await router.invalidate();
-		} catch {
-			toast.error("閲覧者の更新に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "save",
+				userMessage: "閲覧者の更新に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId: form.id,
+					viewerCount: viewers.length,
+				},
+			});
 		}
 	};
 
@@ -263,8 +290,16 @@ function RouteComponent() {
 		try {
 			await deleteForm(formId);
 			navigate({ to: "/committee/forms" });
-		} catch {
-			toast.error("申請の削除に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "delete",
+				userMessage: "申請の削除に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId,
+				},
+			});
 		} finally {
 			setIsDeleting(false);
 		}
@@ -274,8 +309,17 @@ function RouteComponent() {
 		try {
 			await approveFormAuthorization(formId, authorizationId);
 			await router.invalidate();
-		} catch {
-			toast.error("承認に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "approve",
+				userMessage: "承認に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId,
+					authorizationId,
+				},
+			});
 		}
 	};
 
@@ -283,8 +327,17 @@ function RouteComponent() {
 		try {
 			await rejectFormAuthorization(formId, authorizationId);
 			await router.invalidate();
-		} catch {
-			toast.error("却下に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "reject",
+				userMessage: "却下に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId,
+					authorizationId,
+				},
+			});
 		}
 	};
 
