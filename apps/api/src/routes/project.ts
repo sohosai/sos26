@@ -9,6 +9,7 @@ import {
 	updateProjectDetailRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
+import { assertWithinApplicationPeriod } from "../lib/application-period";
 import { Errors } from "../lib/error";
 import {
 	getConfirmedFileMap,
@@ -135,6 +136,9 @@ projectRoute.post("/create", requireAuth, async c => {
 		...data
 	} = createProjectRequestSchema.parse(body);
 	const userId = c.get("user").id;
+
+	// ── 企画応募期間チェック ──
+	assertWithinApplicationPeriod();
 
 	// ── 他の企画で責任者・副責任者をやっていないか確認 ──
 	const hasOtherPrivilegedProject = await prisma.project.findFirst({
