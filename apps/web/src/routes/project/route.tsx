@@ -128,7 +128,7 @@ function ProjectLayout() {
 				const info = await getApplicationPeriod();
 				setApplicationPeriodInfo(info);
 			} catch {
-				// エラーは無視して無期限として扱う
+				// 企画作成ボタンをデフォルトでactiveにするため、エラーは無視して無期限として扱う
 				setApplicationPeriodInfo({ isOpen: true, periods: null });
 			}
 		};
