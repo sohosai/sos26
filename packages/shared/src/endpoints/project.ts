@@ -5,6 +5,7 @@ import {
 	createProjectResponseSchema,
 	decideSubOwnerRequestRequestSchema,
 	decideSubOwnerRequestResponseSchema,
+	getApplicationPeriodResponseSchema,
 	getProjectDetailResponseSchema,
 	getProjectRegistrationFormResponsesResponseSchema,
 	joinProjectRequestSchema,
@@ -279,4 +280,22 @@ export const rejectSubOwnerRequestEndpoint: BodyEndpoint<
 	query: undefined,
 	request: decideSubOwnerRequestRequestSchema,
 	response: decideSubOwnerRequestResponseSchema,
+} as const;
+
+/**
+ * GET /project/application-period
+ * 企画応募期間の情報を取得
+ */
+export const getApplicationPeriodEndpoint: GetEndpoint<
+	"/project/application-period",
+	undefined,
+	undefined,
+	typeof getApplicationPeriodResponseSchema
+> = {
+	method: "GET",
+	path: "/project/application-period",
+	pathParams: undefined,
+	query: undefined,
+	request: undefined,
+	response: getApplicationPeriodResponseSchema,
 } as const;

@@ -11,7 +11,11 @@ import { toast } from "sonner";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
-import { joinProject, listMyProjects } from "@/lib/api/project";
+import {
+	getApplicationPeriod,
+	joinProject,
+	listMyProjects,
+} from "@/lib/api/project";
 import { listProjectForms } from "@/lib/api/project-form";
 import { listProjectInquiries } from "@/lib/api/project-inquiry";
 import { listProjectNotices } from "@/lib/api/project-notice";
@@ -112,7 +116,24 @@ function ProjectLayout() {
 		projects.find(p => p.id === selectedProjectId) ?? null;
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 	const [dialogOpen, setDialogOpen] = useState(false);
+	const [applicationPeriodInfo, setApplicationPeriodInfo] = useState<{
+		isOpen: boolean;
+		periods: { start: string; end: string }[] | null;
+	} | null>(null);
 	const { user } = useAuthStore();
+
+	useEffect(() => {
+		const fetchApplicationPeriod = async () => {
+			try {
+				const info = await getApplicationPeriod();
+				setApplicationPeriodInfo(info);
+			} catch {
+				// エラーは無視して無期限として扱う
+				setApplicationPeriodInfo({ isOpen: true, periods: null });
+			}
+		};
+		void fetchApplicationPeriod();
+	}, []);
 
 	const hasPrivilegedProject = projects.some(
 		project => project.ownerId === user?.id || project.subOwnerId === user?.id
@@ -185,6 +206,7 @@ function ProjectLayout() {
 						onCreateProject={() => setDialogOpen(true)}
 						onJoinProject={handleJoinProject}
 						hasPrivilegedProject={hasPrivilegedProject}
+						applicationPeriodInfo={applicationPeriodInfo}
 					/>
 				}
 			/>

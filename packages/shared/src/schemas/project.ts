@@ -350,3 +350,24 @@ export const decideSubOwnerRequestResponseSchema = z.object({
 export type DecideSubOwnerRequestResponse = z.infer<
 	typeof decideSubOwnerRequestResponseSchema
 >;
+
+// ─────────────────────────────────────────────
+// GET /project/application-period
+// 企画応募期間の情報を取得
+// ─────────────────────────────────────────────
+
+export const getApplicationPeriodResponseSchema = z.object({
+	isOpen: z.boolean(),
+	periods: z
+		.array(
+			z.object({
+				start: z.string(),
+				end: z.string(),
+			})
+		)
+		.nullable(),
+});
+
+export type GetApplicationPeriodResponse = z.infer<
+	typeof getApplicationPeriodResponseSchema
+>;

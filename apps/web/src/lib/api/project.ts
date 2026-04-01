@@ -7,8 +7,10 @@ import {
 	cancelSubOwnerRequestEndpoint,
 	createProjectEndpoint,
 	type DecideSubOwnerRequestResponse,
+	type GetApplicationPeriodResponse,
 	type GetProjectDetailResponse,
 	type GetProjectRegistrationFormResponsesResponse,
+	getApplicationPeriodEndpoint,
 	getProjectDetailEndpoint,
 	getProjectRegistrationFormResponsesEndpoint,
 	type JoinProjectRequest,
@@ -178,4 +180,12 @@ export async function rejectSubOwnerRequest(
 	return callBodyApi(rejectSubOwnerRequestEndpoint, undefined, {
 		pathParams: { projectId },
 	});
+}
+
+/**
+ * GET /project/application-period
+ * 企画応募期間の情報を取得
+ */
+export async function getApplicationPeriod(): Promise<GetApplicationPeriodResponse> {
+	return callGetApi(getApplicationPeriodEndpoint);
 }

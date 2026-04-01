@@ -38,3 +38,31 @@ export function isWithinApplicationPeriod(now: Date = new Date()): boolean {
 
 	return periods.some(({ start, end }) => now >= start && now <= end);
 }
+
+/**
+ * 企画応募期間の情報を取得
+ * @returns 期間情報（無期限の場合はnull、それ以外は期間の配列とisOpenフラグ）
+ */
+export function getApplicationPeriodInfo(now: Date = new Date()): {
+	isOpen: boolean;
+	periods: { start: string; end: string }[] | null;
+} {
+	const periods = env.PROJECT_APPLICATION_PERIODS;
+
+	if (!periods) {
+		return {
+			isOpen: true,
+			periods: null,
+		};
+	}
+
+	const isOpen = periods.some(({ start, end }) => now >= start && now <= end);
+
+	return {
+		isOpen,
+		periods: periods.map(({ start, end }) => ({
+			start: start.toISOString(),
+			end: end.toISOString(),
+		})),
+	};
+}

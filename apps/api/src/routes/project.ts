@@ -9,7 +9,10 @@ import {
 	updateProjectDetailRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
-import { assertWithinApplicationPeriod } from "../lib/application-period";
+import {
+	assertWithinApplicationPeriod,
+	getApplicationPeriodInfo,
+} from "../lib/application-period";
 import { Errors } from "../lib/error";
 import {
 	getConfirmedFileMap,
@@ -989,6 +992,15 @@ projectRoute.get("/registration-forms", requireAuth, async c => {
 			})
 		),
 	});
+});
+
+// ─────────────────────────────────────────────────────────────
+// GET /project/application-period
+// 企画応募期間の情報を取得
+// ─────────────────────────────────────────────────────────────
+projectRoute.get("/application-period", c => {
+	const info = getApplicationPeriodInfo();
+	return c.json(info);
 });
 
 export { projectRoute };
