@@ -2,10 +2,13 @@ import {
 	type AssignSubOwnerResponse,
 	approveSubOwnerRequestEndpoint,
 	assignSubOwnerEndpoint,
+	type CreateProjectRegistrationFormResponseRequest,
+	type CreateProjectRegistrationFormResponseResponse,
 	type CreateProjectRequest,
 	type CreateProjectResponse,
 	cancelSubOwnerRequestEndpoint,
 	createProjectEndpoint,
+	createProjectRegistrationFormResponseEndpoint,
 	type DecideSubOwnerRequestResponse,
 	type GetApplicationPeriodResponse,
 	type GetProjectDetailResponse,
@@ -27,7 +30,10 @@ import {
 	removeProjectMemberEndpoint,
 	type UpdateProjectDetailRequest,
 	type UpdateProjectDetailResponse,
+	type UpdateProjectRegistrationFormResponseRequest,
+	type UpdateProjectRegistrationFormResponseResponse,
 	updateProjectDetailEndpoint,
+	updateProjectRegistrationFormResponseEndpoint,
 } from "@sos26/shared";
 import { callBodyApi, callGetApi } from "./core";
 
@@ -91,6 +97,19 @@ export async function getProjectRegistrationFormResponses(
 	projectId: string
 ): Promise<GetProjectRegistrationFormResponsesResponse> {
 	return callGetApi(getProjectRegistrationFormResponsesEndpoint, {
+		pathParams: { projectId },
+	});
+}
+
+/**
+ * POST /project/:projectId/registration-form-responses
+ * 企画登録フォーム回答を新規作成
+ */
+export async function createProjectRegistrationFormResponse(
+	projectId: string,
+	body: CreateProjectRegistrationFormResponseRequest
+): Promise<CreateProjectRegistrationFormResponseResponse> {
+	return callBodyApi(createProjectRegistrationFormResponseEndpoint, body, {
 		pathParams: { projectId },
 	});
 }
@@ -188,4 +207,18 @@ export async function rejectSubOwnerRequest(
  */
 export async function getApplicationPeriod(): Promise<GetApplicationPeriodResponse> {
 	return callGetApi(getApplicationPeriodEndpoint);
+}
+
+/**
+ * PATCH /project/:projectId/registration-form-responses/:responseId
+ * 企画登録フォーム回答を編集
+ */
+export async function updateProjectRegistrationFormResponse(
+	projectId: string,
+	responseId: string,
+	body: UpdateProjectRegistrationFormResponseRequest
+): Promise<UpdateProjectRegistrationFormResponseResponse> {
+	return callBodyApi(updateProjectRegistrationFormResponseEndpoint, body, {
+		pathParams: { projectId, responseId },
+	});
 }
