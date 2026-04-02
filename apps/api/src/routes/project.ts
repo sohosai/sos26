@@ -1340,6 +1340,11 @@ projectRoute.patch(
 								},
 							},
 						},
+						orderBy: {
+							formItem: {
+								sortOrder: "asc",
+							},
+						},
 					},
 				},
 			});
@@ -1352,7 +1357,6 @@ projectRoute.patch(
 				submittedAt: updatedResponse.submittedAt,
 				form: updatedResponse.form,
 				answers: updatedResponse.answers.map(answer => ({
-					id: answer.id,
 					formItemId: answer.formItemId,
 					formItemLabel: answer.formItem.label,
 					type: answer.formItem.type,

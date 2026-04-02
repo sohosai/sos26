@@ -1546,7 +1546,7 @@ model ProjectRegistrationFormAnswer {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  @@unique([responseId, formItemId])
+  @@unique([responseId, formItemId, deletedAt])
   @@index([responseId])
   @@index([formItemId])
   @@index([deletedAt])
