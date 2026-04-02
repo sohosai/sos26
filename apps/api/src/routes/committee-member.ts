@@ -163,6 +163,25 @@ committeeMemberRoute.delete(
 );
 
 // ─────────────────────────────────────────────────────────────
+// GET /committee/members/me/permissions
+// 自分自身の権限一覧を取得（MEMBER_EDIT 不要）
+// ─────────────────────────────────────────────────────────────
+committeeMemberRoute.get(
+	"/me/permissions",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const committeeMember = c.get("committeeMember");
+
+		const permissions = await prisma.committeeMemberPermission.findMany({
+			where: { committeeMemberId: committeeMember.id },
+		});
+
+		return c.json({ permissions });
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
 // GET /committee/members/:id/permissions
 // 委員メンバーの権限一覧を取得
 // ─────────────────────────────────────────────────────────────

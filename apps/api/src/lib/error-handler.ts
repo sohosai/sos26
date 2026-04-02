@@ -4,6 +4,7 @@ import type { ErrorHandler } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { ZodError } from "zod";
 import { AppError } from "./error";
+import { logUnexpectedApiError } from "./error-logging";
 
 /**
  * Hono の onError ハンドラ
@@ -38,7 +39,10 @@ export const errorHandler: ErrorHandler = (err, c) => {
 
 	// その他の予期しないエラー: 詳細を隠蔽してINTERNALとして返却
 	Sentry.captureException(err);
-	console.error("[Internal Error]", err);
+	logUnexpectedApiError("Internal Error", err, {
+		method: c.req.method,
+		path: c.req.path,
+	});
 	const response: ApiErrorResponse = {
 		error: {
 			code: "INTERNAL",

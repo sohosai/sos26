@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button, Select } from "@/components/primitives";
 import { requestProjectRegistrationFormAuthorization } from "@/lib/api/committee-project-registration-form";
+import { reportHandledError } from "@/lib/error/report";
 import styles from "./RequestAuthorizationDialog.module.scss";
 
 type Approver = {
@@ -53,8 +54,17 @@ export function RequestAuthorizationDialog({
 			handleOpenChange(false);
 			onSuccess();
 			toast.success("承認依頼を送信しました");
-		} catch {
-			toast.error("承認依頼の送信に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "publish_request",
+				userMessage: "承認依頼の送信に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId,
+					requestedToId,
+				},
+			});
 		} finally {
 			setIsSubmitting(false);
 		}

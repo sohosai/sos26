@@ -7,7 +7,6 @@ import {
 	useRouter,
 } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
@@ -21,6 +20,7 @@ import {
 	requireAuth,
 	useAuthStore,
 } from "@/lib/auth";
+import { reportHandledError } from "@/lib/error/report";
 import { useProjectStore } from "@/lib/project/store";
 import styles from "./route.module.scss";
 
@@ -196,11 +196,18 @@ function ProjectLayout() {
 			}
 
 			setSelectedProjectId(project.id);
-			await router.invalidate();
-			toast.success("企画に参加しました");
+			router.invalidate();
 		} catch (error) {
-			toast.error("企画への参加に失敗しました。招待コードを確認してください。");
-			throw error;
+			reportHandledError({
+				error,
+				operation: "join_project",
+				userMessage:
+					"企画への参加に失敗しました。招待コードを確認してください。",
+				ui: { type: "toast" },
+				context: {
+					projectId: selectedProjectId,
+				},
+			});
 		}
 	};
 

@@ -4,6 +4,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/primitives";
 import { verifyEmail } from "@/lib/api/auth";
+import { reportHandledError } from "@/lib/error/report";
 import { isClientError } from "@/lib/http/error";
 import styles from "../../auth.module.scss";
 
@@ -41,17 +42,26 @@ function VerifyPage() {
 			await verifyEmail({ token });
 			navigate({ to: "/auth/register/setup" });
 		} catch (err) {
-			if (isClientError(err)) {
-				if (err.code === ErrorCode.TOKEN_INVALID) {
-					setError(
-						"リンクが無効または期限切れです。再度登録をお試しください。"
-					);
-				} else {
-					setError(err.message);
-				}
-			} else {
-				setError("エラーが発生しました");
-			}
+			reportHandledError({
+				error: err,
+				operation: "submit",
+				userMessage: "エラーが発生しました",
+				ui: { type: "inline", setError },
+				resolveMessage: ({ error, fallbackMessage }) => {
+					if (isClientError(error) && error.code === ErrorCode.TOKEN_INVALID) {
+						return "リンクが無効または期限切れです。再度登録をお試しください。";
+					}
+
+					if (isClientError(error)) {
+						return error.message;
+					}
+
+					return fallbackMessage;
+				},
+				context: {
+					flow: "auth_register_verify",
+				},
+			});
 		} finally {
 			setLoading(false);
 		}

@@ -15,10 +15,10 @@ import { ZodError } from "zod";
  * 分岐は kind で行い、APIエラーの場合は code getter で分岐する
  */
 export type ClientError =
-	| { kind: "api"; error: ApiErrorResponse }
-	| { kind: "network"; message: string }
-	| { kind: "timeout"; message: string }
-	| { kind: "abort"; message: string }
+	| { kind: "api"; error: ApiErrorResponse; cause?: unknown }
+	| { kind: "network"; message: string; cause?: unknown }
+	| { kind: "timeout"; message: string; cause?: unknown }
+	| { kind: "abort"; message: string; cause?: unknown }
 	| { kind: "unknown"; message: string; cause?: unknown };
 
 /**
@@ -34,7 +34,10 @@ export class ClientErrorClass extends Error {
 			clientError.kind === "api"
 				? clientError.error.error.message
 				: clientError.message;
-		super(message);
+		super(
+			message,
+			clientError.cause !== undefined ? { cause: clientError.cause } : undefined
+		);
 		this.name = "ClientError";
 		this.clientError = clientError;
 	}
@@ -73,7 +76,7 @@ async function parseHttpError(error: HTTPError): Promise<ClientError> {
 		const body = await response.json().catch(() => null);
 		const parsed = apiErrorResponseSchema.safeParse(body);
 		if (parsed.success) {
-			return { kind: "api", error: parsed.data };
+			return { kind: "api", error: parsed.data, cause: error };
 		}
 	}
 
@@ -89,16 +92,32 @@ function toClientError(error: unknown): ClientError {
 	// フロント側のZod実行時検証エラーはユーザー入力の問題
 	// 生のissues配列などを露出しないよう、フレンドリーな文言に正規化
 	if (error instanceof ZodError) {
-		return { kind: "unknown", message: "入力値が不正です" };
+		return {
+			kind: "unknown",
+			message: "入力値が不正です",
+			cause: error,
+		};
 	}
 	if (error instanceof TimeoutError) {
-		return { kind: "timeout", message: "リクエストがタイムアウトしました" };
+		return {
+			kind: "timeout",
+			message: "リクエストがタイムアウトしました",
+			cause: error,
+		};
 	}
 	if (error instanceof DOMException && error.name === "AbortError") {
-		return { kind: "abort", message: "リクエストが中断されました" };
+		return {
+			kind: "abort",
+			message: "リクエストが中断されました",
+			cause: error,
+		};
 	}
 	if (error instanceof TypeError) {
-		return { kind: "network", message: "ネットワークエラーが発生しました" };
+		return {
+			kind: "network",
+			message: "ネットワークエラーが発生しました",
+			cause: error,
+		};
 	}
 	return {
 		kind: "unknown",
