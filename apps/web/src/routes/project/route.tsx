@@ -1,4 +1,4 @@
-import { Callout } from "@radix-ui/themes";
+import { Callout, Heading, Text } from "@radix-ui/themes";
 import type { Project } from "@sos26/shared";
 import {
 	createFileRoute,
@@ -9,7 +9,9 @@ import {
 import { useEffect, useState } from "react";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
+import { Button } from "@/components/primitives";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
+import { ProjectJoinDialog } from "@/components/project/ProjectJoinDialog";
 import { joinProject, listMyProjects } from "@/lib/api/project";
 import { listProjectForms } from "@/lib/api/project-form";
 import { listProjectInquiries } from "@/lib/api/project-inquiry";
@@ -27,6 +29,42 @@ function projectDeletionStatusLabel(status: Project["deletionStatus"]): string {
 	if (status === "LOTTERY_LOSS") return "抽選漏れ";
 	if (status === "DELETED") return "削除";
 	return "";
+}
+
+type EmptyProjectStateProps = {
+	onCreateProject: () => void;
+	onJoinProject: () => void;
+};
+
+function EmptyProjectState({
+	onCreateProject,
+	onJoinProject,
+}: EmptyProjectStateProps) {
+	return (
+		<div className={styles.emptyState}>
+			<div className={styles.emptyStateContent}>
+				<Heading size="5" className={styles.emptyStateHeading}>
+					企画に参加していません
+				</Heading>
+				<Text
+					as="p"
+					size="2"
+					color="gray"
+					className={styles.emptyStateDescription}
+				>
+					新規作成するか、企画参加コードを企画責任者から受け取って、企画に参加してください。
+				</Text>
+				<div className={styles.emptyStateActions}>
+					<Button size="2" onClick={onCreateProject}>
+						新しい企画を作成
+					</Button>
+					<Button size="2" intent="secondary" onClick={onJoinProject}>
+						企画参加コードで参加
+					</Button>
+				</div>
+			</div>
+		</div>
+	);
 }
 
 export const Route = createFileRoute("/project")({
@@ -111,7 +149,8 @@ function ProjectLayout() {
 	const selectedProject =
 		projects.find(p => p.id === selectedProjectId) ?? null;
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-	const [dialogOpen, setDialogOpen] = useState(false);
+	const [createDialogOpen, setCreateDialogOpen] = useState(false);
+	const [joinDialogOpen, setJoinDialogOpen] = useState(false);
 	const { user } = useAuthStore();
 
 	const hasPrivilegedProject = projects.some(
@@ -170,6 +209,7 @@ function ProjectLayout() {
 					projectId: selectedProjectId,
 				},
 			});
+			throw error;
 		}
 	};
 
@@ -178,7 +218,7 @@ function ProjectLayout() {
 			<Sidebar
 				collapsed={sidebarCollapsed}
 				onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-				menuItems={projectMenuItemsWithDot}
+				menuItems={projects.length > 0 ? projectMenuItemsWithDot : []}
 				projectId={selectedProjectId}
 				projectSelector={
 					<ProjectSelector
@@ -191,7 +231,7 @@ function ProjectLayout() {
 						selectedProjectId={selectedProjectId}
 						collapsed={sidebarCollapsed}
 						onSelectProject={handleSelectProject}
-						onCreateProject={() => setDialogOpen(true)}
+						onCreateProject={() => setCreateDialogOpen(true)}
 						onJoinProject={handleJoinProject}
 						hasPrivilegedProject={hasPrivilegedProject}
 					/>
@@ -209,16 +249,28 @@ function ProjectLayout() {
 						</Callout.Text>
 					</Callout.Root>
 				)}
-				{selectedProjectId && <Outlet key={selectedProjectId} />}
+				{projects.length === 0 ? (
+					<EmptyProjectState
+						onCreateProject={() => setCreateDialogOpen(true)}
+						onJoinProject={() => setJoinDialogOpen(true)}
+					/>
+				) : (
+					selectedProjectId && <Outlet key={selectedProjectId} />
+				)}
 			</main>
 			<ProjectCreateDialog
-				open={dialogOpen}
-				onOpenChange={setDialogOpen}
+				open={createDialogOpen}
+				onOpenChange={setCreateDialogOpen}
 				onCreated={project => {
 					setProjects([...projects, project]);
 					setSelectedProjectId(project.id);
 					router.invalidate();
 				}}
+			/>
+			<ProjectJoinDialog
+				open={joinDialogOpen}
+				onOpenChange={setJoinDialogOpen}
+				onJoin={handleJoinProject}
 			/>
 		</div>
 	);
