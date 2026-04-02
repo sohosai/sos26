@@ -1511,13 +1511,15 @@ model ProjectRegistrationFormResponse {
   // 各項目への回答
   answers ProjectRegistrationFormAnswer[]
 
-  submittedAt DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  submittedAt DateTime  @default(now())
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@unique([formId, projectId])
   @@index([formId])
   @@index([projectId])
+  @@index([deletedAt])
 }
 
 // 企画登録フォーム各項目への回答
@@ -1540,12 +1542,14 @@ model ProjectRegistrationFormAnswer {
   // 選択肢回答（SELECT/CHECKBOX用）
   selectedOptions ProjectRegistrationFormAnswerSelectedOption[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@unique([responseId, formItemId])
   @@index([responseId])
   @@index([formItemId])
+  @@index([deletedAt])
 }
 
 model ProjectRegistrationFormAnswerFile {
