@@ -16,13 +16,22 @@ export function ProjectJoinDialog({
 	const [inviteCode, setInviteCode] = useState("");
 	const [loading, setLoading] = useState(false);
 
+	const handleOpenChange = (newOpen: boolean) => {
+		onOpenChange(newOpen);
+		// ダイアログが閉じられた時に入力内容をリセット
+		if (!newOpen) {
+			setInviteCode("");
+			setLoading(false);
+		}
+	};
+
 	const handleSubmit = async () => {
 		if (!inviteCode.trim()) return;
 
 		setLoading(true);
 		try {
 			await onJoin(inviteCode.trim());
-			setInviteCode("");
+			// 成功時のみダイアログを閉じる
 			onOpenChange(false);
 		} finally {
 			setLoading(false);
@@ -30,7 +39,7 @@ export function ProjectJoinDialog({
 	};
 
 	return (
-		<Dialog.Root open={open} onOpenChange={onOpenChange}>
+		<Dialog.Root open={open} onOpenChange={handleOpenChange}>
 			<Dialog.Content className={styles.content}>
 				<Dialog.Title>企画に参加</Dialog.Title>
 				<Dialog.Description size="2">
@@ -38,7 +47,7 @@ export function ProjectJoinDialog({
 				</Dialog.Description>
 
 				<Flex direction="column" gap="3" mt="4">
-					<Text as="div" size="2" mb="1" weight="medium">
+					<Text as="label" size="2" mb="1" weight="medium">
 						企画参加コード
 					</Text>
 					<TextField.Root
