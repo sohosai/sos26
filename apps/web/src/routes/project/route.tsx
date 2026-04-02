@@ -1,4 +1,4 @@
-import { Button, Callout, Heading, Text } from "@radix-ui/themes";
+import { Callout, Heading, Text } from "@radix-ui/themes";
 import type { Project } from "@sos26/shared";
 import {
 	createFileRoute,
@@ -9,6 +9,7 @@ import {
 import { useEffect, useState } from "react";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
+import { Button } from "@/components/primitives";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
 import { ProjectJoinDialog } from "@/components/project/ProjectJoinDialog";
 import { joinProject, listMyProjects } from "@/lib/api/project";
@@ -54,10 +55,10 @@ function EmptyProjectState({
 					新規作成するか、企画参加コードを企画責任者から受け取って、企画に参加してください。
 				</Text>
 				<div className={styles.emptyStateActions}>
-					<Button size="3" onClick={onCreateProject}>
+					<Button size="2" onClick={onCreateProject}>
 						新しい企画を作成
 					</Button>
-					<Button size="3" variant="outline" onClick={onJoinProject}>
+					<Button size="2" intent="secondary" onClick={onJoinProject}>
 						企画参加コードで参加
 					</Button>
 				</div>
