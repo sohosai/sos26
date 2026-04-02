@@ -1,4 +1,4 @@
-import { Callout } from "@radix-ui/themes";
+import { Button, Callout, Heading, Text } from "@radix-ui/themes";
 import type { Project } from "@sos26/shared";
 import {
 	createFileRoute,
@@ -10,7 +10,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
-import { EmptyProjectState } from "@/components/project/EmptyProjectState";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
 import { ProjectJoinDialog } from "@/components/project/ProjectJoinDialog";
 import { joinProject, listMyProjects } from "@/lib/api/project";
@@ -29,6 +28,42 @@ function projectDeletionStatusLabel(status: Project["deletionStatus"]): string {
 	if (status === "LOTTERY_LOSS") return "抽選漏れ";
 	if (status === "DELETED") return "削除";
 	return "";
+}
+
+type EmptyProjectStateProps = {
+	onCreateProject: () => void;
+	onJoinProject: () => void;
+};
+
+function EmptyProjectState({
+	onCreateProject,
+	onJoinProject,
+}: EmptyProjectStateProps) {
+	return (
+		<div className={styles.emptyState}>
+			<div className={styles.emptyStateContent}>
+				<Heading size="5" className={styles.emptyStateHeading}>
+					企画に参加していません
+				</Heading>
+				<Text
+					as="p"
+					size="2"
+					color="gray"
+					className={styles.emptyStateDescription}
+				>
+					新規作成するか、企画参加コードを企画責任者から受け取って、企画に参加してください。
+				</Text>
+				<div className={styles.emptyStateActions}>
+					<Button size="3" onClick={onCreateProject}>
+						新しい企画を作成
+					</Button>
+					<Button size="3" variant="outline" onClick={onJoinProject}>
+						企画参加コードで参加
+					</Button>
+				</div>
+			</div>
+		</div>
+	);
 }
 
 export const Route = createFileRoute("/project")({
