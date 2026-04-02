@@ -12,6 +12,7 @@ import {
 } from "../lib/emails";
 import { env } from "../lib/env";
 import { Errors } from "../lib/error";
+import { logIntegrationFailure } from "../lib/error-logging";
 import { auth as firebaseAuth } from "../lib/firebase";
 import { prisma } from "../lib/prisma";
 import { generateVerificationToken, hashToken } from "../lib/token";
@@ -206,11 +207,15 @@ authRoute.post("/register", requireRegTicket, async c => {
 						"パスワードは6文字以上で入力してください"
 					);
 				default:
-					console.error("[Auth] Firebase createUser failed", e.code, e.message);
+					logIntegrationFailure("Auth", "Firebase createUser", e, {
+						code: e.code,
+						message: e.message,
+						email,
+					});
 					throw Errors.internal("ユーザー作成に失敗しました");
 			}
 		}
-		console.error("[Auth] Firebase createUser failed (unknown error)", e);
+		logIntegrationFailure("Auth", "Firebase createUser", e, { email });
 		throw Errors.internal("ユーザー作成に失敗しました");
 	}
 
@@ -229,13 +234,21 @@ authRoute.post("/register", requireRegTicket, async c => {
 		return c.json({ user });
 	} catch (e) {
 		// DB 失敗時は Firebase ユーザーを補償削除
-		console.error("[Auth] User creation failed, deleting Firebase user", e);
+		logIntegrationFailure("Auth", "Persist user after createUser", e, {
+			email,
+			firebaseUid,
+		});
 		try {
 			await firebaseAuth.deleteUser(firebaseUid);
 		} catch (deleteError) {
-			console.error(
-				"[Auth] Failed to delete Firebase user for compensation",
-				deleteError
+			logIntegrationFailure(
+				"Auth",
+				"Delete Firebase user for compensation",
+				deleteError,
+				{
+					email,
+					firebaseUid,
+				}
 			);
 		}
 		throw Errors.internal("ユーザー作成に失敗しました");

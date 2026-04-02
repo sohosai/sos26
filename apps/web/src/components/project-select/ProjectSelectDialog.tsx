@@ -397,7 +397,7 @@ export function ProjectSelectDialog({
 	onOpenChange,
 	selectedIds,
 	onConfirm,
-	title = "配信先プロジェクトを選択",
+	title = "配信先企画を選択",
 }: ProjectSelectDialogProps) {
 	const [apiColumns, setApiColumns] = useState<ApiColumn[]>([]);
 	const [apiRows, setApiRows] = useState<GetMastersheetDataResponse["rows"]>(

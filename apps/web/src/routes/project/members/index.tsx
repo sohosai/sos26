@@ -20,6 +20,7 @@ import {
 	removeProjectMember,
 } from "@/lib/api/project";
 import { useAuthStore } from "@/lib/auth";
+import { reportHandledError } from "@/lib/error/report";
 import { formatDate } from "@/lib/format";
 import { useProject, useProjectStore } from "@/lib/project/store";
 import styles from "./index.module.scss";
@@ -180,8 +181,17 @@ function RouteComponent() {
 				}))
 			);
 			toast.success("副責任者の確認待ちにしました");
-		} catch {
-			toast.error("副責任者の任命に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "submit",
+				userMessage: "副責任者の任命に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					projectId: project.id,
+					memberId,
+				},
+			});
 		}
 	};
 
@@ -207,8 +217,16 @@ function RouteComponent() {
 				})
 			);
 			toast.success("副責任者リクエストを承認しました");
-		} catch {
-			toast.error("副責任者リクエストの承認に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "approve",
+				userMessage: "副責任者リクエストの承認に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					projectId: project.id,
+				},
+			});
 		} finally {
 			setIsApprovingSubOwnerRequest(false);
 		}
@@ -225,8 +243,16 @@ function RouteComponent() {
 				}))
 			);
 			toast.success("副責任者リクエストを取り消しました");
-		} catch {
-			toast.error("副責任者リクエストの取り消しに失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "reject",
+				userMessage: "副責任者リクエストの取り消しに失敗しました",
+				ui: { type: "toast" },
+				context: {
+					projectId: project.id,
+				},
+			});
 		}
 	};
 
@@ -243,8 +269,16 @@ function RouteComponent() {
 				}))
 			);
 			toast.success("副責任者リクエストを辞退しました");
-		} catch {
-			toast.error("副責任者リクエストの辞退に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "reject",
+				userMessage: "副責任者リクエストの辞退に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					projectId: project.id,
+				},
+			});
 		} finally {
 			setIsRejectingSubOwnerRequest(false);
 		}
@@ -257,8 +291,17 @@ function RouteComponent() {
 			if (pendingSubOwnerRequestUserId === memberId) {
 				setPendingSubOwnerRequestUserId(null);
 			}
-		} catch {
-			toast.error("メンバーの削除に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "delete",
+				userMessage: "メンバーの削除に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					projectId: project.id,
+					memberId,
+				},
+			});
 		}
 	};
 

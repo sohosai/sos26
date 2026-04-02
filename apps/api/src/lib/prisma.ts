@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { Errors } from "./error";
+import { logIntegrationFailure } from "./error-logging";
 
 const globalForPrisma = globalThis as unknown as {
 	prisma: PrismaClient | undefined;
@@ -34,6 +35,6 @@ export function handlePrismaError(e: unknown): never {
 		}
 	}
 
-	console.error("[Prisma] Unexpected error", e);
+	logIntegrationFailure("Prisma", "Unexpected query", e);
 	throw Errors.internal("データベースエラーが発生しました");
 }

@@ -122,7 +122,7 @@ export async function regenerateInviteCode(
 
 /**
  * POST /project/:projectId/members/:userId/remove
- * プロジェクトメンバーを削除
+ * 企画メンバーを削除
  */
 export async function removeProjectMember(
 	projectId: string,
@@ -135,7 +135,7 @@ export async function removeProjectMember(
 
 /**
  * POST /project/:projectId/members/:userId/assign
- * プロジェクトメンバーに副責任者リクエストを送る
+ * 企画メンバーに副責任者リクエストを送る
  */
 export async function assignSubOwner(
 	projectId: string,

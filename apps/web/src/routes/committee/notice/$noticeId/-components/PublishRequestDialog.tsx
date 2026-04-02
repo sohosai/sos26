@@ -140,7 +140,7 @@ export function PublishRequestDialog({
 						</IconButton>
 					</div>
 					<Dialog.Description size="2" mb="4" color="gray">
-						公開日時と公開先プロジェクトを指定し、承認を依頼します。
+						公開日時と公開先企画を指定し、承認を依頼します。
 					</Dialog.Description>
 
 					<div className={styles.form}>
@@ -204,7 +204,7 @@ export function PublishRequestDialog({
 							/* 個別指定モード */
 							<div className={styles.field}>
 								<Text as="label" size="2" weight="medium">
-									公開先プロジェクト
+									公開先企画
 								</Text>
 								<Button
 									intent="secondary"
@@ -270,7 +270,7 @@ export function PublishRequestDialog({
 				onOpenChange={setProjectSelectOpen}
 				selectedIds={selectedProjectIds}
 				onConfirm={setSelectedProjectIds}
-				title="公開先プロジェクトを選択"
+				title="公開先企画を選択"
 			/>
 		</>
 	);

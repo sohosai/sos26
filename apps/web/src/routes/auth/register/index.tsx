@@ -4,6 +4,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button, TextField } from "@/components/primitives";
 import { startEmailVerification } from "@/lib/api/auth";
+import { reportHandledError } from "@/lib/error/report";
 import { isClientError } from "@/lib/http/error";
 import styles from "../auth.module.scss";
 
@@ -44,17 +45,29 @@ function RegisterPage() {
 			await startEmailVerification({ email });
 			setSent(true);
 		} catch (err) {
-			if (isClientError(err)) {
-				if (err.code === ErrorCode.VALIDATION_ERROR) {
-					setError(
-						"筑波大学のメールアドレス（s0000000@u.tsukuba.ac.jp）を入力してください"
-					);
-				} else {
-					setError(err.message);
-				}
-			} else {
-				setError("エラーが発生しました");
-			}
+			reportHandledError({
+				error: err,
+				operation: "submit",
+				userMessage: "エラーが発生しました",
+				ui: { type: "inline", setError },
+				resolveMessage: ({ error, fallbackMessage }) => {
+					if (
+						isClientError(error) &&
+						error.code === ErrorCode.VALIDATION_ERROR
+					) {
+						return "筑波大学のメールアドレス（s0000000@u.tsukuba.ac.jp）を入力してください";
+					}
+
+					if (isClientError(error)) {
+						return error.message;
+					}
+
+					return fallbackMessage;
+				},
+				context: {
+					flow: "auth_register_start",
+				},
+			});
 		} finally {
 			setLoading(false);
 		}

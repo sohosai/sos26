@@ -110,6 +110,7 @@ function ErrorComponent({ error }: { error: unknown }) {
 		error instanceof Error ? error.message : String(error ?? "Unknown error");
 
 	useEffect(() => {
+		console.error("[Route Error]", error);
 		Sentry.captureException(error);
 	}, [error]);
 

@@ -79,6 +79,29 @@ async function fetchAndSetUser(fbUser: FirebaseUser | null): Promise<void> {
 			isCommitteeMember: !!response.committeeMember,
 		});
 	} catch (err) {
+		if (isClientError(err)) {
+			if (err.code === ErrorCode.NOT_FOUND) {
+				console.warn(
+					"[Auth] Firebase user is authenticated but app user was not found",
+					{
+						firebaseUid: fbUser.uid,
+						code: err.code,
+						message: err.message,
+					}
+				);
+			} else {
+				console.error("[Auth] Failed to fetch current user", {
+					firebaseUid: fbUser.uid,
+					kind: err.kind,
+					code: err.code,
+					message: err.message,
+					apiError: err.apiError?.error,
+				});
+			}
+		} else {
+			console.error("[Auth] Failed to fetch current user", err);
+		}
+
 		if (isClientError(err) && err.code === ErrorCode.NOT_FOUND) {
 			useAuthStore.setState(UNAUTHENTICATED_STATE);
 		} else {

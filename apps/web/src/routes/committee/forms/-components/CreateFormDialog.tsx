@@ -2,12 +2,12 @@ import { Text } from "@radix-ui/themes";
 import { allowedMimeTypes } from "@sos26/shared";
 import { IconPaperclip, IconX } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { FormEditDialog } from "@/components/form/Builder/EditDialog";
 import type { Form } from "@/components/form/type";
 import { Button, IconButton } from "@/components/primitives";
 import { addFormAttachments, createForm } from "@/lib/api/committee-form";
 import { uploadFile } from "@/lib/api/files";
+import { reportHandledError } from "@/lib/error/report";
 import { formatFileSize } from "@/lib/format";
 import styles from "./CreateFormDialog.module.scss";
 
@@ -85,8 +85,16 @@ export function CreateFormDialog({ open, onOpenChange, onSuccess }: Props) {
 
 			onSuccess?.();
 			onOpenChange(false);
-		} catch {
-			toast.error("申請の作成に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "create",
+				userMessage: "申請の作成に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formName: form.name,
+				},
+			});
 		} finally {
 			setIsSubmitting(false);
 		}

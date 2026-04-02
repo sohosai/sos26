@@ -1,6 +1,5 @@
 import type { GetProjectFormResponse } from "@sos26/shared";
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
 import { FormAnswerDialog } from "@/components/form/Answer/AnswerDialog";
 import { DownloadFileNameProvider } from "@/components/form/Answer/DownloadFileNameContext";
 import type { Form, FormAnswers } from "@/components/form/type";
@@ -9,6 +8,7 @@ import {
 	getProjectForm,
 	updateFormResponse,
 } from "@/lib/api/project-form";
+import { reportHandledError } from "@/lib/error/report";
 import { ProjectFormToForm } from "@/lib/form/convert";
 import {
 	buildAnswerBody,
@@ -77,10 +77,19 @@ export function ProjectFormAnswerDialog({
 				// openのたびにdraftResponseIdをサーバーの値でリセット
 				setDraftResponseId(null);
 			})
-			.catch(() => {
+			.catch(error => {
 				if (controller.signal.aborted) return;
 				setFetchState({ status: "error" });
-				toast.error("申請の取得に失敗しました");
+				reportHandledError({
+					error,
+					operation: "read",
+					userMessage: "申請の取得に失敗しました",
+					ui: { type: "toast" },
+					context: {
+						projectId,
+						formDeliveryId,
+					},
+				});
 			});
 
 		return () => controller.abort();

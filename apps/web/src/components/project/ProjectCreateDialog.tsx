@@ -16,7 +16,6 @@ import {
 } from "@sos26/shared";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 import { AnswerField } from "@/components/form/Answer/AnswerField";
 import {
 	createEmptyFileAnswerValue,
@@ -33,6 +32,7 @@ import { Button, Checkbox, TextField } from "@/components/primitives";
 import { uploadFile } from "@/lib/api/files";
 import { createProject } from "@/lib/api/project";
 import { getActiveProjectRegistrationForms } from "@/lib/api/project-registration-form";
+import { reportHandledError } from "@/lib/error/report";
 import {
 	PROJECT_LOCATION_OPTIONS,
 	PROJECT_TYPE_OPTIONS,
@@ -530,8 +530,17 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 			setRegFormAnswers(forms.map(f => initFormAnswers(f.items)));
 			setRegFormErrors(forms.map(() => ({})));
 			setStep(1);
-		} catch {
-			toast.error("追加申請の取得に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "read",
+				userMessage: "追加申請の取得に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					projectType: parsed.data,
+					projectLocation: parsedLoc.data,
+				},
+			});
 		} finally {
 			setIsFetching(false);
 		}
@@ -613,8 +622,18 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 			});
 			onCreated(res.project);
 			closeAndReset();
-		} catch {
-			toast.error("企画の作成に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "create",
+				userMessage: "企画の作成に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					projectName: step1.name,
+					projectType: type,
+					projectLocation: location,
+				},
+			});
 		} finally {
 			setIsSubmitting(false);
 		}
