@@ -463,12 +463,24 @@ function RouteComponent() {
 		memberColumnHelper.accessor("email", {
 			header: "メールアドレス",
 		}),
-		memberColumnHelper.display({
+		memberColumnHelper.accessor(row => row.bureau, {
 			id: "bureau",
 			header: "所属局",
 			cell: ({ row }) => (
 				<BureauCell member={row.original} onChange={handleBureauChange} />
 			),
+			sortingFn: (rowA, rowB) => {
+				const a = bureauLabelMap[rowA.original.bureau] ?? rowA.original.bureau;
+				const b = bureauLabelMap[rowB.original.bureau] ?? rowB.original.bureau;
+				return a.localeCompare(b, "ja");
+			},
+			meta: {
+				filterVariant: "select",
+				selectOptions: allBureaus.map(bureau => ({
+					value: bureau,
+					label: bureauLabelMap[bureau],
+				})),
+			},
 		}),
 		memberColumnHelper.display({
 			id: "permissions",
@@ -510,6 +522,7 @@ function RouteComponent() {
 			<DataTable<CommitteeMemberRow>
 				data={members}
 				columns={columns}
+				features={{ columnFilter: true }}
 				initialSorting={[
 					{
 						id: "joinedAt",
