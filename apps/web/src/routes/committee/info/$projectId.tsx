@@ -42,7 +42,7 @@ export const Route = createFileRoute("/committee/info/$projectId")({
 });
 
 function statusLabel(status: ProjectDeletionStatus | null): string {
-	if (status === "LOTTERY_LOSS") return "抽選漏れ";
+	if (status === "LOTTERY_LOSS") return "落選";
 	if (status === "DELETED") return "削除";
 	return "有効";
 }
@@ -331,7 +331,7 @@ function CommitteeProjectInfoPage() {
 							<Select.Content>
 								<Select.Item value="ACTIVE">有効</Select.Item>
 								<Select.Item value="DELETED">削除</Select.Item>
-								<Select.Item value="LOTTERY_LOSS">抽選漏れ</Select.Item>
+								<Select.Item value="LOTTERY_LOSS">落選</Select.Item>
 							</Select.Content>
 						</Select.Root>
 					</Field>

@@ -39,7 +39,7 @@ function getProjectStatusFields(project: object): ProjectStatusFields {
 function getProjectDeletionStatusLabel(
 	status: "LOTTERY_LOSS" | "DELETED" | null
 ): string {
-	if (status === "LOTTERY_LOSS") return "抽選漏れ";
+	if (status === "LOTTERY_LOSS") return "落選";
 	if (status === "DELETED") return "削除";
 	return "";
 }

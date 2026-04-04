@@ -71,7 +71,7 @@ export async function updateCommitteeProjectBaseInfo(
 
 /**
  * PATCH /committee/projects/:projectId/deletion-status
- * 企画の削除状態を更新（削除/抽選漏れ/取消）
+ * 企画の削除状態を更新（削除/落選/取消）
  */
 export async function updateCommitteeProjectDeletionStatus(
 	projectId: string,

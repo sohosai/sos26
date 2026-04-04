@@ -205,7 +205,7 @@ model Project {
 }
 
 enum ProjectDeletionStatus {
-  LOTTERY_LOSS // 抽選漏れ
+  LOTTERY_LOSS // 落選
   DELETED // 削除
 }
 

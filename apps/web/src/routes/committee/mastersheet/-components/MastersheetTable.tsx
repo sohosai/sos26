@@ -78,7 +78,7 @@ type ProjectDeletionFilterValue = "ACTIVE" | "DELETED" | "LOTTERY_LOSS";
 function projectDeletionStatusLabel(
 	status: ProjectDeletionStatus | null
 ): string {
-	if (status === "LOTTERY_LOSS") return "抽選漏れ";
+	if (status === "LOTTERY_LOSS") return "落選";
 	if (status === "DELETED") return "削除";
 	return "有効";
 }
@@ -230,7 +230,7 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 				selectOptions: [
 					{ value: "ACTIVE", label: "有効" },
 					{ value: "DELETED", label: "削除" },
-					{ value: "LOTTERY_LOSS", label: "抽選漏れ" },
+					{ value: "LOTTERY_LOSS", label: "落選" },
 				],
 			},
 		}
