@@ -62,7 +62,7 @@ const permissionLabelMap: Record<CommitteePermission, string> = {
 	FORM_DELIVER: "申請配信",
 	INQUIRY_ADMIN: "お問い合わせ管理",
 	PROJECT_EDIT: "企画編集",
-	PROJECT_DELETE: "企画削除",
+	PROJECT_DELETE: "企画中止",
 	PROJECT_VIEW: "企画閲覧",
 	PROJECT_REGISTRATION_FORM_CREATE: "企画登録フォーム作成",
 	PROJECT_REGISTRATION_FORM_DELIVER: "企画登録フォーム配信",

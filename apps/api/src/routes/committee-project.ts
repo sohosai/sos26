@@ -40,7 +40,7 @@ function getProjectDeletionStatusLabel(
 	status: "LOTTERY_LOSS" | "DELETED" | null
 ): string {
 	if (status === "LOTTERY_LOSS") return "落選";
-	if (status === "DELETED") return "削除";
+	if (status === "DELETED") return "企画中止";
 	return "";
 }
 
@@ -434,7 +434,7 @@ async function handleUpdateProjectDeletionStatus(c: Context<AuthEnv>) {
 	const permissions = await resolveProjectPermissions(user.id);
 
 	if (!permissions.canDelete) {
-		throw Errors.forbidden("企画削除権限がありません");
+		throw Errors.forbidden("企画中止権限がありません");
 	}
 
 	const body = await c.req.json().catch(() => ({}));
