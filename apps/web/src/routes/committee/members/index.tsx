@@ -482,9 +482,16 @@ function RouteComponent() {
 				})),
 			},
 		}),
-		memberColumnHelper.display({
+		memberColumnHelper.accessor(row => row.permissions, {
 			id: "permissions",
 			header: "権限",
+			meta: {
+				filterVariant: "select",
+				selectOptions: allPermissions.map(perm => ({
+					value: perm,
+					label: permissionLabelMap[perm],
+				})),
+			},
 			cell: ({ row }) => (
 				<PermissionsCell
 					member={row.original}
