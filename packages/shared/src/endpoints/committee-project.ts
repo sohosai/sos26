@@ -93,7 +93,7 @@ export const updateCommitteeProjectBaseInfoEndpoint: BodyEndpoint<
 
 /**
  * PATCH /committee/projects/:projectId/deletion-status
- * 企画の削除状態を更新（削除/落選/取消）
+ * 企画の削除状態を更新（企画中止/落選/取消）
  */
 export const updateCommitteeProjectDeletionStatusEndpoint: BodyEndpoint<
 	"PATCH",
