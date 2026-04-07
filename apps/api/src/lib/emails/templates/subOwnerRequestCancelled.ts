@@ -4,7 +4,7 @@ export function subOwnerRequestCancelledTemplate(params: {
 	ownerName: string;
 	projectName: string;
 }) {
-	const body = `${params.ownerName} さんが副責任者リクエストを取り消しました。
+	const body = `${params.ownerName} さんが副企画責任者リクエストを取り消しました。
 
 企画名: ${params.projectName}
 
@@ -13,7 +13,8 @@ export function subOwnerRequestCancelledTemplate(params: {
 このメールは送信専用です。返信いただいてもお応えできません。`;
 
 	return {
-		subject: "【雙峰祭オンラインシステム】副責任者リクエストが取り消されました",
+		subject:
+			"【雙峰祭オンラインシステム】副企画責任者リクエストが取り消されました",
 		html: textToHtml(body),
 		text: body,
 	};

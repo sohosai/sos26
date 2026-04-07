@@ -203,7 +203,7 @@ function ProjectLayout() {
 				error,
 				operation: "join_project",
 				userMessage:
-					"企画への参加に失敗しました。招待コードを確認してください。",
+					"企画への参加に失敗しました。企画参加コードを確認してください。",
 				ui: { type: "toast" },
 				context: {
 					projectId: selectedProjectId,

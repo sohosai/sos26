@@ -5,7 +5,7 @@ export function subOwnerRequestCancelledTemplate(params: {
 	url: string;
 }): PushPayload {
 	return {
-		title: "副責任者リクエストが取り消されました",
+		title: "副企画責任者リクエストが取り消されました",
 		body: params.projectName,
 		icon: "/sos.svg",
 		badge: "/sos.svg",

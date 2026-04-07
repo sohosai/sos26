@@ -219,15 +219,15 @@ function CommitteeProjectInfoPage() {
 			</Card>
 
 			<Card>
-				<Heading size="4">責任者情報</Heading>
+				<Heading size="4">企画責任者情報</Heading>
 				{!project.permissions.canViewContacts && (
 					<Text size="2" color="gray">
 						企画閲覧権限がないため、メールアドレスと電話番号は非表示です。
 					</Text>
 				)}
 				<div className={styles.people}>
-					<PersonCard title="責任者" person={project.owner} />
-					<PersonCard title="副責任者" person={project.subOwner} />
+					<PersonCard title="企画責任者" person={project.owner} />
+					<PersonCard title="副企画責任者" person={project.subOwner} />
 				</div>
 			</Card>
 

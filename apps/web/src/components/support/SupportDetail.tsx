@@ -307,7 +307,7 @@ function InquiryReplyPanel({
 		return (
 			<section className={styles.replySection}>
 				<Text size="2" color="gray">
-					このお問い合わせは解決済みのため、コメントを追加できません。
+					このお問い合わせは解決済みのため、返信できません。
 				</Text>
 				{viewerRole === "project" && (
 					<Button
