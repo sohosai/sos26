@@ -1,5 +1,5 @@
 /**
- * 副責任者リクエストが送信されたとき、指名されたユーザーに送信するメール
+ * 副企画責任者リクエストが送信されたとき、指名されたユーザーに送信するメール
  * トリガー: POST /project/:projectId/members/:userId/assign
  */
 import { z } from "zod";

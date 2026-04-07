@@ -375,7 +375,9 @@ function AuthDetailSection({
 				<Text size="2" color="gray">
 					閲覧制限
 				</Text>
-				<Text size="2">{auth.ownerOnly ? "責任者・副責任者のみ" : "なし"}</Text>
+				<Text size="2">
+					{auth.ownerOnly ? "企画責任者・副企画責任者のみ" : "なし"}
+				</Text>
 			</div>
 			{isApprover && pendingAuth && (
 				<div className={styles.authorizationActions}>

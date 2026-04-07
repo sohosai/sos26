@@ -72,7 +72,7 @@ export function FormPublishRequestDialog({
 	// 申請の必須回答かどうか
 	const [isRequired, setIsRequired] = useState(true);
 
-	// 回答の閲覧制限（責任者・副責任者のみ）
+	// 回答の閲覧制限（企画責任者・副企画責任者のみ）
 	const [ownerOnly, setOwnerOnly] = useState(false);
 
 	// 配信先モード
@@ -313,7 +313,7 @@ export function FormPublishRequestDialog({
 						{/* 回答の閲覧制限 */}
 						<div className={styles.field}>
 							<Checkbox
-								label="回答の閲覧を責任者・副責任者に限定する"
+								label="回答の閲覧を企画責任者・副企画責任者に限定する"
 								checked={ownerOnly}
 								onCheckedChange={checked => setOwnerOnly(checked === true)}
 							/>

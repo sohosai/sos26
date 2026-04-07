@@ -34,7 +34,7 @@ export type MemberRow = {
 	joinedAt: Date;
 };
 
-const pendingSubOwnerLabel = "副責任者承認待ち";
+const pendingSubOwnerLabel = "副企画責任者承認待ち";
 
 const buildMemberActions = (
 	member: MemberRow,
@@ -49,7 +49,7 @@ const buildMemberActions = (
 ): ActionItem<MemberRow>[] => [
 	{
 		key: "assign-sub-owner",
-		label: "副責任者に指名",
+		label: "副企画責任者に指名",
 		icon: <IconUserUp size={16} />,
 		hidden:
 			!isOwner ||
@@ -67,7 +67,7 @@ const buildMemberActions = (
 	},
 	{
 		key: "cancel-sub-owner-request",
-		label: "副責任者リクエスト取り消し",
+		label: "副企画責任者リクエスト取り消し",
 		icon: <IconX size={16} />,
 		hidden:
 			!isOwner ||
@@ -78,15 +78,15 @@ const buildMemberActions = (
 ];
 
 const roleLabelMap: Record<MemberRow["role"], string> = {
-	OWNER: "責任者",
-	SUB_OWNER: "副責任者",
+	OWNER: "企画責任者",
+	SUB_OWNER: "副企画責任者",
 	MEMBER: "メンバー",
 };
 
 const roleColorMap: Record<string, string> = {
-	責任者: "red",
-	副責任者: "orange",
-	副責任者承認待ち: "orange",
+	企画責任者: "red",
+	副企画責任者: "orange",
+	副企画責任者承認待ち: "orange",
 	メンバー: "gray",
 };
 
@@ -180,12 +180,12 @@ function RouteComponent() {
 					],
 				}))
 			);
-			toast.success("副責任者の確認待ちにしました");
+			toast.success("副企画責任者の確認待ちにしました");
 		} catch (error) {
 			reportHandledError({
 				error,
 				operation: "submit",
-				userMessage: "副責任者の任命に失敗しました",
+				userMessage: "副企画責任者の任命に失敗しました",
 				ui: { type: "toast" },
 				context: {
 					projectId: project.id,
@@ -216,12 +216,12 @@ function RouteComponent() {
 					};
 				})
 			);
-			toast.success("副責任者リクエストを承認しました");
+			toast.success("副企画責任者リクエストを承認しました");
 		} catch (error) {
 			reportHandledError({
 				error,
 				operation: "approve",
-				userMessage: "副責任者リクエストの承認に失敗しました",
+				userMessage: "副企画責任者リクエストの承認に失敗しました",
 				ui: { type: "toast" },
 				context: {
 					projectId: project.id,
@@ -242,12 +242,12 @@ function RouteComponent() {
 					roleLabel: [roleLabelMap[m.role]],
 				}))
 			);
-			toast.success("副責任者リクエストを取り消しました");
+			toast.success("副企画責任者リクエストを取り消しました");
 		} catch (error) {
 			reportHandledError({
 				error,
 				operation: "reject",
-				userMessage: "副責任者リクエストの取り消しに失敗しました",
+				userMessage: "副企画責任者リクエストの取り消しに失敗しました",
 				ui: { type: "toast" },
 				context: {
 					projectId: project.id,
@@ -268,12 +268,12 @@ function RouteComponent() {
 					roleLabel: [roleLabelMap[m.role]],
 				}))
 			);
-			toast.success("副責任者リクエストを辞退しました");
+			toast.success("副企画責任者リクエストを辞退しました");
 		} catch (error) {
 			reportHandledError({
 				error,
 				operation: "reject",
-				userMessage: "副責任者リクエストの辞退に失敗しました",
+				userMessage: "副企画責任者リクエストの辞退に失敗しました",
 				ui: { type: "toast" },
 				context: {
 					projectId: project.id,
@@ -385,11 +385,11 @@ function RouteComponent() {
 			{/* ユーザーに承認/辞退を明示的に選択させるため、ESC・オーバーレイクリックでは閉じない */}
 			<AlertDialog.Root open={subOwnerRequestDialogOpen}>
 				<AlertDialog.Content maxWidth="420px">
-					<AlertDialog.Title>副責任者リクエストの確認</AlertDialog.Title>
+					<AlertDialog.Title>副企画責任者リクエストの確認</AlertDialog.Title>
 					<AlertDialog.Description size="2">
 						{pendingRequestedByName
-							? `${pendingRequestedByName} さんから副責任者リクエストが届いています。承認または辞退を選択してください。`
-							: "副責任者リクエストが届いています。承認または辞退を選択してください。"}
+							? `${pendingRequestedByName} さんから副企画責任者リクエストが届いています。承認または辞退を選択してください。`
+							: "副企画責任者リクエストが届いています。承認または辞退を選択してください。"}
 					</AlertDialog.Description>
 					<div className={styles.dialogActions}>
 						<Button

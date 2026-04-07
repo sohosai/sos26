@@ -5,7 +5,7 @@ export function subOwnerRequestSentTemplate(params: {
 	url: string;
 }): PushPayload {
 	return {
-		title: "副責任者への指名依頼が届きました",
+		title: "副企画責任者への指名依頼が届きました",
 		body: params.projectName,
 		icon: "/sos.svg",
 		badge: "/sos.svg",

@@ -171,11 +171,11 @@ model Project {
   //企画実施場所
   location ProjectLocation
 
-  //責任者
+  //企画責任者
   ownerId String
   owner   User   @relation("ProjectOwner", fields: [ownerId], references: [id])
 
-  //副責任者
+  //副企画責任者
   subOwnerId String?
   subOwner   User?   @relation("ProjectSubOwner", fields: [subOwnerId], references: [id])
 
@@ -209,7 +209,7 @@ enum ProjectDeletionStatus {
   DELETED // 削除
 }
 
-//企画に参加している責任者と副責任者以外のユーザーのTable
+//企画に参加している企画責任者と副企画責任者以外のユーザーのTable
 model ProjectMember {
   id        String @id @default(cuid())
   projectId String
@@ -226,14 +226,14 @@ model ProjectMember {
   @@index([userId])
 }
 
-// 副責任者の承認待ちの状態Enum
+// 副企画責任者の承認待ちの状態Enum
 enum SubOwnerRequestStatus {
   PENDING // 承認待ち
   APPROVED // 承認済み
   REJECTED // 却下
 }
 
-// 副責任者の承認確認
+// 副企画責任者の承認確認
 model ProjectSubOwnerRequest {
   id String @id @default(cuid())
 
@@ -241,7 +241,7 @@ model ProjectSubOwnerRequest {
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  // 指名された副責任者リクエスト対象ユーザー
+  // 指名された副企画責任者リクエスト対象ユーザー
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
@@ -298,7 +298,7 @@ enum CommitteePermission {
   INQUIRY_ADMIN // お問い合わせ管理
   PROJECT_EDIT // 企画編集
   PROJECT_DELETE // 企画削除
-  PROJECT_VIEW // 企画詳細閲覧（責任者連絡先を含む）
+  PROJECT_VIEW // 企画詳細閲覧（企画責任者連絡先を含む）
   PROJECT_REGISTRATION_FORM_CREATE // 企画登録フォーム作成・編集・公開申請
   PROJECT_REGISTRATION_FORM_DELIVER // 企画登録フォーム承認
 }
@@ -769,7 +769,7 @@ model FormAuthorization {
   //申請自体を回答必須にするか
   required Boolean @default(true)
 
-  //回答の閲覧制限（trueの場合、責任者・副責任者のみ閲覧・回答可能）
+  //回答の閲覧制限（trueの場合、企画責任者・副企画責任者のみ閲覧・回答可能）
   ownerOnly Boolean @default(false)
 
   //配信先指定モード

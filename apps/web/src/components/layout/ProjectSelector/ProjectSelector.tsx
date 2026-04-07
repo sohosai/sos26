@@ -141,7 +141,7 @@ export function ProjectSelector({
 					</>
 				)}
 				<div className={styles.actions}>
-					{/* 責任者、副責任者でなければ */}
+					{/* 企画責任者、副企画責任者でなければ */}
 					{!hasPrivilegedProject && (
 						<button
 							type="button"

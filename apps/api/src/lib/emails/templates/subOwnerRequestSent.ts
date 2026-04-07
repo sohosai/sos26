@@ -5,7 +5,7 @@ export function subOwnerRequestSentTemplate(params: {
 	projectName: string;
 	url: string;
 }) {
-	const body = `${params.ownerName} さんから副責任者リクエストが届きました。
+	const body = `${params.ownerName} さんから副企画責任者リクエストが届きました。
 
 企画名: ${params.projectName}
 
@@ -17,7 +17,7 @@ ${params.url}
 このメールは送信専用です。返信いただいてもお応えできません。`;
 
 	return {
-		subject: "【雙峰祭オンラインシステム】副責任者リクエスト",
+		subject: "【雙峰祭オンラインシステム】副企画責任者リクエスト",
 		html: textToHtml(body),
 		text: body,
 	};

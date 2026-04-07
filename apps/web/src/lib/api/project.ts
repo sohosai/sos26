@@ -133,7 +133,7 @@ export async function removeProjectMember(
 
 /**
  * POST /project/:projectId/members/:userId/assign
- * 企画メンバーに副責任者リクエストを送る
+ * 企画メンバーに副企画責任者リクエストを送る
  */
 export async function assignSubOwner(
 	projectId: string,
@@ -146,7 +146,7 @@ export async function assignSubOwner(
 
 /**
  * POST /project/:projectId/sub-owner-request/approve
- * 副責任者リクエストを承認
+ * 副企画責任者リクエストを承認
  */
 export async function approveSubOwnerRequest(
 	projectId: string
@@ -158,7 +158,7 @@ export async function approveSubOwnerRequest(
 
 /**
  * POST /project/:projectId/sub-owner-request/cancel
- * 副責任者リクエストを取り消し
+ * 副企画責任者リクエストを取り消し
  */
 export async function cancelSubOwnerRequest(
 	projectId: string
@@ -170,7 +170,7 @@ export async function cancelSubOwnerRequest(
 
 /**
  * POST /project/:projectId/sub-owner-request/reject
- * 副責任者リクエストを辞退
+ * 副企画責任者リクエストを辞退
  */
 export async function rejectSubOwnerRequest(
 	projectId: string

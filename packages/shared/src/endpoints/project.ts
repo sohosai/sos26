@@ -203,7 +203,7 @@ export const removeProjectMemberEndpoint: BodyEndpoint<
 
 /**
  * POST /project/:projectId/members/:userId/assign
- * 企画メンバーに副責任者リクエストを送信
+ * 企画メンバーに副企画責任者リクエストを送信
  */
 export const assignSubOwnerEndpoint: BodyEndpoint<
 	"POST",
@@ -223,7 +223,7 @@ export const assignSubOwnerEndpoint: BodyEndpoint<
 
 /**
  * POST /project/:projectId/sub-owner-request/approve
- * 指名されたユーザーが副責任者リクエストを承認する
+ * 指名されたユーザーが副企画責任者リクエストを承認する
  */
 export const approveSubOwnerRequestEndpoint: BodyEndpoint<
 	"POST",
@@ -243,7 +243,7 @@ export const approveSubOwnerRequestEndpoint: BodyEndpoint<
 
 /**
  * POST /project/:projectId/sub-owner-request/cancel
- * 責任者が副責任者リクエストを取り消す
+ * 企画責任者が副企画責任者リクエストを取り消す
  */
 export const cancelSubOwnerRequestEndpoint: BodyEndpoint<
 	"POST",
@@ -263,7 +263,7 @@ export const cancelSubOwnerRequestEndpoint: BodyEndpoint<
 
 /**
  * POST /project/:projectId/sub-owner-request/reject
- * 指名されたユーザーが副責任者リクエストを辞退する
+ * 指名されたユーザーが副企画責任者リクエストを辞退する
  */
 export const rejectSubOwnerRequestEndpoint: BodyEndpoint<
 	"POST",
