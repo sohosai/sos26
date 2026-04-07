@@ -179,7 +179,7 @@ model Project {
   subOwnerId String?
   subOwner   User?   @relation("ProjectSubOwner", fields: [subOwnerId], references: [id])
 
-  //招待コード
+  //企画参加コード
   inviteCode String @unique @db.Char(6)
 
   // 非アクティブ化理由

@@ -160,16 +160,16 @@ export function ProjectSelector({
 							onClick={() => setShowJoinInput(true)}
 						>
 							<IconTicket size={16} />
-							<Text size="2">招待コードで参加</Text>
+							<Text size="2">企画参加コードで参加</Text>
 						</button>
 					) : (
 						<div className={styles.joinInput} ref={joinInputContainerRef}>
 							<TextField
-								placeholder="招待コードを入力"
+								placeholder="企画参加コードを入力"
 								value={inviteCode}
 								onChange={(value: string) => setInviteCode(value)}
 								label={""}
-								aria-label="招待コード入力"
+								aria-label="企画参加コード入力"
 							/>
 							<div className={styles.joinActions}>
 								<Button intent="secondary" onClick={handleCancelJoin}>

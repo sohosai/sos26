@@ -34,7 +34,7 @@ import type { AuthEnv } from "../types/auth-env";
 
 const projectRoute = new Hono<AuthEnv>();
 
-// 招待コード生成
+// 企画参加コード生成
 const INVITE_CODE_LENGTH = 6;
 const INVITE_CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -150,7 +150,7 @@ projectRoute.post("/create", requireAuth, async c => {
 		);
 	}
 
-	// 招待コード生成（衝突回避）
+	// 企画参加コード生成（衝突回避）
 	let inviteCode = generateInviteCode();
 	while (await prisma.project.findUnique({ where: { inviteCode } })) {
 		inviteCode = generateInviteCode();
@@ -256,7 +256,7 @@ projectRoute.get("/list", requireAuth, async c => {
 
 // ─────────────────────────────────────────
 // POST /project/join
-// 招待コードで企画に参加
+// 企画参加コードで企画に参加
 // ─────────────────────────────────────────
 projectRoute.post("/join", requireAuth, async c => {
 	const body = await c.req.json().catch(() => ({}));
@@ -272,7 +272,7 @@ projectRoute.post("/join", requireAuth, async c => {
 	});
 
 	if (!project) {
-		throw Errors.notFound("招待コードが無効です");
+		throw Errors.notFound("企画参加コードが無効です");
 	}
 
 	// 既にメンバーか確認
@@ -300,7 +300,7 @@ projectRoute.post("/join", requireAuth, async c => {
 
 // ─────────────────────────────────────────
 // GET /project/:projectId/detail
-// 企画の詳細を取得（招待コード含む）
+// 企画の詳細を取得（企画参加コード含む）
 // ─────────────────────────────────────────
 projectRoute.get(
 	"/:projectId/detail",
@@ -443,7 +443,7 @@ projectRoute.patch(
 
 // ─────────────────────────────────────────
 // POST /project/:projectId/invite-code/regenerate
-// 招待コードを再生成
+// 企画参加コードを再生成
 // ─────────────────────────────────────────
 projectRoute.post(
 	"/:projectId/invite-code/regenerate",
@@ -452,7 +452,7 @@ projectRoute.post(
 	async c => {
 		const role = c.get("projectRole");
 		if (role !== "OWNER") {
-			throw Errors.forbidden("招待コードを再生成できるのは責任者のみです");
+			throw Errors.forbidden("企画参加コードを再生成できるのは責任者のみです");
 		}
 
 		const project = c.get("project");

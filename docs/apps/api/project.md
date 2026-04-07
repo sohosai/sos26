@@ -41,10 +41,10 @@
 |---|---|---|
 | POST | `/project/create` | 企画作成 |
 | GET | `/project/list` | 自分が参加中の企画一覧 |
-| POST | `/project/join` | 招待コードで企画参加 |
+| POST | `/project/join` | 企画参加コードで企画参加 |
 | GET | `/project/:projectId/detail` | 企画詳細取得 |
 | PATCH | `/project/:projectId/detail` | 企画設定更新（責任者のみ） |
-| POST | `/project/:projectId/invite-code/regenerate` | 招待コード再生成（責任者のみ） |
+| POST | `/project/:projectId/invite-code/regenerate` | 企画参加コード再生成（責任者のみ） |
 | GET | `/project/:projectId/members` | 企画メンバー一覧 |
 | POST | `/project/:projectId/members/:userId/remove` | メンバー削除（責任者/副責任者） |
 | POST | `/project/:projectId/members/:userId/assign` | 副責任者リクエストの送信（責任者のみ） |
@@ -62,7 +62,7 @@
 
 - 実行ユーザーを `ownerId` に設定
 - `subOwnerId` は `null`
-- 招待コード（6文字英数字）を生成し、重複時は再生成
+- 企画参加コード（6文字英数字）を生成し、重複時は再生成
 - 作成者を `projectMembers` に自動追加
 
 ### GET `/project/list`
@@ -74,7 +74,7 @@
 
 ### POST `/project/join`
 
-招待コードで企画に参加します。
+企画参加コードで企画に参加します。
 
 - 入力: `inviteCode`（6文字）
 - 対象企画が存在しない場合: `NOT_FOUND`
@@ -86,7 +86,7 @@
 企画詳細を返します。
 
 - `requireProjectMember` により、対象企画メンバーのみ取得可能
-- 招待コードを含む企画情報を返却
+- 企画参加コードを含む企画情報を返却
 
 ### PATCH `/project/:projectId/detail`
 
@@ -97,7 +97,7 @@
 
 ### POST `/project/:projectId/invite-code/regenerate`
 
-招待コードを再生成します。
+企画参加コードを再生成します。
 
 - `requireProjectMember` + `projectRole === OWNER` が必須
 - 新しい 6 文字コードを重複回避しながら生成
@@ -190,7 +190,7 @@
 役職は `OWNER / SUB_OWNER / MEMBER` の 3 種です。
 
 - OWNER
-  - 設定変更、招待コード再生成、副責任者リクエストの送信が可能
+  - 設定変更、企画参加コード再生成、副責任者リクエストの送信が可能
 - SUB_OWNER
   - メンバー削除が可能
 - MEMBER

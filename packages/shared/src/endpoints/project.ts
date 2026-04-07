@@ -83,7 +83,7 @@ export const listProjectMembersEndpoint: GetEndpoint<
 
 /**
  * POST /project/join
- * 招待コードで企画に参加
+ * 企画参加コードで企画に参加
  */
 export const joinProjectEndpoint: BodyEndpoint<
 	"POST",
@@ -103,7 +103,7 @@ export const joinProjectEndpoint: BodyEndpoint<
 
 /**
  * GET /project/:projectId/detail
- * 企画の詳細を取得（招待コード含む）
+ * 企画の詳細を取得（企画参加コード含む）
  */
 export const getProjectDetailEndpoint: GetEndpoint<
 	"/project/:projectId/detail",
@@ -161,7 +161,7 @@ export const updateProjectDetailEndpoint: BodyEndpoint<
 
 /**
  * POST /project/:projectId/invite-code/regenerate
- * 招待コードを再生成
+ * 企画参加コードを再生成
  *
  * - requireProjectMember + OWNER のみ
  */

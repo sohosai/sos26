@@ -61,7 +61,7 @@ export function listProjectMembers(
 
 /**
  * POST /project/join
- * 招待コードで企画に参加
+ * 企画参加コードで企画に参加
  */
 export async function joinProject(
 	body: JoinProjectRequest
@@ -71,7 +71,7 @@ export async function joinProject(
 
 /**
  * GET /project/:projectId/detail
- * 企画の詳細を取得（招待コード含む）
+ * 企画の詳細を取得（企画参加コード含む）
  */
 export async function getProjectDetail(
 	projectId: string
@@ -108,7 +108,7 @@ export async function updateProjectDetail(
 
 /**
  * POST /project/:projectId/invite-code/regenerate
- * 招待コードを再生成
+ * 企画参加コードを再生成
  */
 export async function regenerateInviteCode(
 	projectId: string
