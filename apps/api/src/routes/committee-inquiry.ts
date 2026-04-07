@@ -687,14 +687,10 @@ committeeInquiryRoute.post(
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
 		if (inquiry.isDraft) {
-			throw Errors.invalidRequest(
-				"下書き状態のお問い合わせにはコメントできません"
-			);
+			throw Errors.invalidRequest("下書き状態のお問い合わせには返信できません");
 		}
 		if (inquiry.status === "RESOLVED") {
-			throw Errors.invalidRequest(
-				"解決済みのお問い合わせにはコメントできません"
-			);
+			throw Errors.invalidRequest("解決済みのお問い合わせには返信できません");
 		}
 
 		// 添付ファイルの存在・ステータスチェック
@@ -837,9 +833,7 @@ committeeInquiryRoute.post(
 
 		// お問い合わせがRESOLVED状態でないことを確認
 		if (existingComment.inquiry.status === "RESOLVED") {
-			throw Errors.invalidRequest(
-				"解決済みのお問い合わせにはコメントできません"
-			);
+			throw Errors.invalidRequest("解決済みのお問い合わせには返信できません");
 		}
 
 		// 下書きを正式送信に変換（送信時刻をコメント時刻として確定）
@@ -931,9 +925,7 @@ committeeInquiryRoute.patch(
 			throw Errors.forbidden("下書きの編集は作成者のみが可能です");
 		}
 		if (existingComment.inquiry.status === "RESOLVED") {
-			throw Errors.invalidRequest(
-				"解決済みのお問い合わせにはコメントできません"
-			);
+			throw Errors.invalidRequest("解決済みのお問い合わせには返信できません");
 		}
 
 		const comment = await prisma.$transaction(async tx => {

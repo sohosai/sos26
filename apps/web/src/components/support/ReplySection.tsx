@@ -214,7 +214,7 @@ export function ReplySection({
 			<Heading size="3">コメント送信</Heading>
 			{disabled && (
 				<Text size="2" color="gray">
-					閲覧権限のため、コメントを送信できません。
+					閲覧権限のため、このお問い合わせに返信できません。
 				</Text>
 			)}
 			<TextArea
