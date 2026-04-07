@@ -22,14 +22,14 @@ export const projectMenuItems: MenuItem[] = [
 		to: "/project/forms",
 	},
 	{
-		label: "お問い合わせ",
-		icon: <IconMessageCircleQuestion size={18} />,
-		to: "/project/support",
-	},
-	{
 		label: "お知らせ",
 		icon: <IconBell size={18} />,
 		to: "/project/notice",
+	},
+	{
+		label: "お問い合わせ",
+		icon: <IconMessageCircleQuestion size={18} />,
+		to: "/project/support",
 	},
 	{
 		label: "メンバー管理",
