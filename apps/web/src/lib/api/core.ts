@@ -1,8 +1,45 @@
-import type { Endpoint } from "@sos26/shared";
+import type { Endpoint, HttpMethod } from "@sos26/shared";
 import type { Options } from "ky";
 import type { z } from "zod";
+import { reportHandledError } from "../error/report";
 import { httpClient } from "../http/client";
 import { throwClientError } from "../http/error";
+
+function parseResponseWithLogging<Response extends z.ZodTypeAny>(
+	endpoint: Endpoint<
+		HttpMethod,
+		string,
+		z.ZodTypeAny | undefined,
+		z.ZodTypeAny | undefined,
+		z.ZodTypeAny | undefined,
+		Response
+	>,
+	response: unknown
+): z.infer<Response> {
+	const parsed = endpoint.response.safeParse(response);
+	if (!parsed.success) {
+		const issues = parsed.error.issues.map(issue => ({
+			path: issue.path.join("."),
+			message: issue.message,
+			code: issue.code,
+		}));
+
+		reportHandledError({
+			error: parsed.error,
+			operation: "api_response_validation",
+			userMessage: "APIレスポンスの検証に失敗しました",
+			context: {
+				method: endpoint.method,
+				path: endpoint.path,
+				issues,
+			},
+		});
+
+		throw parsed.error;
+	}
+
+	return parsed.data;
+}
 
 /** 正規表現の特殊文字をエスケープ */
 function escapeRegExp(str: string): string {
@@ -98,7 +135,7 @@ export async function callGetApi<
 			.json();
 
 		// レスポンスを実行時検証
-		return endpoint.response.parse(response);
+		return parseResponseWithLogging(endpoint, response);
 	} catch (error) {
 		return throwClientError(error);
 	}
@@ -139,7 +176,7 @@ export async function callBodyApi<
 		}).json();
 
 		// レスポンスを実行時検証
-		return endpoint.response.parse(response);
+		return parseResponseWithLogging(endpoint, response);
 	} catch (error) {
 		return throwClientError(error);
 	}
@@ -172,7 +209,7 @@ export async function callNoBodyApi<
 		}).json();
 
 		// レスポンスを実行時検証
-		return endpoint.response.parse(response);
+		return parseResponseWithLogging(endpoint, response);
 	} catch (error) {
 		return throwClientError(error);
 	}

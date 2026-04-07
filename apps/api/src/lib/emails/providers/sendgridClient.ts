@@ -2,6 +2,7 @@ import sgMail from "@sendgrid/mail";
 import { ZodError, z } from "zod";
 import { env } from "../../env";
 import { Errors } from "../../error";
+import { logIntegrationFailure } from "../../error-logging";
 
 sgMail.setApiKey(env.SENDGRID_API_KEY);
 
@@ -37,7 +38,7 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
 		}
 
 		// 外部サービスの失敗などは内部エラーとして正規化し、詳細は返さない
-		console.error("[Email] Failed to send email via SendGrid", err);
+		logIntegrationFailure("Email", "SendGrid send", err);
 		throw Errors.internal("メール送信に失敗しました");
 	}
 }

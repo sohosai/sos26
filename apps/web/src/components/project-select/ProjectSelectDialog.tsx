@@ -118,13 +118,13 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 	}),
 	columnHelper.accessor(row => row.project.owner.name, {
 		id: "ownerName",
-		header: "責任者",
+		header: "企画責任者",
 		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
 		meta: { filterVariant: "text" },
 	}),
 	columnHelper.accessor(row => row.project.subOwner?.name ?? "", {
 		id: "subOwnerName",
-		header: "副責任者",
+		header: "副企画責任者",
 		cell: ctx => {
 			const name = ctx.getValue() as string;
 			if (!name)
@@ -397,7 +397,7 @@ export function ProjectSelectDialog({
 	onOpenChange,
 	selectedIds,
 	onConfirm,
-	title = "配信先プロジェクトを選択",
+	title = "配信先企画を選択",
 }: ProjectSelectDialogProps) {
 	const [apiColumns, setApiColumns] = useState<ApiColumn[]>([]);
 	const [apiRows, setApiRows] = useState<GetMastersheetDataResponse["rows"]>(

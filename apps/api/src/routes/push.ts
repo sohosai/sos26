@@ -4,6 +4,7 @@ import {
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
+import { logIntegrationFailure } from "../lib/error-logging";
 import { prisma } from "../lib/prisma";
 import { requireAuth } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -57,7 +58,7 @@ pushRoute.post("/subscribe", requireAuth, async c => {
 			});
 		});
 	} catch (e) {
-		console.error("PushSubscription の保存に失敗しました:", e);
+		logIntegrationFailure("Push", "Persist subscription", e, { userId });
 		throw Errors.internal("PushSubscription の保存に失敗しました");
 	}
 
@@ -99,7 +100,7 @@ pushRoute.post("/unsubscribe", requireAuth, async c => {
 			}
 		});
 	} catch (e) {
-		console.error("PushSubscription の解除に失敗しました:", e);
+		logIntegrationFailure("Push", "Remove subscription", e, { userId });
 		throw Errors.internal("PushSubscription の解除に失敗しました");
 	}
 

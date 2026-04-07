@@ -21,6 +21,7 @@ import {
 	updateProjectRegistrationFormAuthorization,
 } from "@/lib/api/committee-project-registration-form";
 import { useAuthStore } from "@/lib/auth";
+import { reportHandledError } from "@/lib/error/report";
 import { getProjectRegistrationFormStatus } from "@/lib/form/form-status";
 import { formatDate } from "@/lib/format";
 import {
@@ -138,8 +139,17 @@ function RouteComponent() {
 			});
 			await router.invalidate();
 			toast.success("共同編集者を追加しました");
-		} catch {
-			toast.error("共同編集者の追加に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "collaborator_update",
+				userMessage: "共同編集者の追加に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId,
+					targetUserId,
+				},
+			});
 		}
 	};
 
@@ -149,8 +159,17 @@ function RouteComponent() {
 			await removeProjectRegistrationFormCollaborator(formId, targetUserId);
 			await router.invalidate();
 			toast.success("共同編集者を削除しました");
-		} catch {
-			toast.error("共同編集者の削除に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "collaborator_update",
+				userMessage: "共同編集者の削除に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId,
+					targetUserId,
+				},
+			});
 		} finally {
 			setRemovingId(null);
 		}
@@ -163,8 +182,17 @@ function RouteComponent() {
 			});
 			await router.invalidate();
 			toast.success("承認しました。フォームが公開されました。");
-		} catch {
-			toast.error("承認に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "approve",
+				userMessage: "承認に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId,
+					authId,
+				},
+			});
 		}
 	};
 
@@ -175,8 +203,17 @@ function RouteComponent() {
 			});
 			await router.invalidate();
 			toast.success("却下しました");
-		} catch {
-			toast.error("却下に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "reject",
+				userMessage: "却下に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId,
+					authId,
+				},
+			});
 		}
 	};
 
@@ -186,8 +223,16 @@ function RouteComponent() {
 			await deleteProjectRegistrationForm(formId);
 			toast.success("フォームを削除しました");
 			navigate({ to: "/committee/project-registration" });
-		} catch {
-			toast.error("フォームの削除に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "delete",
+				userMessage: "フォームの削除に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId,
+				},
+			});
 			setIsDeleting(false);
 		}
 	};

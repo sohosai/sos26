@@ -1,5 +1,5 @@
 import { redirect } from "@tanstack/react-router";
-import { listCommitteeMemberPermissions } from "../api/committee-member";
+import { getMyPermissions } from "../api/committee-member";
 import { authReady, useAuthStore } from "./store";
 
 /**
@@ -52,15 +52,15 @@ export async function requireCommitteeMember(): Promise<void> {
  * beforeLoad で呼び出すことで、初回描画時のチラつきを防ぐ
  */
 export async function preloadMemberEditPermission(): Promise<void> {
-	const { committeeMember, isCommitteeMember } = useAuthStore.getState();
+	const { isCommitteeMember } = useAuthStore.getState();
 
-	if (!isCommitteeMember || !committeeMember?.id) {
+	if (!isCommitteeMember) {
 		useAuthStore.setState({ hasMemberEditPermission: false });
 		return;
 	}
 
 	try {
-		const res = await listCommitteeMemberPermissions(committeeMember.id);
+		const res = await getMyPermissions();
 		useAuthStore.setState({
 			hasMemberEditPermission: res.permissions.some(
 				p => p.permission === "MEMBER_EDIT"
@@ -76,15 +76,15 @@ export async function preloadMemberEditPermission(): Promise<void> {
  * beforeLoad で呼び出すことで、初回描画時のチラつきを防ぐ
  */
 export async function preloadProjectRegistrationPermission(): Promise<void> {
-	const { committeeMember, isCommitteeMember } = useAuthStore.getState();
+	const { isCommitteeMember } = useAuthStore.getState();
 
-	if (!isCommitteeMember || !committeeMember?.id) {
+	if (!isCommitteeMember) {
 		useAuthStore.setState({ hasProjectRegistrationPermission: false });
 		return;
 	}
 
 	try {
-		const res = await listCommitteeMemberPermissions(committeeMember.id);
+		const res = await getMyPermissions();
 		useAuthStore.setState({
 			hasProjectRegistrationPermission: res.permissions.some(
 				p =>

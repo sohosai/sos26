@@ -1,5 +1,5 @@
-import { toast } from "sonner";
 import { createProjectRegistrationForm } from "@/lib/api/committee-project-registration-form";
+import { reportHandledError } from "@/lib/error/report";
 import { normalizeItemConstraintsForType } from "@/lib/form/constraints";
 import {
 	ProjectRegistrationFormDialog,
@@ -51,7 +51,15 @@ export function CreateProjectRegistrationFormDialog({
 				})),
 			});
 		} catch (error) {
-			toast.error("フォームの作成に失敗しました");
+			reportHandledError({
+				error,
+				operation: "create",
+				userMessage: "フォームの作成に失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formTitle: values.title.trim(),
+				},
+			});
 			throw error;
 		}
 	};

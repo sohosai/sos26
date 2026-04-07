@@ -5,7 +5,7 @@ export function inquiryCommentAddedTemplate(params: {
 	url: string;
 }): PushPayload {
 	return {
-		title: "お問い合わせに新しいコメントが追加されました",
+		title: "お問い合わせに新しい返信がありました",
 		body: params.inquiryTitle,
 		icon: "/sos.svg",
 		badge: "/sos.svg",

@@ -122,6 +122,27 @@ export const deleteCommitteeMemberEndpoint: NoBodyEndpoint<
 // ─────────────────────────────────────────────────────────────
 
 /**
+ * GET /committee/members/me/permissions
+ * 自分自身の権限一覧を取得
+ *
+ * - 認証 + 実委メンバー必須
+ * - MEMBER_EDIT 権限不要
+ */
+export const getMyPermissionsEndpoint: GetEndpoint<
+	"/committee/members/me/permissions",
+	undefined,
+	undefined,
+	typeof listCommitteeMemberPermissionsResponseSchema
+> = {
+	method: "GET",
+	path: "/committee/members/me/permissions",
+	pathParams: undefined,
+	query: undefined,
+	request: undefined,
+	response: listCommitteeMemberPermissionsResponseSchema,
+} as const;
+
+/**
  * GET /committee/members/:id/permissions
  * 委員メンバーの権限一覧を取得
  *

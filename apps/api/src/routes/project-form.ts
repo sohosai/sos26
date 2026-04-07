@@ -503,7 +503,9 @@ projectFormRoute.get(
 
 		// ownerOnly 制限チェック
 		if (delivery.formAuthorization.ownerOnly && projectRole === "MEMBER") {
-			throw Errors.forbidden("この申請は責任者・副責任者のみ閲覧できます");
+			throw Errors.forbidden(
+				"この申請は企画責任者・副企画責任者のみ閲覧できます"
+			);
 		}
 
 		const existingResponse = await prisma.formResponse.findFirst({
@@ -615,7 +617,9 @@ projectFormRoute.post(
 
 		// ownerOnly 制限チェック
 		if (delivery.formAuthorization.ownerOnly && projectRole === "MEMBER") {
-			throw Errors.forbidden("この申請は責任者・副責任者のみ回答できます");
+			throw Errors.forbidden(
+				"この申請は企画責任者・副企画責任者のみ回答できます"
+			);
 		}
 
 		const body = await c.req.json().catch(() => ({}));
@@ -698,7 +702,9 @@ projectFormRoute.patch(
 
 		// ownerOnly 制限チェック
 		if (delivery.formAuthorization.ownerOnly && projectRole === "MEMBER") {
-			throw Errors.forbidden("この申請は責任者・副責任者のみ回答できます");
+			throw Errors.forbidden(
+				"この申請は企画責任者・副企画責任者のみ回答できます"
+			);
 		}
 
 		const existing = await prisma.formResponse.findFirst({

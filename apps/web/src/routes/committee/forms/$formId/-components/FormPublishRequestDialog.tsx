@@ -13,6 +13,7 @@ import {
 import { ProjectCategorySelector } from "@/components/project/ProjectCategorySelector";
 import { ProjectSelectDialog } from "@/components/project-select";
 import { requestFormAuthorization } from "@/lib/api/committee-form";
+import { reportHandledError } from "@/lib/error/report";
 import { validateAuthorizationDates } from "@/lib/form/AuthDateCheck";
 import { isClientError } from "@/lib/http/error";
 import styles from "./FormPublishRequestDialog.module.scss";
@@ -71,7 +72,7 @@ export function FormPublishRequestDialog({
 	// 申請の必須回答かどうか
 	const [isRequired, setIsRequired] = useState(true);
 
-	// 回答の閲覧制限（責任者・副責任者のみ）
+	// 回答の閲覧制限（企画責任者・副企画責任者のみ）
 	const [ownerOnly, setOwnerOnly] = useState(false);
 
 	// 配信先モード
@@ -149,11 +150,24 @@ export function FormPublishRequestDialog({
 			onOpenChange(false);
 			onSuccess();
 		} catch (e) {
-			if (isClientError(e) && e.apiError) {
-				setError(e.apiError.error.message);
-			} else {
-				setError("公開申請の送信に失敗しました。");
-			}
+			reportHandledError({
+				error: e,
+				operation: "publish_request",
+				userMessage: "公開申請の送信に失敗しました。",
+				ui: { type: "inline", setError },
+				resolveMessage: ({ error, fallbackMessage }) => {
+					if (isClientError(error) && error.apiError) {
+						return error.apiError.error.message;
+					}
+
+					return fallbackMessage;
+				},
+				context: {
+					formId,
+					approverId,
+					deliveryMode,
+				},
+			});
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -200,7 +214,7 @@ export function FormPublishRequestDialog({
 						</IconButton>
 					</div>
 					<Dialog.Description size="2" mb="4" color="gray">
-						配信日時・回答期限・配信先プロジェクトを指定し、承認を依頼します。
+						配信日時・回答期限・配信先企画を指定し、承認を依頼します。
 					</Dialog.Description>
 
 					<div className={styles.form}>
@@ -299,7 +313,7 @@ export function FormPublishRequestDialog({
 						{/* 回答の閲覧制限 */}
 						<div className={styles.field}>
 							<Checkbox
-								label="回答の閲覧を責任者・副責任者に限定する"
+								label="回答の閲覧を企画責任者・副企画責任者に限定する"
 								checked={ownerOnly}
 								onCheckedChange={checked => setOwnerOnly(checked === true)}
 							/>
@@ -331,7 +345,7 @@ export function FormPublishRequestDialog({
 							/* 個別指定モード */
 							<div className={styles.field}>
 								<Text as="label" size="2" weight="medium">
-									配信先プロジェクト
+									配信先企画
 								</Text>
 								<Button
 									intent="secondary"
@@ -397,7 +411,7 @@ export function FormPublishRequestDialog({
 				onOpenChange={setProjectSelectOpen}
 				selectedIds={selectedProjectIds}
 				onConfirm={setSelectedProjectIds}
-				title="配信先プロジェクトを選択"
+				title="配信先企画を選択"
 			/>
 		</>
 	);

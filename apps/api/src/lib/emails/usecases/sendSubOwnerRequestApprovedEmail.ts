@@ -1,5 +1,5 @@
 /**
- * 副責任者リクエストが承認されたとき、責任者に送信するメール
+ * 副企画責任者リクエストが承認されたとき、企画責任者に送信するメール
  * トリガー: POST /project/:projectId/sub-owner-request/approve
  */
 import { z } from "zod";
