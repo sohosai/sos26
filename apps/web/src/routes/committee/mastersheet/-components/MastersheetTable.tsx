@@ -73,13 +73,18 @@ const PROJECT_TYPE_LABEL = {
 	NORMAL: "普通企画",
 } satisfies Record<ProjectType, string>;
 
-type ProjectDeletionFilterValue = "ACTIVE" | "DELETED" | "LOTTERY_LOSS";
+type ProjectDeletionFilterValue =
+	| "ACTIVE"
+	| "DELETED"
+	| "LOTTERY_LOSS"
+	| "PROJECT_WITHDRAWN";
 
 function projectDeletionStatusLabel(
 	status: ProjectDeletionStatus | null
 ): string {
 	if (status === "LOTTERY_LOSS") return "落選";
 	if (status === "DELETED") return "企画中止";
+	if (status === "PROJECT_WITHDRAWN") return "企画辞退";
 	return "有効";
 }
 const columnHelper = createColumnHelper<MastersheetRow>();
@@ -231,6 +236,7 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 					{ value: "ACTIVE", label: "有効" },
 					{ value: "DELETED", label: "企画中止" },
 					{ value: "LOTTERY_LOSS", label: "落選" },
+					{ value: "PROJECT_WITHDRAWN", label: "企画辞退" },
 				],
 			},
 		}

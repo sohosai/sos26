@@ -207,6 +207,7 @@ model Project {
 enum ProjectDeletionStatus {
   LOTTERY_LOSS // 落選
   DELETED // 企画中止
+  PROJECT_WITHDRAWN // 企画辞退
 }
 
 //企画に参加している責任者と副責任者以外のユーザーのTable
