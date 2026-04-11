@@ -163,6 +163,8 @@ export const updateCommitteeProjectBaseInfoRequestSchema = z
 			.optional(),
 		type: projectTypeSchema.optional(),
 		location: projectLocationSchema.optional(),
+		ownerId: z.string().min(1).optional(),
+		subOwnerId: z.string().min(1).nullable().optional(),
 	})
 	.refine(data => Object.keys(data).length > 0, {
 		message: "更新する項目を指定してください",
