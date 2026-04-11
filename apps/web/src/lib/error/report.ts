@@ -16,6 +16,7 @@ const IMPORTANT_ERROR_OPERATIONS = [
 	"inquiry_create",
 	"comment_submit",
 	"assignee_update",
+	"update_base_info",
 	"api_response_validation",
 ] as const;
 
