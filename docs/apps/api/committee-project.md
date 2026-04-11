@@ -177,7 +177,7 @@
 
 ### PATCH `/committee/projects/:projectId/base-info`
 
-企画の基礎情報を更新します。
+企画の基礎情報を更新します。基本情報のほか、企画責任者・副企画責任者も更新可能です。
 
 #### 権限
 
@@ -194,9 +194,18 @@
   "organizationName": "新しい団体名",
   "organizationNamePhonetic": "あたらしいだんたいめい",
   "type": "NORMAL",
-  "location": "INDOOR"
+  "location": "INDOOR",
+  "ownerId": "clxxx...",
+  "subOwnerId": "clyyy..."
 }
 ```
+
+#### 責任者更新に関する制約
+
+- `ownerId`: 企画メンバーであり、且つ他の企画で責任者・副責任者に指定されていないユーザー
+- `subOwnerId`: 企画メンバーであり、且つ他の企画で責任者・副責任者に指定されていないユーザー（`null` で未設定）
+- 同一企画内では、`ownerId` と `subOwnerId` に同じユーザーを指定できない
+- 企画責任者の変更時に、既存の副企画責任者が存在する場合、その副企画責任者は変わらない限り保持される
 
 #### レスポンス
 
@@ -232,6 +241,9 @@
 
 - 権限がない場合: `FORBIDDEN`
 - 企画が存在しない場合: `NOT_FOUND`
+- 指定したメンバーが企画のメンバーでない場合: `NOT_FOUND`
+- 指定したメンバーが他の企画で責任者として登録されている場合: `INVALID_REQUEST`
+- 責任者と副責任者が同じユーザーの場合: `INVALID_REQUEST`
 
 ---
 
