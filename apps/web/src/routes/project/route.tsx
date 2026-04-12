@@ -39,34 +39,61 @@ function projectDeletionStatusLabel(status: Project["deletionStatus"]): string {
 type EmptyProjectStateProps = {
 	onCreateProject: () => void;
 	onJoinProject: () => void;
+	isApplicationPeriodOpen?: boolean;
 };
 
 function EmptyProjectState({
 	onCreateProject,
 	onJoinProject,
+	isApplicationPeriodOpen = true,
 }: EmptyProjectStateProps) {
+	const isOutsideApplicationPeriod = !isApplicationPeriodOpen;
+
 	return (
 		<div className={styles.emptyState}>
 			<div className={styles.emptyStateContent}>
-				<Heading size="5" className={styles.emptyStateHeading}>
-					企画に参加していません
-				</Heading>
-				<Text
-					as="p"
-					size="2"
-					color="gray"
-					className={styles.emptyStateDescription}
-				>
-					新規作成するか、企画参加コードを企画責任者から受け取って、企画に参加してください。
-				</Text>
-				<div className={styles.emptyStateActions}>
-					<Button size="2" onClick={onCreateProject}>
-						新しい企画を作成
-					</Button>
-					<Button size="2" intent="secondary" onClick={onJoinProject}>
-						企画参加コードで参加
-					</Button>
-				</div>
+				{isOutsideApplicationPeriod ? (
+					<>
+						<Heading size="5" className={styles.emptyStateHeading}>
+							企画応募期間外です
+						</Heading>
+						<Text
+							as="p"
+							size="2"
+							color="gray"
+							className={styles.emptyStateDescription}
+						>
+							現在は企画の新規作成ができません。
+						</Text>
+						<div className={styles.emptyStateActions}>
+							<Button size="2" intent="secondary" onClick={onJoinProject}>
+								企画参加コードで参加
+							</Button>
+						</div>
+					</>
+				) : (
+					<>
+						<Heading size="5" className={styles.emptyStateHeading}>
+							企画に参加していません
+						</Heading>
+						<Text
+							as="p"
+							size="2"
+							color="gray"
+							className={styles.emptyStateDescription}
+						>
+							新規作成するか、企画参加コードを企画責任者から受け取って、企画に参加してください。
+						</Text>
+						<div className={styles.emptyStateActions}>
+							<Button size="2" onClick={onCreateProject}>
+								新しい企画を作成
+							</Button>
+							<Button size="2" intent="secondary" onClick={onJoinProject}>
+								企画参加コードで参加
+							</Button>
+						</div>
+					</>
+				)}
 			</div>
 		</div>
 	);
@@ -276,6 +303,7 @@ function ProjectLayout() {
 					<EmptyProjectState
 						onCreateProject={() => setCreateDialogOpen(true)}
 						onJoinProject={() => setJoinDialogOpen(true)}
+						isApplicationPeriodOpen={applicationPeriodInfo?.isOpen}
 					/>
 				) : (
 					selectedProjectId && <Outlet key={selectedProjectId} />
