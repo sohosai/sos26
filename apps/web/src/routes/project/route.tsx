@@ -39,13 +39,13 @@ function projectDeletionStatusLabel(status: Project["deletionStatus"]): string {
 type EmptyProjectStateProps = {
 	onCreateProject: () => void;
 	onJoinProject: () => void;
-	isApplicationPeriodOpen?: boolean;
+	isApplicationPeriodOpen: boolean;
 };
 
 function EmptyProjectState({
 	onCreateProject,
 	onJoinProject,
-	isApplicationPeriodOpen = true,
+	isApplicationPeriodOpen,
 }: EmptyProjectStateProps) {
 	const isOutsideApplicationPeriod = !isApplicationPeriodOpen;
 
@@ -195,8 +195,8 @@ function ProjectLayout() {
 				const info = await getApplicationPeriod();
 				setApplicationPeriodInfo(info);
 			} catch {
-				// 企画作成ボタンをデフォルトでactiveにするため、エラーは無視して無期限として扱う
-				setApplicationPeriodInfo({ isOpen: true, periods: null });
+				// API失敗時は保守的に期間外として扱う
+				setApplicationPeriodInfo({ isOpen: false, periods: null });
 			}
 		};
 		void fetchApplicationPeriod();
@@ -300,11 +300,21 @@ function ProjectLayout() {
 					</Callout.Root>
 				)}
 				{projects.length === 0 ? (
-					<EmptyProjectState
-						onCreateProject={() => setCreateDialogOpen(true)}
-						onJoinProject={() => setJoinDialogOpen(true)}
-						isApplicationPeriodOpen={applicationPeriodInfo?.isOpen}
-					/>
+					applicationPeriodInfo ? (
+						<EmptyProjectState
+							onCreateProject={() => setCreateDialogOpen(true)}
+							onJoinProject={() => setJoinDialogOpen(true)}
+							isApplicationPeriodOpen={applicationPeriodInfo.isOpen}
+						/>
+					) : (
+						<div className={styles.emptyState}>
+							<div className={styles.emptyStateContent}>
+								<Heading size="5" className={styles.emptyStateHeading}>
+									読み込み中...
+								</Heading>
+							</div>
+						</div>
+					)
 				) : (
 					selectedProjectId && <Outlet key={selectedProjectId} />
 				)}
