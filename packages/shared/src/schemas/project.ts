@@ -66,6 +66,11 @@ export const projectMemberSchema = z.object({
 });
 export type ProjectMember = z.infer<typeof projectMemberSchema>;
 
+export const projectMemberViewSchema = projectMemberSchema.extend({
+	email: z.email().nullable(),
+});
+export type ProjectMemberView = z.infer<typeof projectMemberViewSchema>;
+
 // ─────────────────────────────────────────────────────────────
 // POST /project/create
 // ─────────────────────────────────────────────────────────────
@@ -143,7 +148,7 @@ export type ListMyProjectsResponse = z.infer<
 // ─────────────────────────────────────────────────────────────
 
 export const listProjectMembersResponseSchema = z.object({
-	members: z.array(projectMemberSchema),
+	members: z.array(projectMemberViewSchema),
 	pendingSubOwnerRequestUserId: z.string().nullable(),
 });
 
