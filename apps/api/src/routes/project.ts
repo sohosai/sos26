@@ -680,6 +680,9 @@ projectRoute.get(
 	requireProjectMember,
 	async c => {
 		const project = c.get("project");
+		const role = c.get("projectRole");
+		const requesterUserId = c.get("user").id;
+		const canViewAllEmails = role === "OWNER" || role === "SUB_OWNER";
 
 		const members = await prisma.projectMember.findMany({
 			where: {
@@ -718,7 +721,10 @@ projectRoute.get(
 				id: m.id,
 				userId: m.userId,
 				name: m.user.name,
-				email: m.user.email,
+				email:
+					canViewAllEmails || m.userId === requesterUserId
+						? m.user.email
+						: null,
 				role,
 				joinedAt: m.joinedAt,
 			};
