@@ -32,6 +32,7 @@ import {
 	mapItemToApiShape,
 } from "../lib/form-constraints";
 import {
+	notifyFormAuthorizationCancelled,
 	notifyFormAuthorizationDecided,
 	notifyFormAuthorizationRequested,
 } from "../lib/notifications";
@@ -885,6 +886,15 @@ committeeFormRoute.patch(
 			status,
 			scheduledSendAt: authorization.scheduledSendAt,
 		});
+
+		// 承認が取り消された場合は別の通知を送信
+		if (authorization.status === "APPROVED" && status === "REJECTED") {
+			void notifyFormAuthorizationCancelled({
+				requestedByUserId: authorization.requestedById,
+				formId,
+				formTitle: authorization.form.title,
+			});
+		}
 
 		return c.json({ authorization: updated });
 	}

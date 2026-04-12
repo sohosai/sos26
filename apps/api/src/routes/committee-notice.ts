@@ -13,6 +13,7 @@ import {
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import {
+	notifyNoticeAuthorizationCancelled,
 	notifyNoticeAuthorizationDecided,
 	notifyNoticeAuthorizationRequested,
 } from "../lib/notifications";
@@ -819,12 +820,10 @@ committeeNoticeRoute.patch(
 				data: { status: "REJECTED", decidedAt: now, deliveryNotifiedAt: null },
 			});
 
-			void notifyNoticeAuthorizationDecided({
+			void notifyNoticeAuthorizationCancelled({
 				requestedByUserId: authorization.requestedById,
 				noticeId,
 				noticeTitle: authorization.notice.title,
-				status: "REJECTED",
-				deliveredAt: authorization.deliveredAt,
 			});
 
 			return c.json({ authorization: updated });
