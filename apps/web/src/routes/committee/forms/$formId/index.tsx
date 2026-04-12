@@ -348,7 +348,7 @@ function RouteComponent() {
 		} catch (error) {
 			reportHandledError({
 				error,
-				operation: "reject",
+				operation: "cancel_approval",
 				userMessage: "承認の取り消しに失敗しました",
 				ui: { type: "toast" },
 				context: {
