@@ -10,6 +10,7 @@ const IMPORTANT_ERROR_OPERATIONS = [
 	"publish_request",
 	"approve",
 	"reject",
+	"cancel_approval",
 	"delete",
 	"join_project",
 	"collaborator_update",

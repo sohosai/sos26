@@ -312,7 +312,7 @@ function AuthDetailSection({
 						size="2"
 						onClick={() => onApprove(auth.id)}
 						loading={approvingId === auth.id}
-						disabled={rejectingId !== null}
+						disabled={rejectingId !== null || approvingId === auth.id}
 					>
 						<IconCheck size={16} />
 						承認
@@ -322,7 +322,7 @@ function AuthDetailSection({
 						size="2"
 						onClick={() => onReject(auth.id)}
 						loading={rejectingId === auth.id}
-						disabled={approvingId !== null}
+						disabled={approvingId !== null || rejectingId === auth.id}
 					>
 						<IconX size={16} />
 						却下

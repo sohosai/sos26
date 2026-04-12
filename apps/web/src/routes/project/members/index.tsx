@@ -397,7 +397,9 @@ function RouteComponent() {
 							size="2"
 							onClick={handleRejectSubOwnerRequest}
 							loading={isRejectingSubOwnerRequest}
-							disabled={isApprovingSubOwnerRequest}
+							disabled={
+								isApprovingSubOwnerRequest || isRejectingSubOwnerRequest
+							}
 						>
 							辞退する
 						</Button>
@@ -406,7 +408,9 @@ function RouteComponent() {
 							size="2"
 							onClick={handleApproveSubOwnerRequest}
 							loading={isApprovingSubOwnerRequest}
-							disabled={isRejectingSubOwnerRequest}
+							disabled={
+								isRejectingSubOwnerRequest || isApprovingSubOwnerRequest
+							}
 						>
 							承認する
 						</Button>
