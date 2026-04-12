@@ -741,7 +741,7 @@ committeeNoticeRoute.post(
 
 // ─────────────────────────────────────────────────────────────
 // PATCH /committee/notices/:noticeId/authorizations/:authorizationId
-// 承認 / 却下（requestedTo 本人のみ）
+// 承認依頼を承認/却下する（PENDING）または承認を取り消す（APPROVED）（requestedTo 本人のみ）
 // ─────────────────────────────────────────────────────────────
 committeeNoticeRoute.patch(
 	"/:noticeId/authorizations/:authorizationId",
@@ -776,34 +776,62 @@ committeeNoticeRoute.patch(
 			throw Errors.forbidden("この承認依頼を操作する権限がありません");
 		}
 
-		// PENDING でなければ操作不可
-		if (authorization.status !== "PENDING") {
-			throw Errors.invalidRequest("この承認依頼は既に処理済みです");
+		const now = new Date();
+
+		// PENDING の場合の処理（承認/却下）
+		if (authorization.status === "PENDING") {
+			// 承認する場合、deliveredAt が未来であること
+			if (status === "APPROVED" && authorization.deliveredAt <= now) {
+				throw Errors.invalidRequest(
+					"配信希望日時を過ぎているため承認できません。新しい日時で再申請してください"
+				);
+			}
+
+			// where に status: "PENDING" を含めることで、
+			// 同時リクエストによる二重承認を防止する
+			const updated = await prisma.noticeAuthorization.update({
+				where: { id: authorizationId, status: "PENDING" },
+				data: { status, decidedAt: now },
+			});
+
+			void notifyNoticeAuthorizationDecided({
+				requestedByUserId: authorization.requestedById,
+				noticeId,
+				noticeTitle: authorization.notice.title,
+				status,
+				deliveredAt: authorization.deliveredAt,
+			});
+
+			return c.json({ authorization: updated });
 		}
 
-		// 承認する場合、deliveredAt が未来であること
-		if (status === "APPROVED" && authorization.deliveredAt <= new Date()) {
-			throw Errors.invalidRequest(
-				"配信希望日時を過ぎているため承認できません。新しい日時で再申請してください"
-			);
+		// APPROVED の場合の処理（承認を取り消す）
+		if (authorization.status === "APPROVED" && status === "REJECTED") {
+			// deliveredAt が未来であること
+			if (authorization.deliveredAt <= now) {
+				throw Errors.invalidRequest(
+					"配信予定日時を過ぎているため承認を取り消せません"
+				);
+			}
+
+			const updated = await prisma.noticeAuthorization.update({
+				where: { id: authorizationId, status: "APPROVED" },
+				data: { status: "REJECTED", decidedAt: now, deliveryNotifiedAt: null },
+			});
+
+			void notifyNoticeAuthorizationDecided({
+				requestedByUserId: authorization.requestedById,
+				noticeId,
+				noticeTitle: authorization.notice.title,
+				status: "REJECTED",
+				deliveredAt: authorization.deliveredAt,
+			});
+
+			return c.json({ authorization: updated });
 		}
 
-		// where に status: "PENDING" を含めることで、
-		// 同時リクエストによる二重承認を防止する
-		const updated = await prisma.noticeAuthorization.update({
-			where: { id: authorizationId, status: "PENDING" },
-			data: { status, decidedAt: new Date() },
-		});
-
-		void notifyNoticeAuthorizationDecided({
-			requestedByUserId: authorization.requestedById,
-			noticeId,
-			noticeTitle: authorization.notice.title,
-			status,
-			deliveredAt: authorization.deliveredAt,
-		});
-
-		return c.json({ authorization: updated });
+		// その他のステータス遷移は不可
+		throw Errors.invalidRequest("この承認依頼は操作できない状態です");
 	}
 );
 
