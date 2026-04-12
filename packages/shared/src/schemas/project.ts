@@ -223,6 +223,27 @@ export type GetProjectRegistrationFormResponsesResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────
+// POST /project/:projectId/registration-form-responses
+// ─────────────────────────────────────────────
+
+export const createProjectRegistrationFormResponseRequestSchema = z.object({
+	formId: z.string().min(1),
+	answers: z.array(formAnswerInputSchema),
+});
+
+export type CreateProjectRegistrationFormResponseRequest = z.infer<
+	typeof createProjectRegistrationFormResponseRequestSchema
+>;
+
+export const createProjectRegistrationFormResponseResponseSchema = z.object({
+	response: projectRegistrationFormResponseViewSchema,
+});
+
+export type CreateProjectRegistrationFormResponseResponse = z.infer<
+	typeof createProjectRegistrationFormResponseResponseSchema
+>;
+
+// ─────────────────────────────────────────────
 // PATCH /project/:projectId/detail
 // ─────────────────────────────────────────────
 
@@ -285,6 +306,35 @@ export const updateProjectDetailResponseSchema = z.object({
 
 export type UpdateProjectDetailResponse = z.infer<
 	typeof updateProjectDetailResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────────────────
+// PATCH /project/:projectId/registration-form-responses/:responseId
+// ─────────────────────────────────────────────────────────────────────────
+
+export const projectRegistrationFormResponsePathParamsSchema = z.object({
+	projectId: z.string().min(1),
+	responseId: z.string().min(1),
+});
+
+export type ProjectRegistrationFormResponsePathParams = z.infer<
+	typeof projectRegistrationFormResponsePathParamsSchema
+>;
+
+export const updateProjectRegistrationFormResponseRequestSchema = z.object({
+	answers: z.array(formAnswerInputSchema),
+});
+
+export type UpdateProjectRegistrationFormResponseRequest = z.infer<
+	typeof updateProjectRegistrationFormResponseRequestSchema
+>;
+
+export const updateProjectRegistrationFormResponseResponseSchema = z.object({
+	response: projectRegistrationFormResponseViewSchema,
+});
+
+export type UpdateProjectRegistrationFormResponseResponse = z.infer<
+	typeof updateProjectRegistrationFormResponseResponseSchema
 >;
 
 // ─────────────────────────────────────────────
@@ -353,4 +403,25 @@ export const decideSubOwnerRequestResponseSchema = z.object({
 
 export type DecideSubOwnerRequestResponse = z.infer<
 	typeof decideSubOwnerRequestResponseSchema
+>;
+
+// ─────────────────────────────────────────────
+// GET /project/application-period
+// 企画応募期間の情報を取得
+// ─────────────────────────────────────────────
+
+export const getApplicationPeriodResponseSchema = z.object({
+	isOpen: z.boolean(),
+	periods: z
+		.array(
+			z.object({
+				start: z.string(),
+				end: z.string(),
+			})
+		)
+		.nullable(),
+});
+
+export type GetApplicationPeriodResponse = z.infer<
+	typeof getApplicationPeriodResponseSchema
 >;

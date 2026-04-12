@@ -1,10 +1,13 @@
 import {
 	assignSubOwnerRequestSchema,
 	assignSubOwnerResponseSchema,
+	createProjectRegistrationFormResponseRequestSchema,
+	createProjectRegistrationFormResponseResponseSchema,
 	createProjectRequestSchema,
 	createProjectResponseSchema,
 	decideSubOwnerRequestRequestSchema,
 	decideSubOwnerRequestResponseSchema,
+	getApplicationPeriodResponseSchema,
 	getProjectDetailResponseSchema,
 	getProjectRegistrationFormResponsesResponseSchema,
 	joinProjectRequestSchema,
@@ -13,12 +16,15 @@ import {
 	listProjectMembersResponseSchema,
 	projectIdPathParamsSchema,
 	projectMemberPathParamsSchema,
+	projectRegistrationFormResponsePathParamsSchema,
 	regenerateInviteCodeRequestSchema,
 	regenerateInviteCodeResponseSchema,
 	removeProjectMemberRequestSchema,
 	removeProjectMemberResponseSchema,
 	updateProjectDetailRequestSchema,
 	updateProjectDetailResponseSchema,
+	updateProjectRegistrationFormResponseRequestSchema,
+	updateProjectRegistrationFormResponseResponseSchema,
 } from "../schemas/project";
 import type { BodyEndpoint, GetEndpoint } from "./types";
 
@@ -135,6 +141,28 @@ export const getProjectRegistrationFormResponsesEndpoint: GetEndpoint<
 	query: undefined,
 	request: undefined,
 	response: getProjectRegistrationFormResponsesResponseSchema,
+} as const;
+
+/**
+ * POST /project/:projectId/registration-form-responses
+ * 企画登録フォーム回答を新規作成
+ *
+ * - requireProjectMember + OWNER のみ
+ */
+export const createProjectRegistrationFormResponseEndpoint: BodyEndpoint<
+	"POST",
+	"/project/:projectId/registration-form-responses",
+	typeof projectIdPathParamsSchema,
+	undefined,
+	typeof createProjectRegistrationFormResponseRequestSchema,
+	typeof createProjectRegistrationFormResponseResponseSchema
+> = {
+	method: "POST",
+	path: "/project/:projectId/registration-form-responses",
+	pathParams: projectIdPathParamsSchema,
+	query: undefined,
+	request: createProjectRegistrationFormResponseRequestSchema,
+	response: createProjectRegistrationFormResponseResponseSchema,
 } as const;
 
 /**
@@ -279,4 +307,44 @@ export const rejectSubOwnerRequestEndpoint: BodyEndpoint<
 	query: undefined,
 	request: decideSubOwnerRequestRequestSchema,
 	response: decideSubOwnerRequestResponseSchema,
+} as const;
+
+/**
+ * GET /project/application-period
+ * 企画応募期間の情報を取得
+ */
+export const getApplicationPeriodEndpoint: GetEndpoint<
+	"/project/application-period",
+	undefined,
+	undefined,
+	typeof getApplicationPeriodResponseSchema
+> = {
+	method: "GET",
+	path: "/project/application-period",
+	pathParams: undefined,
+	query: undefined,
+	request: undefined,
+	response: getApplicationPeriodResponseSchema,
+} as const;
+
+/**
+ * PATCH /project/:projectId/registration-form-responses/:responseId
+ * 企画登録フォーム回答を編集（応募期間内のみ）
+ *
+ * - requireProjectMember + OWNER のみ
+ */
+export const updateProjectRegistrationFormResponseEndpoint: BodyEndpoint<
+	"PATCH",
+	"/project/:projectId/registration-form-responses/:responseId",
+	typeof projectRegistrationFormResponsePathParamsSchema,
+	undefined,
+	typeof updateProjectRegistrationFormResponseRequestSchema,
+	typeof updateProjectRegistrationFormResponseResponseSchema
+> = {
+	method: "PATCH",
+	path: "/project/:projectId/registration-form-responses/:responseId",
+	pathParams: projectRegistrationFormResponsePathParamsSchema,
+	query: undefined,
+	request: updateProjectRegistrationFormResponseRequestSchema,
+	response: updateProjectRegistrationFormResponseResponseSchema,
 } as const;

@@ -718,12 +718,18 @@ committeeProjectRegistrationFormRoute.get(
 		if (!form) throw Errors.notFound("企画登録フォームが見つかりません");
 
 		const responses = await prisma.projectRegistrationFormResponse.findMany({
-			where: { formId },
+			where: {
+				formId,
+				deletedAt: null,
+			},
 			include: {
 				project: {
 					select: { id: true, name: true, organizationName: true },
 				},
 				answers: {
+					where: {
+						deletedAt: null,
+					},
 					include: {
 						files: answerFilesInclude,
 						selectedOptions: {
