@@ -94,7 +94,7 @@
 | `FORM_DELIVER` | 申請配信 |
 | `INQUIRY_ADMIN` | お問い合わせ管理 |
 | `PROJECT_EDIT` | 企画編集 |
-| `PROJECT_DELETE` | 企画中止状態の変更 |
+| `PROJECT_DELETE` | 企画削除状態の変更 |
 | `PROJECT_VIEW` | 企画詳細の連絡先閲覧（企画責任者・副企画責任者） |
 | `PROJECT_REGISTRATION_FORM_CREATE` | 企画登録フォーム作成 |
 | `PROJECT_REGISTRATION_FORM_DELIVER` | 企画登録フォーム配信・承認 |
