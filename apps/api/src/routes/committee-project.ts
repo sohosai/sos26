@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import {
 	listCommitteeProjectsQuerySchema,
 	type ProjectMemberRole,
+	type UpdateCommitteeProjectBaseInfoRequest,
 	updateCommitteeProjectBaseInfoRequestSchema,
 	updateCommitteeProjectDeletionStatusRequestSchema,
 } from "@sos26/shared";
@@ -585,6 +586,99 @@ committeeProjectRoute.get(
 	}
 );
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>複数の責任者バリデーションロジックが連続しているだけ
+async function validateProjectOwnerUpdates(
+	projectId: string,
+	data: UpdateCommitteeProjectBaseInfoRequest
+) {
+	if (!data.ownerId && data.subOwnerId === undefined) {
+		return;
+	}
+
+	const project = await prisma.project.findFirst({
+		where: { id: projectId, deletedAt: null },
+	});
+
+	if (!project) {
+		throw Errors.notFound("企画が見つかりません");
+	}
+
+	const ownerId = data.ownerId ?? project.ownerId;
+	const subOwnerId =
+		data.subOwnerId !== undefined ? data.subOwnerId : project.subOwnerId;
+
+	// 同じユーザーが責任者と副責任者になってはいけない
+	if (ownerId && subOwnerId && ownerId === subOwnerId) {
+		throw Errors.invalidRequest(
+			"企画責任者と副企画責任者は異なるメンバーを指定してください"
+		);
+	}
+
+	// 新しい責任者がメンバーか確認
+	if (data.ownerId && data.ownerId !== project.ownerId) {
+		const newOwnerMember = await prisma.projectMember.findFirst({
+			where: {
+				projectId,
+				userId: data.ownerId,
+				deletedAt: null,
+			},
+		});
+
+		if (!newOwnerMember) {
+			throw Errors.notFound("新しい企画責任者は企画メンバーではありません");
+		}
+
+		// 新しい責任者が他の企画で既に責任者または副責任者になっていないか確認
+		const existingOwnerRole = await prisma.project.findFirst({
+			where: {
+				deletedAt: null,
+				id: { not: projectId },
+				OR: [{ ownerId: data.ownerId }, { subOwnerId: data.ownerId }],
+			},
+		});
+
+		if (existingOwnerRole) {
+			throw Errors.invalidRequest(
+				"このメンバーは既に別の企画の企画責任者として登録されています"
+			);
+		}
+	}
+
+	// 新しい副責任者がメンバーか確認（nullableなので設定されている場合のみ）
+	if (
+		data.subOwnerId !== undefined &&
+		data.subOwnerId !== null &&
+		data.subOwnerId !== project.subOwnerId
+	) {
+		const newSubOwnerMember = await prisma.projectMember.findFirst({
+			where: {
+				projectId,
+				userId: data.subOwnerId,
+				deletedAt: null,
+			},
+		});
+
+		if (!newSubOwnerMember) {
+			throw Errors.notFound("新しい副企画責任者は企画メンバーではありません");
+		}
+
+		// 新しい副責任者が他の企画で既に責任者または副責任者になっていないか確認
+		const existingSubOwnerRole = await prisma.project.findFirst({
+			where: {
+				deletedAt: null,
+				id: { not: projectId },
+				OR: [{ ownerId: data.subOwnerId }, { subOwnerId: data.subOwnerId }],
+			},
+		});
+
+		if (existingSubOwnerRole) {
+			throw Errors.invalidRequest(
+				"このメンバーは既に別の企画の企画責任者または、副企画責任者として登録されています"
+			);
+		}
+	}
+}
+
 committeeProjectRoute.patch(
 	"/:projectId/base-info",
 	requireAuth,
@@ -600,6 +694,9 @@ committeeProjectRoute.patch(
 
 		const body = await c.req.json().catch(() => ({}));
 		const data = updateCommitteeProjectBaseInfoRequestSchema.parse(body);
+
+		// 責任者情報のバリデーション
+		await validateProjectOwnerUpdates(projectId, data);
 
 		const updated = await prisma.project.updateMany({
 			where: { id: projectId, deletedAt: null },
