@@ -341,6 +341,24 @@ function RouteComponent() {
 		}
 	};
 
+	const handleCancelApproval = async (authorizationId: string) => {
+		try {
+			await rejectFormAuthorization(formId, authorizationId);
+			await router.invalidate();
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "reject",
+				userMessage: "承認の取り消しに失敗しました",
+				ui: { type: "toast" },
+				context: {
+					formId,
+					authorizationId,
+				},
+			});
+		}
+	};
+
 	const formDetailSidebar = (
 		<FormDetailSidebar
 			form={form}
@@ -359,6 +377,7 @@ function RouteComponent() {
 			onRemoveCollaborator={handleRemoveCollaborator}
 			onApprove={handleApprove}
 			onReject={handleReject}
+			onCancelApproval={handleCancelApproval}
 			onUpdateViewers={handleUpdateViewers}
 			onPublishSuccess={() => router.invalidate()}
 			onEdit={() => setEditDialogOpen(true)}
