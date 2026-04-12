@@ -610,12 +610,12 @@ async function validateProjectOwnerUpdates(
 	// 同じユーザーが責任者と副責任者になってはいけない
 	if (ownerId && subOwnerId && ownerId === subOwnerId) {
 		throw Errors.invalidRequest(
-			"責任者と副責任者は異なるメンバーを指定してください"
+			"企画責任者と副企画責任者は異なるメンバーを指定してください"
 		);
 	}
 
 	// 新しい責任者がメンバーか確認
-	if (data.ownerId) {
+	if (data.ownerId && data.ownerId !== project.ownerId) {
 		const newOwnerMember = await prisma.projectMember.findFirst({
 			where: {
 				projectId,
@@ -625,7 +625,7 @@ async function validateProjectOwnerUpdates(
 		});
 
 		if (!newOwnerMember) {
-			throw Errors.notFound("新しい責任者は企画メンバーではありません");
+			throw Errors.notFound("新しい企画責任者は企画メンバーではありません");
 		}
 
 		// 新しい責任者が他の企画で既に責任者または副責任者になっていないか確認
@@ -639,13 +639,17 @@ async function validateProjectOwnerUpdates(
 
 		if (existingOwnerRole) {
 			throw Errors.invalidRequest(
-				"このメンバーは既に別の企画の責任者として登録されています"
+				"このメンバーは既に別の企画の企画責任者として登録されています"
 			);
 		}
 	}
 
 	// 新しい副責任者がメンバーか確認（nullableなので設定されている場合のみ）
-	if (data.subOwnerId) {
+	if (
+		data.subOwnerId !== undefined &&
+		data.subOwnerId !== null &&
+		data.subOwnerId !== project.subOwnerId
+	) {
 		const newSubOwnerMember = await prisma.projectMember.findFirst({
 			where: {
 				projectId,
@@ -655,7 +659,7 @@ async function validateProjectOwnerUpdates(
 		});
 
 		if (!newSubOwnerMember) {
-			throw Errors.notFound("新しい副責任者は企画メンバーではありません");
+			throw Errors.notFound("新しい副企画責任者は企画メンバーではありません");
 		}
 
 		// 新しい副責任者が他の企画で既に責任者または副責任者になっていないか確認
@@ -669,7 +673,7 @@ async function validateProjectOwnerUpdates(
 
 		if (existingSubOwnerRole) {
 			throw Errors.invalidRequest(
-				"このメンバーは既に別の企画の責任者として登録されています"
+				"このメンバーは既に別の企画の企画責任者または、副企画責任者として登録されています"
 			);
 		}
 	}

@@ -8,14 +8,37 @@
 
 ## 目次
 
-- [共通仕様](#共通仕様)
-- [エンドポイント一覧](#エンドポイント一覧)
-- [各 API 詳細](#各-api-詳細)
-  - [GET `/committee/projects`](#get-committeeprojects)
-  - [GET `/committee/projects/:projectId`](#get-committeeprojectsprojectid)
-  - [PATCH `/committee/projects/:projectId/base-info`](#patch-committeeprojectsprojectidbase-info)
-  - [PATCH `/committee/projects/:projectId/deletion-status`](#patch-committeeprojectsprojectiddeletion-status)
-  - [GET `/committee/projects/:projectId/members`](#get-committeeprojectsprojectidmembers)
+- [Committee Project API 仕様（`/committee/projects`）](#committee-project-api-仕様committeeprojects)
+	- [目次](#目次)
+	- [共通仕様](#共通仕様)
+	- [エンドポイント一覧](#エンドポイント一覧)
+	- [各 API 詳細](#各-api-詳細)
+		- [GET `/committee/projects`](#get-committeeprojects)
+			- [クエリパラメータ](#クエリパラメータ)
+			- [レスポンス](#レスポンス)
+			- [動作](#動作)
+		- [GET `/committee/projects/:projectId`](#get-committeeprojectsprojectid)
+			- [パスパラメータ](#パスパラメータ)
+			- [レスポンス](#レスポンス-1)
+			- [動作](#動作-1)
+			- [エラー](#エラー)
+		- [PATCH `/committee/projects/:projectId/base-info`](#patch-committeeprojectsprojectidbase-info)
+			- [権限](#権限)
+			- [リクエスト](#リクエスト)
+			- [責任者更新に関する制約](#責任者更新に関する制約)
+			- [レスポンス](#レスポンス-2)
+			- [エラー](#エラー-1)
+		- [PATCH `/committee/projects/:projectId/deletion-status`](#patch-committeeprojectsprojectiddeletion-status)
+			- [権限](#権限-1)
+			- [リクエスト](#リクエスト-1)
+			- [レスポンス](#レスポンス-3)
+			- [動作](#動作-2)
+			- [エラー](#エラー-2)
+		- [GET `/committee/projects/:projectId/members`](#get-committeeprojectsprojectidmembers)
+			- [パスパラメータ](#パスパラメータ-1)
+			- [レスポンス](#レスポンス-4)
+			- [動作](#動作-3)
+			- [エラー](#エラー-3)
 
 ---
 
@@ -242,7 +265,7 @@
 - 権限がない場合: `FORBIDDEN`
 - 企画が存在しない場合: `NOT_FOUND`
 - 指定したメンバーが企画のメンバーでない場合: `NOT_FOUND`
-- 指定したメンバーが他の企画で責任者として登録されている場合: `INVALID_REQUEST`
+- 指定したメンバーが他の企画で責任者または副責任者として登録されている場合: `INVALID_REQUEST`
 - 責任者と副責任者が同じユーザーの場合: `INVALID_REQUEST`
 
 ---
