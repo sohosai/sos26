@@ -431,7 +431,11 @@ function AuthDetailSection({
 							onApprove(pendingAuth.id);
 						}}
 						loading={approvingId === pendingAuth.id}
-						disabled={rejectingId !== null}
+						disabled={
+							rejectingId !== null ||
+							cancelingId !== null ||
+							approvingId === pendingAuth.id
+						}
 					>
 						<IconCheck size={16} />
 						承認
@@ -441,7 +445,11 @@ function AuthDetailSection({
 						size="2"
 						onClick={() => onReject(pendingAuth.id)}
 						loading={rejectingId === pendingAuth.id}
-						disabled={approvingId !== null}
+						disabled={
+							approvingId !== null ||
+							cancelingId !== null ||
+							rejectingId === pendingAuth.id
+						}
 					>
 						<IconX size={16} />
 						却下
@@ -455,7 +463,11 @@ function AuthDetailSection({
 						size="2"
 						onClick={() => onCancelApproval(auth.id)}
 						loading={cancelingId === auth.id}
-						disabled={approvingId !== null || rejectingId !== null}
+						disabled={
+							approvingId !== null ||
+							rejectingId !== null ||
+							cancelingId === auth.id
+						}
 					>
 						<IconX size={16} />
 						承認を取り消す

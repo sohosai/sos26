@@ -879,20 +879,20 @@ committeeFormRoute.patch(
 			throw Errors.invalidRequest("この承認依頼は既に処理済みです");
 		});
 
-		void notifyFormAuthorizationDecided({
-			requestedByUserId: authorization.requestedById,
-			formId,
-			formTitle: authorization.form.title,
-			status,
-			scheduledSendAt: authorization.scheduledSendAt,
-		});
-
 		// 承認が取り消された場合は別の通知を送信
 		if (authorization.status === "APPROVED" && status === "REJECTED") {
 			void notifyFormAuthorizationCancelled({
 				requestedByUserId: authorization.requestedById,
 				formId,
 				formTitle: authorization.form.title,
+			});
+		} else {
+			void notifyFormAuthorizationDecided({
+				requestedByUserId: authorization.requestedById,
+				formId,
+				formTitle: authorization.form.title,
+				status,
+				scheduledSendAt: authorization.scheduledSendAt,
 			});
 		}
 
