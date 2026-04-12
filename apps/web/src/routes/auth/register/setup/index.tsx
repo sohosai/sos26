@@ -9,6 +9,8 @@ import {
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
+import { toast } from "sonner";
+import FilePreviewDialog from "@/components/filePreview/FilePreviewDialog";
 import { Button, Checkbox, TextField } from "@/components/primitives";
 import { register } from "@/lib/api/auth";
 import { useAuthStore } from "@/lib/auth";
@@ -39,8 +41,43 @@ function SetupPage() {
 	const [passwordConfirm, setPasswordConfirm] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [termsAccepted, setTermsAccepted] = useState(false);
+	const [termsFile, setTermsFile] = useState<File | null>(null);
+	const [termsDialogOpen, setTermsDialogOpen] = useState(false);
+	const [termsLoading, setTermsLoading] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [sessionExpired, setSessionExpired] = useState(false);
+	const termsFilePath = "/雙峰祭オンラインシステム利用規約.pdf";
+	const termsFileName = "雙峰祭オンラインシステム利用規約.pdf";
+
+	const handleOpenTerms = async () => {
+		if (termsFile) {
+			setTermsDialogOpen(true);
+			return;
+		}
+
+		setTermsLoading(true);
+		try {
+			const response = await fetch(termsFilePath);
+			if (!response.ok) throw new Error("failed to fetch terms");
+			const blob = await response.blob();
+			const file = new File([blob], termsFileName, {
+				type: blob.type || "application/pdf",
+			});
+			setTermsFile(file);
+			setTermsDialogOpen(true);
+		} catch {
+			toast.error("利用規約の読み込みに失敗しました");
+		} finally {
+			setTermsLoading(false);
+		}
+	};
+
+	const handleDownloadTerms = () => {
+		const link = document.createElement("a");
+		link.href = termsFilePath;
+		link.download = termsFileName;
+		link.click();
+	};
 
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: 各フィールドのバリデーションを順次チェックしているだけで実質的に複雑ではない
 	const validate = (): string | null => {
@@ -196,6 +233,20 @@ function SetupPage() {
 					autoComplete="new-password"
 				/>
 
+				<Button
+					intent="secondary"
+					size="2"
+					onClick={handleOpenTerms}
+					loading={termsLoading}
+				>
+					利用規約を表示
+				</Button>
+				<FilePreviewDialog
+					file={termsFile}
+					open={termsDialogOpen}
+					onOpenChange={setTermsDialogOpen}
+					onDownload={handleDownloadTerms}
+				/>
 				<Checkbox
 					label="利用規約に同意する"
 					checked={termsAccepted}

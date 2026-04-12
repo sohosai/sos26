@@ -8,14 +8,37 @@
 
 ## 目次
 
-- [共通仕様](#共通仕様)
-- [エンドポイント一覧](#エンドポイント一覧)
-- [各 API 詳細](#各-api-詳細)
-  - [GET `/committee/projects`](#get-committeeprojects)
-  - [GET `/committee/projects/:projectId`](#get-committeeprojectsprojectid)
-  - [PATCH `/committee/projects/:projectId/base-info`](#patch-committeeprojectsprojectidbase-info)
-  - [PATCH `/committee/projects/:projectId/deletion-status`](#patch-committeeprojectsprojectiddeletion-status)
-  - [GET `/committee/projects/:projectId/members`](#get-committeeprojectsprojectidmembers)
+- [Committee Project API 仕様（`/committee/projects`）](#committee-project-api-仕様committeeprojects)
+	- [目次](#目次)
+	- [共通仕様](#共通仕様)
+	- [エンドポイント一覧](#エンドポイント一覧)
+	- [各 API 詳細](#各-api-詳細)
+		- [GET `/committee/projects`](#get-committeeprojects)
+			- [クエリパラメータ](#クエリパラメータ)
+			- [レスポンス](#レスポンス)
+			- [動作](#動作)
+		- [GET `/committee/projects/:projectId`](#get-committeeprojectsprojectid)
+			- [パスパラメータ](#パスパラメータ)
+			- [レスポンス](#レスポンス-1)
+			- [動作](#動作-1)
+			- [エラー](#エラー)
+		- [PATCH `/committee/projects/:projectId/base-info`](#patch-committeeprojectsprojectidbase-info)
+			- [権限](#権限)
+			- [リクエスト](#リクエスト)
+			- [責任者更新に関する制約](#責任者更新に関する制約)
+			- [レスポンス](#レスポンス-2)
+			- [エラー](#エラー-1)
+		- [PATCH `/committee/projects/:projectId/deletion-status`](#patch-committeeprojectsprojectiddeletion-status)
+			- [権限](#権限-1)
+			- [リクエスト](#リクエスト-1)
+			- [レスポンス](#レスポンス-3)
+			- [動作](#動作-2)
+			- [エラー](#エラー-2)
+		- [GET `/committee/projects/:projectId/members`](#get-committeeprojectsprojectidmembers)
+			- [パスパラメータ](#パスパラメータ-1)
+			- [レスポンス](#レスポンス-4)
+			- [動作](#動作-3)
+			- [エラー](#エラー-3)
 
 ---
 
@@ -39,7 +62,7 @@
 | GET | `/committee/projects` | 全企画一覧（フィルタ・検索・ページネーション） |
 | GET | `/committee/projects/:projectId` | 企画詳細（permissions/連絡先マスキング/アクション履歴含む） |
 | PATCH | `/committee/projects/:projectId/base-info` | 企画基礎情報を更新 |
-| PATCH | `/committee/projects/:projectId/deletion-status` | 企画削除状態を更新（削除/抽選漏れ/取消） |
+| PATCH | `/committee/projects/:projectId/deletion-status` | 企画削除状態を更新（企画中止/落選/取消） |
 | GET | `/committee/projects/:projectId/members` | 企画メンバー一覧（ロール付き） |
 
 ---
@@ -99,7 +122,7 @@
 
 ### GET `/committee/projects/:projectId`
 
-企画の詳細情報を返します。責任者・副責任者情報、メンバー数、アクション履歴、操作権限を含みます。
+企画の詳細情報を返します。企画責任者・副企画責任者情報、メンバー数、アクション履歴、操作権限を含みます。
 
 #### パスパラメータ
 
@@ -177,7 +200,7 @@
 
 ### PATCH `/committee/projects/:projectId/base-info`
 
-企画の基礎情報を更新します。
+企画の基礎情報を更新します。基本情報のほか、企画責任者・副企画責任者も更新可能です。
 
 #### 権限
 
@@ -194,9 +217,18 @@
   "organizationName": "新しい団体名",
   "organizationNamePhonetic": "あたらしいだんたいめい",
   "type": "NORMAL",
-  "location": "INDOOR"
+  "location": "INDOOR",
+  "ownerId": "clxxx...",
+  "subOwnerId": "clyyy..."
 }
 ```
+
+#### 責任者更新に関する制約
+
+- `ownerId`: 企画メンバーであり、且つ他の企画で責任者・副責任者に指定されていないユーザー
+- `subOwnerId`: 企画メンバーであり、且つ他の企画で責任者・副責任者に指定されていないユーザー（`null` で未設定）
+- 同一企画内では、`ownerId` と `subOwnerId` に同じユーザーを指定できない
+- 企画責任者の変更時に、既存の副企画責任者が存在する場合、その副企画責任者は変わらない限り保持される
 
 #### レスポンス
 
@@ -232,6 +264,9 @@
 
 - 権限がない場合: `FORBIDDEN`
 - 企画が存在しない場合: `NOT_FOUND`
+- 指定したメンバーが企画のメンバーでない場合: `NOT_FOUND`
+- 指定したメンバーが他の企画で責任者または副責任者として登録されている場合: `INVALID_REQUEST`
+- 責任者と副責任者が同じユーザーの場合: `INVALID_REQUEST`
 
 ---
 

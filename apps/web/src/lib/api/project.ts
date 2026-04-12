@@ -69,7 +69,7 @@ export function listProjectMembers(
 
 /**
  * POST /project/join
- * 招待コードで企画に参加
+ * 企画参加コードで企画に参加
  */
 export async function joinProject(
 	body: JoinProjectRequest
@@ -79,7 +79,7 @@ export async function joinProject(
 
 /**
  * GET /project/:projectId/detail
- * 企画の詳細を取得（招待コード含む）
+ * 企画の詳細を取得（企画参加コード含む）
  */
 export async function getProjectDetail(
 	projectId: string
@@ -129,7 +129,7 @@ export async function updateProjectDetail(
 
 /**
  * POST /project/:projectId/invite-code/regenerate
- * 招待コードを再生成
+ * 企画参加コードを再生成
  */
 export async function regenerateInviteCode(
 	projectId: string
@@ -154,7 +154,7 @@ export async function removeProjectMember(
 
 /**
  * POST /project/:projectId/members/:userId/assign
- * 企画メンバーに副責任者リクエストを送る
+ * 企画メンバーに副企画責任者リクエストを送る
  */
 export async function assignSubOwner(
 	projectId: string,
@@ -167,7 +167,7 @@ export async function assignSubOwner(
 
 /**
  * POST /project/:projectId/sub-owner-request/approve
- * 副責任者リクエストを承認
+ * 副企画責任者リクエストを承認
  */
 export async function approveSubOwnerRequest(
 	projectId: string
@@ -179,7 +179,7 @@ export async function approveSubOwnerRequest(
 
 /**
  * POST /project/:projectId/sub-owner-request/cancel
- * 副責任者リクエストを取り消し
+ * 副企画責任者リクエストを取り消し
  */
 export async function cancelSubOwnerRequest(
 	projectId: string
@@ -191,7 +191,7 @@ export async function cancelSubOwnerRequest(
 
 /**
  * POST /project/:projectId/sub-owner-request/reject
- * 副責任者リクエストを辞退
+ * 副企画責任者リクエストを辞退
  */
 export async function rejectSubOwnerRequest(
 	projectId: string

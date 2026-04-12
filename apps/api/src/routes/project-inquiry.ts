@@ -603,14 +603,10 @@ projectInquiryRoute.post(
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
 		if (inquiry.isDraft) {
-			throw Errors.invalidRequest(
-				"下書き状態のお問い合わせにはコメントできません"
-			);
+			throw Errors.invalidRequest("下書き状態のお問い合わせには返信できません");
 		}
 		if (inquiry.status === "RESOLVED") {
-			throw Errors.invalidRequest(
-				"解決済みのお問い合わせにはコメントできません"
-			);
+			throw Errors.invalidRequest("解決済みのお問い合わせには返信できません");
 		}
 
 		// 添付ファイルの存在・ステータスチェック

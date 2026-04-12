@@ -5,7 +5,7 @@ export function subOwnerRequestRejectedTemplate(params: {
 	url: string;
 }): PushPayload {
 	return {
-		title: "副責任者リクエストが辞退されました",
+		title: "副企画責任者リクエストが辞退されました",
 		body: params.projectName,
 		icon: "/sos.svg",
 		badge: "/sos.svg",

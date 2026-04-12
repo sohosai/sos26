@@ -29,7 +29,7 @@ export function InviteMemberDialog({ open, onOpenChange }: Props) {
 			setInviteCode(res.inviteCode);
 			setRegenerateConfirmOpen(false);
 		} catch {
-			toast.error("招待コードの再生成に失敗しました");
+			toast.error("企画参加コードの再生成に失敗しました");
 		}
 	};
 
@@ -86,9 +86,9 @@ export function InviteMemberDialog({ open, onOpenChange }: Props) {
 					onOpenChange={setRegenerateConfirmOpen}
 				>
 					<AlertDialog.Content maxWidth="400px">
-						<AlertDialog.Title>招待コードの再生成</AlertDialog.Title>
+						<AlertDialog.Title>企画参加コードの再生成</AlertDialog.Title>
 						<AlertDialog.Description size="2">
-							招待コードを再生成しますか？現在のコードは無効になります。
+							企画参加コードを再生成しますか？現在のコードは無効になります。
 						</AlertDialog.Description>
 						<div
 							style={{

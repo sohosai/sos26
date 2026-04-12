@@ -4,7 +4,7 @@ import { prisma } from "../prisma";
 import { sendSubOwnerRequestCancelledPush } from "../push";
 
 /**
- * 副責任者リクエストが取り消されたとき、指名されていたユーザーに通知
+ * 副企画責任者リクエストが取り消されたとき、指名されていたユーザーに通知
  */
 export async function notifySubOwnerRequestCancelled(input: {
 	targetUserId: string;

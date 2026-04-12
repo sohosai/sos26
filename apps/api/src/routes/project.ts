@@ -41,7 +41,7 @@ import type { AuthEnv } from "../types/auth-env";
 
 const projectRoute = new Hono<AuthEnv>();
 
-// 招待コード生成
+// 企画参加コード生成
 const INVITE_CODE_LENGTH = 6;
 const INVITE_CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -146,7 +146,7 @@ projectRoute.post("/create", requireAuth, async c => {
 	// ── 企画応募期間チェック ──
 	assertWithinApplicationPeriod();
 
-	// ── 他の企画で責任者・副責任者をやっていないか確認 ──
+	// ── 他の企画で企画責任者・副企画責任者をやっていないか確認 ──
 	const hasOtherPrivilegedProject = await prisma.project.findFirst({
 		where: {
 			deletedAt: null,
@@ -156,11 +156,11 @@ projectRoute.post("/create", requireAuth, async c => {
 
 	if (hasOtherPrivilegedProject) {
 		throw Errors.invalidRequest(
-			"このユーザーは既に他の企画で責任者または副責任者です"
+			"このユーザーは既に他の企画で企画責任者または副企画責任者です"
 		);
 	}
 
-	// 招待コード生成（衝突回避）
+	// 企画参加コード生成（衝突回避）
 	let inviteCode = generateInviteCode();
 	while (await prisma.project.findUnique({ where: { inviteCode } })) {
 		inviteCode = generateInviteCode();
@@ -266,7 +266,7 @@ projectRoute.get("/list", requireAuth, async c => {
 
 // ─────────────────────────────────────────
 // POST /project/join
-// 招待コードで企画に参加
+// 企画参加コードで企画に参加
 // ─────────────────────────────────────────
 projectRoute.post("/join", requireAuth, async c => {
 	const body = await c.req.json().catch(() => ({}));
@@ -282,7 +282,7 @@ projectRoute.post("/join", requireAuth, async c => {
 	});
 
 	if (!project) {
-		throw Errors.notFound("招待コードが無効です");
+		throw Errors.notFound("企画参加コードが無効です");
 	}
 
 	// 既にメンバーか確認
@@ -310,7 +310,7 @@ projectRoute.post("/join", requireAuth, async c => {
 
 // ─────────────────────────────────────────
 // GET /project/:projectId/detail
-// 企画の詳細を取得（招待コード含む）
+// 企画の詳細を取得（企画参加コード含む）
 // ─────────────────────────────────────────
 projectRoute.get(
 	"/:projectId/detail",
@@ -605,7 +605,7 @@ projectRoute.patch(
 	async c => {
 		const role = c.get("projectRole");
 		if (role !== "OWNER") {
-			throw Errors.forbidden("企画の設定を変更できるのは責任者のみです");
+			throw Errors.forbidden("企画の設定を変更できるのは企画責任者のみです");
 		}
 
 		// 企画応募期間内のみ編集可能
@@ -640,7 +640,7 @@ projectRoute.patch(
 
 // ─────────────────────────────────────────
 // POST /project/:projectId/invite-code/regenerate
-// 招待コードを再生成
+// 企画参加コードを再生成
 // ─────────────────────────────────────────
 projectRoute.post(
 	"/:projectId/invite-code/regenerate",
@@ -649,7 +649,9 @@ projectRoute.post(
 	async c => {
 		const role = c.get("projectRole");
 		if (role !== "OWNER") {
-			throw Errors.forbidden("招待コードを再生成できるのは責任者のみです");
+			throw Errors.forbidden(
+				"企画参加コードを再生成できるのは企画責任者のみです"
+			);
 		}
 
 		const project = c.get("project");
@@ -692,7 +694,7 @@ projectRoute.get(
 			},
 		});
 
-		// PENDINGの副責任者リクエストを取得
+		// PENDINGの副企画責任者リクエストを取得
 		const pendingRequest = await prisma.projectSubOwnerRequest.findFirst({
 			where: {
 				projectId: project.id,
@@ -760,10 +762,10 @@ projectRoute.post(
 		}
 
 		if (userId === project.ownerId || userId === project.subOwnerId) {
-			throw Errors.invalidRequest("責任者・副責任者は削除できません");
+			throw Errors.invalidRequest("企画責任者・副企画責任者は削除できません");
 		}
 
-		// 削除対象が副責任者リクエストの対象ユーザーであればリクエストも拒否する
+		// 削除対象が副企画責任者リクエストの対象ユーザーであればリクエストも拒否する
 		await prisma.$transaction(async tx => {
 			await tx.projectSubOwnerRequest.updateMany({
 				where: {
@@ -790,7 +792,7 @@ projectRoute.post(
 
 // ─────────────────────────────────────────
 // POST /project/:projectId/members/:userId/assign
-// メンバーに副責任者リクエストを送信
+// メンバーに副企画責任者リクエストを送信
 // ─────────────────────────────────────────
 projectRoute.post(
 	"/:projectId/members/:userId/assign",
@@ -802,7 +804,7 @@ projectRoute.post(
 		const project = c.get("project");
 
 		if (role !== "OWNER") {
-			throw Errors.forbidden("副責任者を任命できるのは責任者のみです");
+			throw Errors.forbidden("副企画責任者を任命できるのは企画責任者のみです");
 		}
 
 		// 任命対象がメンバーか
@@ -817,17 +819,17 @@ projectRoute.post(
 			throw Errors.notFound("対象ユーザーは企画メンバーではありません");
 		}
 
-		// 既に副責任者がいる場合はエラー
+		// 既に副企画責任者がいる場合はエラー
 		if (project.subOwnerId) {
-			throw Errors.invalidRequest("既に副責任者が任命されています");
+			throw Errors.invalidRequest("既に副企画責任者が任命されています");
 		}
 
-		// 責任者は指定不可
+		// 企画責任者は指定不可
 		if (userId === project.ownerId) {
-			throw Errors.invalidRequest("責任者を副責任者には指定できません");
+			throw Errors.invalidRequest("企画責任者を副企画責任者には指定できません");
 		}
 
-		// 他企画で責任者、副責任者をやっていないかチェック
+		// 他企画で企画責任者、副企画責任者をやっていないかチェック
 		const hasOtherPrivilegedProject = await prisma.project.findFirst({
 			where: {
 				deletedAt: null,
@@ -840,7 +842,7 @@ projectRoute.post(
 
 		if (hasOtherPrivilegedProject) {
 			throw Errors.invalidRequest(
-				"このユーザーは既に他の企画で責任者または副責任者です"
+				"このユーザーは既に他の企画で企画責任者または副企画責任者です"
 			);
 		}
 
@@ -853,7 +855,9 @@ projectRoute.post(
 		});
 
 		if (existingRequest) {
-			throw Errors.invalidRequest("既に副責任者リクエストが送信されています");
+			throw Errors.invalidRequest(
+				"既に副企画責任者リクエストが送信されています"
+			);
 		}
 
 		const [request, owner] = await Promise.all([
@@ -889,7 +893,7 @@ projectRoute.post(
 
 /**
  * POST /project/:projectId/sub-owner-request/approve
- * 指名されたユーザーが副責任者リクエストを承認する
+ * 指名されたユーザーが副企画責任者リクエストを承認する
  */
 projectRoute.post(
 	"/:projectId/sub-owner-request/approve",
@@ -909,7 +913,7 @@ projectRoute.post(
 		});
 
 		if (!pendingRequest) {
-			throw Errors.notFound("自分宛ての副責任者リクエストが見つかりません");
+			throw Errors.notFound("自分宛ての副企画責任者リクエストが見つかりません");
 		}
 
 		await prisma.$transaction(async tx => {
@@ -934,15 +938,15 @@ projectRoute.post(
 				currentProject.subOwnerId === userId
 			) {
 				throw Errors.forbidden(
-					"副責任者リクエストを承認できるのはメンバーのみです"
+					"副企画責任者リクエストを承認できるのはメンバーのみです"
 				);
 			}
 
-			// 既に副責任者がいる場合はエラー
+			// 既に副企画責任者がいる場合はエラー
 			if (currentProject.subOwnerId) {
-				throw Errors.invalidRequest("既に副責任者が任命されています");
+				throw Errors.invalidRequest("既に副企画責任者が任命されています");
 			}
-			// 他企画で責任者、副責任者をやっていないかチェック
+			// 他企画で企画責任者、副企画責任者をやっていないかチェック
 			const hasOtherPrivilegedProject = await tx.project.findFirst({
 				where: {
 					deletedAt: null,
@@ -958,7 +962,7 @@ projectRoute.post(
 
 			if (hasOtherPrivilegedProject) {
 				throw Errors.invalidRequest(
-					"既に他の企画で責任者または副責任者のユーザーは副責任者になることはできません"
+					"既に他の企画で企画責任者または副企画責任者のユーザーは副企画責任者になることはできません"
 				);
 			}
 
@@ -976,7 +980,9 @@ projectRoute.post(
 			});
 
 			if (approveResult.count !== 1) {
-				throw Errors.notFound("副責任者リクエストの承認対象が見つかりません");
+				throw Errors.notFound(
+					"副企画責任者リクエストの承認対象が見つかりません"
+				);
 			}
 
 			const updateProjectResult = await tx.project.updateMany({
@@ -990,7 +996,7 @@ projectRoute.post(
 			});
 
 			if (updateProjectResult.count !== 1) {
-				throw Errors.invalidRequest("既に副責任者が任命されています");
+				throw Errors.invalidRequest("既に副企画責任者が任命されています");
 			}
 		});
 
@@ -1013,7 +1019,7 @@ projectRoute.post(
 
 /**
  * POST /project/:projectId/sub-owner-request/cancel
- * 責任者が副責任者リクエストを取り消す
+ * 企画責任者が副企画責任者リクエストを取り消す
  */
 projectRoute.post(
 	"/:projectId/sub-owner-request/cancel",
@@ -1025,7 +1031,7 @@ projectRoute.post(
 
 		if (role !== "OWNER") {
 			throw Errors.forbidden(
-				"副責任者リクエストを取り消せるのは責任者のみです"
+				"副企画責任者リクエストを取り消せるのは企画責任者のみです"
 			);
 		}
 
@@ -1039,7 +1045,9 @@ projectRoute.post(
 		});
 
 		if (!pendingRequest) {
-			throw Errors.notFound("取り消し対象の副責任者リクエストが見つかりません");
+			throw Errors.notFound(
+				"取り消し対象の副企画責任者リクエストが見つかりません"
+			);
 		}
 
 		await prisma.projectSubOwnerRequest.updateMany({
@@ -1073,7 +1081,7 @@ projectRoute.post(
 
 /**
  * POST /project/:projectId/sub-owner-request/reject
- * 指名されたユーザーが副責任者リクエストを辞退する
+ * 指名されたユーザーが副企画責任者リクエストを辞退する
  */
 projectRoute.post(
 	"/:projectId/sub-owner-request/reject",
@@ -1093,7 +1101,7 @@ projectRoute.post(
 		});
 
 		if (!pendingRequest) {
-			throw Errors.notFound("自分宛ての副責任者リクエストが見つかりません");
+			throw Errors.notFound("自分宛ての副企画責任者リクエストが見つかりません");
 		}
 
 		const rejectResult = await prisma.projectSubOwnerRequest.updateMany({
@@ -1110,7 +1118,7 @@ projectRoute.post(
 		});
 
 		if (rejectResult.count < 1) {
-			throw Errors.notFound("副責任者リクエストの辞退対象が見つかりません");
+			throw Errors.notFound("副企画責任者リクエストの辞退対象が見つかりません");
 		}
 
 		const rejectedUser = await prisma.user.findUniqueOrThrow({

@@ -73,13 +73,18 @@ const PROJECT_TYPE_LABEL = {
 	NORMAL: "普通企画",
 } satisfies Record<ProjectType, string>;
 
-type ProjectDeletionFilterValue = "ACTIVE" | "DELETED" | "LOTTERY_LOSS";
+type ProjectDeletionFilterValue =
+	| "ACTIVE"
+	| "DELETED"
+	| "LOTTERY_LOSS"
+	| "PROJECT_WITHDRAWN";
 
 function projectDeletionStatusLabel(
 	status: ProjectDeletionStatus | null
 ): string {
-	if (status === "LOTTERY_LOSS") return "抽選漏れ";
-	if (status === "DELETED") return "削除";
+	if (status === "LOTTERY_LOSS") return "落選";
+	if (status === "DELETED") return "企画中止";
+	if (status === "PROJECT_WITHDRAWN") return "企画辞退";
 	return "有効";
 }
 const columnHelper = createColumnHelper<MastersheetRow>();
@@ -192,13 +197,13 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 	}),
 	columnHelper.accessor(row => row.project.owner.name, {
 		id: "ownerName",
-		header: "責任者",
+		header: "企画責任者",
 		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
 		meta: { filterVariant: "text" },
 	}),
 	columnHelper.accessor(row => row.project.subOwner?.name ?? "", {
 		id: "subOwnerName",
-		header: "副責任者",
+		header: "副企画責任者",
 		cell: ctx => {
 			const name = ctx.getValue() as string;
 			if (!name)
@@ -229,8 +234,9 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 				filterVariant: "select",
 				selectOptions: [
 					{ value: "ACTIVE", label: "有効" },
-					{ value: "DELETED", label: "削除" },
-					{ value: "LOTTERY_LOSS", label: "抽選漏れ" },
+					{ value: "DELETED", label: "企画中止" },
+					{ value: "LOTTERY_LOSS", label: "落選" },
+					{ value: "PROJECT_WITHDRAWN", label: "企画辞退" },
 				],
 			},
 		}
