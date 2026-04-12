@@ -1,12 +1,14 @@
 export { sendAccessRequestDecidedEmail } from "./usecases/sendAccessRequestDecidedEmail";
 export { sendAccessRequestReceivedEmail } from "./usecases/sendAccessRequestReceivedEmail";
 export { sendAlreadyRegisteredEmail } from "./usecases/sendAlreadyRegisteredEmail";
+export { sendFormAuthorizationCancelledEmail } from "./usecases/sendFormAuthorizationCancelledEmail";
 export { sendFormAuthorizationDecidedEmail } from "./usecases/sendFormAuthorizationDecidedEmail";
 export { sendFormAuthorizationRequestedEmail } from "./usecases/sendFormAuthorizationRequestedEmail";
 export { sendFormDeliveredEmail } from "./usecases/sendFormDeliveredEmail";
 export { sendInquiryAssigneeAddedEmail } from "./usecases/sendInquiryAssigneeAddedEmail";
 export { sendInquiryCommentAddedEmail } from "./usecases/sendInquiryCommentAddedEmail";
 export { sendInquiryCreatedEmail } from "./usecases/sendInquiryCreatedEmail";
+export { sendNoticeAuthorizationCancelledEmail } from "./usecases/sendNoticeAuthorizationCancelledEmail";
 export { sendNoticeAuthorizationDecidedEmail } from "./usecases/sendNoticeAuthorizationDecidedEmail";
 export { sendNoticeAuthorizationRequestedEmail } from "./usecases/sendNoticeAuthorizationRequestedEmail";
 export { sendNoticeDeliveredEmail } from "./usecases/sendNoticeDeliveredEmail";

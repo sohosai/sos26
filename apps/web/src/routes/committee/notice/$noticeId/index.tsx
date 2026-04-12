@@ -137,6 +137,18 @@ function RouteComponent() {
 		}
 	};
 
+	const handleCancelApproval = async (authorizationId: string) => {
+		try {
+			await updateNoticeAuthorization(noticeId, authorizationId, {
+				status: "REJECTED",
+			});
+			await router.invalidate();
+			toast.success("承認を取り消しました");
+		} catch {
+			toast.error("承認の取り消しに失敗しました");
+		}
+	};
+
 	return (
 		<div className={styles.layout}>
 			{/* メインコンテンツ */}
@@ -213,6 +225,7 @@ function RouteComponent() {
 				onRemoveCollaborator={handleRemoveCollaborator}
 				onApprove={handleApprove}
 				onReject={handleReject}
+				onCancelApproval={handleCancelApproval}
 				onPublishSuccess={() => router.invalidate()}
 				onEdit={() => setEditDialogOpen(true)}
 				onDelete={() => setDeleteConfirmOpen(true)}

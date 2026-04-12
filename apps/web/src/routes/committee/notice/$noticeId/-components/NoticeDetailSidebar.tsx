@@ -44,6 +44,7 @@ type Props = {
 	onRemoveCollaborator: (collaboratorId: string) => void;
 	onApprove: (authorizationId: string) => Promise<void>;
 	onReject: (authorizationId: string) => Promise<void>;
+	onCancelApproval: (authorizationId: string) => Promise<void>;
 	onPublishSuccess: () => void;
 	onEdit: () => void;
 	onDelete: () => void;
@@ -62,6 +63,7 @@ export function NoticeDetailSidebar({
 	onRemoveCollaborator,
 	onApprove,
 	onReject,
+	onCancelApproval,
 	onPublishSuccess,
 	onEdit,
 	onDelete,
@@ -70,6 +72,7 @@ export function NoticeDetailSidebar({
 	const [publishRequestOpen, setPublishRequestOpen] = useState(false);
 	const [approvingId, setApprovingId] = useState<string | null>(null);
 	const [rejectingId, setRejectingId] = useState<string | null>(null);
+	const [cancelingId, setCancelingId] = useState<string | null>(null);
 
 	const pendingAuth = notice.authorizations.find(a => a.status === "PENDING");
 	const approvedAuth = notice.authorizations.find(a => a.status === "APPROVED");
@@ -196,9 +199,12 @@ export function NoticeDetailSidebar({
 							<AuthDetailSection
 								auth={latestAuth}
 								pendingAuth={pendingAuth}
+								approvedAuth={approvedAuth}
 								isApprover={isApprover}
+								userId={userId}
 								approvingId={approvingId}
 								rejectingId={rejectingId}
+								cancelingId={cancelingId}
 								onApprove={async id => {
 									setApprovingId(id);
 									try {
@@ -213,6 +219,14 @@ export function NoticeDetailSidebar({
 										await onReject(id);
 									} finally {
 										setRejectingId(null);
+									}
+								}}
+								onCancelApproval={async id => {
+									setCancelingId(id);
+									try {
+										await onCancelApproval(id);
+									} finally {
+										setCancelingId(null);
 									}
 								}}
 							/>
@@ -242,21 +256,29 @@ export function NoticeDetailSidebar({
 type AuthDetailSectionProps = {
 	auth: NoticeDetail["authorizations"][number];
 	pendingAuth: NoticeDetail["authorizations"][number] | undefined;
+	approvedAuth: NoticeDetail["authorizations"][number] | undefined;
 	isApprover: boolean;
+	userId: string;
 	approvingId: string | null;
 	rejectingId: string | null;
+	cancelingId: string | null;
 	onApprove: (id: string) => void;
 	onReject: (id: string) => void;
+	onCancelApproval: (id: string) => void;
 };
 
 function AuthDetailSection({
 	auth,
 	pendingAuth,
+	approvedAuth,
 	isApprover,
+	userId,
 	approvingId,
 	rejectingId,
+	cancelingId,
 	onApprove,
 	onReject,
+	onCancelApproval,
 }: AuthDetailSectionProps) {
 	return (
 		<div className={styles.section}>
@@ -305,7 +327,11 @@ function AuthDetailSection({
 						size="2"
 						onClick={() => onApprove(pendingAuth.id)}
 						loading={approvingId === pendingAuth.id}
-						disabled={rejectingId !== null}
+						disabled={
+							rejectingId !== null ||
+							cancelingId !== null ||
+							approvingId === pendingAuth.id
+						}
 					>
 						<IconCheck size={16} />
 						承認
@@ -315,13 +341,37 @@ function AuthDetailSection({
 						size="2"
 						onClick={() => onReject(pendingAuth.id)}
 						loading={rejectingId === pendingAuth.id}
-						disabled={approvingId !== null}
+						disabled={
+							approvingId !== null ||
+							cancelingId !== null ||
+							rejectingId === pendingAuth.id
+						}
 					>
 						<IconX size={16} />
 						却下
 					</Button>
 				</div>
 			)}
+			{approvedAuth &&
+				approvedAuth.requestedToId === userId &&
+				new Date(approvedAuth.deliveredAt) > new Date() && (
+					<div className={styles.authorizationActions}>
+						<Button
+							intent="secondary"
+							size="2"
+							onClick={() => onCancelApproval(approvedAuth.id)}
+							loading={cancelingId === approvedAuth.id}
+							disabled={
+								approvingId !== null ||
+								rejectingId !== null ||
+								cancelingId === approvedAuth.id
+							}
+						>
+							<IconX size={16} />
+							承認を取り消す
+						</Button>
+					</div>
+				)}
 		</div>
 	);
 }

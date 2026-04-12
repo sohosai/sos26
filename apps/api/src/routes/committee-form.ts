@@ -32,6 +32,7 @@ import {
 	mapItemToApiShape,
 } from "../lib/form-constraints";
 import {
+	notifyFormAuthorizationCancelled,
 	notifyFormAuthorizationDecided,
 	notifyFormAuthorizationRequested,
 } from "../lib/notifications";
@@ -796,7 +797,7 @@ committeeFormRoute.post(
 
 // ─────────────────────────────────────────────────────────────
 // PATCH /committee/forms/:formId/authorizations/:authorizationId
-// 承認 / 却下（requestedTo 本人のみ）
+// 承認 / 却下 / 承認取り消し（requestedTo 本人のみ）
 // ─────────────────────────────────────────────────────────────
 committeeFormRoute.patch(
 	"/:formId/authorizations/:authorizationId",
@@ -813,6 +814,7 @@ committeeFormRoute.patch(
 		const body = await c.req.json().catch(() => ({}));
 		const { status } = updateFormAuthorizationRequestSchema.parse(body);
 
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: 単純なチェック分岐のみのため見通しを優先
 		const { updated, authorization } = await prisma.$transaction(async tx => {
 			const authorization = await tx.formAuthorization.findFirst({
 				where: { id: authorizationId, formId },
@@ -827,9 +829,6 @@ committeeFormRoute.patch(
 			if (authorization.requestedToId !== user.id)
 				throw Errors.forbidden("この承認依頼を操作する権限がありません");
 
-			if (authorization.status !== "PENDING")
-				throw Errors.invalidRequest("この承認依頼は既に処理済みです");
-
 			// 承認依頼作成後に FORM_DELIVER 権限が剥奪されていないか再確認
 			await requirePermission(
 				tx,
@@ -839,30 +838,63 @@ committeeFormRoute.patch(
 			);
 
 			const now = new Date();
-			// 承認する場合、スケジュール日時を検証
-			if (status === "APPROVED") {
-				validateApprovalSchedule(
-					authorization.scheduledSendAt,
-					authorization.deadlineAt,
-					now
-				);
+
+			if (authorization.status === "PENDING") {
+				// 承認する場合、スケジュール日時を検証
+				if (status === "APPROVED") {
+					validateApprovalSchedule(
+						authorization.scheduledSendAt,
+						authorization.deadlineAt,
+						now
+					);
+				}
+
+				const updated = await tx.formAuthorization.update({
+					where: { id: authorizationId, status: "PENDING" },
+					data: { status, decidedAt: now },
+				});
+
+				return { updated, authorization };
 			}
 
-			const updated = await tx.formAuthorization.update({
-				where: { id: authorizationId, status: "PENDING" },
-				data: { status, decidedAt: new Date() },
+			if (authorization.status === "APPROVED" && status === "REJECTED") {
+				if (authorization.scheduledSendAt <= now) {
+					throw Errors.invalidRequest(
+						"公開予定日時を過ぎているため承認を取り消せません"
+					);
+				}
+
+				const updated = await tx.formAuthorization.update({
+					where: { id: authorizationId, status: "APPROVED" },
+					data: {
+						status: "REJECTED",
+						decidedAt: now,
+						deliveryNotifiedAt: null,
+					},
+				});
+
+				return { updated, authorization };
+			}
+
+			throw Errors.invalidRequest("この承認依頼は既に処理済みです");
+		});
+
+		// 承認が取り消された場合は別の通知を送信
+		if (authorization.status === "APPROVED" && status === "REJECTED") {
+			void notifyFormAuthorizationCancelled({
+				requestedByUserId: authorization.requestedById,
+				formId,
+				formTitle: authorization.form.title,
 			});
-
-			return { updated, authorization };
-		});
-
-		void notifyFormAuthorizationDecided({
-			requestedByUserId: authorization.requestedById,
-			formId,
-			formTitle: authorization.form.title,
-			status,
-			scheduledSendAt: authorization.scheduledSendAt,
-		});
+		} else {
+			void notifyFormAuthorizationDecided({
+				requestedByUserId: authorization.requestedById,
+				formId,
+				formTitle: authorization.form.title,
+				status,
+				scheduledSendAt: authorization.scheduledSendAt,
+			});
+		}
 
 		return c.json({ authorization: updated });
 	}
