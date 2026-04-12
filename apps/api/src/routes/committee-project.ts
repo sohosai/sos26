@@ -19,7 +19,7 @@ import type { AuthEnv } from "../types/auth-env";
 const committeeProjectRoute = new Hono<AuthEnv>();
 
 type ProjectStatusFields = {
-	deletionStatus: "LOTTERY_LOSS" | "DELETED" | null;
+	deletionStatus: "LOTTERY_LOSS" | "DELETED" | "PROJECT_WITHDRAWN" | null;
 };
 
 type ProjectActionItem = {
@@ -38,17 +38,18 @@ function getProjectStatusFields(project: object): ProjectStatusFields {
 }
 
 function getProjectDeletionStatusLabel(
-	status: "LOTTERY_LOSS" | "DELETED" | null
+	status: "LOTTERY_LOSS" | "DELETED" | "PROJECT_WITHDRAWN" | null
 ): string {
-	if (status === "LOTTERY_LOSS") return "抽選漏れ";
-	if (status === "DELETED") return "削除";
+	if (status === "LOTTERY_LOSS") return "落選";
+	if (status === "DELETED") return "企画中止";
+	if (status === "PROJECT_WITHDRAWN") return "企画辞退";
 	return "";
 }
 
 function shouldNotifyDeletionStatusUpdate(
-	deletionStatus: "LOTTERY_LOSS" | "DELETED" | null,
+	deletionStatus: "LOTTERY_LOSS" | "DELETED" | "PROJECT_WITHDRAWN" | null,
 	beforeStatus: ProjectStatusFields
-): deletionStatus is "LOTTERY_LOSS" | "DELETED" {
+): deletionStatus is "LOTTERY_LOSS" | "DELETED" | "PROJECT_WITHDRAWN" {
 	return (
 		deletionStatus !== null && beforeStatus.deletionStatus !== deletionStatus
 	);
@@ -255,7 +256,7 @@ async function notifyProjectDeletionStatusUpdated(input: {
 	subOwnerUserId: string | null;
 	subOwnerEmail: string | null;
 	projectName: string;
-	status: "LOTTERY_LOSS" | "DELETED";
+	status: "LOTTERY_LOSS" | "DELETED" | "PROJECT_WITHDRAWN";
 	updatedByName: string;
 }): Promise<void> {
 	try {
@@ -316,7 +317,7 @@ ${url}
 }
 
 async function maybeNotifyProjectDeletionStatusUpdated(input: {
-	deletionStatus: "LOTTERY_LOSS" | "DELETED" | null;
+	deletionStatus: "LOTTERY_LOSS" | "DELETED" | "PROJECT_WITHDRAWN" | null;
 	beforeStatus: ProjectStatusFields;
 	projectBefore: {
 		name: string;
@@ -435,7 +436,7 @@ async function handleUpdateProjectDeletionStatus(c: Context<AuthEnv>) {
 	const permissions = await resolveProjectPermissions(user.id);
 
 	if (!permissions.canDelete) {
-		throw Errors.forbidden("企画削除権限がありません");
+		throw Errors.forbidden("企画中止権限がありません");
 	}
 
 	const body = await c.req.json().catch(() => ({}));

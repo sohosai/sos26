@@ -11,7 +11,11 @@ import { formAnswerInputSchema, formItemTypeSchema } from "./form";
 export { projectTypeSchema, projectLocationSchema };
 export type { ProjectLocation, ProjectType } from "./common";
 
-export const projectDeletionStatusSchema = z.enum(["LOTTERY_LOSS", "DELETED"]);
+export const projectDeletionStatusSchema = z.enum([
+	"LOTTERY_LOSS",
+	"DELETED",
+	"PROJECT_WITHDRAWN",
+]);
 export type ProjectDeletionStatus = z.infer<typeof projectDeletionStatusSchema>;
 
 const INVITE_CODE_LENGTH = 6;

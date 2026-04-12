@@ -62,7 +62,7 @@
 | GET | `/committee/projects` | 全企画一覧（フィルタ・検索・ページネーション） |
 | GET | `/committee/projects/:projectId` | 企画詳細（permissions/連絡先マスキング/アクション履歴含む） |
 | PATCH | `/committee/projects/:projectId/base-info` | 企画基礎情報を更新 |
-| PATCH | `/committee/projects/:projectId/deletion-status` | 企画削除状態を更新（削除/抽選漏れ/取消） |
+| PATCH | `/committee/projects/:projectId/deletion-status` | 企画削除状態を更新（企画中止/落選/取消） |
 | GET | `/committee/projects/:projectId/members` | 企画メンバー一覧（ロール付き） |
 
 ---

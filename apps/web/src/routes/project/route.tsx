@@ -26,8 +26,9 @@ import { useProjectStore } from "@/lib/project/store";
 import styles from "./route.module.scss";
 
 function projectDeletionStatusLabel(status: Project["deletionStatus"]): string {
-	if (status === "LOTTERY_LOSS") return "抽選漏れ";
-	if (status === "DELETED") return "削除";
+	if (status === "LOTTERY_LOSS") return "落選";
+	if (status === "DELETED") return "企画中止";
+	if (status === "PROJECT_WITHDRAWN") return "企画辞退";
 	return "";
 }
 

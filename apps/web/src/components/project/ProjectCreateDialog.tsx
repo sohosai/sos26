@@ -809,6 +809,10 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 													企画区分を選択してください。
 												</Text>
 											)}
+											<Text size="1" color="gray">
+												※前夜祭はすべての一般企画が参加できるわけではありません。詳しくは、募集要項
+												一般企画用の「企画実施申請(屋外企画用)」（p.31）を確認してください。
+											</Text>
 										</>
 									)}
 									{step1Errors.location && (

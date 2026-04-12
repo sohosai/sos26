@@ -205,8 +205,9 @@ model Project {
 }
 
 enum ProjectDeletionStatus {
-  LOTTERY_LOSS // 抽選漏れ
-  DELETED // 削除
+  LOTTERY_LOSS // 落選
+  DELETED // 企画中止
+  PROJECT_WITHDRAWN // 企画辞退
 }
 
 //企画に参加している企画責任者と副企画責任者以外のユーザーのTable
@@ -297,7 +298,7 @@ enum CommitteePermission {
   FORM_DELIVER // 申請配信
   INQUIRY_ADMIN // お問い合わせ管理
   PROJECT_EDIT // 企画編集
-  PROJECT_DELETE // 企画削除
+  PROJECT_DELETE // 企画中止
   PROJECT_VIEW // 企画詳細閲覧（企画責任者・副企画責任者連絡先を含む）
   PROJECT_REGISTRATION_FORM_CREATE // 企画登録フォーム作成・編集・公開申請
   PROJECT_REGISTRATION_FORM_DELIVER // 企画登録フォーム承認
