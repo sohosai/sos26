@@ -6,10 +6,10 @@ export function inquiryCommentAddedTemplate(params: {
 	commentBodyPreview: string;
 	url: string;
 }) {
-	const body = `お問い合わせに新しいコメントが追加されました。
+	const body = `お問い合わせに新しい返信がありました。
 
 タイトル: ${params.inquiryTitle}
-コメント者: ${params.commenterName}
+返信者: ${params.commenterName}
 
 ${params.commentBodyPreview}
 
@@ -21,8 +21,7 @@ ${params.url}
 このメールは送信専用です。返信いただいてもお応えできません。`;
 
 	return {
-		subject:
-			"【雙峰祭オンラインシステム】お問い合わせにコメントが追加されました",
+		subject: "【雙峰祭オンラインシステム】お問い合わせに返信がありました",
 		html: textToHtml(body),
 		text: body,
 	};

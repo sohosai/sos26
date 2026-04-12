@@ -186,7 +186,7 @@ describe("canAccessFormFile", () => {
 		await expect(canAccessFormFile("file-1", mockUser)).resolves.toBe(false);
 	});
 
-	it("ownerOnly の FormAttachment は責任者/副責任者なら true", async () => {
+	it("ownerOnly の FormAttachment は企画責任者/副企画責任者なら true", async () => {
 		mockPrisma.formAttachment.findMany.mockResolvedValue([
 			{
 				form: {

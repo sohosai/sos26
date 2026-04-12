@@ -45,7 +45,7 @@
    - `INDIVIDUAL`: 既存 Delivery を使用
    - `CATEGORY`: フィルタ条件で企画を再評価
 3. Delivery レコードを不足分だけ作成（`createMany + skipDuplicates`）
-4. 企画メンバー（責任者 / 副責任者 / 一般メンバー）へメール・Pushを送信
+4. 企画メンバー（企画責任者 / 副企画責任者 / 一般メンバー）へメール・Pushを送信
 5. 成功した Authorization の `deliveryNotifiedAt` を更新
 
 ## 設定

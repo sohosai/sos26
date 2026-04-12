@@ -1,5 +1,6 @@
 import { createProjectRegistrationForm } from "@/lib/api/committee-project-registration-form";
 import { reportHandledError } from "@/lib/error/report";
+import { normalizeItemConstraintsForType } from "@/lib/form/constraints";
 import {
 	ProjectRegistrationFormDialog,
 	type ProjectRegistrationFormValues,
@@ -39,7 +40,10 @@ export function CreateProjectRegistrationFormDialog({
 					type: item.type,
 					required: item.required,
 					sortOrder: index,
-					constraints: item.constraints,
+					constraints: normalizeItemConstraintsForType(
+						item.type,
+						item.constraints
+					),
 					options: item.options?.map((opt, i) => ({
 						label: opt.label,
 						sortOrder: i,

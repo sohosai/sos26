@@ -1,6 +1,16 @@
 import { RadioGroup as RadixRadioGroup, Text } from "@radix-ui/themes";
 import type { ReactNode } from "react";
+import { createContext, useContext } from "react";
+
 import styles from "./RadioGroup.module.scss";
+
+// RadioGroup → Item へ value と onValueChange を渡すための Context
+type RadioGroupContextValue = {
+	value?: string;
+	onValueChange?: (value: string) => void;
+};
+
+const RadioGroupContext = createContext<RadioGroupContextValue>({});
 
 /**
  * RadioGroup - ラジオボタングループ
@@ -15,6 +25,7 @@ import styles from "./RadioGroup.module.scss";
  * ## 付加している振る舞い
  * - label 必須（a11y 保証）
  * - required マークの表示
+ * - 選択済みの項目を再度クリックすると選択が解除される
  *
  * ## 注意点
  * RadioGroup.Item は children でラベルを受け取る（label prop ではない）
@@ -54,27 +65,29 @@ export function RadioGroup({
 	name,
 }: RadioGroupProps) {
 	return (
-		<fieldset className={styles.fieldset}>
-			<legend className={styles.legend}>
-				<Text size="2" weight="medium">
-					{label}
-					{required && <span aria-hidden="true"> *</span>}
-				</Text>
-			</legend>
-			<RadixRadioGroup.Root
-				size={size}
-				variant="surface"
-				value={value}
-				defaultValue={defaultValue}
-				onValueChange={onValueChange}
-				disabled={disabled}
-				required={required}
-				name={name}
-				className={styles.group}
-			>
-				{children}
-			</RadixRadioGroup.Root>
-		</fieldset>
+		<RadioGroupContext.Provider value={{ value, onValueChange }}>
+			<fieldset className={styles.fieldset}>
+				<legend className={styles.legend}>
+					<Text size="2" weight="medium">
+						{label}
+						{required && <span aria-hidden="true"> *</span>}
+					</Text>
+				</legend>
+				<RadixRadioGroup.Root
+					size={size}
+					variant="surface"
+					value={value}
+					defaultValue={defaultValue}
+					onValueChange={onValueChange}
+					disabled={disabled}
+					required={required}
+					name={name}
+					className={styles.group}
+				>
+					{children}
+				</RadixRadioGroup.Root>
+			</fieldset>
+		</RadioGroupContext.Provider>
 	);
 }
 
@@ -94,8 +107,20 @@ export function RadioGroupItem({
 	value,
 	disabled,
 }: RadioGroupItemProps) {
+	const { value: selectedValue, onValueChange } = useContext(RadioGroupContext);
+
+	const handleClick = () => {
+		// 選択中の項目をクリックしたら選択解除
+		if (value === selectedValue) {
+			onValueChange?.("");
+		}
+	};
 	return (
-		<RadixRadioGroup.Item value={value} disabled={disabled}>
+		<RadixRadioGroup.Item
+			value={value}
+			disabled={disabled}
+			onClick={handleClick}
+		>
 			{children}
 		</RadixRadioGroup.Item>
 	);

@@ -4,7 +4,7 @@ import { prisma } from "../prisma";
 import { sendSubOwnerRequestApprovedPush } from "../push";
 
 /**
- * 副責任者リクエストが承認されたとき、責任者に通知
+ * 副企画責任者リクエストが承認されたとき、企画責任者に通知
  */
 export async function notifySubOwnerRequestApproved(input: {
 	ownerUserId: string;

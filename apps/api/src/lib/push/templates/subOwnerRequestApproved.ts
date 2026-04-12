@@ -5,7 +5,7 @@ export function subOwnerRequestApprovedTemplate(params: {
 	url: string;
 }): PushPayload {
 	return {
-		title: "副責任者リクエストが承認されました",
+		title: "副企画責任者リクエストが承認されました",
 		body: params.projectName,
 		icon: "/sos.svg",
 		badge: "/sos.svg",
