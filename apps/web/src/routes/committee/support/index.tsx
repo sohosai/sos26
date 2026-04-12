@@ -56,7 +56,11 @@ export const Route = createFileRoute("/committee/support/")({
 
 		return {
 			inquiries: inquiriesRes.inquiries,
-			projects: projectsRes.projects.map(p => ({ id: p.id, name: p.name })),
+			projects: projectsRes.projects.map(p => ({
+				id: p.id,
+				name: p.name,
+				number: p.number,
+			})),
 			committeeMembers: membersRes.committeeMembers.map(m => ({
 				id: m.user.id,
 				name: m.user.name,

@@ -494,6 +494,7 @@ erDiagram
   String formId FK
   String projectId FK
   DateTime submittedAt
+  DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -503,6 +504,7 @@ erDiagram
   String formItemId FK
   String textValue "nullable"
   Float numberValue "nullable"
+  DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
 }
@@ -1262,6 +1264,7 @@ Properties as follows:
 - `formId`:
 - `projectId`:
 - `submittedAt`:
+- `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
 
@@ -1274,6 +1277,7 @@ Properties as follows:
 - `formItemId`:
 - `textValue`:
 - `numberValue`:
+- `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
 

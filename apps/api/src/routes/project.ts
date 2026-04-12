@@ -1,5 +1,6 @@
 import { randomInt } from "node:crypto";
 import {
+	createProjectRegistrationFormResponseRequestSchema,
 	createProjectRequestSchema,
 	type FormAnswerValidationItem,
 	getActiveProjectRegistrationFormsQuerySchema,
@@ -7,10 +8,16 @@ import {
 	type ProjectMemberRole,
 	type RegistrationFormAnswersInput,
 	updateProjectDetailRequestSchema,
+	updateProjectRegistrationFormResponseRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
+import {
+	assertWithinApplicationPeriod,
+	getApplicationPeriodInfo,
+} from "../lib/application-period";
 import { Errors } from "../lib/error";
 import {
+	formAnswerFileSelect,
 	getConfirmedFileMap,
 	mapAnswerFiles,
 	normalizeFileIds,
@@ -135,6 +142,9 @@ projectRoute.post("/create", requireAuth, async c => {
 		...data
 	} = createProjectRequestSchema.parse(body);
 	const userId = c.get("user").id;
+
+	// ── 企画応募期間チェック ──
+	assertWithinApplicationPeriod();
 
 	// ── 他の企画で企画責任者・副企画責任者をやっていないか確認 ──
 	const hasOtherPrivilegedProject = await prisma.project.findFirst({
@@ -323,7 +333,10 @@ projectRoute.get(
 	async c => {
 		const project = c.get("project");
 		const responses = await prisma.projectRegistrationFormResponse.findMany({
-			where: { projectId: project.id },
+			where: {
+				projectId: project.id,
+				deletedAt: null,
+			},
 			include: {
 				form: {
 					select: {
@@ -333,6 +346,9 @@ projectRoute.get(
 					},
 				},
 				answers: {
+					where: {
+						deletedAt: null,
+					},
 					include: {
 						formItem: {
 							select: {
@@ -401,6 +417,184 @@ projectRoute.get(
 );
 
 // ─────────────────────────────────────────
+// POST /project/:projectId/registration-form-responses
+// 企画登録フォーム回答を作成（応募期間内のみ）
+// ─────────────────────────────────────────
+projectRoute.post(
+	"/:projectId/registration-form-responses",
+	requireAuth,
+	requireProjectMember,
+	async c => {
+		// 権限チェック：責任者（OWNER）のみ
+		const role = c.get("projectRole");
+		if (role !== "OWNER") {
+			throw Errors.forbidden(
+				"企画登録フォームの回答を作成できるのは責任者のみです"
+			);
+		}
+
+		// 企画応募期間チェック
+		assertWithinApplicationPeriod();
+
+		const project = c.get("project");
+		const body = await c.req.json().catch(() => ({}));
+		const { formId, answers } =
+			createProjectRegistrationFormResponseRequestSchema.parse(body);
+
+		// フォーム情報を取得してバリデーション
+		const form = await prisma.projectRegistrationForm.findFirst({
+			where: {
+				id: formId,
+				isActive: true,
+				deletedAt: null,
+				OR: [
+					{ filterTypes: { isEmpty: true } },
+					{ filterTypes: { has: project.type } },
+				],
+				AND: [
+					{
+						OR: [
+							{ filterLocations: { isEmpty: true } },
+							{ filterLocations: { has: project.location } },
+						],
+					},
+				],
+			},
+			select: {
+				id: true,
+				title: true,
+				description: true,
+				items: {
+					select: {
+						id: true,
+						type: true,
+						required: true,
+						options: { select: { id: true } },
+						constraintMinLength: true,
+						constraintMaxLength: true,
+						constraintPattern: true,
+						constraintCustomPattern: true,
+						constraintMinFiles: true,
+						constraintMaxFiles: true,
+						constraintAllowedMimeTypes: true,
+					},
+					orderBy: { sortOrder: "asc" },
+				},
+			},
+		});
+
+		if (!form) {
+			throw Errors.notFound("フォームが見つかりません");
+		}
+
+		const formItems = form.items.map(mapItemToApiShape);
+
+		// バリデーション
+		assertFormAnswersValid(formItems, answers);
+		assertRequiredAnswered(formItems, answers);
+		assertFileCountConstraints(formItems, answers);
+
+		const allFileIds = answers.flatMap(a =>
+			a.type === "FILE" ? a.fileIds : []
+		);
+		if (allFileIds.length > 0) {
+			const fileMap = await getConfirmedFileMap(prisma, allFileIds);
+			assertFileMimeTypeConstraints(formItems, answers, fileMap);
+		}
+
+		const createdResponse = await prisma.$transaction(async tx => {
+			const existing = await tx.projectRegistrationFormResponse.findFirst({
+				where: {
+					projectId: project.id,
+					formId,
+					deletedAt: null,
+				},
+			});
+			if (existing) {
+				throw Errors.alreadyExists("既に回答済みの申請です");
+			}
+
+			return await tx.projectRegistrationFormResponse.create({
+				data: {
+					formId,
+					projectId: project.id,
+					submittedAt: new Date(),
+					answers: {
+						create: answers.map(buildPrismaAnswerData),
+					},
+				},
+				include: {
+					form: {
+						select: {
+							id: true,
+							title: true,
+							description: true,
+						},
+					},
+					answers: {
+						where: {
+							deletedAt: null,
+						},
+						include: {
+							formItem: {
+								select: {
+									id: true,
+									label: true,
+									type: true,
+								},
+							},
+							files: {
+								orderBy: { sortOrder: "asc" },
+								include: {
+									file: {
+										select: formAnswerFileSelect,
+									},
+								},
+							},
+							selectedOptions: {
+								include: {
+									formItemOption: {
+										select: {
+											id: true,
+											label: true,
+										},
+									},
+								},
+							},
+						},
+						orderBy: {
+							formItem: {
+								sortOrder: "asc",
+							},
+						},
+					},
+				},
+			});
+		});
+
+		return c.json({
+			response: {
+				id: createdResponse.id,
+				submittedAt: createdResponse.submittedAt,
+				form: createdResponse.form,
+				answers: createdResponse.answers.map(answer => ({
+					formItemId: answer.formItem.id,
+					formItemLabel: answer.formItem.label,
+					type: answer.formItem.type,
+					textValue: answer.textValue,
+					numberValue: answer.numberValue,
+					files: mapAnswerFiles(answer.files),
+					selectedOptions: answer.selectedOptions.map(selected => ({
+						id: selected.formItemOption.id,
+						label: selected.formItemOption.label,
+					})),
+				})),
+			},
+		});
+	}
+);
+
+// ─────────────────────────────────────────
 // PATCH /project/:projectId/detail
 // 企画の設定変更（名前・団体名等）
 // ─────────────────────────────────────────
@@ -413,6 +607,9 @@ projectRoute.patch(
 		if (role !== "OWNER") {
 			throw Errors.forbidden("企画の設定を変更できるのは企画責任者のみです");
 		}
+
+		// 企画応募期間内のみ編集可能
+		assertWithinApplicationPeriod();
 
 		const body = await c.req.json().catch(() => ({}));
 		const data = updateProjectDetailRequestSchema.parse(body);
@@ -994,5 +1191,194 @@ projectRoute.get("/registration-forms", requireAuth, async c => {
 		),
 	});
 });
+
+// ─────────────────────────────────────────────────────────────
+// GET /project/application-period
+// 企画応募期間の情報を取得
+// ─────────────────────────────────────────────────────────────
+projectRoute.get("/application-period", c => {
+	const info = getApplicationPeriodInfo();
+	return c.json(info);
+});
+
+// ─────────────────────────────────────────────────────────────
+// PATCH /project/:projectId/registration-form-responses/:responseId
+// 企画登録フォーム回答を編集（応募期間内のみ）
+// ─────────────────────────────────────────────────────────────
+projectRoute.patch(
+	"/:projectId/registration-form-responses/:responseId",
+	requireAuth,
+	requireProjectMember,
+	async c => {
+		// 権限チェック：責任者（OWNER）のみ
+		const role = c.get("projectRole");
+		if (role !== "OWNER") {
+			throw Errors.forbidden(
+				"企画登録フォームの回答を変更できるのは責任者のみです"
+			);
+		}
+
+		// 企画応募期間チェック
+		assertWithinApplicationPeriod();
+
+		const project = c.get("project");
+		const { responseId } = c.req.param();
+
+		const body = await c.req.json().catch(() => ({}));
+		const { answers } =
+			updateProjectRegistrationFormResponseRequestSchema.parse(body);
+
+		// 既存の回答を取得
+		const existingResponse =
+			await prisma.projectRegistrationFormResponse.findFirst({
+				where: {
+					id: responseId,
+					deletedAt: null,
+				},
+				include: { form: true },
+			});
+
+		if (!existingResponse) {
+			throw Errors.notFound("指定された回答が見つかりません");
+		}
+
+		if (existingResponse.projectId !== project.id) {
+			throw Errors.forbidden("この回答は他の企画のものです");
+		}
+
+		// フォーム情報を取得してバリデーション
+		const form = await prisma.projectRegistrationForm.findUnique({
+			where: { id: existingResponse.formId },
+			select: {
+				id: true,
+				items: {
+					select: {
+						id: true,
+						type: true,
+						required: true,
+						options: { select: { id: true } },
+						constraintMinLength: true,
+						constraintMaxLength: true,
+						constraintPattern: true,
+						constraintCustomPattern: true,
+						constraintMinFiles: true,
+						constraintMaxFiles: true,
+						constraintAllowedMimeTypes: true,
+					},
+					orderBy: { sortOrder: "asc" },
+				},
+			},
+		});
+
+		if (!form) {
+			throw Errors.notFound("フォームが見つかりません");
+		}
+
+		const formItems = form.items.map(mapItemToApiShape);
+
+		// バリデーション
+		assertFormAnswersValid(formItems, answers);
+		assertRequiredAnswered(formItems, answers);
+		assertFileCountConstraints(formItems, answers);
+
+		const allFileIds = answers.flatMap(a =>
+			a.type === "FILE" ? a.fileIds : []
+		);
+		if (allFileIds.length > 0) {
+			const fileMap = await getConfirmedFileMap(prisma, allFileIds);
+			assertFileMimeTypeConstraints(formItems, answers, fileMap);
+		}
+
+		// トランザクションで既存回答をソフトデリートして新規作成
+		const updatedResponse = await prisma.$transaction(async tx => {
+			// 既存の回答データをソフトデリート
+			await tx.projectRegistrationFormAnswer.updateMany({
+				where: {
+					responseId,
+					deletedAt: null,
+				},
+				data: { deletedAt: new Date() },
+			});
+
+			// 新しい回答を作成
+			return await tx.projectRegistrationFormResponse.update({
+				where: { id: responseId },
+				data: {
+					answers: {
+						create: answers.map(buildPrismaAnswerData),
+					},
+					submittedAt: new Date(),
+				},
+				include: {
+					form: {
+						select: {
+							id: true,
+							title: true,
+							description: true,
+						},
+					},
+					answers: {
+						where: {
+							deletedAt: null,
+						},
+						include: {
+							formItem: {
+								select: {
+									id: true,
+									label: true,
+									type: true,
+								},
+							},
+							files: {
+								orderBy: { sortOrder: "asc" },
+								include: {
+									file: {
+										select: formAnswerFileSelect,
+									},
+								},
+							},
+							selectedOptions: {
+								include: {
+									formItemOption: {
+										select: {
+											id: true,
+											label: true,
+										},
+									},
+								},
+							},
+						},
+						orderBy: {
+							formItem: {
+								sortOrder: "asc",
+							},
+						},
+					},
+				},
+			});
+		});
+
+		// レスポンス整形
+		return c.json({
+			response: {
+				id: updatedResponse.id,
+				submittedAt: updatedResponse.submittedAt,
+				form: updatedResponse.form,
+				answers: updatedResponse.answers.map(answer => ({
+					formItemId: answer.formItemId,
+					formItemLabel: answer.formItem.label,
+					type: answer.formItem.type,
+					textValue: answer.textValue,
+					numberValue: answer.numberValue,
+					files: mapAnswerFiles(answer.files),
+					selectedOptions: answer.selectedOptions.map(selected => ({
+						id: selected.formItemOption.id,
+						label: selected.formItemOption.label,
+					})),
+				})),
+			},
+		});
+	}
+);
 
 export { projectRoute };

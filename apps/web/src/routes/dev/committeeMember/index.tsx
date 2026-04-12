@@ -18,7 +18,7 @@ const PERMISSION_OPTIONS: { value: CommitteePermission; label: string }[] = [
 	{ value: "FORM_DELIVER", label: "申請配信" },
 	{ value: "INQUIRY_ADMIN", label: "お問い合わせ管理" },
 	{ value: "PROJECT_EDIT", label: "企画編集" },
-	{ value: "PROJECT_DELETE", label: "企画削除" },
+	{ value: "PROJECT_DELETE", label: "企画中止" },
 	{ value: "PROJECT_VIEW", label: "企画閲覧" },
 ];
 
