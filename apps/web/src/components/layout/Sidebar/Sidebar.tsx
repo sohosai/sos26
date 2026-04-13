@@ -2,7 +2,6 @@ import { Text, Tooltip } from "@radix-ui/themes";
 import {
 	IconArrowsExchange,
 	IconBug,
-	// IconHelp,
 	IconLayoutSidebar,
 	IconLogout,
 	IconSettings,
@@ -33,6 +32,7 @@ const MOBILE_BREAKPOINT = 900;
 
 const commonItems: MenuItem[] = [
 	{ label: "設定", icon: <IconSettings size={18} />, to: "/settings" },
+	// 未完成のため、コメントアウト
 	// {
 	// 	label: "説明書",
 	// 	icon: <IconHelp size={18} />,

@@ -11,6 +11,7 @@ export function Header() {
 				</Link>
 			</div>
 			<nav className={styles.nav}>
+				{/* 未完成のため、コメントアウト */}
 				{/* <RadixLink asChild>
 					<Link to="/docs">
 						<Text size="2">説明書</Text>
