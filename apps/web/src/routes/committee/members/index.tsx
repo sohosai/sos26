@@ -54,6 +54,7 @@ type CommitteeMemberRow = {
 	permissions: CommitteePermission[];
 	isExecutive: boolean;
 	joinedAt: Date;
+	avatarFileId: string | null;
 };
 
 const permissionLabelMap: Record<CommitteePermission, string> = {
@@ -313,6 +314,7 @@ export const Route = createFileRoute("/committee/members/")({
 				permissions: m.permissions.map(p => p.permission),
 				isExecutive: m.isExecutive,
 				joinedAt: new Date(m.joinedAt),
+				avatarFileId: m.user.avatarFileId,
 			})),
 		};
 	},
@@ -450,16 +452,21 @@ function RouteComponent() {
 				permissions: m.permissions.map(p => p.permission),
 				isExecutive: m.isExecutive,
 				joinedAt: new Date(m.joinedAt),
+				avatarFileId: m.user.avatarFileId,
 			}))
 		);
 		return result;
 	};
 
 	const columns = [
-		memberColumnHelper.accessor("name", {
-			header: "名前",
-			cell: NameCell,
-		}),
+		memberColumnHelper.accessor(
+			row => ({ name: row.name, avatarFileId: row.avatarFileId }),
+			{
+				id: "name",
+				header: "名前",
+				cell: NameCell,
+			}
+		),
 		memberColumnHelper.accessor("email", {
 			header: "メールアドレス",
 		}),

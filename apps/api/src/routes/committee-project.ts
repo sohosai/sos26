@@ -101,6 +101,7 @@ function maskContact<
 		name: string;
 		email: string;
 		telephoneNumber: string;
+		avatarFileId: string | null;
 	},
 >(
 	person: T | null,
@@ -110,6 +111,7 @@ function maskContact<
 	name: string;
 	email: string | null;
 	telephoneNumber: string | null;
+	avatarFileId: string | null;
 } | null {
 	if (!person) return null;
 	return {
@@ -117,6 +119,7 @@ function maskContact<
 		name: person.name,
 		email: canViewContacts ? person.email : null,
 		telephoneNumber: canViewContacts ? person.telephoneNumber : null,
+		avatarFileId: person.avatarFileId,
 	};
 }
 
@@ -139,6 +142,7 @@ async function fetchCommitteeProjectDetailData(projectParam: string) {
 					name: true,
 					email: true,
 					telephoneNumber: true,
+					avatarFileId: true,
 				},
 			},
 			subOwner: {
@@ -147,6 +151,7 @@ async function fetchCommitteeProjectDetailData(projectParam: string) {
 					name: true,
 					email: true,
 					telephoneNumber: true,
+					avatarFileId: true,
 				},
 			},
 			_count: {
@@ -379,6 +384,7 @@ async function findProjectAfterDeletionStatusUpdate(projectId: string) {
 					name: true,
 					email: true,
 					telephoneNumber: true,
+					avatarFileId: true,
 				},
 			},
 			subOwner: {
@@ -387,6 +393,7 @@ async function findProjectAfterDeletionStatusUpdate(projectId: string) {
 					name: true,
 					email: true,
 					telephoneNumber: true,
+					avatarFileId: true,
 				},
 			},
 			_count: {
@@ -717,6 +724,7 @@ committeeProjectRoute.patch(
 						name: true,
 						email: true,
 						telephoneNumber: true,
+						avatarFileId: true,
 					},
 				},
 				subOwner: {
@@ -725,6 +733,7 @@ committeeProjectRoute.patch(
 						name: true,
 						email: true,
 						telephoneNumber: true,
+						avatarFileId: true,
 					},
 				},
 				_count: {
@@ -825,6 +834,7 @@ committeeProjectRoute.get(
 				email: m.user.email,
 				role,
 				joinedAt: m.joinedAt,
+				avatarFileId: m.user.avatarFileId,
 			};
 		});
 

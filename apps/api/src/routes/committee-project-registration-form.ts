@@ -26,6 +26,8 @@ import type { AuthEnv } from "../types/auth-env";
 
 const committeeProjectRegistrationFormRoute = new Hono<AuthEnv>();
 
+const userSelect = { id: true, name: true, avatarFileId: true } as const;
+
 const answerFilesInclude = {
 	where: {
 		file: {
@@ -47,7 +49,7 @@ const getFormOrThrow = async (formId: string) => {
 	const form = await prisma.projectRegistrationForm.findFirst({
 		where: { id: formId, deletedAt: null },
 		include: {
-			owner: { select: { id: true, name: true } },
+			owner: { select: userSelect },
 			items: {
 				include: { options: { orderBy: { sortOrder: "asc" } } },
 				orderBy: { sortOrder: "asc" },
@@ -61,7 +63,7 @@ const getFormOrThrow = async (formId: string) => {
 			},
 			collaborators: {
 				where: { deletedAt: null },
-				include: { user: { select: { id: true, name: true } } },
+				include: { user: { select: userSelect } },
 			},
 		},
 	});
@@ -142,7 +144,7 @@ committeeProjectRegistrationFormRoute.post(
 						},
 					},
 					include: {
-						owner: { select: { id: true, name: true } },
+						owner: { select: userSelect },
 						items: {
 							include: { options: { orderBy: { sortOrder: "asc" } } },
 							orderBy: { sortOrder: "asc" },
@@ -152,7 +154,7 @@ committeeProjectRegistrationFormRoute.post(
 						},
 						collaborators: {
 							where: { deletedAt: null },
-							include: { user: { select: { id: true, name: true } } },
+							include: { user: { select: userSelect } },
 						},
 					},
 				});
@@ -176,7 +178,7 @@ committeeProjectRegistrationFormRoute.get(
 		const forms = await prisma.projectRegistrationForm.findMany({
 			where: { deletedAt: null },
 			include: {
-				owner: { select: { id: true, name: true } },
+				owner: { select: userSelect },
 				authorizations: {
 					orderBy: { createdAt: "desc" },
 					take: 1,
@@ -365,7 +367,7 @@ committeeProjectRegistrationFormRoute.patch(
 				return tx.projectRegistrationForm.findUniqueOrThrow({
 					where: { id: formId },
 					include: {
-						owner: { select: { id: true, name: true } },
+						owner: { select: userSelect },
 						items: {
 							include: { options: { orderBy: { sortOrder: "asc" } } },
 							orderBy: { sortOrder: "asc" },
@@ -376,7 +378,7 @@ committeeProjectRegistrationFormRoute.patch(
 						},
 						collaborators: {
 							where: { deletedAt: null },
-							include: { user: { select: { id: true, name: true } } },
+							include: { user: { select: userSelect } },
 						},
 					},
 				});

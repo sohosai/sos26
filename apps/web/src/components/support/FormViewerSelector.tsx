@@ -7,8 +7,8 @@ import {
 import type { Bureau, ViewerScope } from "@sos26/shared";
 import { bureauLabelMap } from "@sos26/shared";
 import { IconCheck, IconPlus, IconSearch, IconX } from "@tabler/icons-react";
-import Avatar from "boring-avatars";
 import { useState } from "react";
+import { UserAvatar } from "@/components/common/UserAvatar";
 import styles from "./NewInquiryForm.module.scss";
 
 type ViewerInput = {
@@ -17,7 +17,7 @@ type ViewerInput = {
 	userId?: string;
 };
 
-type UserSummary = { id: string; name: string };
+type UserSummary = { id: string; name: string; avatarFileId?: string | null };
 
 const BUREAU_OPTIONS = Object.entries(bureauLabelMap).map(([value, label]) => ({
 	value: value as Bureau,
@@ -231,7 +231,11 @@ export function FormViewerSelector({
 													onClick={() => handleAddIndividual(m.id)}
 													disabled={exists}
 												>
-													<Avatar size={20} name={m.name} variant="beam" />
+													<UserAvatar
+														size={20}
+														name={m.name}
+														avatarFileId={m.avatarFileId}
+													/>
 													<Text size="2">{m.name}</Text>
 													{exists && (
 														<IconCheck

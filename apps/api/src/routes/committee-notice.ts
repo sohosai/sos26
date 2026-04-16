@@ -24,6 +24,8 @@ import type { AuthEnv } from "../types/auth-env";
 
 const committeeNoticeRoute = new Hono<AuthEnv>();
 
+const userSelect = { id: true, name: true, avatarFileId: true } as const;
+
 // ─────────────────────────────────────────────────────────────
 // POST /committee/notices
 // お知らせを作成
@@ -53,14 +55,14 @@ committeeNoticeRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 	const notices = await prisma.notice.findMany({
 		where: { deletedAt: null },
 		include: {
-			owner: { select: { id: true, name: true } },
+			owner: { select: userSelect },
 			collaborators: {
 				where: { deletedAt: null },
-				include: { user: { select: { id: true, name: true } } },
+				include: { user: { select: userSelect } },
 			},
 			authorizations: {
 				include: {
-					requestedTo: { select: { id: true, name: true } },
+					requestedTo: { select: userSelect },
 				},
 				orderBy: { createdAt: "desc" },
 				take: 1,
@@ -110,15 +112,15 @@ committeeNoticeRoute.get(
 		const notice = await prisma.notice.findFirst({
 			where: { id: noticeId, deletedAt: null },
 			include: {
-				owner: { select: { id: true, name: true } },
+				owner: { select: userSelect },
 				collaborators: {
 					where: { deletedAt: null },
-					include: { user: { select: { id: true, name: true } } },
+					include: { user: { select: userSelect } },
 				},
 				authorizations: {
 					include: {
-						requestedBy: { select: { id: true, name: true } },
-						requestedTo: { select: { id: true, name: true } },
+						requestedBy: { select: userSelect },
+						requestedTo: { select: userSelect },
 						deliveries: {
 							include: {
 								project: { select: { id: true, name: true } },
@@ -355,7 +357,7 @@ committeeNoticeRoute.post(
 			const reactivated = await prisma.noticeCollaborator.update({
 				where: { id: existing.id },
 				data: { deletedAt: null },
-				include: { user: { select: { id: true, name: true } } },
+				include: { user: { select: userSelect } },
 			});
 
 			return c.json(
@@ -366,7 +368,7 @@ committeeNoticeRoute.post(
 
 		const collaborator = await prisma.noticeCollaborator.create({
 			data: { noticeId, userId },
-			include: { user: { select: { id: true, name: true } } },
+			include: { user: { select: userSelect } },
 		});
 
 		return c.json(

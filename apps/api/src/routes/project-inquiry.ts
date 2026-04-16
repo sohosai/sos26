@@ -130,7 +130,7 @@ async function requireProjectAssignee(inquiryId: string, userId: string) {
 // レスポンス整形ヘルパー
 // ─────────────────────────────────────────────────────────────
 
-const userSelect = { id: true, name: true } as const;
+const userSelect = { id: true, name: true, avatarFileId: true } as const;
 
 const assigneeInclude = {
 	user: { select: userSelect },
@@ -175,7 +175,7 @@ function formatAssignee(a: {
 	side: string;
 	isCreator: boolean;
 	assignedAt: Date;
-	user: { id: string; name: string };
+	user: { id: string; name: string; avatarFileId: string | null };
 }) {
 	return {
 		id: a.id,

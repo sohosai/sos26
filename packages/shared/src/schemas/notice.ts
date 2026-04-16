@@ -108,8 +108,12 @@ export const projectNoticeIdPathParamsSchema = z.object({
 // レスポンス組み立て用の内部ヘルパー（export しない）
 // ─────────────────────────────────────────────────────────────
 
-/** ユーザーの最小表示情報（id + name のみ） */
-const userSummarySchema = userSchema.pick({ id: true, name: true });
+/** ユーザーの最小表示情報（id + name + avatar） */
+const userSummarySchema = userSchema.pick({
+	id: true,
+	name: true,
+	avatarFileId: true,
+});
 
 /** 共同編集者 + ユーザー情報（詳細で使用: id は削除APIのパスに必要） */
 const collaboratorWithUserSchema = noticeCollaboratorSchema

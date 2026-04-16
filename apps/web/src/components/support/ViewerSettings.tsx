@@ -8,8 +8,8 @@ import {
 import type { Bureau, ViewerScope } from "@sos26/shared";
 import { bureauLabelMap } from "@sos26/shared";
 import { IconCheck, IconPlus, IconSearch, IconX } from "@tabler/icons-react";
-import Avatar from "boring-avatars";
 import { useCallback, useState } from "react";
+import { UserAvatar } from "@/components/common/UserAvatar";
 import styles from "./SupportDetail.module.scss";
 import type { ViewerDetail, ViewerInput } from "./types";
 
@@ -25,7 +25,11 @@ export function ViewerSettings({
 	readOnly = false,
 }: {
 	viewers: ViewerDetail[];
-	committeeMembers: { id: string; name: string }[];
+	committeeMembers: {
+		id: string;
+		name: string;
+		avatarFileId?: string | null;
+	}[];
 	onUpdate?: (viewers: ViewerInput[]) => Promise<void>;
 	readOnly?: boolean;
 }) {
@@ -241,7 +245,11 @@ export function ViewerSettings({
 													onClick={() => handleAddIndividual(m.id)}
 													disabled={exists}
 												>
-													<Avatar size={20} name={m.name} variant="beam" />
+													<UserAvatar
+														size={20}
+														name={m.name}
+														avatarFileId={m.avatarFileId}
+													/>
 													<Text size="2">{m.name}</Text>
 													{exists && (
 														<IconCheck

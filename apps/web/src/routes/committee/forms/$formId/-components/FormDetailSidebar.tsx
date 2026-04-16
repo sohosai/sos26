@@ -7,10 +7,10 @@ import {
 	IconTrash,
 	IconX,
 } from "@tabler/icons-react";
-import Avatar from "boring-avatars";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AddCollaboratorDialog } from "@/components/committee/AddCollaboratorDialog";
+import { UserAvatar } from "@/components/common/UserAvatar";
 import { Button, IconButton } from "@/components/primitives";
 import type { ViewerDetail, ViewerInput } from "@/components/support/types";
 import { ViewerSettings } from "@/components/support/ViewerSettings";
@@ -29,11 +29,13 @@ type FormDetail = GetFormDetailResponse["form"];
 type AvailableMember = {
 	userId: string;
 	name: string;
+	avatarFileId?: string | null;
 };
 
 type Approver = {
 	userId: string;
 	name: string;
+	avatarFileId?: string | null;
 };
 
 function resolveFormPermissions(params: {
@@ -68,7 +70,11 @@ type Props = {
 	isViewer: boolean;
 	availableMembers: AvailableMember[];
 	approvers: Approver[];
-	committeeMembers: { id: string; name: string }[];
+	committeeMembers: {
+		id: string;
+		name: string;
+		avatarFileId?: string | null;
+	}[];
 	removingId: string | null;
 	onAddCollaborator: (userId: string) => Promise<void>;
 	onRemoveCollaborator: (collaboratorId: string) => void;
@@ -143,7 +149,11 @@ export function FormDetailSidebar({
 							オーナー
 						</Text>
 						<div className={styles.ownerItem}>
-							<Avatar size={32} name={form.owner.name} variant="beam" />
+							<UserAvatar
+								size={32}
+								name={form.owner.name}
+								avatarFileId={form.owner.avatarFileId}
+							/>
 							<Text size="2" weight="medium">
 								{form.owner.name}
 							</Text>
@@ -172,7 +182,11 @@ export function FormDetailSidebar({
 							<div className={styles.collaboratorList}>
 								{form.collaborators.map(c => (
 									<div key={c.id} className={styles.collaboratorItem}>
-										<Avatar size={24} name={c.user.name} variant="beam" />
+										<UserAvatar
+											size={24}
+											name={c.user.name}
+											avatarFileId={c.user.avatarFileId}
+										/>
 										<Text size="2">{c.user.name}</Text>
 										{isOwner && (
 											<IconButton
@@ -346,7 +360,11 @@ function AuthDetailSection({
 					申請者
 				</Text>
 				<div className={styles.authPerson}>
-					<Avatar size={20} name={auth.requestedBy.name} variant="beam" />
+					<UserAvatar
+						size={20}
+						name={auth.requestedBy.name}
+						avatarFileId={auth.requestedBy.avatarFileId}
+					/>
 					<Text size="2">{auth.requestedBy.name}</Text>
 				</div>
 			</div>
@@ -355,7 +373,11 @@ function AuthDetailSection({
 					承認者
 				</Text>
 				<div className={styles.authPerson}>
-					<Avatar size={20} name={auth.requestedTo.name} variant="beam" />
+					<UserAvatar
+						size={20}
+						name={auth.requestedTo.name}
+						avatarFileId={auth.requestedTo.avatarFileId}
+					/>
 					<Text size="2">{auth.requestedTo.name}</Text>
 				</div>
 			</div>

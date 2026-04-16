@@ -11,8 +11,8 @@ import {
 	IconUserCheck,
 } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
-import Avatar from "boring-avatars";
 import { useState } from "react";
+import { UserAvatar } from "@/components/common/UserAvatar";
 import { Button, TextField } from "@/components/primitives";
 import { formatDate } from "@/lib/format";
 import { statusConfig } from "./constants";
@@ -511,7 +511,11 @@ function InquiryCard({
 								{allAssignees.slice(0, 3).map(a => (
 									<Tooltip key={a.id} content={a.user.name}>
 										<span className={styles.avatar}>
-											<Avatar size={20} name={a.user.name} variant="beam" />
+											<UserAvatar
+												size={20}
+												name={a.user.name}
+												avatarFileId={a.user.avatarFileId}
+											/>
 										</span>
 									</Tooltip>
 								))}

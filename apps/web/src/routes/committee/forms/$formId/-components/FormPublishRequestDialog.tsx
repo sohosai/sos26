@@ -1,8 +1,8 @@
 import { Dialog, SegmentedControl, Text } from "@radix-ui/themes";
 import type { ProjectLocation, ProjectType } from "@sos26/shared";
 import { IconListCheck, IconSend, IconX } from "@tabler/icons-react";
-import Avatar from "boring-avatars";
 import { useState } from "react";
+import { UserAvatar } from "@/components/common/UserAvatar";
 import {
 	Button,
 	Checkbox,
@@ -21,6 +21,7 @@ import styles from "./FormPublishRequestDialog.module.scss";
 type Approver = {
 	userId: string;
 	name: string;
+	avatarFileId?: string | null;
 };
 
 type Props = {
@@ -96,7 +97,7 @@ export function FormPublishRequestDialog({
 	const approverOptions = approvers.map(a => ({
 		value: a.userId,
 		label: a.name,
-		icon: <Avatar size={16} name={a.name} variant="beam" />,
+		icon: <UserAvatar size={16} name={a.name} avatarFileId={a.avatarFileId} />,
 	}));
 
 	const canSubmit =

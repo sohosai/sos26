@@ -23,7 +23,7 @@ type FormRow = {
 	id: string;
 	ownerId: string;
 	title: string;
-	ownerName: string;
+	owner: { name: string; avatarFileId: string | null };
 	isActive: boolean;
 	sortOrder: number;
 	filterTypes: string[];
@@ -64,7 +64,7 @@ export const Route = createFileRoute("/committee/project-registration/")({
 				id: f.id,
 				ownerId: f.ownerId,
 				title: f.title,
-				ownerName: f.owner.name,
+				owner: { name: f.owner.name, avatarFileId: f.owner.avatarFileId },
 				isActive: f.isActive,
 				sortOrder: f.sortOrder,
 				filterTypes: f.filterTypes,
@@ -99,9 +99,11 @@ function ProjectRegistrationPage() {
 		columnHelper.accessor("title", {
 			header: "フォーム名",
 		}),
-		columnHelper.accessor("ownerName", {
+		columnHelper.accessor("owner", {
 			header: "オーナー",
 			cell: NameCell,
+			sortingFn: (a, b) =>
+				a.original.owner.name.localeCompare(b.original.owner.name),
 		}),
 		columnHelper.accessor("filterTypes", {
 			header: "対象区分",

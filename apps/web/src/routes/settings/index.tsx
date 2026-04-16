@@ -1,15 +1,9 @@
-import {
-	Card,
-	Flex,
-	Heading,
-	Avatar as RadixAvatar,
-	Text,
-} from "@radix-ui/themes";
+import { Card, Flex, Heading, Text } from "@radix-ui/themes";
 import { IconUpload } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
-import Avatar from "boring-avatars";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { UserAvatar } from "@/components/common/UserAvatar";
 import { Button, Switch } from "@/components/primitives";
 import { uploadFile } from "@/lib/api/files";
 import { getUserSettings, updateUserSettings } from "@/lib/api/user";
@@ -19,35 +13,11 @@ import {
 	enablePushByPreference,
 	getPushEnabledPreference,
 } from "@/lib/push";
-import { useStorageUrl } from "@/lib/storage";
 import styles from "./index.module.scss";
 
 export const Route = createFileRoute("/settings/")({
 	component: SettingsPage,
 });
-
-function AvatarPreview({
-	avatarFileId,
-	userName,
-}: {
-	avatarFileId: string | null;
-	userName: string;
-}) {
-	const url = useStorageUrl(avatarFileId ?? "", true);
-
-	if (avatarFileId && url) {
-		return (
-			<RadixAvatar
-				src={url}
-				fallback={userName.charAt(0)}
-				size="7"
-				radius="full"
-			/>
-		);
-	}
-
-	return <Avatar size={96} name={userName} variant="beam" />;
-}
 
 function SettingsPage() {
 	const { user, refreshUser } = useAuthStore();
@@ -145,9 +115,10 @@ function SettingsPage() {
 					</Text>
 					<Flex align="center" gap="4" className={styles.settingRow}>
 						<div className={styles.avatarContainer}>
-							<AvatarPreview
+							<UserAvatar
+								size={96}
+								name={user?.name ?? ""}
 								avatarFileId={avatarFileId}
-								userName={user?.name ?? ""}
 							/>
 						</div>
 						<Flex direction="column" gap="2">

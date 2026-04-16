@@ -89,7 +89,7 @@ const requireOwner = async (formId: string, userId: string) => {
 	return form;
 };
 
-const userSelect = { id: true, name: true } as const;
+const userSelect = { id: true, name: true, avatarFileId: true } as const;
 
 /** 承認済みの申請は編集不可 */
 const requireNotApproved = async (formId: string) => {
@@ -213,13 +213,11 @@ committeeFormRoute.get(
 				title: true,
 				description: true,
 				updatedAt: true,
-				owner: {
-					select: { id: true, name: true },
-				},
+				owner: { select: userSelect },
 				collaborators: {
 					where: { deletedAt: null },
 					select: {
-						user: { select: { id: true, name: true } },
+						user: { select: userSelect },
 					},
 				},
 				authorizations: {
@@ -232,9 +230,7 @@ committeeFormRoute.get(
 						allowLateResponse: true,
 						deadlineAt: true,
 						ownerOnly: true,
-						requestedTo: {
-							select: { id: true, name: true },
-						},
+						requestedTo: { select: userSelect },
 					},
 				},
 			},
@@ -266,7 +262,7 @@ committeeFormRoute.get(
 		const form = await prisma.form.findFirst({
 			where: { id: formId, deletedAt: null },
 			include: {
-				owner: { select: { id: true, name: true } },
+				owner: { select: userSelect },
 				items: {
 					include: {
 						options: true,
@@ -276,7 +272,7 @@ committeeFormRoute.get(
 				collaborators: {
 					where: { deletedAt: null },
 					include: {
-						user: { select: { id: true, name: true } },
+						user: { select: userSelect },
 					},
 				},
 				attachments: formAttachmentsInclude,
@@ -284,8 +280,8 @@ committeeFormRoute.get(
 					orderBy: { createdAt: "desc" },
 					take: 1,
 					include: {
-						requestedBy: { select: { id: true, name: true } },
-						requestedTo: { select: { id: true, name: true } },
+						requestedBy: { select: userSelect },
+						requestedTo: { select: userSelect },
 						deliveries: {
 							include: {
 								project: { select: { id: true, name: true } },
@@ -924,7 +920,7 @@ committeeFormRoute.get(
 				submittedAt: { not: null }, // 提出済みのみ
 			},
 			include: {
-				respondent: { select: { id: true, name: true } },
+				respondent: { select: userSelect },
 				formDelivery: {
 					include: {
 						project: {
@@ -1053,7 +1049,7 @@ committeeFormRoute.get(
 				submittedAt: { not: null },
 			},
 			include: {
-				respondent: { select: { id: true, name: true } },
+				respondent: { select: userSelect },
 				formDelivery: {
 					include: {
 						project: { select: { id: true, number: true, name: true } },

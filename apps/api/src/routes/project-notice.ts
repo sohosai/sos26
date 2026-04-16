@@ -106,6 +106,7 @@ projectNoticeRoute.get(
 									select: {
 										id: true,
 										name: true,
+										avatarFileId: true,
 										committeeMember: {
 											select: { Bureau: true },
 										},
@@ -128,6 +129,7 @@ projectNoticeRoute.get(
 			owner: {
 				id: d.noticeAuthorization.notice.owner.id,
 				name: d.noticeAuthorization.notice.owner.name,
+				avatarFileId: d.noticeAuthorization.notice.owner.avatarFileId,
 			},
 			ownerBureau:
 				d.noticeAuthorization.notice.owner.committeeMember?.Bureau ?? "",
@@ -180,6 +182,7 @@ projectNoticeRoute.get(
 									select: {
 										id: true,
 										name: true,
+										avatarFileId: true,
 										committeeMember: {
 											select: { Bureau: true },
 										},
@@ -219,6 +222,7 @@ projectNoticeRoute.get(
 			owner: {
 				id: delivery.noticeAuthorization.notice.owner.id,
 				name: delivery.noticeAuthorization.notice.owner.name,
+				avatarFileId: delivery.noticeAuthorization.notice.owner.avatarFileId,
 			},
 			ownerBureau:
 				delivery.noticeAuthorization.notice.owner.committeeMember?.Bureau ?? "",

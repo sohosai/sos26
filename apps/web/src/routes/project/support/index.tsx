@@ -41,6 +41,7 @@ export const Route = createFileRoute("/project/support/")({
 			projectMembers: membersRes.members.map(m => ({
 				id: m.userId,
 				name: m.name,
+				avatarFileId: m.avatarFileId,
 			})),
 			availableForms: formsRes.forms.map(f => ({
 				id: f.formId,

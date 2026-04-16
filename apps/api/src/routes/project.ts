@@ -727,6 +727,7 @@ projectRoute.get(
 						: null,
 				role,
 				joinedAt: m.joinedAt,
+				avatarFileId: m.user.avatarFileId,
 			};
 		});
 

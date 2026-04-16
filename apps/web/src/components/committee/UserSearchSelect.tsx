@@ -1,8 +1,8 @@
 import { TextField as RadixTextField, Text } from "@radix-ui/themes";
 import type { UserSummary } from "@sos26/shared";
 import { IconSearch, IconX } from "@tabler/icons-react";
-import Avatar from "boring-avatars";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { UserAvatar } from "@/components/common/UserAvatar";
 import { searchUsers } from "@/lib/api/user";
 import styles from "./UserSearchSelect.module.scss";
 
@@ -81,7 +81,11 @@ export function UserSearchSelect({
 							className={styles.selectedChip}
 							onClick={() => onRemove(user.id)}
 						>
-							<Avatar size={16} name={user.name} variant="beam" />
+							<UserAvatar
+								size={16}
+								name={user.name}
+								avatarFileId={user.avatarFileId}
+							/>
 							{user.name}
 							<IconX size={12} />
 						</button>
@@ -127,7 +131,11 @@ export function UserSearchSelect({
 								onClick={() => handleSelect(user)}
 								disabled={selectedIds.has(user.id)}
 							>
-								<Avatar size={28} name={user.name} variant="beam" />
+								<UserAvatar
+									size={28}
+									name={user.name}
+									avatarFileId={user.avatarFileId}
+								/>
 								<div className={styles.userInfo}>
 									<Text size="2" weight="medium">
 										{user.name}

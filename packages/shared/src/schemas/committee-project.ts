@@ -24,6 +24,7 @@ const userSummarySchema = userSchema
 		name: true,
 		email: true,
 		telephoneNumber: true,
+		avatarFileId: true,
 	})
 	.extend({
 		// マスキングのために nullable にするが、userSchema と同じ制約を維持する

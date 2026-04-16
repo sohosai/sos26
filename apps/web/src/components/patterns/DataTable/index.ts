@@ -4,7 +4,7 @@ export { EditableCell } from "./cells/EditableCell";
 export { FileCell } from "./cells/FileCell";
 export { MultiSelectCell } from "./cells/MultiSelectCell";
 export { MultiSelectEditCell } from "./cells/MultiSelectEditCell";
-export { NameCell } from "./cells/NameCell";
+export { NameCell, type NameCellValue } from "./cells/NameCell";
 export { SelectCell } from "./cells/SelectCell";
 export { TagCell } from "./cells/TagCell";
 export type { DataTableFeatures } from "./DataTable";
