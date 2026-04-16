@@ -23,6 +23,10 @@ type ProjectSelectorProps = {
 	onCreateProject: () => void;
 	onJoinProject: (inviteCode: string) => void;
 	hasPrivilegedProject: boolean;
+	applicationPeriodInfo?: {
+		isOpen: boolean;
+		periods: { start: string; end: string }[] | null;
+	} | null;
 };
 
 export function ProjectSelector({
@@ -33,6 +37,7 @@ export function ProjectSelector({
 	onCreateProject,
 	onJoinProject,
 	hasPrivilegedProject,
+	applicationPeriodInfo,
 }: ProjectSelectorProps) {
 	const [open, setOpen] = useState(false);
 	const [isMobile, setIsMobile] = useState(false);
@@ -147,9 +152,29 @@ export function ProjectSelector({
 							type="button"
 							className={styles.actionItem}
 							onClick={handleCreateProject}
+							disabled={applicationPeriodInfo?.isOpen === false}
+							style={
+								applicationPeriodInfo && !applicationPeriodInfo.isOpen
+									? {
+											opacity: 0.5,
+											cursor: "not-allowed",
+											flexDirection: "column",
+											alignItems: "flex-start",
+										}
+									: undefined
+							}
 						>
-							<IconPlus size={16} />
-							<Text size="2">新しい企画を作成</Text>
+							<div
+								style={{ display: "flex", alignItems: "center", gap: "8px" }}
+							>
+								<IconPlus size={16} />
+								<Text size="2">新しい企画を作成</Text>
+							</div>
+							{applicationPeriodInfo && !applicationPeriodInfo.isOpen && (
+								<Text size="1" color="gray" style={{ marginLeft: "24px" }}>
+									（現在、応募期間外です）
+								</Text>
+							)}
 						</button>
 					)}
 

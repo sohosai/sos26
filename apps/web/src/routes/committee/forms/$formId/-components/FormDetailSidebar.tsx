@@ -80,6 +80,7 @@ type Props = {
 	onRemoveCollaborator: (collaboratorId: string) => void;
 	onApprove: (authorizationId: string) => Promise<void>;
 	onReject: (authorizationId: string) => Promise<void>;
+	onCancelApproval: (authorizationId: string) => Promise<void>;
 	onUpdateViewers: (viewers: ViewerInput[]) => Promise<void>;
 	onPublishSuccess: () => void;
 	onEdit: () => void;
@@ -100,6 +101,7 @@ export function FormDetailSidebar({
 	onRemoveCollaborator,
 	onApprove,
 	onReject,
+	onCancelApproval,
 	onUpdateViewers,
 	onPublishSuccess,
 	onEdit,
@@ -109,6 +111,7 @@ export function FormDetailSidebar({
 	const [publishRequestOpen, setPublishRequestOpen] = useState(false);
 	const [approvingId, setApprovingId] = useState<string | null>(null);
 	const [rejectingId, setRejectingId] = useState<string | null>(null);
+	const [cancelingId, setCancelingId] = useState<string | null>(null);
 
 	const latestAuth = form.authorizationDetail;
 	const statusInfo = getFormStatusFromAuth(
@@ -122,6 +125,10 @@ export function FormDetailSidebar({
 	);
 	const isApprover =
 		latestAuth?.status === "PENDING" && latestAuth.requestedToId === userId;
+	const canCancelApproval =
+		latestAuth?.status === "APPROVED" &&
+		latestAuth.requestedToId === userId &&
+		new Date(latestAuth.scheduledSendAt) > new Date();
 
 	const { canPublish, canEditForm } = resolveFormPermissions({
 		canEdit,
@@ -248,8 +255,10 @@ export function FormDetailSidebar({
 								auth={latestAuth}
 								pendingAuth={latestAuth}
 								isApprover={isApprover}
+								canCancelApproval={canCancelApproval}
 								approvingId={approvingId}
 								rejectingId={rejectingId}
+								cancelingId={cancelingId}
 								onApprove={async id => {
 									setApprovingId(id);
 									try {
@@ -264,6 +273,14 @@ export function FormDetailSidebar({
 										await onReject(id);
 									} finally {
 										setRejectingId(null);
+									}
+								}}
+								onCancelApproval={async id => {
+									setCancelingId(id);
+									try {
+										await onCancelApproval(id);
+									} finally {
+										setCancelingId(null);
 									}
 								}}
 							/>
@@ -304,20 +321,26 @@ type AuthDetailSectionProps = {
 	auth: FormDetail["authorizationDetail"];
 	pendingAuth: FormDetail["authorizationDetail"] | undefined;
 	isApprover: boolean;
+	canCancelApproval: boolean;
 	approvingId: string | null;
 	rejectingId: string | null;
+	cancelingId: string | null;
 	onApprove: (id: string) => void;
 	onReject: (id: string) => void;
+	onCancelApproval: (id: string) => void;
 };
 
 function AuthDetailSection({
 	auth,
 	pendingAuth,
 	isApprover,
+	canCancelApproval,
 	approvingId,
 	rejectingId,
+	cancelingId,
 	onApprove,
 	onReject,
+	onCancelApproval,
 }: AuthDetailSectionProps) {
 	if (!auth) {
 		return null;
@@ -430,7 +453,11 @@ function AuthDetailSection({
 							onApprove(pendingAuth.id);
 						}}
 						loading={approvingId === pendingAuth.id}
-						disabled={rejectingId !== null}
+						disabled={
+							rejectingId !== null ||
+							cancelingId !== null ||
+							approvingId === pendingAuth.id
+						}
 					>
 						<IconCheck size={16} />
 						承認
@@ -440,10 +467,32 @@ function AuthDetailSection({
 						size="2"
 						onClick={() => onReject(pendingAuth.id)}
 						loading={rejectingId === pendingAuth.id}
-						disabled={approvingId !== null}
+						disabled={
+							approvingId !== null ||
+							cancelingId !== null ||
+							rejectingId === pendingAuth.id
+						}
 					>
 						<IconX size={16} />
 						却下
+					</Button>
+				</div>
+			)}
+			{canCancelApproval && (
+				<div className={styles.authorizationActions}>
+					<Button
+						intent="secondary"
+						size="2"
+						onClick={() => onCancelApproval(auth.id)}
+						loading={cancelingId === auth.id}
+						disabled={
+							approvingId !== null ||
+							rejectingId !== null ||
+							cancelingId === auth.id
+						}
+					>
+						<IconX size={16} />
+						承認を取り消す
 					</Button>
 				</div>
 			)}

@@ -1,5 +1,6 @@
 export { notifyAccessRequestDecided } from "./notifyAccessRequestDecided";
 export { notifyAccessRequestReceived } from "./notifyAccessRequestReceived";
+export { notifyFormAuthorizationCancelled } from "./notifyFormAuthorizationCancelled";
 export { notifyFormAuthorizationDecided } from "./notifyFormAuthorizationDecided";
 export { notifyFormAuthorizationRequested } from "./notifyFormAuthorizationRequested";
 export { notifyFormDelivered } from "./notifyFormDelivered";
@@ -7,6 +8,7 @@ export { notifyInquiryAssigneeAdded } from "./notifyInquiryAssigneeAdded";
 export { notifyInquiryCommentAdded } from "./notifyInquiryCommentAdded";
 export { notifyInquiryCreatedByCommittee } from "./notifyInquiryCreatedByCommittee";
 export { notifyInquiryCreatedByProject } from "./notifyInquiryCreatedByProject";
+export { notifyNoticeAuthorizationCancelled } from "./notifyNoticeAuthorizationCancelled";
 export { notifyNoticeAuthorizationDecided } from "./notifyNoticeAuthorizationDecided";
 export { notifyNoticeAuthorizationRequested } from "./notifyNoticeAuthorizationRequested";
 export { notifyNoticeDelivered } from "./notifyNoticeDelivered";

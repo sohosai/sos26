@@ -4,24 +4,20 @@ import {
 	Button,
 	Callout,
 	Card,
-	Dialog,
 	Heading,
 	Select,
 	Table,
 	Text,
-	TextField,
 } from "@radix-ui/themes";
 import type {
 	CommitteeProjectDetail,
 	ProjectDeletionStatus,
-	UpdateCommitteeProjectBaseInfoRequest,
 } from "@sos26/shared";
 import { createFileRoute } from "@tanstack/react-router";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
 	getCommitteeProjectDetail,
-	updateCommitteeProjectBaseInfo,
 	updateCommitteeProjectDeletionStatus,
 } from "@/lib/api/committee-project";
 import { formatDate, formatProjectNumber } from "@/lib/format";
@@ -29,6 +25,8 @@ import {
 	PROJECT_LOCATION_LABELS,
 	PROJECT_TYPE_LABELS,
 } from "@/lib/project/options";
+import { EditProjectDialog } from "./-components/EditProjectDialog";
+import { Field } from "./-components/Field";
 import styles from "./$projectId.module.scss";
 
 type DeletionStatusSelectValue = ProjectDeletionStatus | "ACTIVE";
@@ -42,8 +40,9 @@ export const Route = createFileRoute("/committee/info/$projectId")({
 });
 
 function statusLabel(status: ProjectDeletionStatus | null): string {
-	if (status === "LOTTERY_LOSS") return "抽選漏れ";
-	if (status === "DELETED") return "削除";
+	if (status === "LOTTERY_LOSS") return "落選";
+	if (status === "DELETED") return "企画中止";
+	if (status === "PROJECT_WITHDRAWN") return "企画辞退";
 	return "有効";
 }
 
@@ -55,28 +54,6 @@ function CommitteeProjectInfoPage() {
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 	const [deletionStatus, setDeletionStatus] =
 		useState<DeletionStatusSelectValue>("DELETED");
-
-	const [form, setForm] = useState<UpdateCommitteeProjectBaseInfoRequest>({
-		name: project.name,
-		namePhonetic: project.namePhonetic,
-		organizationName: project.organizationName,
-		organizationNamePhonetic: project.organizationNamePhonetic,
-		type: project.type,
-		location: project.location,
-	});
-
-	useEffect(() => {
-		if (!editOpen) return;
-
-		setForm({
-			name: project.name,
-			namePhonetic: project.namePhonetic,
-			organizationName: project.organizationName,
-			organizationNamePhonetic: project.organizationNamePhonetic,
-			type: project.type,
-			location: project.location,
-		});
-	}, [editOpen, project]);
 
 	const mixedActions = useMemo(() => {
 		return [
@@ -111,20 +88,6 @@ function CommitteeProjectInfoPage() {
 					}
 				: null,
 		}));
-	};
-
-	const handleSaveBaseInfo = async () => {
-		try {
-			setSaving(true);
-			const res = await updateCommitteeProjectBaseInfo(project.id, form);
-			applyProjectUpdate(res.project);
-			setEditOpen(false);
-			toast.success("企画情報を更新しました");
-		} catch {
-			toast.error("企画情報の更新に失敗しました");
-		} finally {
-			setSaving(false);
-		}
 	};
 
 	const handleUpdateDeletionStatus = async (
@@ -255,61 +218,12 @@ function CommitteeProjectInfoPage() {
 				</div>
 			</Card>
 
-			<Dialog.Root open={editOpen} onOpenChange={setEditOpen}>
-				<Dialog.Content>
-					<Dialog.Title>企画の基本情報を編集</Dialog.Title>
-					<div className={styles.form}>
-						<Field label="企画名">
-							<TextField.Root
-								value={form.name ?? ""}
-								onChange={e =>
-									setForm(prev => ({ ...prev, name: e.target.value }))
-								}
-							/>
-						</Field>
-						<Field label="企画名（ふりがな）">
-							<TextField.Root
-								value={form.namePhonetic ?? ""}
-								onChange={e =>
-									setForm(prev => ({ ...prev, namePhonetic: e.target.value }))
-								}
-							/>
-						</Field>
-						<Field label="企画団体名">
-							<TextField.Root
-								value={form.organizationName ?? ""}
-								onChange={e =>
-									setForm(prev => ({
-										...prev,
-										organizationName: e.target.value,
-									}))
-								}
-							/>
-						</Field>
-						<Field label="企画団体名（ふりがな）">
-							<TextField.Root
-								value={form.organizationNamePhonetic ?? ""}
-								onChange={e =>
-									setForm(prev => ({
-										...prev,
-										organizationNamePhonetic: e.target.value,
-									}))
-								}
-							/>
-						</Field>
-					</div>
-					<div className={styles.dialogActions}>
-						<Dialog.Close>
-							<Button variant="soft" color="gray">
-								キャンセル
-							</Button>
-						</Dialog.Close>
-						<Button onClick={handleSaveBaseInfo} disabled={saving}>
-							{saving ? "更新中..." : "更新する"}
-						</Button>
-					</div>
-				</Dialog.Content>
-			</Dialog.Root>
+			<EditProjectDialog
+				open={editOpen}
+				onOpenChange={setEditOpen}
+				project={project}
+				onProjectUpdate={applyProjectUpdate}
+			/>
 
 			<AlertDialog.Root
 				open={deleteConfirmOpen}
@@ -330,8 +244,9 @@ function CommitteeProjectInfoPage() {
 							<Select.Trigger />
 							<Select.Content>
 								<Select.Item value="ACTIVE">有効</Select.Item>
-								<Select.Item value="DELETED">削除</Select.Item>
-								<Select.Item value="LOTTERY_LOSS">抽選漏れ</Select.Item>
+								<Select.Item value="DELETED">企画中止</Select.Item>
+								<Select.Item value="LOTTERY_LOSS">落選</Select.Item>
+								<Select.Item value="PROJECT_WITHDRAWN">企画辞退</Select.Item>
 							</Select.Content>
 						</Select.Root>
 					</Field>
@@ -402,15 +317,6 @@ function PersonCard({
 			<Text as="p" size="2" color="gray">
 				電話: {person.telephoneNumber ?? "権限がないため非表示"}
 			</Text>
-		</div>
-	);
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-	return (
-		<div className={styles.field}>
-			<Text size="2">{label}</Text>
-			{children}
 		</div>
 	);
 }

@@ -14,12 +14,12 @@ export const PROJECT_LOCATION_OPTIONS: {
 	{
 		value: "INDOOR",
 		label: "屋内",
-		caption: "調理：◯　火気の使用：✖　雨天時：◎",
+		caption: "調理：◯　火気の使用：✖　雨天時：〇　前夜祭の参加：✖",
 	},
 	{
 		value: "OUTDOOR",
 		label: "屋外",
-		caption: "調理：◎　火気の使用：◎　雨天時：△",
+		caption: "調理：〇　火気の使用：〇　雨天時：△　前夜祭の参加：〇",
 	},
 	{ value: "STAGE", label: "ステージ" },
 ];

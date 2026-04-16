@@ -90,6 +90,13 @@
 	flex-wrap: wrap;
 }
 
+.loading {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	min-height: 200px;
+}
+
 @media (max-width: 640px) {
 	.actionRow {
 		flex-direction: column;
@@ -97,5 +104,9 @@
 
 	.dialogActions {
 		justify-content: stretch;
+	}
+
+	.loading {
+		min-height: 160px;
 	}
 }

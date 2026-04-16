@@ -28,7 +28,7 @@ import styles from "./index.module.scss";
 export type MemberRow = {
 	userId: string;
 	name: string;
-	email: string;
+	email: string | null;
 	role: "OWNER" | "SUB_OWNER" | "MEMBER";
 	roleLabel: string[];
 	joinedAt: Date;
@@ -311,6 +311,9 @@ function RouteComponent() {
 		}),
 		memberColumnHelper.accessor("email", {
 			header: "メールアドレス",
+			cell: info => {
+				return info.getValue() ?? "非表示";
+			},
 		}),
 		memberColumnHelper.accessor("roleLabel", {
 			header: "役職",
@@ -397,7 +400,9 @@ function RouteComponent() {
 							size="2"
 							onClick={handleRejectSubOwnerRequest}
 							loading={isRejectingSubOwnerRequest}
-							disabled={isApprovingSubOwnerRequest}
+							disabled={
+								isApprovingSubOwnerRequest || isRejectingSubOwnerRequest
+							}
 						>
 							辞退する
 						</Button>
@@ -406,7 +411,9 @@ function RouteComponent() {
 							size="2"
 							onClick={handleApproveSubOwnerRequest}
 							loading={isApprovingSubOwnerRequest}
-							disabled={isRejectingSubOwnerRequest}
+							disabled={
+								isRejectingSubOwnerRequest || isApprovingSubOwnerRequest
+							}
 						>
 							承認する
 						</Button>

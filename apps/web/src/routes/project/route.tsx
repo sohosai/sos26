@@ -12,7 +12,11 @@ import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { Button } from "@/components/primitives";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
 import { ProjectJoinDialog } from "@/components/project/ProjectJoinDialog";
-import { joinProject, listMyProjects } from "@/lib/api/project";
+import {
+	getApplicationPeriod,
+	joinProject,
+	listMyProjects,
+} from "@/lib/api/project";
 import { listProjectForms } from "@/lib/api/project-form";
 import { listProjectInquiries } from "@/lib/api/project-inquiry";
 import { listProjectNotices } from "@/lib/api/project-notice";
@@ -26,42 +30,70 @@ import { useProjectStore } from "@/lib/project/store";
 import styles from "./route.module.scss";
 
 function projectDeletionStatusLabel(status: Project["deletionStatus"]): string {
-	if (status === "LOTTERY_LOSS") return "抽選漏れ";
-	if (status === "DELETED") return "削除";
+	if (status === "LOTTERY_LOSS") return "落選";
+	if (status === "DELETED") return "企画中止";
+	if (status === "PROJECT_WITHDRAWN") return "企画辞退";
 	return "";
 }
 
 type EmptyProjectStateProps = {
 	onCreateProject: () => void;
 	onJoinProject: () => void;
+	isApplicationPeriodOpen: boolean;
 };
 
 function EmptyProjectState({
 	onCreateProject,
 	onJoinProject,
+	isApplicationPeriodOpen,
 }: EmptyProjectStateProps) {
+	const isOutsideApplicationPeriod = !isApplicationPeriodOpen;
+
 	return (
 		<div className={styles.emptyState}>
 			<div className={styles.emptyStateContent}>
-				<Heading size="5" className={styles.emptyStateHeading}>
-					企画に参加していません
-				</Heading>
-				<Text
-					as="p"
-					size="2"
-					color="gray"
-					className={styles.emptyStateDescription}
-				>
-					新規作成するか、企画参加コードを企画責任者から受け取って、企画に参加してください。
-				</Text>
-				<div className={styles.emptyStateActions}>
-					<Button size="2" onClick={onCreateProject}>
-						新しい企画を作成
-					</Button>
-					<Button size="2" intent="secondary" onClick={onJoinProject}>
-						企画参加コードで参加
-					</Button>
-				</div>
+				{isOutsideApplicationPeriod ? (
+					<>
+						<Heading size="5" className={styles.emptyStateHeading}>
+							企画応募期間外です
+						</Heading>
+						<Text
+							as="p"
+							size="2"
+							color="gray"
+							className={styles.emptyStateDescription}
+						>
+							現在は企画の新規作成ができません。
+						</Text>
+						<div className={styles.emptyStateActions}>
+							<Button size="2" intent="secondary" onClick={onJoinProject}>
+								企画参加コードで参加
+							</Button>
+						</div>
+					</>
+				) : (
+					<>
+						<Heading size="5" className={styles.emptyStateHeading}>
+							企画に参加していません
+						</Heading>
+						<Text
+							as="p"
+							size="2"
+							color="gray"
+							className={styles.emptyStateDescription}
+						>
+							新規作成するか、企画参加コードを企画責任者から受け取って、企画に参加してください。
+						</Text>
+						<div className={styles.emptyStateActions}>
+							<Button size="2" onClick={onCreateProject}>
+								新しい企画を作成
+							</Button>
+							<Button size="2" intent="secondary" onClick={onJoinProject}>
+								企画参加コードで参加
+							</Button>
+						</div>
+					</>
+				)}
 			</div>
 		</div>
 	);
@@ -149,9 +181,26 @@ function ProjectLayout() {
 	const selectedProject =
 		projects.find(p => p.id === selectedProjectId) ?? null;
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+	const [applicationPeriodInfo, setApplicationPeriodInfo] = useState<{
+		isOpen: boolean;
+		periods: { start: string; end: string }[] | null;
+	} | null>(null);
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 	const [joinDialogOpen, setJoinDialogOpen] = useState(false);
 	const { user } = useAuthStore();
+
+	useEffect(() => {
+		const fetchApplicationPeriod = async () => {
+			try {
+				const info = await getApplicationPeriod();
+				setApplicationPeriodInfo(info);
+			} catch {
+				// API失敗時は保守的に期間外として扱う
+				setApplicationPeriodInfo({ isOpen: false, periods: null });
+			}
+		};
+		void fetchApplicationPeriod();
+	}, []);
 
 	const hasPrivilegedProject = projects.some(
 		project => project.ownerId === user?.id || project.subOwnerId === user?.id
@@ -234,6 +283,7 @@ function ProjectLayout() {
 						onCreateProject={() => setCreateDialogOpen(true)}
 						onJoinProject={handleJoinProject}
 						hasPrivilegedProject={hasPrivilegedProject}
+						applicationPeriodInfo={applicationPeriodInfo}
 					/>
 				}
 			/>
@@ -250,10 +300,21 @@ function ProjectLayout() {
 					</Callout.Root>
 				)}
 				{projects.length === 0 ? (
-					<EmptyProjectState
-						onCreateProject={() => setCreateDialogOpen(true)}
-						onJoinProject={() => setJoinDialogOpen(true)}
-					/>
+					applicationPeriodInfo ? (
+						<EmptyProjectState
+							onCreateProject={() => setCreateDialogOpen(true)}
+							onJoinProject={() => setJoinDialogOpen(true)}
+							isApplicationPeriodOpen={applicationPeriodInfo.isOpen}
+						/>
+					) : (
+						<div className={styles.emptyState}>
+							<div className={styles.emptyStateContent}>
+								<Heading size="5" className={styles.emptyStateHeading}>
+									読み込み中...
+								</Heading>
+							</div>
+						</div>
+					)
 				) : (
 					selectedProjectId && <Outlet key={selectedProjectId} />
 				)}

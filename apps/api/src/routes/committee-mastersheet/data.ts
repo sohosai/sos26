@@ -162,9 +162,15 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 
 	const prfResponses = visiblePrfFormIds.length
 		? await prisma.projectRegistrationFormResponse.findMany({
-				where: { formId: { in: visiblePrfFormIds } },
+				where: {
+					formId: { in: visiblePrfFormIds },
+					deletedAt: null,
+				},
 				include: {
 					answers: {
+						where: {
+							deletedAt: null,
+						},
 						include: {
 							files: {
 								orderBy: { sortOrder: "asc" },

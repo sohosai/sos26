@@ -10,12 +10,14 @@ const IMPORTANT_ERROR_OPERATIONS = [
 	"publish_request",
 	"approve",
 	"reject",
+	"cancel_approval",
 	"delete",
 	"join_project",
 	"collaborator_update",
 	"inquiry_create",
 	"comment_submit",
 	"assignee_update",
+	"update_base_info",
 	"api_response_validation",
 ] as const;
 

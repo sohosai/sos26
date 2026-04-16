@@ -12,10 +12,11 @@ import {
 	type ViewerScope,
 } from "@sos26/shared";
 import { IconCheck, IconChevronDown, IconSearch } from "@tabler/icons-react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DiscardChangesDialog } from "@/components/patterns/DiscardChangesDialog";
 import { Button, Select, TextArea, TextField } from "@/components/primitives";
+import { formatProjectNumber } from "@/lib/format";
 import { FileAttachmentArea } from "./FileAttachmentArea";
 import { FormViewerSelector } from "./FormViewerSelector";
 import { MemberSelectPopover, SelectedChips } from "./MemberSelectPopover";
@@ -37,7 +38,7 @@ type NewInquiryFormProps = {
 	viewerRole: "project" | "committee";
 	currentUser: UserSummary;
 	projectMembers?: UserSummary[];
-	projects?: { id: string; name: string }[];
+	projects?: { id: string; name: string; number: number }[];
 	onLoadProjectMembers?: (projectId: string) => Promise<UserSummary[]>;
 	committeeMembers?: UserSummary[];
 	availableForms?: FormSummary[];
@@ -67,7 +68,7 @@ type BuildSubmitParamsInput = {
 	title: string;
 	body: string;
 	selectedForm: FormSummary | null;
-	selectedProject: { id: string; name: string } | null;
+	selectedProject: { id: string; name: string; number: number } | null;
 	selectedProjectAssignees: UserSummary[];
 	selectedCommitteeAssignees: UserSummary[];
 	selectedCoAssignees: UserSummary[];
@@ -167,9 +168,13 @@ function CommitteeContent({
 	selectedViewers,
 	onChangeViewers,
 }: {
-	projects?: { id: string; name: string }[];
-	selectedProject: { id: string; name: string } | null;
-	onSelectProject: (project: { id: string; name: string }) => void;
+	projects?: { id: string; name: string; number: number }[];
+	selectedProject: { id: string; name: string; number: number } | null;
+	onSelectProject: (project: {
+		id: string;
+		name: string;
+		number: number;
+	}) => void;
 	loadingMembers: boolean;
 	loadedProjectMembers: UserSummary[];
 	selectedProjectAssignees: UserSummary[];
@@ -366,6 +371,7 @@ export function NewInquiryForm({
 	const [selectedProject, setSelectedProject] = useState<{
 		id: string;
 		name: string;
+		number: number;
 	} | null>(
 		initialData?.projectId && projects
 			? (projects.find(p => p.id === initialData.projectId) ?? null)
@@ -407,7 +413,11 @@ export function NewInquiryForm({
 		setSelectedFiles([]);
 	};
 
-	const handleSelectProject = async (project: { id: string; name: string }) => {
+	const handleSelectProject = async (project: {
+		id: string;
+		name: string;
+		number: number;
+	}) => {
 		setSelectedProject(project);
 		setSelectedProjectAssignees([]);
 
@@ -695,14 +705,31 @@ function ProjectSelector({
 	selectedProject,
 	onSelect,
 }: {
-	projects: { id: string; name: string }[];
-	selectedProject: { id: string; name: string } | null;
-	onSelect: (project: { id: string; name: string }) => void;
+	projects: { id: string; name: string; number: number }[];
+	selectedProject: { id: string; name: string; number: number } | null;
+	onSelect: (project: { id: string; name: string; number: number }) => void;
 }) {
 	const [open, setOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
+	const filteredProjects = useMemo(() => {
+		const query = searchQuery.trim().toLowerCase();
+		const sorted = [...projects].sort((a, b) => a.number - b.number);
+		if (!query) return sorted;
+		return sorted.filter(project => {
+			const numberText = formatProjectNumber(project.number);
+			const rawNumber = String(project.number);
+			const nameMatch = project.name.toLowerCase().includes(query);
+			const numberMatch =
+				numberText.includes(query) || rawNumber.includes(query);
+			return nameMatch || numberMatch;
+		});
+	}, [projects, searchQuery]);
 
-	const handleSelect = (project: { id: string; name: string }) => {
+	const handleSelect = (project: {
+		id: string;
+		name: string;
+		number: number;
+	}) => {
 		onSelect(project);
 		setOpen(false);
 		setSearchQuery("");
@@ -726,7 +753,9 @@ function ProjectSelector({
 				<Popover.Trigger>
 					<button type="button" className={styles.assignTrigger}>
 						<Text size="2" color="gray">
-							{selectedProject ? selectedProject.name : "企画を選択..."}
+							{selectedProject
+								? `${formatProjectNumber(selectedProject.number)} ${selectedProject.name}`
+								: "企画を選択..."}
 						</Text>
 						<IconChevronDown size={16} />
 					</button>
@@ -738,7 +767,7 @@ function ProjectSelector({
 				>
 					<div className={styles.assignSearch}>
 						<RadixTextField.Root
-							placeholder="企画名で検索..."
+							placeholder="企画名・企画番号で検索..."
 							size="2"
 							value={searchQuery}
 							onChange={e => setSearchQuery(e.target.value)}
@@ -749,35 +778,28 @@ function ProjectSelector({
 						</RadixTextField.Root>
 					</div>
 					<div className={styles.assignList}>
-						{projects
-							.filter(p => {
-								const q = searchQuery.toLowerCase();
-								if (!q) return true;
-								return p.name.toLowerCase().includes(q);
-							})
-							.map(project => {
-								const isSelected = selectedProject?.id === project.id;
-								return (
-									<button
-										key={project.id}
-										type="button"
-										className={`${styles.assignOption} ${
-											isSelected ? styles.assignOptionSelected : ""
-										}`}
-										onClick={() => handleSelect(project)}
-									>
-										<div className={styles.assignOptionText}>
-											<Text size="2">{project.name}</Text>
-										</div>
-										{isSelected && (
-											<IconCheck
-												size={14}
-												className={styles.assignOptionCheck}
-											/>
-										)}
-									</button>
-								);
-							})}
+						{filteredProjects.map(project => {
+							const isSelected = selectedProject?.id === project.id;
+							return (
+								<button
+									key={project.id}
+									type="button"
+									className={`${styles.assignOption} ${
+										isSelected ? styles.assignOptionSelected : ""
+									}`}
+									onClick={() => handleSelect(project)}
+								>
+									<div className={styles.assignOptionText}>
+										<Text size="2">
+											{formatProjectNumber(project.number)} {project.name}
+										</Text>
+									</div>
+									{isSelected && (
+										<IconCheck size={14} className={styles.assignOptionCheck} />
+									)}
+								</button>
+							);
+						})}
 					</div>
 				</Popover.Content>
 			</Popover.Root>

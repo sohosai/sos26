@@ -49,12 +49,12 @@ export const committeeMenuItems: MenuItem[] = [
 		icon: <IconFileText size={18} />,
 		to: "/committee/forms",
 	},
+	{ label: "お知らせ", icon: <IconBell size={18} />, to: "/committee/notice" },
 	{
 		label: "お問い合わせ",
 		icon: <IconMessageCircleQuestion size={18} />,
 		to: "/committee/support",
 	},
-	{ label: "お知らせ", icon: <IconBell size={18} />, to: "/committee/notice" },
 	{
 		label: "メンバー管理",
 		icon: <IconUsers size={18} />,

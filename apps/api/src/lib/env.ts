@@ -60,6 +60,41 @@ const envSchema = z.object({
 	// Sentry
 	SENTRY_DSN: z.string().url().optional(),
 	SENTRY_ENVIRONMENT: z.string().default("development"),
+
+	// 企画応募期間（カンマ区切りで複数期間指定可能、未指定の場合は無期限）
+	PROJECT_APPLICATION_PERIODS: z
+		.string()
+		.optional()
+		.transform(val => {
+			if (!val || val.trim() === "") {
+				return null; // 無期限
+			}
+			const periods = val
+				.split(",")
+				.map(p => p.trim())
+				.filter(Boolean);
+			const parsed = periods.map(period => {
+				const [start, end] = period.split("~").map(d => d.trim());
+				if (!start || !end) {
+					throw new Error(
+						`Invalid period format: ${period}. Expected format: YYYY-MM-DD~YYYY-MM-DD`
+					);
+				}
+				const startDate = new Date(start);
+				const endDate = new Date(end);
+				if (Number.isNaN(startDate.getTime())) {
+					throw new Error(`Invalid start date: ${start}`);
+				}
+				if (Number.isNaN(endDate.getTime())) {
+					throw new Error(`Invalid end date: ${end}`);
+				}
+				if (startDate > endDate) {
+					throw new Error(`Start date must be before end date: ${period}`);
+				}
+				return { start: startDate, end: endDate };
+			});
+			return parsed;
+		}),
 });
 
 export const env = envSchema.parse({
@@ -87,6 +122,7 @@ export const env = envSchema.parse({
 	FILE_TOKEN_SECRET: process.env.FILE_TOKEN_SECRET,
 	SENTRY_DSN: process.env.SENTRY_DSN,
 	SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT,
+	PROJECT_APPLICATION_PERIODS: process.env.PROJECT_APPLICATION_PERIODS,
 });
 
 export type Env = z.infer<typeof envSchema>;

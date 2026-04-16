@@ -63,7 +63,7 @@ const permissionLabelMap: Record<CommitteePermission, string> = {
 	FORM_DELIVER: "申請配信",
 	INQUIRY_ADMIN: "お問い合わせ管理",
 	PROJECT_EDIT: "企画編集",
-	PROJECT_DELETE: "企画削除",
+	PROJECT_DELETE: "企画中止",
 	PROJECT_VIEW: "企画閲覧",
 	PROJECT_REGISTRATION_FORM_CREATE: "企画登録フォーム作成",
 	PROJECT_REGISTRATION_FORM_DELIVER: "企画登録フォーム配信",
@@ -470,16 +470,35 @@ function RouteComponent() {
 		memberColumnHelper.accessor("email", {
 			header: "メールアドレス",
 		}),
-		memberColumnHelper.display({
+		memberColumnHelper.accessor(row => row.bureau, {
 			id: "bureau",
 			header: "所属局",
 			cell: ({ row }) => (
 				<BureauCell member={row.original} onChange={handleBureauChange} />
 			),
+			sortingFn: (rowA, rowB) => {
+				const a = bureauLabelMap[rowA.original.bureau] ?? rowA.original.bureau;
+				const b = bureauLabelMap[rowB.original.bureau] ?? rowB.original.bureau;
+				return a.localeCompare(b, "ja");
+			},
+			meta: {
+				filterVariant: "select",
+				selectOptions: allBureaus.map(bureau => ({
+					value: bureau,
+					label: bureauLabelMap[bureau],
+				})),
+			},
 		}),
-		memberColumnHelper.display({
+		memberColumnHelper.accessor(row => row.permissions, {
 			id: "permissions",
 			header: "権限",
+			meta: {
+				filterVariant: "select",
+				selectOptions: allPermissions.map(perm => ({
+					value: perm,
+					label: permissionLabelMap[perm],
+				})),
+			},
 			cell: ({ row }) => (
 				<PermissionsCell
 					member={row.original}
@@ -517,6 +536,7 @@ function RouteComponent() {
 			<DataTable<CommitteeMemberRow>
 				data={members}
 				columns={columns}
+				features={{ columnFilter: true }}
 				initialSorting={[
 					{
 						id: "joinedAt",

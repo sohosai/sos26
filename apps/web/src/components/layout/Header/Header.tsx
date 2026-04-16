@@ -11,11 +11,12 @@ export function Header() {
 				</Link>
 			</div>
 			<nav className={styles.nav}>
-				<RadixLink asChild>
+				{/* 未完成のため、コメントアウト */}
+				{/* <RadixLink asChild>
 					<Link to="/docs">
 						<Text size="2">説明書</Text>
 					</Link>
-				</RadixLink>
+				</RadixLink> */}
 				<RadixLink asChild>
 					<Link to="/support">
 						<Text size="2">不具合報告</Text>
