@@ -105,7 +105,11 @@ export type MastersheetViewerInput = z.infer<
 // 内部ヘルパー（export しない）
 // ─────────────────────────────────────────────────────────────
 
-const userSummarySchema = userSchema.pick({ id: true, name: true });
+const userSummarySchema = userSchema.pick({
+	id: true,
+	name: true,
+	avatarFileId: true,
+});
 
 const columnOptionSchema = z.object({
 	id: z.string(),

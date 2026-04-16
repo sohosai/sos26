@@ -10,6 +10,7 @@ export {
 	MultiSelectCell,
 	MultiSelectEditCell,
 	NameCell,
+	type NameCellValue,
 	SelectCell,
 	TagCell,
 } from "./DataTable";

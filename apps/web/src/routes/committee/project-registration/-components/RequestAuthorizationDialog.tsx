@@ -1,8 +1,8 @@
 import { Dialog, Text } from "@radix-ui/themes";
 import { IconSend } from "@tabler/icons-react";
-import Avatar from "boring-avatars";
 import { useState } from "react";
 import { toast } from "sonner";
+import { UserAvatar } from "@/components/common/UserAvatar";
 import { Button, Select } from "@/components/primitives";
 import { requestProjectRegistrationFormAuthorization } from "@/lib/api/committee-project-registration-form";
 import { reportHandledError } from "@/lib/error/report";
@@ -11,6 +11,7 @@ import styles from "./RequestAuthorizationDialog.module.scss";
 type Approver = {
 	userId: string;
 	name: string;
+	avatarFileId?: string | null;
 };
 
 type Props = {
@@ -34,7 +35,7 @@ export function RequestAuthorizationDialog({
 	const approverOptions = approvers.map(a => ({
 		value: a.userId,
 		label: a.name,
-		icon: <Avatar size={16} name={a.name} variant="beam" />,
+		icon: <UserAvatar size={16} name={a.name} avatarFileId={a.avatarFileId} />,
 	}));
 
 	const handleOpenChange = (o: boolean) => {

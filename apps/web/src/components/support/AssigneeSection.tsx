@@ -10,8 +10,8 @@ import {
 	IconSearch,
 	IconTrash,
 } from "@tabler/icons-react";
-import Avatar from "boring-avatars";
 import { useState } from "react";
+import { UserAvatar } from "@/components/common/UserAvatar";
 import styles from "./SupportDetail.module.scss";
 import type { AssigneeInfo } from "./types";
 
@@ -21,7 +21,7 @@ export function AssigneePopover({
 	side,
 	onToggle,
 }: {
-	members: { id: string; name: string }[];
+	members: { id: string; name: string; avatarFileId?: string | null }[];
 	assignees: AssigneeInfo[];
 	side: "PROJECT" | "COMMITTEE";
 	onToggle: (userId: string, side: "PROJECT" | "COMMITTEE") => void;
@@ -81,7 +81,11 @@ export function AssigneePopover({
 										setOpen(false);
 									}}
 								>
-									<Avatar size={20} name={person.name} variant="beam" />
+									<UserAvatar
+										size={20}
+										name={person.name}
+										avatarFileId={person.avatarFileId}
+									/>
 									<div className={styles.assignDropdownOptionText}>
 										<Text size="2">{person.name}</Text>
 									</div>
@@ -131,7 +135,11 @@ export function AssigneeList({
 				return (
 					<div key={a.id} className={styles.assigneeItem}>
 						<span className={styles.sidebarAvatar} data-variant={variant}>
-							<Avatar size={28} name={a.user.name} variant="beam" />
+							<UserAvatar
+								size={28}
+								name={a.user.name}
+								avatarFileId={a.user.avatarFileId}
+							/>
 						</span>
 						<div className={styles.assigneeNameBlock}>
 							<Text size="2">{a.user.name}</Text>

@@ -5,8 +5,8 @@ import {
 	IconPlus,
 	IconTicket,
 } from "@tabler/icons-react";
-import Avatar from "boring-avatars";
 import { useEffect, useRef, useState } from "react";
+import { UserAvatar } from "@/components/common/UserAvatar";
 import { Button, TextField } from "@/components/primitives";
 import styles from "./ProjectSelector.module.scss";
 
@@ -93,7 +93,7 @@ export function ProjectSelector({
 		>
 			<span className={styles.icon}>
 				{selectedProject ? (
-					<Avatar size={26} name={selectedProject.name} variant="beam" />
+					<UserAvatar size={26} name={selectedProject.name} />
 				) : (
 					<IconFolder size={26} />
 				)}
@@ -130,7 +130,7 @@ export function ProjectSelector({
 									className={`${styles.projectItem} ${project.id === selectedProjectId ? styles.selected : ""}`}
 									onClick={() => handleSelectProject(project.id)}
 								>
-									<Avatar size={28} name={project.name} variant="beam" />
+									<UserAvatar size={28} name={project.name} />
 									<Text size="2" truncate>
 										{project.name}
 									</Text>

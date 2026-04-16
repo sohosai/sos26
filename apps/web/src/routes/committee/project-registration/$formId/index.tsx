@@ -81,7 +81,11 @@ export const Route = createFileRoute(
 					p => p.permission === "PROJECT_REGISTRATION_FORM_DELIVER"
 				)
 			)
-			.map(m => ({ userId: m.user.id, name: m.user.name }));
+			.map(m => ({
+				userId: m.user.id,
+				name: m.user.name,
+				avatarFileId: m.user.avatarFileId,
+			}));
 		const existingCollaboratorIds = new Set(
 			form.collaborators.map(c => c.user.id)
 		);
@@ -94,7 +98,11 @@ export const Route = createFileRoute(
 						p => p.permission === "PROJECT_REGISTRATION_FORM_CREATE"
 					)
 			)
-			.map(m => ({ userId: m.user.id, name: m.user.name }));
+			.map(m => ({
+				userId: m.user.id,
+				name: m.user.name,
+				avatarFileId: m.user.avatarFileId,
+			}));
 		const activeForms = allForms
 			.filter(f => f.isActive && f.id !== params.formId)
 			.sort((a, b) => a.sortOrder - b.sortOrder)

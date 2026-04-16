@@ -27,7 +27,7 @@ type ViewerInput = {
 	userId?: string;
 };
 
-type UserSummary = { id: string; name: string };
+type UserSummary = { id: string; name: string; avatarFileId?: string | null };
 type FormSummary = { id: string; title: string };
 type SubmitParams = Parameters<NewInquiryFormProps["onSubmit"]>[0];
 
@@ -38,9 +38,7 @@ type NewInquiryFormProps = {
 	currentUser: UserSummary;
 	projectMembers?: UserSummary[];
 	projects?: { id: string; name: string }[];
-	onLoadProjectMembers?: (
-		projectId: string
-	) => Promise<{ id: string; name: string }[]>;
+	onLoadProjectMembers?: (projectId: string) => Promise<UserSummary[]>;
 	committeeMembers?: UserSummary[];
 	availableForms?: FormSummary[];
 	onSubmit: (params: {

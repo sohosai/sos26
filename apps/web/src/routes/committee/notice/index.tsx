@@ -23,10 +23,10 @@ type NoticeRow = {
 	id: string;
 	ownerId: string;
 	title: string;
-	ownerName: string;
+	owner: { name: string; avatarFileId: string | null };
 	collaborators: AvatarGroupItem[];
 	updatedAt: Date;
-	approverName: string;
+	approver: { name: string; avatarFileId: string | null } | null;
 	status: NoticeStatusInfo;
 };
 
@@ -44,10 +44,15 @@ export const Route = createFileRoute("/committee/notice/")({
 				id: n.id,
 				ownerId: n.ownerId,
 				title: n.title,
-				ownerName: n.owner.name,
+				owner: { name: n.owner.name, avatarFileId: n.owner.avatarFileId },
 				collaborators: n.collaborators,
 				updatedAt: n.updatedAt,
-				approverName: n.authorization?.requestedTo.name ?? "",
+				approver: n.authorization
+					? {
+							name: n.authorization.requestedTo.name,
+							avatarFileId: n.authorization.requestedTo.avatarFileId,
+						}
+					: null,
 				status: getNoticeStatusFromAuth(n.authorization),
 			})),
 		};
@@ -64,9 +69,11 @@ function RouteComponent() {
 		noticeColumnHelper.accessor("title", {
 			header: "タイトル",
 		}),
-		noticeColumnHelper.accessor("ownerName", {
+		noticeColumnHelper.accessor("owner", {
 			header: "オーナー",
 			cell: NameCell,
+			sortingFn: (a, b) =>
+				a.original.owner.name.localeCompare(b.original.owner.name),
 		}),
 		noticeColumnHelper.accessor("collaborators", {
 			header: "共同編集者",
@@ -88,11 +95,11 @@ function RouteComponent() {
 				);
 			},
 		}),
-		noticeColumnHelper.accessor("approverName", {
+		noticeColumnHelper.accessor("approver", {
 			header: "承認者",
 			cell: ctx => {
-				const name = ctx.getValue();
-				if (!name)
+				const value = ctx.getValue();
+				if (!value)
 					return (
 						<Text size="2" color="gray">
 							—
@@ -100,6 +107,10 @@ function RouteComponent() {
 					);
 				return <NameCell {...ctx} />;
 			},
+			sortingFn: (a, b) =>
+				(a.original.approver?.name ?? "").localeCompare(
+					b.original.approver?.name ?? ""
+				),
 		}),
 		noticeColumnHelper.display({
 			id: "actions",

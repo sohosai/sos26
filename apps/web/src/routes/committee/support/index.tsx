@@ -60,6 +60,7 @@ export const Route = createFileRoute("/committee/support/")({
 			committeeMembers: membersRes.committeeMembers.map(m => ({
 				id: m.user.id,
 				name: m.user.name,
+				avatarFileId: m.user.avatarFileId,
 			})),
 			availableForms: formsRes.forms
 				.filter(
@@ -90,7 +91,11 @@ function CommitteeSupportListPage() {
 
 	const handleLoadProjectMembers = async (projectId: string) => {
 		const res = await listCommitteeProjectMembers(projectId);
-		return res.members.map(m => ({ id: m.userId, name: m.name }));
+		return res.members.map(m => ({
+			id: m.userId,
+			name: m.name,
+			avatarFileId: m.avatarFileId,
+		}));
 	};
 
 	return (

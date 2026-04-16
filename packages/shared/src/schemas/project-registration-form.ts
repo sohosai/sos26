@@ -86,7 +86,7 @@ export type ProjectRegistrationFormCollaborator = z.infer<
 // フォーム詳細（items, authorizations, collaborators 含む）
 export const projectRegistrationFormDetailSchema =
 	projectRegistrationFormSchema.extend({
-		owner: userSchema.pick({ id: true, name: true }),
+		owner: userSchema.pick({ id: true, name: true, avatarFileId: true }),
 		items: z.array(projectRegistrationFormItemSchema),
 		authorizations: z.array(
 			projectRegistrationFormAuthorizationSchema.extend({
@@ -97,7 +97,9 @@ export const projectRegistrationFormDetailSchema =
 		collaborators: z.array(
 			projectRegistrationFormCollaboratorSchema
 				.pick({ id: true, isWrite: true })
-				.extend({ user: userSchema.pick({ id: true, name: true }) })
+				.extend({
+					user: userSchema.pick({ id: true, name: true, avatarFileId: true }),
+				})
 		),
 	});
 export type ProjectRegistrationFormDetail = z.infer<
@@ -238,7 +240,7 @@ export type CreateProjectRegistrationFormResponse = z.infer<
 export const listProjectRegistrationFormsResponseSchema = z.object({
 	forms: z.array(
 		projectRegistrationFormSchema.extend({
-			owner: userSchema.pick({ id: true, name: true }),
+			owner: userSchema.pick({ id: true, name: true, avatarFileId: true }),
 			latestAuthorization: projectRegistrationFormAuthorizationSchema
 				.pick({
 					id: true,

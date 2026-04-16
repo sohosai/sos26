@@ -524,6 +524,7 @@ projectRoute.get(
 				email: m.user.email,
 				role,
 				joinedAt: m.joinedAt,
+				avatarFileId: m.user.avatarFileId,
 			};
 		});
 

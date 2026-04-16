@@ -5,11 +5,11 @@ import {
 	IconSearch,
 	IconX,
 } from "@tabler/icons-react";
-import Avatar from "boring-avatars";
 import { useState } from "react";
+import { UserAvatar } from "@/components/common/UserAvatar";
 import styles from "./NewInquiryForm.module.scss";
 
-type UserSummary = { id: string; name: string };
+type UserSummary = { id: string; name: string; avatarFileId?: string | null };
 
 export function MemberSelectPopover({
 	members,
@@ -74,7 +74,11 @@ export function MemberSelectPopover({
 									className={`${styles.assignOption} ${isSelected ? styles.assignOptionSelected : ""}`}
 									onClick={() => onToggle(person)}
 								>
-									<Avatar size={20} name={person.name} variant="beam" />
+									<UserAvatar
+										size={20}
+										name={person.name}
+										avatarFileId={person.avatarFileId}
+									/>
 									<div className={styles.assignOptionText}>
 										<Text size="2">{person.name}</Text>
 									</div>
@@ -103,7 +107,11 @@ export function SelectedChips({
 		<div className={styles.assignChips}>
 			{items.map(person => (
 				<span key={person.id} className={styles.assignChip}>
-					<Avatar size={16} name={person.name} variant="beam" />
+					<UserAvatar
+						size={16}
+						name={person.name}
+						avatarFileId={person.avatarFileId}
+					/>
 					<Text size="1">{person.name}</Text>
 					<button
 						type="button"

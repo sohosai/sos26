@@ -34,8 +34,12 @@ type SupportDetailProps = {
 	viewerRole: "project" | "committee";
 	basePath: string;
 	currentUserId: string;
-	committeeMembers: { id: string; name: string }[];
-	projectMembers: { id: string; name: string }[];
+	committeeMembers: {
+		id: string;
+		name: string;
+		avatarFileId?: string | null;
+	}[];
+	projectMembers: { id: string; name: string; avatarFileId?: string | null }[];
 	onUpdateStatus: (status: "RESOLVED" | "IN_PROGRESS") => Promise<void>;
 	onAddComment: (
 		body: string,
@@ -137,6 +141,7 @@ function InquiryTimeline({
 		<div className={styles.timeline}>
 			<TimelineItem
 				name={inquiry.createdBy.name}
+				avatarFileId={inquiry.createdBy.avatarFileId}
 				committeeBureau={inquiry.createdBy.committeeBureau}
 				affiliatedProjects={inquiry.createdBy.affiliatedProjects}
 				role={inquiry.creatorRole === "COMMITTEE" ? "committee" : "project"}
@@ -154,6 +159,7 @@ function InquiryTimeline({
 						<TimelineItem
 							key={entry.data.id}
 							name={entry.data.createdBy.name}
+							avatarFileId={entry.data.createdBy.avatarFileId}
 							committeeBureau={entry.data.createdBy.committeeBureau}
 							affiliatedProjects={entry.data.createdBy.affiliatedProjects}
 							role={toTimelineRole(entry.data.senderRole)}
@@ -224,6 +230,7 @@ function DraftCommentItem({
 	return (
 		<TimelineItem
 			name={comment.createdBy.name}
+			avatarFileId={comment.createdBy.avatarFileId}
 			committeeBureau={comment.createdBy.committeeBureau}
 			affiliatedProjects={comment.createdBy.affiliatedProjects}
 			role={toTimelineRole(comment.senderRole)}
@@ -440,8 +447,12 @@ function SupportSidebar({
 }: {
 	inquiry: InquiryDetail;
 	viewerRole: "project" | "committee";
-	committeeMembers: { id: string; name: string }[];
-	projectMembers: { id: string; name: string }[];
+	committeeMembers: {
+		id: string;
+		name: string;
+		avatarFileId?: string | null;
+	}[];
+	projectMembers: { id: string; name: string; avatarFileId?: string | null }[];
 	viewers?: ViewerDetail[];
 	onUpdateViewers?: (viewers: ViewerInput[]) => Promise<void>;
 	canEditCommittee: boolean;

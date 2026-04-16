@@ -32,6 +32,7 @@ committeeUserRoute.get(
 				email: true,
 				name: true,
 				namePhonetic: true,
+				avatarFileId: true,
 			},
 			take: limit,
 			orderBy: { name: "asc" },

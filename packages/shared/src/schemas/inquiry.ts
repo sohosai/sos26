@@ -126,8 +126,12 @@ export const committeeInquiryAssigneeIdPathParamsSchema = z.object({
 // レスポンス組み立て用の内部ヘルパー（export しない）
 // ─────────────────────────────────────────────────────────────
 
-/** ユーザーの最小表示情報（id + name） */
-const userSummarySchema = userSchema.pick({ id: true, name: true });
+/** ユーザーの最小表示情報（id + name + avatar） */
+const userSummarySchema = userSchema.pick({
+	id: true,
+	name: true,
+	avatarFileId: true,
+});
 
 /** ユーザーの最小表示情報（id + name + 所属） */
 const userSummaryWithAffiliationSchema = userSummarySchema.extend({

@@ -34,6 +34,7 @@ export const Route = createFileRoute("/project/support/$inquiryId")({
 			projectMembers: membersRes.members.map(m => ({
 				id: m.userId,
 				name: m.name,
+				avatarFileId: m.avatarFileId,
 			})),
 		};
 	},

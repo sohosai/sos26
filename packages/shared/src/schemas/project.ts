@@ -59,6 +59,7 @@ export const projectMemberSchema = z.object({
 	email: z.email(),
 	role: projectMemberRoleSchema,
 	joinedAt: z.coerce.date(),
+	avatarFileId: z.string().nullable(),
 });
 export type ProjectMember = z.infer<typeof projectMemberSchema>;
 

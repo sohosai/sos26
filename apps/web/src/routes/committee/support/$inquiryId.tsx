@@ -61,10 +61,12 @@ export const Route = createFileRoute("/committee/support/$inquiryId")({
 			committeeMembers: membersRes.committeeMembers.map(m => ({
 				id: m.user.id,
 				name: m.user.name,
+				avatarFileId: m.user.avatarFileId,
 			})),
 			projectMembers: projectMembersRes.members.map(m => ({
 				id: m.userId,
 				name: m.name,
+				avatarFileId: m.avatarFileId,
 			})),
 			isAdmin,
 		};

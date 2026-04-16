@@ -253,7 +253,9 @@ accessRequestsRoute.get(
 					},
 				],
 			},
-			include: { requester: { select: { id: true, name: true } } },
+			include: {
+				requester: { select: { id: true, name: true, avatarFileId: true } },
+			},
 			orderBy: { createdAt: "asc" },
 		});
 		return c.json({

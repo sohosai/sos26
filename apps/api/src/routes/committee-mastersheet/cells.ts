@@ -68,7 +68,7 @@ async function collectFormItemHistory(
 			projectId: { in: targetProjectIds },
 		},
 		include: {
-			actor: { select: { id: true, name: true } },
+			actor: { select: { id: true, name: true, avatarFileId: true } },
 			files: answerFilesInclude,
 			selectedOptions: { select: { formItemOptionId: true } },
 		},

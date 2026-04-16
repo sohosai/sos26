@@ -186,11 +186,19 @@ function RouteComponent() {
 		.filter(
 			m => m.user.id !== form.ownerId && !collaboratorUserIds.has(m.user.id)
 		)
-		.map(m => ({ userId: m.user.id, name: m.user.name }));
+		.map(m => ({
+			userId: m.user.id,
+			name: m.user.name,
+			avatarFileId: m.user.avatarFileId,
+		}));
 
 	const approvers = committeeMembers
 		.filter(m => m.permissions.some(p => p.permission === "FORM_DELIVER"))
-		.map(m => ({ userId: m.user.id, name: m.user.name }));
+		.map(m => ({
+			userId: m.user.id,
+			name: m.user.name,
+			avatarFileId: m.user.avatarFileId,
+		}));
 
 	const previewForm = useMemo(() => formDetailToForm({ form: form }), [form]);
 
@@ -353,6 +361,7 @@ function RouteComponent() {
 			committeeMembers={committeeMembers.map(m => ({
 				id: m.user.id,
 				name: m.user.name,
+				avatarFileId: m.user.avatarFileId,
 			}))}
 			removingId={removingId}
 			onAddCollaborator={handleAddCollaborator}

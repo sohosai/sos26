@@ -1,13 +1,14 @@
 import { Dialog, TextField as RadixTextField, Text } from "@radix-ui/themes";
 import { IconPlus, IconSearch, IconX } from "@tabler/icons-react";
-import Avatar from "boring-avatars";
 import { useMemo, useState } from "react";
+import { UserAvatar } from "@/components/common/UserAvatar";
 import { Button, IconButton } from "@/components/primitives";
 import styles from "./AddCollaboratorDialog.module.scss";
 
 type Member = {
 	userId: string;
 	name: string;
+	avatarFileId?: string | null;
 };
 
 type Props = {
@@ -84,7 +85,11 @@ export function AddCollaboratorDialog({
 					) : (
 						filtered.map(m => (
 							<div key={m.userId} className={styles.memberRow}>
-								<Avatar size={28} name={m.name} variant="beam" />
+								<UserAvatar
+									size={28}
+									name={m.name}
+									avatarFileId={m.avatarFileId}
+								/>
 								<Text size="2" className={styles.memberName}>
 									{m.name}
 								</Text>

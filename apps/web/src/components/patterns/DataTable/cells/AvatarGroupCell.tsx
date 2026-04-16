@@ -1,11 +1,12 @@
 import { Popover, Text } from "@radix-ui/themes";
 import type { CellContext, RowData } from "@tanstack/react-table";
-import Avatar from "boring-avatars";
+import { UserAvatar } from "@/components/common/UserAvatar";
 import styles from "./AvatarGroupCell.module.scss";
 
 export type AvatarGroupItem = {
 	id: string;
 	name: string;
+	avatarFileId?: string | null;
 };
 
 const MAX_VISIBLE = 3;
@@ -28,7 +29,11 @@ export function AvatarGroupCell<TData extends RowData>({
 				<button type="button" className={styles.trigger}>
 					{visible.map(user => (
 						<span key={user.id} className={styles.avatar}>
-							<Avatar size={20} name={user.name} variant="beam" />
+							<UserAvatar
+								size={20}
+								name={user.name}
+								avatarFileId={user.avatarFileId}
+							/>
 						</span>
 					))}
 					{remaining > 0 && (
@@ -40,7 +45,11 @@ export function AvatarGroupCell<TData extends RowData>({
 				<div className={styles.popoverList}>
 					{users.map(user => (
 						<div key={user.id} className={styles.popoverItem}>
-							<Avatar size={20} name={user.name} variant="beam" />
+							<UserAvatar
+								size={20}
+								name={user.name}
+								avatarFileId={user.avatarFileId}
+							/>
 							<Text size="2">{user.name}</Text>
 						</div>
 					))}

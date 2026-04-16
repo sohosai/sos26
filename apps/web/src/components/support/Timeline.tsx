@@ -1,8 +1,8 @@
 import { Badge, Text } from "@radix-ui/themes";
 import type { InquiryAttachment } from "@sos26/shared";
 import { IconTrash } from "@tabler/icons-react";
-import Avatar from "boring-avatars";
 import { useEffect, useState } from "react";
+import { UserAvatar } from "@/components/common/UserAvatar";
 import { AttachmentPreviewButton } from "@/components/filePreview/AttachmentPreviewButton";
 import { formatDate } from "@/lib/format";
 import { useStorageUrl } from "@/lib/storage";
@@ -12,6 +12,7 @@ import type { ActivityInfo } from "./types";
 
 type TimelineItemProps = {
 	name: string;
+	avatarFileId?: string | null;
 	committeeBureau?: string;
 	affiliatedProjects?: string[];
 	role: "project" | "committee";
@@ -200,6 +201,7 @@ function DraftActionButtons({
 
 export function TimelineItem({
 	name,
+	avatarFileId,
 	committeeBureau,
 	affiliatedProjects,
 	role,
@@ -285,7 +287,7 @@ export function TimelineItem({
 	return (
 		<div className={styles.timelineItem} data-draft={isDraft || undefined}>
 			<span className={styles.avatar}>
-				<Avatar size={28} name={name} variant="beam" />
+				<UserAvatar size={28} name={name} avatarFileId={avatarFileId} />
 			</span>
 			<div className={styles.timelineContent}>
 				<TimelineHeader

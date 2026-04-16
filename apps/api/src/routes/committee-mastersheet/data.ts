@@ -73,8 +73,8 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 	const projects = await prisma.project.findMany({
 		where: { deletedAt: null },
 		include: {
-			owner: { select: { id: true, name: true } },
-			subOwner: { select: { id: true, name: true } },
+			owner: { select: { id: true, name: true, avatarFileId: true } },
+			subOwner: { select: { id: true, name: true, avatarFileId: true } },
 		},
 		orderBy: { number: "asc" },
 	});

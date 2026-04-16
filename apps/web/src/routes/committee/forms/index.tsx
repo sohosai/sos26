@@ -23,10 +23,10 @@ type FormRow = {
 	id: string;
 	ownerId: string;
 	title: string;
-	ownerName: string;
+	owner: { name: string; avatarFileId: string | null };
 	collaborators: AvatarGroupItem[];
 	updatedAt: Date;
-	approverName: string;
+	approver: { name: string; avatarFileId: string | null } | null;
 	status: FormStatusInfo;
 };
 
@@ -51,13 +51,19 @@ export const Route = createFileRoute("/committee/forms/")({
 					id: f.id,
 					ownerId: f.owner.id,
 					title: f.title,
-					ownerName: f.owner.name,
+					owner: { name: f.owner.name, avatarFileId: f.owner.avatarFileId },
 					collaborators: f.collaborators.map(u => ({
 						id: u.id,
 						name: u.name,
+						avatarFileId: u.avatarFileId,
 					})),
 					updatedAt: f.updatedAt,
-					approverName: authorization?.requestedTo.name ?? "",
+					approver: authorization
+						? {
+								name: authorization.requestedTo.name,
+								avatarFileId: authorization.requestedTo.avatarFileId,
+							}
+						: null,
 					status: getFormStatusFromAuth(
 						authorization
 							? {
@@ -83,9 +89,11 @@ function CommitteeIndexPage() {
 		columnHelper.accessor("title", {
 			header: "申請名",
 		}),
-		columnHelper.accessor("ownerName", {
+		columnHelper.accessor("owner", {
 			header: "オーナー",
 			cell: NameCell,
+			sortingFn: (a, b) =>
+				a.original.owner.name.localeCompare(b.original.owner.name),
 		}),
 		columnHelper.accessor("collaborators", {
 			header: "共同編集者",
@@ -107,11 +115,11 @@ function CommitteeIndexPage() {
 				);
 			},
 		}),
-		columnHelper.accessor("approverName", {
+		columnHelper.accessor("approver", {
 			header: "承認者",
 			cell: ctx => {
-				const name = ctx.getValue();
-				if (!name)
+				const value = ctx.getValue();
+				if (!value)
 					return (
 						<Text size="2" color="gray">
 							—
@@ -119,6 +127,10 @@ function CommitteeIndexPage() {
 					);
 				return <NameCell {...ctx} />;
 			},
+			sortingFn: (a, b) =>
+				(a.original.approver?.name ?? "").localeCompare(
+					b.original.approver?.name ?? ""
+				),
 		}),
 		columnHelper.display({
 			id: "actions",

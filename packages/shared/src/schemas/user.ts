@@ -114,6 +114,7 @@ export const userSummarySchema = userSchema.pick({
 	email: true,
 	name: true,
 	namePhonetic: true,
+	avatarFileId: true,
 });
 export type UserSummary = z.infer<typeof userSummarySchema>;
 

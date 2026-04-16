@@ -7,16 +7,20 @@ import {
 	IconTrash,
 	IconX,
 } from "@tabler/icons-react";
-import Avatar from "boring-avatars";
 import { useState } from "react";
 import { AddCollaboratorDialog } from "@/components/committee/AddCollaboratorDialog";
+import { UserAvatar } from "@/components/common/UserAvatar";
 import { Button, IconButton } from "@/components/primitives";
 import { formatDate } from "@/lib/format";
 import { RequestAuthorizationDialog } from "../../-components/RequestAuthorizationDialog";
 import styles from "./ProjectRegistrationFormDetailSidebar.module.scss";
 
-type AvailableMember = { userId: string; name: string };
-type Approver = { userId: string; name: string };
+type AvailableMember = {
+	userId: string;
+	name: string;
+	avatarFileId?: string | null;
+};
+type Approver = { userId: string; name: string; avatarFileId?: string | null };
 
 type Props = {
 	form: ProjectRegistrationFormDetail;
@@ -95,7 +99,11 @@ export function ProjectRegistrationFormDetailSidebar({
 							オーナー
 						</Text>
 						<div className={styles.ownerItem}>
-							<Avatar size={32} name={form.owner.name} variant="beam" />
+							<UserAvatar
+								size={32}
+								name={form.owner.name}
+								avatarFileId={form.owner.avatarFileId}
+							/>
 							<Text size="2" weight="medium">
 								{form.owner.name}
 							</Text>
@@ -124,7 +132,11 @@ export function ProjectRegistrationFormDetailSidebar({
 							<div className={styles.collaboratorList}>
 								{form.collaborators.map(c => (
 									<div key={c.user.id} className={styles.collaboratorItem}>
-										<Avatar size={24} name={c.user.name} variant="beam" />
+										<UserAvatar
+											size={24}
+											name={c.user.name}
+											avatarFileId={c.user.avatarFileId}
+										/>
 										<Text size="2">{c.user.name}</Text>
 										{isOwner && (
 											<IconButton
@@ -278,7 +290,11 @@ function AuthDetailSection({
 					申請者
 				</Text>
 				<div className={styles.authPerson}>
-					<Avatar size={20} name={auth.requestedBy.name} variant="beam" />
+					<UserAvatar
+						size={20}
+						name={auth.requestedBy.name}
+						avatarFileId={auth.requestedBy.avatarFileId}
+					/>
 					<Text size="2">{auth.requestedBy.name}</Text>
 				</div>
 			</div>
@@ -287,7 +303,11 @@ function AuthDetailSection({
 					承認者
 				</Text>
 				<div className={styles.authPerson}>
-					<Avatar size={20} name={auth.requestedTo.name} variant="beam" />
+					<UserAvatar
+						size={20}
+						name={auth.requestedTo.name}
+						avatarFileId={auth.requestedTo.avatarFileId}
+					/>
 					<Text size="2">{auth.requestedTo.name}</Text>
 				</div>
 			</div>
