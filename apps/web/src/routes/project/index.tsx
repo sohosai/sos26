@@ -234,7 +234,7 @@ function RegistrationFormsSection({
 							<div className={styles.formResponseMeta}>
 								<Heading size="3">{form.title}</Heading>
 								{form.description && (
-									<Text size="1" color="gray">
+									<Text size="1" color="gray" className={styles.description}>
 										{form.description}
 									</Text>
 								)}
@@ -279,7 +279,7 @@ function RegistrationFormsSection({
 										最終更新: {formatDate(response.submittedAt, "datetime")}
 									</Text>
 									{response.form.description && (
-										<Text size="1" color="gray">
+										<Text size="1" color="gray" className={styles.description}>
 											{response.form.description}
 										</Text>
 									)}

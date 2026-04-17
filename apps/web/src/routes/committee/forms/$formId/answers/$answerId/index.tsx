@@ -78,7 +78,7 @@ function RouteComponent() {
 						</Text>
 					</div>
 					{form.description && (
-						<Text size="2" color="gray">
+						<Text size="2" color="gray" className={styles.description}>
 							{form.description}
 						</Text>
 					)}

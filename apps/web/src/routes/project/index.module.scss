@@ -59,6 +59,10 @@
 	gap: var(--space-1);
 }
 
+.description {
+	white-space: pre-wrap;
+}
+
 .formResponseActions {
 	display: flex;
 	flex-direction: column;

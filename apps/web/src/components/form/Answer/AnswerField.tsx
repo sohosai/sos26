@@ -15,6 +15,7 @@ import {
 	type FormItem,
 	isFileAnswerValue,
 } from "../type";
+import styles from "./AnswerField.module.scss";
 
 type FieldProps = {
 	item: FormItem;
@@ -30,7 +31,7 @@ export function AnswerField({ item, value, onChange, disabled }: FieldProps) {
 		</Text>
 	);
 	const description = item.description ? (
-		<Text size="1" color="gray">
+		<Text size="1" color="gray" className={styles.description}>
 			{item.description}
 		</Text>
 	) : null;
