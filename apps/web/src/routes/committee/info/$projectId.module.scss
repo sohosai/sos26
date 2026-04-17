@@ -24,6 +24,11 @@
 	border: none;
 }
 
+.table tr:last-child :is(th, td) {
+	box-shadow: none;
+	border-bottom: none;
+}
+
 .actionList {
 	display: flex;
 	flex-direction: column;

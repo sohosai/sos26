@@ -1,4 +1,4 @@
-import { Badge, Dialog, Heading, Table, Text } from "@radix-ui/themes";
+import { Badge, Card, Dialog, Heading, Table, Text } from "@radix-ui/themes";
 import type {
 	GetActiveProjectRegistrationFormsResponse,
 	GetProjectRegistrationFormResponsesResponse,
@@ -70,10 +70,8 @@ export const Route = createFileRoute("/project/")({
 function InfoRow({ label, value }: { label: string; value: ReactNode }) {
 	return (
 		<Table.Row>
-			<Table.RowHeaderCell className={styles.label}>
-				{label}
-			</Table.RowHeaderCell>
-			<Table.Cell className={styles.value}>{value}</Table.Cell>
+			<Table.RowHeaderCell>{label}</Table.RowHeaderCell>
+			<Table.Cell>{value}</Table.Cell>
 		</Table.Row>
 	);
 }
@@ -231,7 +229,7 @@ function RegistrationFormsSection({
 			)}
 			<div className={styles.formResponses}>
 				{missingForms.map(form => (
-					<div key={form.id} className={styles.formResponseCard}>
+					<Card key={form.id}>
 						<div className={styles.formResponseHeader}>
 							<div className={styles.formResponseMeta}>
 								<Heading size="3">{form.title}</Heading>
@@ -260,7 +258,7 @@ function RegistrationFormsSection({
 								)}
 							</div>
 						</div>
-					</div>
+					</Card>
 				))}
 				{visibleResponses.map(response => {
 					const form = formMap.get(response.form.id) ?? null;
@@ -273,7 +271,7 @@ function RegistrationFormsSection({
 								: null;
 
 					return (
-						<div key={response.id} className={styles.formResponseCard}>
+						<Card key={response.id}>
 							<div className={styles.formResponseHeader}>
 								<div className={styles.formResponseMeta}>
 									<Heading size="3">{response.form.title}</Heading>
@@ -302,23 +300,19 @@ function RegistrationFormsSection({
 									)}
 								</div>
 							</div>
-							<div className={styles.tableWrap}>
-								<Table.Root className={styles.infoTable}>
-									<Table.Body>
-										{response.answers.map(answer => (
-											<Table.Row key={answer.formItemId}>
-												<Table.RowHeaderCell className={styles.label}>
-													{answer.formItemLabel}
-												</Table.RowHeaderCell>
-												<Table.Cell className={styles.value}>
-													{formatAnswerValue(answer)}
-												</Table.Cell>
-											</Table.Row>
-										))}
-									</Table.Body>
-								</Table.Root>
-							</div>
-						</div>
+							<Table.Root className={styles.table}>
+								<Table.Body>
+									{response.answers.map(answer => (
+										<Table.Row key={answer.formItemId}>
+											<Table.RowHeaderCell>
+												{answer.formItemLabel}
+											</Table.RowHeaderCell>
+											<Table.Cell>{formatAnswerValue(answer)}</Table.Cell>
+										</Table.Row>
+									))}
+								</Table.Body>
+							</Table.Root>
+						</Card>
 					);
 				})}
 			</div>
@@ -448,15 +442,16 @@ function ProjectIndexPage() {
 				</Text>
 			</header>
 
-			<div className={styles.tableWrap}>
-				<Table.Root className={styles.infoTable}>
+			<Card>
+				<Heading size="4">基本情報</Heading>
+				<Table.Root className={styles.table}>
 					<Table.Body>
 						{rows.map(row => (
 							<InfoRow key={row.label} label={row.label} value={row.value} />
 						))}
 					</Table.Body>
 				</Table.Root>
-			</div>
+			</Card>
 
 			<RegistrationFormsSection
 				missingForms={missingForms}
