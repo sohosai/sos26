@@ -361,7 +361,11 @@ export function FormViewer({
 					<Text size="5" weight="bold">
 						{form.name || "無題の申請"}
 					</Text>
-					{form.description && <Text size="2">{form.description}</Text>}
+					{form.description && (
+						<Text size="2" className={styles.description}>
+							{form.description}
+						</Text>
+					)}
 					{form.attachments && form.attachments.length > 0 && (
 						<div className={styles.attachmentSection}>
 							<Text size="2" weight="medium" color="gray">

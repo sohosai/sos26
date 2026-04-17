@@ -356,7 +356,7 @@ export function ProjectRegistrationFormResponseEditDialog({
 									{form.title}
 								</Text>
 								{form.description && (
-									<Text size="2" color="gray">
+									<Text size="2" color="gray" className={styles.description}>
 										{form.description}
 									</Text>
 								)}

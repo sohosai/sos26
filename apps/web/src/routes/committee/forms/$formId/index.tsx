@@ -406,7 +406,7 @@ function RouteComponent() {
 					<FormStatusBadge form={form} />
 					<Heading size="5">{form.title}</Heading>
 					{form.description && (
-						<Text size="2" color="gray">
+						<Text size="2" color="gray" className={styles.description}>
 							{form.description}
 						</Text>
 					)}

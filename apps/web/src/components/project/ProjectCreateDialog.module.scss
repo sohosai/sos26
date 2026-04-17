@@ -32,6 +32,10 @@
 	border-bottom: 1px solid var(--gray-6);
 }
 
+.description {
+	white-space: pre-wrap;
+}
+
 .fields {
 	display: flex;
 	flex-direction: column;
