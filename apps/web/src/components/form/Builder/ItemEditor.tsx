@@ -106,10 +106,10 @@ export function FormItemEditor({
 						{/* 質問 */}
 						<TextField
 							label=""
-							aria-label={`質問 ${index + 1}`}
+							aria-label={`質問のタイトルを入力してください`}
 							value={item.label}
 							onChange={value => onUpdate(item.id, { label: value })}
-							placeholder={`質問 ${index + 1}`}
+							placeholder={`質問のタイトルを入力してください`}
 						/>
 
 						{/* タイプ選択 */}
