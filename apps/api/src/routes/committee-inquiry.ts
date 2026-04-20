@@ -1389,6 +1389,7 @@ committeeInquiryRoute.patch(
 			title,
 			body: inquiryBody,
 			fileIds,
+			relatedFormId,
 		} = updateDraftInquiryRequestSchema.parse(body);
 
 		// 下書きの存在確認
@@ -1405,6 +1406,11 @@ committeeInquiryRoute.patch(
 		// 作成者本人のみ編集可能
 		if (inquiry.createdById !== user.id) {
 			throw Errors.forbidden("下書きの作成者のみが編集できます");
+		}
+
+		// 関連申請の検証（オーナーまたは共同編集者のみ）
+		if (relatedFormId) {
+			await validateRelatedForm(relatedFormId, user.id);
 		}
 
 		// 更新
@@ -1426,10 +1432,12 @@ committeeInquiryRoute.patch(
 		const updateData: {
 			title?: string;
 			body?: string;
+			relatedFormId?: string | null;
 			updatedAt: Date;
 		} = { updatedAt: new Date() };
 		if (title !== undefined) updateData.title = title;
 		if (inquiryBody !== undefined) updateData.body = inquiryBody;
+		if (relatedFormId !== undefined) updateData.relatedFormId = relatedFormId;
 
 		const updated = await prisma.$transaction(async tx => {
 			const updatedInquiry = await tx.inquiry.update({

@@ -13,6 +13,7 @@ import { Button } from "@/components/primitives";
 import { formatDate, formatFileSize } from "@/lib/format";
 import { AssigneeList, AssigneePopover } from "./AssigneeSection";
 import { statusConfig } from "./constants";
+import { FormSelector } from "./NewInquiryForm";
 import { ReplySection } from "./ReplySection";
 import styles from "./SupportDetail.module.scss";
 import { ActivityItem, TimelineItem } from "./Timeline";
@@ -59,8 +60,10 @@ type SupportDetailProps = {
 	onUpdateDraftInquiry?: (
 		title: string,
 		body: string,
-		fileIds?: string[]
+		fileIds?: string[],
+		relatedFormId?: string | null
 	) => Promise<void>;
+	availableForms?: { id: string; title: string }[];
 	viewers?: ViewerDetail[];
 	onUpdateViewers?: (viewers: ViewerInput[]) => Promise<void>;
 	/** 権限チェック: 全管理 or 担当者かどうか(編集 UI の出現判定) */
@@ -444,6 +447,9 @@ function SupportSidebar({
 	isPublishingDraftInquiry,
 	isDeletingDraftInquiry,
 	onRequestDeleteDraftInquiry,
+	availableForms,
+	draftRelatedFormId,
+	onChangeDraftRelatedFormId,
 }: {
 	inquiry: InquiryDetail;
 	viewerRole: "project" | "committee";
@@ -475,6 +481,9 @@ function SupportSidebar({
 	isPublishingDraftInquiry: boolean;
 	isDeletingDraftInquiry: boolean;
 	onRequestDeleteDraftInquiry: () => void;
+	availableForms?: { id: string; title: string }[];
+	draftRelatedFormId: string | null;
+	onChangeDraftRelatedFormId: (id: string | null) => void;
 }) {
 	const canEditProjectAssignee = canEditCommittee || viewerRole === "project";
 	const isDraftInquiry = "isDraft" in inquiry && inquiry.isDraft === true;
@@ -620,10 +629,20 @@ function SupportSidebar({
 				<Text size="2" weight="medium" color="gray">
 					関連申請
 				</Text>
-				<RelatedFormContent
-					relatedForm={inquiry.relatedForm}
-					viewerRole={viewerRole}
-				/>
+				{isDraftEditing && isOwnDraftInquiry && availableForms ? (
+					<FormSelector
+						forms={availableForms}
+						selectedForm={
+							availableForms.find(f => f.id === draftRelatedFormId) ?? null
+						}
+						onSelect={form => onChangeDraftRelatedFormId(form?.id ?? null)}
+					/>
+				) : (
+					<RelatedFormContent
+						relatedForm={inquiry.relatedForm}
+						viewerRole={viewerRole}
+					/>
+				)}
 			</div>
 
 			{viewerRole === "committee" && viewers && (
@@ -665,6 +684,7 @@ export function SupportDetail({
 	onPublishDraftInquiry,
 	onDeleteDraftInquiry,
 	onUpdateDraftInquiry,
+	availableForms,
 	viewers,
 	onUpdateViewers,
 	isAssigneeOrAdmin = false,
@@ -754,7 +774,8 @@ export function SupportDetail({
 			await onUpdateDraftInquiry(
 				draftState.draftTitle.trim(),
 				draftState.draftBody.trim(),
-				fileIds
+				fileIds,
+				draftState.draftRelatedFormId
 			);
 			draftState.setEditingDraft(false);
 			draftState.setDraftFiles([]);
@@ -938,6 +959,9 @@ export function SupportDetail({
 				onRequestDeleteDraftInquiry={
 					draftActions.handleRequestDeleteDraftInquiry
 				}
+				availableForms={availableForms}
+				draftRelatedFormId={draftState.draftRelatedFormId}
+				onChangeDraftRelatedFormId={draftState.setDraftRelatedFormId}
 			/>
 
 			<AlertDialog.Root

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
 import { SupportDetail } from "@/components/support/SupportDetail";
+import { listMyForms } from "@/lib/api/committee-form";
 import {
 	addCommitteeInquiryAssignee,
 	addCommitteeInquiryComment,
@@ -38,9 +39,10 @@ export const Route = createFileRoute("/committee/support/$inquiryId")({
 	loader: async ({ params }) => {
 		const { committeeMember } = useAuthStore.getState();
 		const inquiryRes = await getCommitteeInquiry(params.inquiryId);
-		const [membersRes, projectMembersRes] = await Promise.all([
+		const [membersRes, projectMembersRes, formsRes] = await Promise.all([
 			listCommitteeMembers(),
 			listCommitteeProjectMembers(inquiryRes.inquiry.projectId),
+			listMyForms(),
 		]);
 
 		// INQUIRY_ADMIN 権限チェック
@@ -68,6 +70,16 @@ export const Route = createFileRoute("/committee/support/$inquiryId")({
 				name: m.name,
 				avatarFileId: m.avatarFileId,
 			})),
+			availableForms: formsRes.forms
+				.filter(
+					f =>
+						f.owner.id === committeeMember?.userId ||
+						f.collaborators.some(c => c.id === committeeMember?.userId)
+				)
+				.map(f => ({
+					id: f.id,
+					title: f.title,
+				})),
 			isAdmin,
 		};
 	},
@@ -75,7 +87,7 @@ export const Route = createFileRoute("/committee/support/$inquiryId")({
 
 function CommitteeSupportDetailPage() {
 	const { inquiryId } = Route.useParams();
-	const { inquiry, committeeMembers, projectMembers, isAdmin } =
+	const { inquiry, committeeMembers, projectMembers, availableForms, isAdmin } =
 		Route.useLoaderData();
 	const router = useRouter();
 	const { user } = useAuthStore();
@@ -112,6 +124,7 @@ function CommitteeSupportDetailPage() {
 			currentUserId={user?.id ?? ""}
 			committeeMembers={committeeMembers}
 			projectMembers={projectMembers}
+			availableForms={availableForms}
 			viewers={currentInquiry.viewers}
 			isAssigneeOrAdmin={isAssigneeOrAdmin}
 			onUpdateStatus={async status => {
@@ -294,9 +307,14 @@ function CommitteeSupportDetailPage() {
 					});
 				}
 			}}
-			onUpdateDraftInquiry={async (title, body, fileIds) => {
+			onUpdateDraftInquiry={async (title, body, fileIds, relatedFormId) => {
 				try {
-					await updateDraftInquiry(inquiryId, { title, body, fileIds });
+					await updateDraftInquiry(inquiryId, {
+						title,
+						body,
+						fileIds,
+						relatedFormId,
+					});
 					try {
 						const refreshed = await getCommitteeInquiry(inquiryId);
 						setCurrentInquiry(refreshed.inquiry);

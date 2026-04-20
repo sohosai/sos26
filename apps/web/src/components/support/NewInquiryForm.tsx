@@ -660,7 +660,7 @@ function toggleItem<T extends { id: string }>(prev: T[], item: T): T[] {
 
 /* ─── 関連申請選択 ─── */
 
-function FormSelector({
+export function FormSelector({
 	forms,
 	selectedForm,
 	onSelect,

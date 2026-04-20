@@ -8,6 +8,9 @@ export function useDraftInquiryState(inquiry: InquiryDetail) {
 	const [isSavingDraft, setIsSavingDraft] = useState(false);
 	const [draftTitle, setDraftTitle] = useState(inquiry.title);
 	const [draftBody, setDraftBody] = useState(inquiry.body);
+	const [draftRelatedFormId, setDraftRelatedFormId] = useState<string | null>(
+		inquiry.relatedForm?.id ?? null
+	);
 	const [draftAttachments, setDraftAttachments] = useState(
 		inquiry.attachments ?? []
 	);
@@ -18,6 +21,7 @@ export function useDraftInquiryState(inquiry: InquiryDetail) {
 		setEditingDraft(false);
 		setDraftTitle(inquiry.title);
 		setDraftBody(inquiry.body);
+		setDraftRelatedFormId(inquiry.relatedForm?.id ?? null);
 		setDraftAttachments(inquiry.attachments ?? []);
 		setDraftFiles([]);
 	};
@@ -68,6 +72,8 @@ export function useDraftInquiryState(inquiry: InquiryDetail) {
 		setDraftTitle,
 		draftBody,
 		setDraftBody,
+		draftRelatedFormId,
+		setDraftRelatedFormId,
 		draftAttachments,
 		setDraftAttachments,
 		draftFiles,
