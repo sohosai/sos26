@@ -12,9 +12,11 @@ import { requireAuth, requireCommitteeMember } from "../../middlewares/auth";
 import type { AuthEnv } from "../../types/auth-env";
 import {
 	type ColumnFull,
+	canEditColumn,
 	canViewColumn,
 	formatColumnDef,
-	getAccessibleFormIds,
+	getEditableFormIds,
+	getViewableFormIds,
 	requireColumnOwner,
 	syncColumnOptions,
 	syncColumnViewers,
@@ -237,12 +239,14 @@ columnsRoute.post("/columns", requireAuth, requireCommitteeMember, async c => {
 
 	if (data.type === "FORM_ITEM") {
 		const col = await createFormItemColumn(data, userId);
-		return c.json({ column: formatColumnDef(col, userId) }, 201);
+		// 作成者は必ず owner/collaborator のため canEdit=true
+		return c.json({ column: formatColumnDef(col, userId, true) }, 201);
 	}
 
 	if (data.type === "PROJECT_REGISTRATION_FORM_ITEM") {
 		const col = await createPrfItemColumn(data, userId);
-		return c.json({ column: formatColumnDef(col, userId) }, 201);
+		// PRF は読み取り専用
+		return c.json({ column: formatColumnDef(col, userId, false) }, 201);
 	}
 
 	// CUSTOM
@@ -315,7 +319,8 @@ columnsRoute.post("/columns", requireAuth, requireCommitteeMember, async c => {
 		{ isolationLevel: "Serializable" }
 	);
 
-	return c.json({ column: formatColumnDef(col, userId) }, 201);
+	// CUSTOM の作成者は必ず閲覧可能＝編集可能
+	return c.json({ column: formatColumnDef(col, userId, true) }, 201);
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -328,6 +333,7 @@ columnsRoute.patch(
 	requireCommitteeMember,
 	async c => {
 		const userId = c.get("user").id;
+		const committeeMember = c.get("committeeMember");
 		const { columnId } = mastersheetColumnIdPathParamsSchema.parse(
 			c.req.param()
 		);
@@ -399,7 +405,15 @@ columnsRoute.patch(
 			{ isolationLevel: "Serializable" }
 		);
 
-		return c.json({ column: formatColumnDef(col, userId) });
+		const editableFormIds = await getEditableFormIds(userId);
+		const canEdit = canEditColumn(
+			col as ColumnFull,
+			userId,
+			committeeMember,
+			editableFormIds
+		);
+
+		return c.json({ column: formatColumnDef(col, userId, canEdit) });
 	}
 );
 
@@ -484,7 +498,7 @@ columnsRoute.get(
 			orderBy: { createdAt: "asc" },
 		});
 
-		const accessibleFormIds = await getAccessibleFormIds(userId);
+		const viewableFormIds = await getViewableFormIds(userId, committeeMember);
 
 		return c.json({
 			columns: columns.map(col => {
@@ -492,7 +506,7 @@ columnsRoute.get(
 					col as ColumnFull,
 					userId,
 					committeeMember,
-					accessibleFormIds
+					viewableFormIds
 				);
 				const pendingRequest = col.accessRequests.length > 0;
 
