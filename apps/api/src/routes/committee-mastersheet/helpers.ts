@@ -56,8 +56,8 @@ export const getColumnFull = async (columnId: string) => {
 
 export type ColumnFull = Awaited<ReturnType<typeof getColumnFull>>;
 
-/** 自分がアクセス可能な申請 ID セットを返す */
-export const getAccessibleFormIds = async (userId: string) => {
+/** 自分が編集可能（owner / collaborator）な申請 ID セットを返す */
+export const getEditableFormIds = async (userId: string) => {
 	const forms = await prisma.form.findMany({
 		where: {
 			deletedAt: null,
@@ -71,15 +71,43 @@ export const getAccessibleFormIds = async (userId: string) => {
 	return new Set(forms.map(f => f.id));
 };
 
-/** カラムアクセス権チェック（accessibleFormIds はバッチ取得済みのものを渡す） */
+/**
+ * 自分が閲覧可能（owner / collaborator / FormViewer の scope に合致）な申請 ID セットを返す。
+ * FORM_ITEM カラムの閲覧範囲判定に使用する。
+ */
+export const getViewableFormIds = async (
+	userId: string,
+	committeeMember: CommitteeMember
+): Promise<Set<string>> => {
+	const [editable, viewerEntries] = await Promise.all([
+		getEditableFormIds(userId),
+		prisma.formViewer.findMany({
+			where: {
+				deletedAt: null,
+				form: { deletedAt: null },
+				OR: [
+					{ scope: "ALL" },
+					{ scope: "BUREAU", bureauValue: committeeMember.Bureau },
+					{ scope: "INDIVIDUAL", userId },
+				],
+			},
+			select: { formId: true },
+		}),
+	]);
+	const result = new Set(editable);
+	for (const v of viewerEntries) result.add(v.formId);
+	return result;
+};
+
+/** カラム閲覧権チェック（viewableFormIds は viewer 含むセット） */
 export function canViewColumn(
 	col: ColumnFull,
 	userId: string,
 	committeeMember: CommitteeMember,
-	accessibleFormIds: Set<string>
+	viewableFormIds: Set<string>
 ): boolean {
 	if (col.type === "FORM_ITEM") {
-		return col.formItem !== null && accessibleFormIds.has(col.formItem.formId);
+		return col.formItem !== null && viewableFormIds.has(col.formItem.formId);
 	}
 	if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
 		// 企画登録情報は実委人全員が閲覧可能
@@ -101,6 +129,28 @@ export function canViewColumn(
 	return false;
 }
 
+/**
+ * セル編集権チェック。
+ * - FORM_ITEM: 申請の owner / collaborator のみ（viewer は不可）
+ * - CUSTOM: canViewColumn と同じ（カラムにアクセスできる全員）
+ * - PROJECT_REGISTRATION_FORM_ITEM: 不可（読み取り専用）
+ */
+export function canEditColumn(
+	col: ColumnFull,
+	userId: string,
+	committeeMember: CommitteeMember,
+	editableFormIds: Set<string>
+): boolean {
+	if (col.type === "FORM_ITEM") {
+		return col.formItem !== null && editableFormIds.has(col.formItem.formId);
+	}
+	if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
+		return false;
+	}
+	// CUSTOM: 閲覧できる人＝編集できる人
+	return canViewColumn(col, userId, committeeMember, new Set());
+}
+
 /** カラム管理者（作成者）チェック */
 export const requireColumnOwner = async (columnId: string, userId: string) => {
 	const col = await prisma.mastersheetColumn.findUnique({
@@ -117,7 +167,11 @@ export const requireColumnOwner = async (columnId: string, userId: string) => {
 // レスポンス整形ヘルパー
 // ─────────────────────────────────────────────────────────────
 
-export function formatColumnDef(col: ColumnFull, userId: string) {
+export function formatColumnDef(
+	col: ColumnFull,
+	userId: string,
+	canEdit: boolean
+) {
 	const options =
 		col.type === "FORM_ITEM" && col.formItem?.options?.length
 			? col.formItem.options
@@ -135,6 +189,7 @@ export function formatColumnDef(col: ColumnFull, userId: string) {
 		createdById: col.createdById,
 		createdByName: col.createdBy.name,
 		isOwner: col.createdById === userId,
+		canEdit,
 		formItemId: col.formItemId,
 		formItemType: col.formItem?.type ?? null,
 		projectRegistrationFormItemId: col.projectRegistrationFormItemId,

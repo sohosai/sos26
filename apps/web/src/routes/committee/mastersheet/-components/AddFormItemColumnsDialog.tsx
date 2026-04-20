@@ -65,7 +65,9 @@ export function AddFormItemColumnsDialog({
 			.then(res => {
 				const accessible = res.forms.filter(
 					f =>
-						f.owner.id === userId || f.collaborators.some(c => c.id === userId)
+						f.owner.id === userId ||
+						f.collaborators.some(c => c.id === userId) ||
+						f.isViewer
 				);
 				setForms(accessible);
 			})

@@ -7,10 +7,12 @@ import {
 	buildFormItemCell,
 	buildPrfItemCell,
 	type ColumnFull,
+	canEditColumn,
 	canViewColumn,
 	fetchLatestHistoryByCell,
 	formatColumnDef,
-	getAccessibleFormIds,
+	getEditableFormIds,
+	getViewableFormIds,
 } from "./helpers";
 
 export const dataRoute = new Hono<AuthEnv>();
@@ -58,9 +60,12 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 		orderBy: { sortOrder: "asc" },
 	});
 
-	const accessibleFormIds = await getAccessibleFormIds(userId);
+	const [editableFormIds, viewableFormIds] = await Promise.all([
+		getEditableFormIds(userId),
+		getViewableFormIds(userId, committeeMember),
+	]);
 	const visibleColumns = allColumns.filter(col =>
-		canViewColumn(col as ColumnFull, userId, committeeMember, accessibleFormIds)
+		canViewColumn(col as ColumnFull, userId, committeeMember, viewableFormIds)
 	);
 
 	const formItemCols = visibleColumns.filter(c => c.type === "FORM_ITEM");
@@ -272,7 +277,16 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 
 	return c.json({
 		columns: visibleColumns.map(col =>
-			formatColumnDef(col as ColumnFull, userId)
+			formatColumnDef(
+				col as ColumnFull,
+				userId,
+				canEditColumn(
+					col as ColumnFull,
+					userId,
+					committeeMember,
+					editableFormIds
+				)
+			)
 		),
 		rows,
 	});

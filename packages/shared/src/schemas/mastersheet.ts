@@ -143,6 +143,13 @@ const mastersheetColumnDefSchema = z.object({
 	createdById: z.string(),
 	createdByName: z.string(),
 	isOwner: z.boolean(),
+	/**
+	 * 現在ユーザーがこのカラムのセル値を編集可能か。
+	 * - FORM_ITEM: 申請の owner / collaborator のみ true（viewer は false）
+	 * - CUSTOM: 閲覧できる人は編集可能
+	 * - PROJECT_REGISTRATION_FORM_ITEM: 常に false（読み取り専用）
+	 */
+	canEdit: z.boolean(),
 	// FORM_ITEM の場合
 	formItemId: z.string().nullable(),
 	formItemType: formItemTypeSchema.nullable(),

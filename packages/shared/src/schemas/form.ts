@@ -497,6 +497,8 @@ const formSummarySchema = z.object({
 	owner: userSummarySchema,
 	collaborators: z.array(userSummarySchema),
 	authorization: authorizationSummarySchema.nullable(),
+	/** 現在ユーザーが FormViewer の scope に合致する閲覧者かどうか */
+	isViewer: z.boolean(),
 });
 
 export const listMyFormsResponseSchema = z.object({

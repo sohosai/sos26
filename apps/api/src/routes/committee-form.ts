@@ -206,36 +206,55 @@ committeeFormRoute.get(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const forms = await prisma.form.findMany({
-			where: { deletedAt: null },
-			select: {
-				id: true,
-				title: true,
-				description: true,
-				updatedAt: true,
-				owner: { select: userSelect },
-				collaborators: {
-					where: { deletedAt: null },
-					select: {
-						user: { select: userSelect },
+		const userId = c.get("user").id;
+		const committeeMember = c.get("committeeMember");
+
+		const [forms, viewerEntries] = await Promise.all([
+			prisma.form.findMany({
+				where: { deletedAt: null },
+				select: {
+					id: true,
+					title: true,
+					description: true,
+					updatedAt: true,
+					owner: { select: userSelect },
+					collaborators: {
+						where: { deletedAt: null },
+						select: {
+							user: { select: userSelect },
+						},
+					},
+					authorizations: {
+						orderBy: { createdAt: "desc" },
+						take: 1,
+						select: {
+							id: true,
+							status: true,
+							scheduledSendAt: true,
+							allowLateResponse: true,
+							deadlineAt: true,
+							ownerOnly: true,
+							requestedTo: { select: userSelect },
+						},
 					},
 				},
-				authorizations: {
-					orderBy: { createdAt: "desc" },
-					take: 1,
-					select: {
-						id: true,
-						status: true,
-						scheduledSendAt: true,
-						allowLateResponse: true,
-						deadlineAt: true,
-						ownerOnly: true,
-						requestedTo: { select: userSelect },
-					},
+				orderBy: { updatedAt: "desc" },
+			}),
+			prisma.formViewer.findMany({
+				where: {
+					deletedAt: null,
+					form: { deletedAt: null },
+					OR: [
+						{ scope: "ALL" },
+						{ scope: "BUREAU", bureauValue: committeeMember.Bureau },
+						{ scope: "INDIVIDUAL", userId },
+					],
 				},
-			},
-			orderBy: { updatedAt: "desc" },
-		});
+				select: { formId: true },
+			}),
+		]);
+
+		const viewerFormIds = new Set(viewerEntries.map(v => v.formId));
 
 		return c.json({
 			forms: forms.map(f => ({
@@ -243,6 +262,7 @@ committeeFormRoute.get(
 				collaborators: f.collaborators.map(c => c.user),
 				authorization: f.authorizations[0] ?? null,
 				authorizations: undefined,
+				isViewer: viewerFormIds.has(f.id),
 			})),
 		});
 	}

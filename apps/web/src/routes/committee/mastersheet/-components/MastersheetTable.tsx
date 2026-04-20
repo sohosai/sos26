@@ -311,13 +311,19 @@ function CompactFileCell({ files }: { files: FormCellFile[] }) {
 	);
 }
 
-/** 企画登録情報由来カラム（読み取り専用） */
-function buildPrfReadOnlyColumn(
-	col: ApiColumn
+/** 申請由来／企画登録情報由来の formValue ベースの読み取り専用カラム */
+function buildFormValueReadOnlyColumn(
+	col: ApiColumn,
+	itemType:
+		| ApiColumn["formItemType"]
+		| ApiColumn["projectRegistrationFormItemType"],
+	// FORM_ITEM の場合に status による未配信/未回答判定を行う
+	useFormItemInactive: boolean
 	// biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
 ): ColumnDef<MastersheetRow, any> {
-	const itemType = col.projectRegistrationFormItemType;
 	const optionMap = new Map(col.options.map(o => [o.id, o.label]));
+	const isInactive = (row: MastersheetRow) =>
+		useFormItemInactive ? isFormItemInactive(row, col.id) : false;
 
 	if (itemType === "SELECT" || itemType === "CHECKBOX") {
 		return columnHelper.accessor(
@@ -326,6 +332,7 @@ function buildPrfReadOnlyColumn(
 				id: col.id,
 				header: () => <ColHeader col={col} />,
 				cell: props => {
+					if (isInactive(props.row.original)) return INACTIVE_PLACEHOLDER;
 					const ids = props.getValue() as string[];
 					if (!ids.length) return INACTIVE_PLACEHOLDER;
 					return (
@@ -352,6 +359,7 @@ function buildPrfReadOnlyColumn(
 				id: col.id,
 				header: () => <ColHeader col={col} />,
 				cell: props => {
+					if (isInactive(props.row.original)) return INACTIVE_PLACEHOLDER;
 					const v = props.getValue();
 					return v == null ? INACTIVE_PLACEHOLDER : <Text size="2">{v}</Text>;
 				},
@@ -366,9 +374,10 @@ function buildPrfReadOnlyColumn(
 			{
 				id: col.id,
 				header: () => <ColHeader col={col} />,
-				cell: props => (
-					<CompactFileCell files={props.getValue() as FormCellFile[]} />
-				),
+				cell: props => {
+					if (isInactive(props.row.original)) return INACTIVE_PLACEHOLDER;
+					return <CompactFileCell files={props.getValue() as FormCellFile[]} />;
+				},
 				meta: { filterVariant: "text" },
 			}
 		);
@@ -381,6 +390,7 @@ function buildPrfReadOnlyColumn(
 			id: col.id,
 			header: () => <ColHeader col={col} />,
 			cell: props => {
+				if (isInactive(props.row.original)) return INACTIVE_PLACEHOLDER;
 				const v = props.getValue();
 				return v ? <Text size="2">{v}</Text> : INACTIVE_PLACEHOLDER;
 			},
@@ -393,7 +403,16 @@ function buildPrfReadOnlyColumn(
 function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 	// 企画登録情報由来カラムは読み取り専用
 	if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
-		return buildPrfReadOnlyColumn(col);
+		return buildFormValueReadOnlyColumn(
+			col,
+			col.projectRegistrationFormItemType,
+			false
+		);
+	}
+
+	// FORM_ITEM で viewer のみ（編集権限なし）の場合も読み取り専用
+	if (col.type === "FORM_ITEM" && !col.canEdit) {
+		return buildFormValueReadOnlyColumn(col, col.formItemType, true);
 	}
 
 	if (col.type === "FORM_ITEM") {
@@ -643,6 +662,7 @@ export function MastersheetTable({
 
 		try {
 			if (col.type === "FORM_ITEM") {
+				if (!col.canEdit) return; // viewer は編集不可
 				await editFormItemCell(
 					columnId,
 					row.project.id,

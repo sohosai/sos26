@@ -14,7 +14,13 @@ import {
 import { prisma } from "../../lib/prisma";
 import { requireAuth, requireCommitteeMember } from "../../middlewares/auth";
 import type { AuthEnv } from "../../types/auth-env";
-import { canViewColumn, getAccessibleFormIds, getColumnFull } from "./helpers";
+import {
+	canEditColumn,
+	canViewColumn,
+	getColumnFull,
+	getEditableFormIds,
+	getViewableFormIds,
+} from "./helpers";
 
 const answerFilesInclude = {
 	where: {
@@ -122,8 +128,8 @@ cellsRoute.put(
 		if (col.type !== "CUSTOM")
 			throw Errors.invalidRequest("CUSTOM カラムのみセル値を編集できます");
 
-		const accessibleFormIds = await getAccessibleFormIds(userId);
-		if (!canViewColumn(col, userId, committeeMember, accessibleFormIds))
+		const viewableFormIds = await getViewableFormIds(userId, committeeMember);
+		if (!canViewColumn(col, userId, committeeMember, viewableFormIds))
 			throw Errors.forbidden("このカラムへのアクセス権がありません");
 
 		const project = await prisma.project.findFirst({
@@ -227,9 +233,11 @@ cellsRoute.put(
 		if (col.type !== "FORM_ITEM")
 			throw Errors.invalidRequest("FORM_ITEM カラムのみ編集できます");
 
-		const accessibleFormIds = await getAccessibleFormIds(userId);
-		if (!canViewColumn(col, userId, committeeMember, accessibleFormIds))
-			throw Errors.forbidden("このカラムへのアクセス権がありません");
+		const editableFormIds = await getEditableFormIds(userId);
+		if (!canEditColumn(col, userId, committeeMember, editableFormIds))
+			throw Errors.forbidden(
+				"このカラムを編集する権限がありません（閲覧のみ可）"
+			);
 
 		const project = await prisma.project.findFirst({
 			where: { id: projectId, deletedAt: null },
@@ -356,7 +364,7 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 		return c.json({ groups: [] });
 	}
 
-	const accessibleFormIds = await getAccessibleFormIds(userId);
+	const viewableFormIds = await getViewableFormIds(userId, committeeMember);
 
 	// 対象カラムを特定
 	const targetColumnIds = [...new Set(cells.map(c => c.columnId))];
@@ -373,13 +381,13 @@ cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 		},
 	});
 
-	// 権限フィルタ
+	// 権限フィルタ（viewer も履歴を閲覧可）
 	const accessibleColumns = columns.filter(col =>
 		canViewColumn(
 			col as Parameters<typeof canViewColumn>[0],
 			userId,
 			committeeMember,
-			accessibleFormIds
+			viewableFormIds
 		)
 	);
 
