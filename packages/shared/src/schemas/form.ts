@@ -703,6 +703,7 @@ export const formResponseSummarySchema = z.object({
 	respondent: z.object({ id: z.string(), name: z.string() }),
 	project: z.object({
 		id: z.string(),
+		number: z.number().int().positive(),
 		name: z.string(),
 	}),
 	submittedAt: z.coerce.date().nullable(),

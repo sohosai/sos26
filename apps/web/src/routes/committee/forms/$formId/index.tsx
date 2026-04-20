@@ -42,7 +42,7 @@ import { useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
 import { formDetailToForm } from "@/lib/form/convert";
 import { getFormStatusFromAuth } from "@/lib/form/form-status";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatProjectNumber } from "@/lib/format";
 import { AnswerDetailDialog } from "./-components/AnswerDetailDialog";
 import { EditFormDialog } from "./-components/EditFormDialog";
 import { FormDetailSidebar } from "./-components/FormDetailSidebar";
@@ -59,6 +59,7 @@ const searchSchema = z.object({
 
 type AnswerRow = {
 	id: string;
+	projectNumber: number;
 	projectName: string;
 	submittedAt: Date | null;
 	answers: Record<string, string | TagValue[]>;
@@ -116,6 +117,7 @@ function buildAnswerRows(
 
 		return {
 			id: r.id,
+			projectNumber: r.project.number,
 			projectName: r.project.name,
 			submittedAt: r.submittedAt,
 			answers: map,
@@ -561,6 +563,10 @@ function AnswersTab({
 	const columnHelper = createColumnHelper<AnswerRow>();
 
 	const columns = [
+		columnHelper.accessor("projectNumber", {
+			header: "企画番号",
+			cell: ctx => <Text size="2">{formatProjectNumber(ctx.getValue())}</Text>,
+		}),
 		columnHelper.accessor("projectName", {
 			header: "企画",
 			cell: NameCell,
