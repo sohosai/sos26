@@ -308,32 +308,18 @@ function CommitteeSupportDetailPage() {
 				}
 			}}
 			onUpdateDraftInquiry={async (title, body, fileIds, relatedFormId) => {
+				await updateDraftInquiry(inquiryId, {
+					title,
+					body,
+					fileIds,
+					relatedFormId,
+				});
 				try {
-					await updateDraftInquiry(inquiryId, {
-						title,
-						body,
-						fileIds,
-						relatedFormId,
-					});
-					try {
-						const refreshed = await getCommitteeInquiry(inquiryId);
-						setCurrentInquiry(refreshed.inquiry);
-					} catch (err) {
-						console.error("failed to refresh inquiry after draft update", err);
-						await router.invalidate();
-					}
-					toast.success("下書きを更新しました");
-				} catch (error) {
-					reportHandledError({
-						error,
-						operation: "draft_save",
-						userMessage: "下書きの更新に失敗しました",
-						ui: { type: "toast" },
-						context: {
-							inquiryId,
-							fileCount: fileIds?.length ?? 0,
-						},
-					});
+					const refreshed = await getCommitteeInquiry(inquiryId);
+					setCurrentInquiry(refreshed.inquiry);
+				} catch (err) {
+					console.error("failed to refresh inquiry after draft update", err);
+					await router.invalidate();
 				}
 			}}
 		/>
