@@ -113,7 +113,7 @@ FormItemEditHistorySelectedOption
 | 現在値の保存先 | `MastersheetCellValue`（1セル1レコード） | `FormItemEditHistory`（最新）→ `FormAnswer`（フォールバック） | `ProjectRegistrationFormAnswer` |
 | 変更履歴 | なし | `FormItemEditHistory`（append-only） | **なし** |
 | 選択肢の保存 | `MastersheetCellSelectedOption`（中間テーブル） | `FormItemEditHistorySelectedOption`（中間テーブル） | `ProjectRegistrationFormAnswerSelectedOption`（中間テーブル） |
-| 編集者 | 実委人のみ | 企画メンバー（申請提出）+ 実委人（編集） | **なし（読み取り専用）** |
+| 編集者 | 実委人のみ | 企画メンバー（申請提出）+ 実委人 owner/collaborator（編集） | **なし（読み取り専用）** |
 | 履歴が必要な理由 | — | 企画と実委の双方が関与し、変更の追跡が必要なため | — |
 
 > `PROJECT_REGISTRATION_FORM_ITEM` の詳細仕様は [マスターシート × 企画登録フォーム連携 仕様書](mastersheet-project-registration-form-spec.md) を参照。
@@ -142,7 +142,8 @@ FormItemEditHistorySelectedOption
 |------|------|
 | データ型 | 申請設問の型に準じる（TEXT, TEXTAREA, SELECT, CHECKBOX, NUMBER, FILE） |
 | 作成者 | 申請の owner または collaborator |
-| 公開範囲 | 申請の owner / collaborator のみ（viewer 設定なし） |
+| 閲覧範囲 | 申請の owner / collaborator / viewer（`FormViewer` の scope に合致する実委人） |
+| 編集範囲 | 申請の owner / collaborator のみ（viewer は読み取り専用） |
 | セル値の保存先 | `FormItemEditHistory`（最新）→ `FormAnswer`（フォールバック） |
 | 1 設問 1 カラム | 同じ formItemId で複数カラムは作成不可（unique 制約） |
 
@@ -180,13 +181,16 @@ FormItemEditHistorySelectedOption
 
 ### 4.2 FORM_ITEM カラム
 
-| 条件 | アクセス可否 |
-|------|----------|
-| 申請の owner | アクセス可 |
-| 申請の collaborator（isWrite 不問） | アクセス可 |
-| 上記以外 | アクセス不可 |
+| 条件 | 閲覧 | セル編集 |
+|------|:----:|:------:|
+| 申請の owner | 可 | 可 |
+| 申請の collaborator（isWrite 不問） | 可 | 可 |
+| 申請の viewer（`FormViewer` の scope に合致する実委人） | 可 | **不可（読み取り専用）** |
+| 上記以外 | 不可 | — |
 
-- アクセス申請の承認で `FormCollaborator(isWrite=true)` が作成され、アクセス可能になる
+- viewer の判定は申請機能の回答閲覧権限（[form-spec.md §8.1](form-spec.md)）と同じ規則に従う（`scope=ALL` / `BUREAU=bureauValue` / `INDIVIDUAL=userId`）
+- 編集権限が必要な viewer は、アクセス申請の承認により `FormCollaborator(isWrite=true)` が作成され、編集可能になる
+- viewer は既に閲覧可能なためアクセス申請なしでカラムがテーブルに表示される
 
 ### 4.3 PROJECT_REGISTRATION_FORM_ITEM カラム
 
@@ -282,7 +286,11 @@ function computeCellStatus(deliveryId, response, latestHistory) {
 
 | 操作 | 内部動作 | 条件 |
 |------|---------|------|
-| セル値の編集 | `FormItemEditHistory` に `COMMITTEE_EDIT` を追加 | カラムにアクセスできる全員 |
+| セル値の編集 | `FormItemEditHistory` に `COMMITTEE_EDIT` を追加 | 申請の owner / collaborator のみ（viewer は不可） |
+
+- viewer（`FormViewer` の scope に合致する実委人）はカラムを閲覧できるが、セル編集・履歴追加を含むすべての書き込み操作は不可
+- UI では viewer に対して編集用の操作（ダブルクリック編集、プルダウン、チェックボックス切替）を**露出しない**
+- API 側でも owner / collaborator 以外からの編集リクエストは 403 で拒否する
 
 #### 編集可否（データ型別）
 
@@ -296,6 +304,8 @@ function computeCellStatus(deliveryId, response, latestHistory) {
 | FILE | 不可（リンク表示のみ） | 可 |
 
 #### 編集可否（セル状態別）
+
+申請の owner / collaborator が対象。viewer は全状態で編集不可。
 
 | セル状態 | 編集可否 | 操作後の状態 |
 |----------|----------|-------------|
@@ -398,6 +408,8 @@ FormItemEditHistory:
                                            申請回答 + 全関連カラムにアクセス可能に
 ```
 
+- アクセス申請は**編集権限の取得**を目的としたフロー。閲覧のみで十分な場合は `FormViewer` 設定で十分
+- viewer（既に閲覧可能な実委人）も、セル編集を行うためにアクセス申請を送信できる（承認で collaborator に昇格）
 - 重複申請は不可（PENDING の申請が既にある場合は 409）
 - 却下された場合はステータスが REJECTED に更新されるのみ
 
@@ -414,10 +426,10 @@ FormItemEditHistory:
 | カラム作成 | 全実委人 | 申請 owner / collaborator | 全実委人 |
 | カラム編集（名前等） | 作成者のみ | 作成者のみ | 作成者のみ |
 | カラム削除 | 作成者のみ | 作成者のみ | 作成者のみ |
-| カラムへのアクセス | 作成者 + viewer 設定に合致する実委人 | 申請 owner / collaborator | 全実委人 |
-| セル編集 | カラムにアクセスできる全員 | カラムにアクセスできる全員 | **不可（読み取り専用）** |
+| カラム閲覧 | 作成者 + viewer 設定に合致する実委人 | 申請 owner / collaborator / **viewer**（`FormViewer` の scope に合致） | 全実委人 |
+| セル編集 | カラムにアクセスできる全員 | 申請 owner / collaborator のみ（**viewer は不可**） | **不可（読み取り専用）** |
 | アクセス申請の承認 | カラム作成者 | 申請 owner | **不要** |
-| 変更履歴の閲覧 | — | カラムにアクセスできる全員 | — |
+| 変更履歴の閲覧 | — | カラムを閲覧できる全員（viewer を含む） | — |
 
 ---
 

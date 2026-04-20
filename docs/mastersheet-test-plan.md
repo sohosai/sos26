@@ -53,8 +53,12 @@
 | 2-3 | PUBLIC(scope=BUREAU:FINANCE) | Aがカラム作成、viewer=BUREAU:FINANCE | C, E → 表示 / B, D → 非表示 | FINANCE局のみ表示 |
 | 2-4 | PUBLIC(scope=INDIVIDUAL:C) | Aがカラム作成、viewer=INDIVIDUAL指定でC | C → 表示 / B, D, E → 非表示 | Cのみ表示 |
 | 2-5 | 複数viewer（BUREAU:FINANCE + INDIVIDUAL:D） | Aがカラム作成 | C, D, E → 表示 / B → 非表示 | FINANCE局＋Dに表示 |
-| 2-6 | FORM_ITEMカラムはowner/collaboratorのみ | Aが申請由来カラム作成 | A → 表示 / C, D → 非表示 | 申請権限者のみ |
+| 2-6 | FORM_ITEMカラムはowner/collaborator/viewerのみ | Aが申請由来カラム作成 | A → 表示 / C, D → 非表示 | 申請権限者のみ |
 | 2-7 | FormCollaborator追加後の表示 | AがCを申請collaboratorに追加 | C | Cにも表示されるようになる |
+| 2-7b | FormViewer(ALL)追加後のFORM_ITEMカラム表示 | Aが申請のFormViewerにscope=ALLを追加 | B, C, D, E | 全員のテーブルに**表示**されるが、セル編集UIは出ない |
+| 2-7c | FormViewer(BUREAU)追加後のFORM_ITEMカラム表示 | Aが申請のFormViewerにBUREAU:FINANCEを追加 | C, E → 表示 / B, D → 非表示 | 該当局の実委人にのみ読み取り専用で表示 |
+| 2-7d | FormViewer(INDIVIDUAL)追加後のFORM_ITEMカラム表示 | Aが申請のFormViewerにINDIVIDUAL:Dを追加 | D → 表示 / C, E → 非表示 | Dにのみ読み取り専用で表示 |
+| 2-7e | Viewer削除後の非表示化 | 2-7bのFormViewer設定を削除 | B, C, D, E | 再度**非表示**に戻る |
 | 2-8 | PRIVATE→PUBLICへ変更 | Aがviewer追加（ALL等） | 対象者 | 表示開始 |
 | 2-9 | PUBLIC→PRIVATEへ変更 | Aがviewer全削除 | 元のアクセス者 | 非表示に戻る |
 
@@ -111,6 +115,9 @@
 | 5-6 | FILE型は読取専用 | FILE型セルを確認 | リンク表示のみ。編集UI**なし** |
 | 5-7 | 編集履歴の記録確認 | 5-1実行後、APIで履歴取得 | `FormItemEditHistory` に trigger=COMMITTEE_EDIT のレコードが記録されている |
 | 5-8 | 再提出で編集が上書きされる | 5-1実行後、Fが再提出 | SUBMITTED に戻る。再提出値が表示。5-1の編集は履歴として残る |
+| 5-9 | Viewerによるセル編集不可（UI） | 事前準備: Aの申請のFormViewer scope=ALL を設定。CがP1のSUBMITTEDセルをダブルクリック | **編集UIが表示されない**（読み取り専用） |
+| 5-10 | Viewerによるセル編集不可（API） | Cが `PUT /committee/mastersheet/edits/:columnId/:projectId` を直接呼ぶ | **403 Forbidden**。`FormItemEditHistory` に追記されない |
+| 5-11 | Collaborator昇格後は編集可 | Cが5-9のカラムにアクセス申請→Aが承認 → CがP1セルをダブルクリック→編集 | COMMITTEE_EDITED状態に遷移。`FormItemEditHistory` に trigger=COMMITTEE_EDIT が追加される |
 
 ---
 
@@ -126,6 +133,7 @@
 | 6-6 | FORM_ITEMカラム承認後の権限 | A（承認） | 6-5の申請を承認 | FormCollaborator(isWrite=true)作成。Cに申請回答へのアクセスが可能に |
 | 6-7 | 権限なしユーザーの承認試行 | D | Aのカラムへの申請を承認しようとする | 承認ボタンが**表示されない** |
 | 6-8 | ColumnDiscoverDialogの状態表示 | C | カラム発見ダイアログを開く | hasAccess=「表示中」/ pendingRequest=「申請中」/ それ以外=「アクセス申請」ボタン |
+| 6-9 | Viewerからのアクセス申請（編集権限昇格） | C（FormViewerで既に閲覧可能） | カラム発見ダイアログ or 読み取り専用セル上のアクション→アクセス申請 | 申請作成。承認されると `FormCollaborator(isWrite=true)` が作成され編集可能になる |
 
 ---
 
