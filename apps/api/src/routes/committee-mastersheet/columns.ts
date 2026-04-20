@@ -1,3 +1,4 @@
+import type { CommitteeMember } from "@prisma/client";
 import {
 	createMastersheetColumnRequestSchema,
 	type InitialValueInput,
@@ -145,7 +146,11 @@ const columnCreateInclude = {
 	viewers: { include: { user: { select: { name: true } } } },
 } as const;
 
-/** FORM_ITEM カラムを作成する */
+/**
+ * FORM_ITEM カラムを作成する。
+ * owner / collaborator / viewer のいずれかであれば作成可能。
+ * 作成者が編集権限を持つか（owner/collaborator）を canEdit として返す。
+ */
 async function createFormItemColumn(
 	data: {
 		formItemId: string;
@@ -153,23 +158,34 @@ async function createFormItemColumn(
 		description?: string | null;
 		sortOrder: number;
 	},
-	userId: string
+	userId: string,
+	committeeMember: CommitteeMember
 ) {
 	const formItem = await prisma.formItem.findUnique({
 		where: { id: data.formItemId },
 		include: {
 			form: {
-				include: { collaborators: { where: { deletedAt: null } } },
+				include: {
+					collaborators: { where: { deletedAt: null } },
+					viewers: { where: { deletedAt: null } },
+				},
 			},
 		},
 	});
 	if (!formItem) throw Errors.notFound("申請項目が見つかりません");
 
 	const form = formItem.form;
-	const hasAccess =
+	const hasEditAccess =
 		form.ownerId === userId ||
 		form.collaborators.some(col => col.userId === userId);
-	if (!hasAccess) throw Errors.forbidden("この申請へのアクセス権がありません");
+	const hasViewerAccess = form.viewers.some(
+		v =>
+			v.scope === "ALL" ||
+			(v.scope === "BUREAU" && v.bureauValue === committeeMember.Bureau) ||
+			(v.scope === "INDIVIDUAL" && v.userId === userId)
+	);
+	if (!hasEditAccess && !hasViewerAccess)
+		throw Errors.forbidden("この申請へのアクセス権がありません");
 
 	const existing = await prisma.mastersheetColumn.findUnique({
 		where: { formItemId: data.formItemId },
@@ -177,7 +193,7 @@ async function createFormItemColumn(
 	if (existing)
 		throw Errors.alreadyExists("この申請項目のカラムは既に存在します");
 
-	return prisma.mastersheetColumn.create({
+	const col = await prisma.mastersheetColumn.create({
 		data: {
 			type: "FORM_ITEM",
 			name: data.name,
@@ -188,6 +204,7 @@ async function createFormItemColumn(
 		},
 		include: columnCreateInclude,
 	});
+	return { col, canEdit: hasEditAccess };
 }
 
 /** PROJECT_REGISTRATION_FORM_ITEM カラムを作成する */
@@ -234,13 +251,17 @@ async function createPrfItemColumn(
 
 columnsRoute.post("/columns", requireAuth, requireCommitteeMember, async c => {
 	const userId = c.get("user").id;
+	const committeeMember = c.get("committeeMember");
 	const body = await c.req.json().catch(() => ({}));
 	const data = createMastersheetColumnRequestSchema.parse(body);
 
 	if (data.type === "FORM_ITEM") {
-		const col = await createFormItemColumn(data, userId);
-		// 作成者は必ず owner/collaborator のため canEdit=true
-		return c.json({ column: formatColumnDef(col, userId, true) }, 201);
+		const { col, canEdit } = await createFormItemColumn(
+			data,
+			userId,
+			committeeMember
+		);
+		return c.json({ column: formatColumnDef(col, userId, canEdit) }, 201);
 	}
 
 	if (data.type === "PROJECT_REGISTRATION_FORM_ITEM") {
