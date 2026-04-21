@@ -7,6 +7,7 @@ import type {
 	RegistrationFormAnswersInput,
 } from "@sos26/shared";
 import {
+	ErrorCode,
 	isBlankProjectDisplayName,
 	isKana,
 	isValidProjectDisplayName,
@@ -33,6 +34,7 @@ import { uploadFile } from "@/lib/api/files";
 import { createProject } from "@/lib/api/project";
 import { getActiveProjectRegistrationForms } from "@/lib/api/project-registration-form";
 import { reportHandledError } from "@/lib/error/report";
+import { isClientError } from "@/lib/http/error";
 import {
 	PROJECT_LOCATION_OPTIONS,
 	PROJECT_TYPE_OPTIONS,
@@ -632,6 +634,12 @@ export function ProjectCreateDialog({ open, onOpenChange, onCreated }: Props) {
 					projectName: step1.name,
 					projectType: type,
 					projectLocation: location,
+				},
+				resolveMessage: ({ error: e, fallbackMessage }) => {
+					if (isClientError(e) && e.code === ErrorCode.ALREADY_EXISTS) {
+						return "この企画名は既に使用されています";
+					}
+					return fallbackMessage;
 				},
 			});
 		} finally {
