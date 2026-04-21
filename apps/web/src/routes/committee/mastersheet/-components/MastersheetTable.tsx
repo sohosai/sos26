@@ -5,7 +5,12 @@ import type {
 	ProjectDeletionStatus,
 	UpsertMastersheetCellRequest,
 } from "@sos26/shared";
-import { type ProjectType, projectTypeSchema } from "@sos26/shared";
+import {
+	type ProjectLocation,
+	type ProjectType,
+	projectLocationSchema,
+	projectTypeSchema,
+} from "@sos26/shared";
 import {
 	IconClipboardText,
 	IconEye,
@@ -72,6 +77,12 @@ const PROJECT_TYPE_LABEL = {
 	FOOD: "食品企画",
 	NORMAL: "普通企画",
 } satisfies Record<ProjectType, string>;
+
+const PROJECT_LOCATION_LABEL = {
+	INDOOR: "屋内",
+	OUTDOOR: "屋外",
+	STAGE: "ステージ",
+} satisfies Record<ProjectLocation, string>;
 
 type ProjectDeletionFilterValue =
 	| "ACTIVE"
@@ -180,6 +191,22 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 			selectOptions: projectTypeSchema.options.map(v => ({
 				value: v,
 				label: PROJECT_TYPE_LABEL[v],
+			})),
+		},
+	}),
+	columnHelper.accessor(row => row.project.location, {
+		id: "location",
+		header: "企画実施場所",
+		cell: ctx => (
+			<Text size="2">
+				{PROJECT_LOCATION_LABEL[ctx.getValue() as ProjectLocation]}
+			</Text>
+		),
+		meta: {
+			filterVariant: "select",
+			selectOptions: projectLocationSchema.options.map(v => ({
+				value: v,
+				label: PROJECT_LOCATION_LABEL[v],
 			})),
 		},
 	}),
