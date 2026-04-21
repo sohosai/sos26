@@ -188,6 +188,7 @@ export const getMastersheetDataResponseSchema = z.object({
 				name: z.string(),
 				namePhonetic: z.string(),
 				type: z.string(),
+				location: z.string(),
 				organizationName: z.string(),
 				deletionStatus: projectDeletionStatusSchema.nullable(),
 				organizationNamePhonetic: z.string(),
