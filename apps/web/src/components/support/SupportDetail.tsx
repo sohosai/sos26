@@ -3,17 +3,15 @@ import {
 	IconArrowLeft,
 	IconCheck,
 	IconFileDescription,
-	IconPaperclip,
 	IconTrash,
-	IconX,
 } from "@tabler/icons-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/primitives";
-import { formatDate, formatFileSize } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { AssigneeList, AssigneePopover } from "./AssigneeSection";
 import { statusConfig } from "./constants";
-import { FormSelector } from "./NewInquiryForm";
+import { NewInquiryForm } from "./NewInquiryForm";
 import { ReplySection } from "./ReplySection";
 import styles from "./SupportDetail.module.scss";
 import { ActivityItem, TimelineItem } from "./Timeline";
@@ -27,7 +25,6 @@ import type {
 } from "./types";
 import { useAssigneeRemovalConfirmation } from "./useAssigneeRemovalConfirmation";
 import { useDraftInquiryActions } from "./useDraftInquiryActions";
-import { useDraftInquiryState } from "./useDraftInquiryState";
 import { ViewerSettings } from "./ViewerSettings";
 
 type SupportDetailProps = {
@@ -438,18 +435,11 @@ function SupportSidebar({
 	statusColor,
 	StatusIcon,
 	currentUserId,
-	isDraftEditing,
 	onStartEditDraft,
-	onCancelEditDraft,
-	onSaveDraft,
 	onPublishDraftInquiry,
-	isSavingDraft,
 	isPublishingDraftInquiry,
 	isDeletingDraftInquiry,
 	onRequestDeleteDraftInquiry,
-	availableForms,
-	draftRelatedFormId,
-	onChangeDraftRelatedFormId,
 }: {
 	inquiry: InquiryDetail;
 	viewerRole: "project" | "committee";
@@ -472,75 +462,48 @@ function SupportSidebar({
 	statusColor: "orange" | "blue" | "green";
 	StatusIcon: typeof IconCheck;
 	currentUserId: string;
-	isDraftEditing: boolean;
 	onStartEditDraft: () => void;
-	onCancelEditDraft: () => void;
-	onSaveDraft: () => Promise<void>;
 	onPublishDraftInquiry?: () => Promise<void>;
-	isSavingDraft: boolean;
 	isPublishingDraftInquiry: boolean;
 	isDeletingDraftInquiry: boolean;
 	onRequestDeleteDraftInquiry: () => void;
-	availableForms?: { id: string; title: string }[];
-	draftRelatedFormId: string | null;
-	onChangeDraftRelatedFormId: (id: string | null) => void;
 }) {
 	const canEditProjectAssignee = canEditCommittee || viewerRole === "project";
 	const isDraftInquiry = "isDraft" in inquiry && inquiry.isDraft === true;
 	const isOwnDraftInquiry =
 		isDraftInquiry && inquiry.createdById === currentUserId;
 
-	const renderDraftActions = () => {
-		if (isDraftEditing) {
-			return (
-				<>
-					<Button
-						intent="secondary"
-						size="2"
-						onClick={onCancelEditDraft}
-						disabled={isSavingDraft}
-					>
-						キャンセル
-					</Button>
-					<Button size="2" onClick={onSaveDraft} loading={isSavingDraft}>
-						{isSavingDraft ? "保存中..." : "保存"}
-					</Button>
-				</>
-			);
-		}
-
-		return (
-			<>
-				<Button
-					intent="primary"
-					size="2"
-					onClick={onPublishDraftInquiry}
-					loading={isPublishingDraftInquiry}
-					disabled={isPublishingDraftInquiry || isDeletingDraftInquiry}
-				>
-					{isPublishingDraftInquiry ? "送信中..." : "送信する"}
-				</Button>
-				<Button
-					intent="secondary"
-					size="2"
-					onClick={onStartEditDraft}
-					disabled={isPublishingDraftInquiry || isDeletingDraftInquiry}
-				>
-					編集
-				</Button>
-				<Button
-					intent="ghost"
-					size="2"
-					onClick={onRequestDeleteDraftInquiry}
-					loading={isDeletingDraftInquiry}
-					disabled={isPublishingDraftInquiry || isDeletingDraftInquiry}
-				>
-					<IconTrash size={14} />
-					{isDeletingDraftInquiry ? "削除中..." : "削除"}
-				</Button>
-			</>
-		);
-	};
+	const renderDraftActions = () => (
+		<>
+			<Button
+				intent="primary"
+				size="2"
+				onClick={onPublishDraftInquiry}
+				loading={isPublishingDraftInquiry}
+				disabled={isPublishingDraftInquiry || isDeletingDraftInquiry}
+			>
+				{isPublishingDraftInquiry ? "送信中..." : "送信する"}
+			</Button>
+			<Button
+				intent="secondary"
+				size="2"
+				onClick={onStartEditDraft}
+				disabled={isPublishingDraftInquiry || isDeletingDraftInquiry}
+			>
+				編集
+			</Button>
+			<Button
+				intent="ghost"
+				size="2"
+				onClick={onRequestDeleteDraftInquiry}
+				loading={isDeletingDraftInquiry}
+				disabled={isPublishingDraftInquiry || isDeletingDraftInquiry}
+			>
+				<IconTrash size={14} />
+				{isDeletingDraftInquiry ? "削除中..." : "削除"}
+			</Button>
+		</>
+	);
 
 	const renderStatusActions = () => {
 		if (isDraftInquiry && isOwnDraftInquiry) {
@@ -629,20 +592,10 @@ function SupportSidebar({
 				<Text size="2" weight="medium" color="gray">
 					関連申請
 				</Text>
-				{isDraftEditing && isOwnDraftInquiry && availableForms ? (
-					<FormSelector
-						forms={availableForms}
-						selectedForm={
-							availableForms.find(f => f.id === draftRelatedFormId) ?? null
-						}
-						onSelect={form => onChangeDraftRelatedFormId(form?.id ?? null)}
-					/>
-				) : (
-					<RelatedFormContent
-						relatedForm={inquiry.relatedForm}
-						viewerRole={viewerRole}
-					/>
-				)}
+				<RelatedFormContent
+					relatedForm={inquiry.relatedForm}
+					viewerRole={viewerRole}
+				/>
 			</div>
 
 			{viewerRole === "committee" && viewers && (
@@ -693,9 +646,8 @@ export function SupportDetail({
 	const [activeReplyTab, setActiveReplyTab] = useState<"comment" | "draft">(
 		"comment"
 	);
+	const [editModalOpen, setEditModalOpen] = useState(false);
 
-	// Custom hooks for state management
-	const draftState = useDraftInquiryState(inquiry);
 	const assigneeRemoval = useAssigneeRemovalConfirmation(
 		onRemoveAssignee,
 		basePath
@@ -754,35 +706,55 @@ export function SupportDetail({
 		);
 	};
 
-	const handleSaveDraft = async () => {
-		if (!onUpdateDraftInquiry) return;
-		if (
-			!draftState.validateDraft(draftState.draftTitle, draftState.draftBody)
-		) {
-			return;
+	const diffAndUpdateAssignees = async (
+		current: { id: string; user: { id: string } }[],
+		nextUserIds: string[],
+		side: "PROJECT" | "COMMITTEE"
+	) => {
+		const nextSet = new Set(nextUserIds);
+		const currentSet = new Set(current.map(a => a.user.id));
+		const toRemove = current.filter(a => !nextSet.has(a.user.id));
+		for (const assignee of toRemove) {
+			await onRemoveAssignee(assignee.id);
 		}
-		if (draftState.isSavingDraft) return;
-		draftState.setIsSavingDraft(true);
-		try {
-			const newFileIds = await draftState.uploadDraftFiles(
-				draftState.draftFiles
+		const toAdd = nextUserIds.filter(id => !currentSet.has(id));
+		for (const userId of toAdd) {
+			await onAddAssignee(userId, side);
+		}
+	};
+
+	const handleEditSubmit = async (params: {
+		title: string;
+		body: string;
+		relatedFormId?: string | null;
+		fileIds?: string[];
+		projectAssigneeUserIds?: string[];
+		committeeAssigneeUserIds?: string[];
+		viewers?: ViewerInput[];
+	}) => {
+		if (!onUpdateDraftInquiry) return;
+		await onUpdateDraftInquiry(
+			params.title,
+			params.body,
+			params.fileIds,
+			params.relatedFormId ?? null
+		);
+		if (params.projectAssigneeUserIds) {
+			await diffAndUpdateAssignees(
+				inquiry.projectAssignees,
+				params.projectAssigneeUserIds,
+				"PROJECT"
 			);
-			const existingFileIds = draftState.draftAttachments.map(
-				att => att.fileId
+		}
+		if (params.committeeAssigneeUserIds) {
+			await diffAndUpdateAssignees(
+				inquiry.committeeAssignees,
+				params.committeeAssigneeUserIds,
+				"COMMITTEE"
 			);
-			const fileIds = [...existingFileIds, ...newFileIds];
-			await onUpdateDraftInquiry(
-				draftState.draftTitle.trim(),
-				draftState.draftBody.trim(),
-				fileIds,
-				draftState.draftRelatedFormId
-			);
-			draftState.setEditingDraft(false);
-			draftState.setDraftFiles([]);
-		} catch {
-			// Error is handled in the hook
-		} finally {
-			draftState.setIsSavingDraft(false);
+		}
+		if (params.viewers && onUpdateViewers) {
+			await onUpdateViewers(params.viewers);
 		}
 	};
 
@@ -811,17 +783,7 @@ export function SupportDetail({
 						>
 							<StatusIcon size={24} />
 						</span>
-						{draftState.editingDraft && isOwnDraftInquiry ? (
-							<input
-								type="text"
-								value={draftState.draftTitle}
-								onChange={e => draftState.setDraftTitle(e.target.value)}
-								className={styles.editTitleInput}
-								placeholder="題目を入力"
-							/>
-						) : (
-							<Heading size="5">{inquiry.title}</Heading>
-						)}
+						<Heading size="5">{inquiry.title}</Heading>
 					</div>
 					<Text size="2" color="gray">
 						{inquiry.createdBy.name} が{" "}
@@ -829,91 +791,14 @@ export function SupportDetail({
 					</Text>
 				</header>
 
-				{draftState.editingDraft && isOwnDraftInquiry ? (
-					<div className={styles.editBodySection}>
-						<textarea
-							value={draftState.draftBody}
-							onChange={e => draftState.setDraftBody(e.target.value)}
-							className={styles.editBodyTextarea}
-							placeholder="本文を入力"
-							rows={10}
-						/>
-						<div className={styles.editAttachmentSection}>
-							<Text size="2" weight="medium">
-								添付ファイル
-							</Text>
-							{draftState.draftAttachments.length > 0 && (
-								<div className={styles.selectedFiles}>
-									{draftState.draftAttachments.map(att => (
-										<div key={att.id} className={styles.selectedFileItem}>
-											<IconPaperclip size={14} />
-											<Text size="1">{att.fileName}</Text>
-											<Text size="1" color="gray">
-												({formatFileSize(att.size)})
-											</Text>
-											<button
-												type="button"
-												className={styles.selectedFileRemove}
-												onClick={() => draftState.removeDraftAttachment(att.id)}
-											>
-												<IconX size={12} />
-											</button>
-										</div>
-									))}
-								</div>
-							)}
-							{draftState.draftFiles.length > 0 && (
-								<div className={styles.selectedFiles}>
-									{draftState.draftFiles.map((file, index) => (
-										<div
-											key={`${file.name}-${index}`}
-											className={styles.selectedFileItem}
-										>
-											<IconPaperclip size={14} />
-											<Text size="1">{file.name}</Text>
-											<Text size="1" color="gray">
-												({formatFileSize(file.size)})
-											</Text>
-											<button
-												type="button"
-												className={styles.selectedFileRemove}
-												onClick={() => draftState.removeDraftFile(index)}
-											>
-												<IconX size={12} />
-											</button>
-										</div>
-									))}
-								</div>
-							)}
-							<div className={styles.replyFileArea}>
-								<input
-									ref={draftState.draftFileInputRef}
-									type="file"
-									multiple
-									className={styles.fileInput}
-									onChange={draftState.handleDraftFileSelect}
-								/>
-								<button
-									type="button"
-									className={styles.fileSelectButton}
-									onClick={() => draftState.draftFileInputRef.current?.click()}
-								>
-									<IconPaperclip size={16} />
-									<Text size="2">ファイルを選択</Text>
-								</button>
-							</div>
-						</div>
-					</div>
-				) : (
-					<InquiryTimeline
-						inquiry={inquiry}
-						timelineEntries={timelineEntries}
-						currentUserId={currentUserId}
-						onPublishDraft={onPublishDraft}
-						onDeleteComment={onDeleteComment}
-						onUpdateDraft={onUpdateDraft}
-					/>
-				)}
+				<InquiryTimeline
+					inquiry={inquiry}
+					timelineEntries={timelineEntries}
+					currentUserId={currentUserId}
+					onPublishDraft={onPublishDraft}
+					onDeleteComment={onDeleteComment}
+					onUpdateDraft={onUpdateDraft}
+				/>
 
 				{!isDraftInquiry && (
 					<InquiryReplyPanel
@@ -948,21 +833,51 @@ export function SupportDetail({
 				statusColor={config.color}
 				StatusIcon={StatusIcon}
 				currentUserId={currentUserId}
-				isDraftEditing={draftState.editingDraft}
-				onStartEditDraft={draftState.handleStartEditDraft}
-				onCancelEditDraft={draftState.handleCancelEditDraft}
-				onSaveDraft={handleSaveDraft}
+				onStartEditDraft={() => setEditModalOpen(true)}
 				onPublishDraftInquiry={draftActions.handlePublishDraftInquiry}
-				isSavingDraft={draftState.isSavingDraft}
 				isPublishingDraftInquiry={draftActions.isPublishingDraftInquiry}
 				isDeletingDraftInquiry={draftActions.isDeletingDraftInquiry}
 				onRequestDeleteDraftInquiry={
 					draftActions.handleRequestDeleteDraftInquiry
 				}
-				availableForms={availableForms}
-				draftRelatedFormId={draftState.draftRelatedFormId}
-				onChangeDraftRelatedFormId={draftState.setDraftRelatedFormId}
 			/>
+
+			{isDraftInquiry && isOwnDraftInquiry && onUpdateDraftInquiry && (
+				<NewInquiryForm
+					open={editModalOpen}
+					onOpenChange={setEditModalOpen}
+					mode="edit"
+					viewerRole={viewerRole}
+					currentUser={{ id: currentUserId, name: "" }}
+					projectMembers={projectMembers}
+					committeeMembers={committeeMembers}
+					availableForms={availableForms}
+					initialData={{
+						title: inquiry.title,
+						body: inquiry.body,
+						relatedFormId: inquiry.relatedForm?.id ?? null,
+						projectId: inquiry.projectId,
+						existingAttachments: inquiry.attachments,
+						projectAssignees: inquiry.projectAssignees.map(a => ({
+							id: a.user.id,
+							name: a.user.name,
+							avatarFileId: a.user.avatarFileId,
+						})),
+						committeeAssignees: inquiry.committeeAssignees.map(a => ({
+							id: a.user.id,
+							name: a.user.name,
+							avatarFileId: a.user.avatarFileId,
+						})),
+						viewers:
+							viewers?.map(v => ({
+								scope: v.scope,
+								bureauValue: v.bureauValue ?? undefined,
+								userId: v.user?.id,
+							})) ?? [],
+					}}
+					onSubmit={handleEditSubmit}
+				/>
+			)}
 
 			<AlertDialog.Root
 				open={assigneeRemoval.selfRemoveConfirmOpen}

@@ -83,7 +83,7 @@ function ProjectSupportListPage() {
 					const { inquiry } = await createProjectInquiry(selectedProjectId, {
 						title: params.title,
 						body: params.body,
-						relatedFormId: params.relatedFormId,
+						relatedFormId: params.relatedFormId ?? undefined,
 						coAssigneeUserIds: params.coAssigneeUserIds,
 						fileIds: params.fileIds,
 					});
