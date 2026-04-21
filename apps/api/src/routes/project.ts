@@ -160,6 +160,15 @@ projectRoute.post("/create", requireAuth, async c => {
 		);
 	}
 
+	// ── 企画名の重複確認（事前チェックで欠番を回避） ──
+	const nameTaken = await prisma.project.findUnique({
+		where: { name: data.name },
+		select: { id: true },
+	});
+	if (nameTaken) {
+		throw Errors.alreadyExists("この企画名は既に使用されています");
+	}
+
 	// 企画参加コード生成（衝突回避）
 	let inviteCode = generateInviteCode();
 	while (await prisma.project.findUnique({ where: { inviteCode } })) {
@@ -207,19 +216,23 @@ projectRoute.post("/create", requireAuth, async c => {
 			registrationFormAnswers
 		);
 
-		const created = await tx.project.create({
-			data: {
-				...data,
-				ownerId: userId,
-				subOwnerId: null,
-				inviteCode,
-				projectMembers: {
-					create: {
-						userId: userId,
+		// 事前チェックをすり抜けた並行リクエストのレース対策として
+		// P2002 等を handlePrismaError で AppError に変換する
+		const created = await tx.project
+			.create({
+				data: {
+					...data,
+					ownerId: userId,
+					subOwnerId: null,
+					inviteCode,
+					projectMembers: {
+						create: {
+							userId: userId,
+						},
 					},
 				},
-			},
-		});
+			})
+			.catch(handlePrismaError);
 
 		// 企画登録フォームの回答を保存
 		if (registrationFormAnswers?.length) {
