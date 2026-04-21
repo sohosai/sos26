@@ -1209,12 +1209,15 @@ committeeInquiryRoute.post(
 			return created;
 		});
 
-		void notifyInquiryAssigneeAdded({
-			addedUserId: userId,
-			inquiryId,
-			inquiryTitle: inquiry.title,
-			side,
-		});
+		// 下書き状態の間は通知を送らない（公開時にまとめて送る）
+		if (!inquiry.isDraft) {
+			void notifyInquiryAssigneeAdded({
+				addedUserId: userId,
+				inquiryId,
+				inquiryTitle: inquiry.title,
+				side,
+			});
+		}
 
 		return c.json(
 			{
