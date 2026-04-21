@@ -17,7 +17,10 @@ import { toast } from "sonner";
 import { DiscardChangesDialog } from "@/components/patterns/DiscardChangesDialog";
 import { Button, Select, TextArea, TextField } from "@/components/primitives";
 import { formatProjectNumber } from "@/lib/format";
-import { FileAttachmentArea } from "./FileAttachmentArea";
+import {
+	type ExistingAttachment,
+	FileAttachmentArea,
+} from "./FileAttachmentArea";
 import { FormViewerSelector } from "./FormViewerSelector";
 import { MemberSelectPopover, SelectedChips } from "./MemberSelectPopover";
 import styles from "./NewInquiryForm.module.scss";
@@ -32,9 +35,12 @@ type UserSummary = { id: string; name: string; avatarFileId?: string | null };
 type FormSummary = { id: string; title: string };
 type SubmitParams = Parameters<NewInquiryFormProps["onSubmit"]>[0];
 
+type InitialAttachment = ExistingAttachment & { fileId: string };
+
 type NewInquiryFormProps = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	mode?: "create" | "edit";
 	viewerRole: "project" | "committee";
 	currentUser: UserSummary;
 	projectMembers?: UserSummary[];
@@ -45,7 +51,7 @@ type NewInquiryFormProps = {
 	onSubmit: (params: {
 		title: string;
 		body: string;
-		relatedFormId?: string;
+		relatedFormId?: string | null;
 		coAssigneeUserIds?: string[];
 		projectId?: string;
 		projectAssigneeUserIds?: string[];
@@ -57,9 +63,13 @@ type NewInquiryFormProps = {
 	initialData?: {
 		title: string;
 		body: string;
-		relatedFormId?: string;
+		relatedFormId?: string | null;
 		projectId?: string;
-		fileIds?: string[];
+		existingAttachments?: InitialAttachment[];
+		projectAssignees?: UserSummary[];
+		committeeAssignees?: UserSummary[];
+		coAssignees?: UserSummary[];
+		viewers?: ViewerInput[];
 	};
 };
 
@@ -128,11 +138,186 @@ const buildSubmitParams = (
 	return buildProjectParams(input);
 };
 
-const getSuccessMessage = (isDraft: boolean) =>
-	isDraft ? "下書きとして保存しました" : "お問い合わせを作成しました";
+const getSuccessMessage = (mode: "create" | "edit", isDraft: boolean) => {
+	if (mode === "edit") return "お問い合わせを更新しました";
+	return isDraft ? "下書きとして保存しました" : "お問い合わせを作成しました";
+};
 
-const getErrorMessage = (isDraft: boolean) =>
-	isDraft ? "下書きの保存に失敗しました" : "お問い合わせの作成に失敗しました";
+const getErrorMessage = (mode: "create" | "edit", isDraft: boolean) => {
+	if (mode === "edit") return "お問い合わせの更新に失敗しました";
+	return isDraft
+		? "下書きの保存に失敗しました"
+		: "お問い合わせの作成に失敗しました";
+};
+
+const findFormById = (
+	availableForms: FormSummary[] | undefined,
+	id: string | null | undefined
+): FormSummary | null => {
+	if (!id || !availableForms) return null;
+	return availableForms.find(f => f.id === id) ?? null;
+};
+
+const findProjectById = (
+	projects: { id: string; name: string; number: number }[] | undefined,
+	id: string | undefined
+) => {
+	if (!id || !projects) return null;
+	return projects.find(p => p.id === id) ?? null;
+};
+
+const resolveInitialProject = (
+	mode: "create" | "edit",
+	projects: { id: string; name: string; number: number }[] | undefined,
+	projectId: string | undefined
+) => {
+	const found = findProjectById(projects, projectId);
+	if (found) return found;
+	if (mode === "edit" && projectId) {
+		return { id: projectId, name: "", number: 0 };
+	}
+	return null;
+};
+
+type FormState = {
+	title: string;
+	body: string;
+	selectedForm: FormSummary | null;
+	selectedProject: { id: string; name: string; number: number } | null;
+	selectedProjectAssignees: UserSummary[];
+	selectedCoAssignees: UserSummary[];
+	selectedCommitteeAssignees: UserSummary[];
+	selectedViewers: ViewerInput[];
+	selectedFiles: File[];
+	existingAttachments: InitialAttachment[];
+};
+
+const buildEditSubmitParams = (
+	state: FormState,
+	mergedFileIds: string[],
+	isDraft: boolean
+): SubmitParams => ({
+	title: trimText(state.title),
+	body: trimText(state.body),
+	relatedFormId: state.selectedForm?.id ?? null,
+	fileIds: mergedFileIds,
+	projectAssigneeUserIds: state.selectedProjectAssignees.map(p => p.id),
+	committeeAssigneeUserIds: state.selectedCommitteeAssignees.map(p => p.id),
+	coAssigneeUserIds: state.selectedCoAssignees.map(p => p.id),
+	viewers: state.selectedViewers,
+	isDraft,
+});
+
+const sameIdSet = (a: { id: string }[], b: { id: string }[] = []) => {
+	if (a.length !== b.length) return false;
+	const bIds = new Set(b.map(x => x.id));
+	return a.every(x => bIds.has(x.id));
+};
+
+const viewerKey = (v: ViewerInput) =>
+	`${v.scope}:${v.bureauValue ?? ""}:${v.userId ?? ""}`;
+
+const sameViewers = (a: ViewerInput[], b: ViewerInput[] = []) => {
+	if (a.length !== b.length) return false;
+	const bKeys = new Set(b.map(viewerKey));
+	return a.every(v => bKeys.has(viewerKey(v)));
+};
+
+const isEditDirty = (
+	state: FormState,
+	initial: NewInquiryFormProps["initialData"]
+) =>
+	state.title !== (initial?.title ?? "") ||
+	state.body !== (initial?.body ?? "") ||
+	(state.selectedForm?.id ?? null) !== (initial?.relatedFormId ?? null) ||
+	state.selectedFiles.length > 0 ||
+	state.existingAttachments.length !==
+		(initial?.existingAttachments?.length ?? 0) ||
+	!sameIdSet(state.selectedProjectAssignees, initial?.projectAssignees) ||
+	!sameIdSet(state.selectedCommitteeAssignees, initial?.committeeAssignees) ||
+	!sameIdSet(state.selectedCoAssignees, initial?.coAssignees) ||
+	!sameViewers(state.selectedViewers, initial?.viewers);
+
+type SubmitOutcome =
+	| { ok: true }
+	| { ok: false; message?: string; silent?: boolean };
+
+type RunSubmitDeps = {
+	mode: "create" | "edit";
+	viewerRole: NewInquiryFormProps["viewerRole"];
+	onSubmit: NewInquiryFormProps["onSubmit"];
+	uploadFiles: (files: File[]) => Promise<string[]>;
+};
+
+const runCreateSubmit = async (
+	deps: RunSubmitDeps,
+	state: FormState,
+	mergedFileIds: string[],
+	isDraft: boolean
+): Promise<SubmitOutcome> => {
+	const fileIds = mergedFileIds.length > 0 ? mergedFileIds : undefined;
+	const params = buildSubmitParams({
+		viewerRole: deps.viewerRole,
+		title: state.title,
+		body: state.body,
+		selectedForm: state.selectedForm,
+		selectedProject: state.selectedProject,
+		selectedProjectAssignees: state.selectedProjectAssignees,
+		selectedCommitteeAssignees: state.selectedCommitteeAssignees,
+		selectedCoAssignees: state.selectedCoAssignees,
+		selectedViewers: state.selectedViewers,
+		fileIds,
+	});
+	if (!params) return { ok: false, silent: true };
+	await deps.onSubmit({ ...params, isDraft });
+	return { ok: true };
+};
+
+const runSubmit = async (
+	deps: RunSubmitDeps,
+	state: FormState,
+	isDraft: boolean
+): Promise<SubmitOutcome> => {
+	try {
+		const newFileIds =
+			state.selectedFiles.length > 0
+				? await deps.uploadFiles(state.selectedFiles)
+				: [];
+		const existingFileIds = state.existingAttachments.map(att => att.fileId);
+		const mergedFileIds = [...existingFileIds, ...newFileIds];
+		if (deps.mode === "edit") {
+			await deps.onSubmit(buildEditSubmitParams(state, mergedFileIds, isDraft));
+			return { ok: true };
+		}
+		return await runCreateSubmit(deps, state, mergedFileIds, isDraft);
+	} catch {
+		return { ok: false, message: getErrorMessage(deps.mode, isDraft) };
+	}
+};
+
+const partitionFiles = (files: File[]) => {
+	const valid: File[] = [];
+	const invalid: File[] = [];
+	for (const f of files) {
+		if (allowedMimeTypes.includes(f.type as AllowedMimeType)) {
+			valid.push(f);
+		} else {
+			invalid.push(f);
+		}
+	}
+	return { valid, invalid };
+};
+
+const isCreateDirty = (state: FormState) =>
+	state.title !== "" ||
+	state.body !== "" ||
+	state.selectedForm !== null ||
+	state.selectedProject !== null ||
+	state.selectedProjectAssignees.length > 0 ||
+	state.selectedCoAssignees.length > 0 ||
+	state.selectedCommitteeAssignees.length > 0 ||
+	state.selectedViewers.length > 0 ||
+	state.selectedFiles.length > 0;
 
 function FormSection({
 	availableForms,
@@ -310,18 +495,37 @@ function InfoBox({
 }
 
 function FormActions({
+	mode,
 	viewerRole,
 	canSubmit,
 	isSubmitting,
 	onCancel,
 	onSubmit,
 }: {
+	mode: "create" | "edit";
 	viewerRole: NewInquiryFormProps["viewerRole"];
 	canSubmit: boolean;
 	isSubmitting: boolean;
 	onCancel: () => void;
 	onSubmit: (isDraft: boolean) => void;
 }) {
+	if (mode === "edit") {
+		return (
+			<div className={styles.actions}>
+				<Button intent="ghost" onClick={onCancel}>
+					キャンセル
+				</Button>
+				<Button
+					onClick={() => onSubmit(false)}
+					disabled={!canSubmit || isSubmitting}
+					loading={isSubmitting}
+				>
+					{isSubmitting ? "保存中..." : "保存"}
+				</Button>
+			</div>
+		);
+	}
+
 	return (
 		<div className={styles.actions}>
 			<Button intent="ghost" onClick={onCancel}>
@@ -348,9 +552,11 @@ function FormActions({
 	);
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: form component with many concerns (state init, reset, submit, dirty check, open/close, file upload) — splitting further would harm readability
 export function NewInquiryForm({
 	open,
 	onOpenChange,
+	mode = "create",
 	viewerRole,
 	currentUser,
 	projectMembers,
@@ -364,43 +570,64 @@ export function NewInquiryForm({
 	const [title, setTitle] = useState(initialData?.title ?? "");
 	const [body, setBody] = useState(initialData?.body ?? "");
 	const [selectedForm, setSelectedForm] = useState<FormSummary | null>(
-		initialData?.relatedFormId && availableForms
-			? (availableForms.find(f => f.id === initialData.relatedFormId) ?? null)
-			: null
+		findFormById(availableForms, initialData?.relatedFormId)
 	);
 	const [selectedProject, setSelectedProject] = useState<{
 		id: string;
 		name: string;
 		number: number;
-	} | null>(
-		initialData?.projectId && projects
-			? (projects.find(p => p.id === initialData.projectId) ?? null)
-			: null
-	);
+	} | null>(resolveInitialProject(mode, projects, initialData?.projectId));
 	const [loadedProjectMembers, setLoadedProjectMembers] = useState<
 		UserSummary[]
-	>([]);
+	>(mode === "edit" ? (projectMembers ?? []) : []);
 	const [selectedProjectAssignees, setSelectedProjectAssignees] = useState<
 		UserSummary[]
-	>([]);
+	>(initialData?.projectAssignees ?? []);
 	const [loadingMembers, setLoadingMembers] = useState(false);
 	const [selectedCoAssignees, setSelectedCoAssignees] = useState<UserSummary[]>(
-		[]
+		initialData?.coAssignees ?? []
 	);
 	const [selectedCommitteeAssignees, setSelectedCommitteeAssignees] = useState<
 		UserSummary[]
-	>([]);
-	const [selectedViewers, setSelectedViewers] = useState<ViewerInput[]>([]);
-	const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-	const [existingFileIds, setExistingFileIds] = useState<string[]>(
-		initialData?.fileIds ?? []
+	>(initialData?.committeeAssignees ?? []);
+	const [selectedViewers, setSelectedViewers] = useState<ViewerInput[]>(
+		initialData?.viewers ?? []
 	);
+	const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+	const [existingAttachments, setExistingAttachments] = useState<
+		InitialAttachment[]
+	>(initialData?.existingAttachments ?? []);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [fileError, setFileError] = useState<string | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [confirmClose, setConfirmClose] = useState(false);
 
-	const reset = () => {
+	const formState: FormState = {
+		title,
+		body,
+		selectedForm,
+		selectedProject,
+		selectedProjectAssignees,
+		selectedCoAssignees,
+		selectedCommitteeAssignees,
+		selectedViewers,
+		selectedFiles,
+		existingAttachments,
+	};
+
+	const resetToInitial = () => {
+		setTitle(initialData?.title ?? "");
+		setBody(initialData?.body ?? "");
+		setSelectedForm(findFormById(availableForms, initialData?.relatedFormId));
+		setExistingAttachments(initialData?.existingAttachments ?? []);
+		setSelectedFiles([]);
+		setSelectedProjectAssignees(initialData?.projectAssignees ?? []);
+		setSelectedCommitteeAssignees(initialData?.committeeAssignees ?? []);
+		setSelectedCoAssignees(initialData?.coAssignees ?? []);
+		setSelectedViewers(initialData?.viewers ?? []);
+	};
+
+	const resetToEmpty = () => {
 		setTitle("");
 		setBody("");
 		setSelectedForm(null);
@@ -411,6 +638,16 @@ export function NewInquiryForm({
 		setSelectedCommitteeAssignees([]);
 		setSelectedViewers([]);
 		setSelectedFiles([]);
+		setExistingAttachments([]);
+	};
+
+	const reset = () => {
+		if (mode === "edit") resetToInitial();
+		else resetToEmpty();
+	};
+
+	const removeExistingAttachment = (attachmentId: string) => {
+		setExistingAttachments(prev => prev.filter(att => att.id !== attachmentId));
 	};
 
 	const handleSelectProject = async (project: {
@@ -438,34 +675,8 @@ export function NewInquiryForm({
 		return results.map(r => r.file.id);
 	};
 
-	const submitInquiry = async (isDraft: boolean) => {
-		try {
-			const newFileIds =
-				selectedFiles.length > 0 ? await uploadFiles(selectedFiles) : [];
-			const mergedFileIds = [...existingFileIds, ...newFileIds];
-			const fileIds = mergedFileIds.length > 0 ? mergedFileIds : undefined;
-			const params = buildSubmitParams({
-				viewerRole,
-				title,
-				body,
-				selectedForm,
-				selectedProject,
-				selectedProjectAssignees,
-				selectedCommitteeAssignees,
-				selectedCoAssignees,
-				selectedViewers,
-				fileIds,
-			});
-			if (!params) return { ok: false, silent: true };
-			await onSubmit({ ...params, isDraft });
-			return { ok: true };
-		} catch {
-			return {
-				ok: false,
-				message: getErrorMessage(isDraft),
-			};
-		}
-	};
+	const submitInquiry = (isDraft: boolean) =>
+		runSubmit({ mode, viewerRole, onSubmit, uploadFiles }, formState, isDraft);
 
 	const handleSubmit = async (isDraft = false) => {
 		if (!canSubmit) return;
@@ -482,33 +693,21 @@ export function NewInquiryForm({
 		}
 
 		reset();
-		setExistingFileIds([]);
 		onOpenChange(false);
-		toast.success(getSuccessMessage(isDraft));
+		toast.success(getSuccessMessage(mode, isDraft));
 	};
 
 	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const { files } = e.target;
-		if (files) {
-			const added = Array.from(files);
-			const invalid = added.filter(
-				f => !allowedMimeTypes.includes(f.type as AllowedMimeType)
-			);
-			const valid = added.filter(f =>
-				allowedMimeTypes.includes(f.type as AllowedMimeType)
-			);
-			if (invalid.length > 0) {
-				setFileError(
-					`対応していないファイル形式です（${allowedFileExtensions}）`
-				);
-			} else {
-				setFileError(null);
-			}
-			if (valid.length > 0) {
-				setSelectedFiles(prev => [...prev, ...valid]);
-			}
-		}
 		e.target.value = "";
+		if (!files) return;
+		const { valid, invalid } = partitionFiles(Array.from(files));
+		setFileError(
+			invalid.length > 0
+				? `対応していないファイル形式です（${allowedFileExtensions}）`
+				: null
+		);
+		if (valid.length > 0) setSelectedFiles(prev => [...prev, ...valid]);
 	};
 
 	const removeFile = (index: number) => {
@@ -528,15 +727,9 @@ export function NewInquiryForm({
 	};
 
 	const isDirty =
-		title !== "" ||
-		body !== "" ||
-		selectedForm !== null ||
-		selectedProject !== null ||
-		selectedProjectAssignees.length > 0 ||
-		selectedCoAssignees.length > 0 ||
-		selectedCommitteeAssignees.length > 0 ||
-		selectedViewers.length > 0 ||
-		selectedFiles.length > 0;
+		mode === "edit"
+			? isEditDirty(formState, initialData)
+			: isCreateDirty(formState);
 
 	const handleOpenChange = (nextOpen: boolean) => {
 		if (nextOpen) {
@@ -560,17 +753,25 @@ export function NewInquiryForm({
 	const canSubmit =
 		trimText(title) &&
 		trimText(body) &&
-		(viewerRole === "project" ||
+		(mode === "edit" ||
+			viewerRole === "project" ||
 			(selectedProject && selectedProjectAssignees.length > 0));
+
+	const dialogTitle =
+		mode === "edit" ? "お問い合わせを編集" : "新しいお問い合わせを作成";
+	const dialogDescription =
+		mode === "edit"
+			? "下書きの内容を編集します"
+			: viewerRole === "project"
+				? "実行委員会へのお問い合わせを作成します"
+				: "企画へのお問い合わせを作成します";
 
 	return (
 		<Dialog.Root open={open} onOpenChange={handleOpenChange}>
 			<Dialog.Content maxWidth="640px">
-				<Dialog.Title>新しいお問い合わせを作成</Dialog.Title>
+				<Dialog.Title>{dialogTitle}</Dialog.Title>
 				<Dialog.Description size="2" color="gray">
-					{viewerRole === "project"
-						? "実行委員会へのお問い合わせを作成します"
-						: "企画へのお問い合わせを作成します"}
+					{dialogDescription}
 				</Dialog.Description>
 
 				<div className={styles.form}>
@@ -599,7 +800,7 @@ export function NewInquiryForm({
 
 					{viewerRole === "committee" ? (
 						<CommitteeContent
-							projects={projects}
+							projects={mode === "edit" ? undefined : projects}
 							selectedProject={selectedProject}
 							onSelectProject={handleSelectProject}
 							loadingMembers={loadingMembers}
@@ -627,13 +828,18 @@ export function NewInquiryForm({
 						selectedFiles={selectedFiles}
 						onFileSelect={handleFileSelect}
 						onRemoveFile={removeFile}
+						existingAttachments={existingAttachments}
+						onRemoveExistingAttachment={removeExistingAttachment}
 						error={fileError}
 					/>
 
-					<InfoBox viewerRole={viewerRole} currentUser={currentUser} />
+					{mode === "create" && (
+						<InfoBox viewerRole={viewerRole} currentUser={currentUser} />
+					)}
 				</div>
 
 				<FormActions
+					mode={mode}
 					viewerRole={viewerRole}
 					canSubmit={Boolean(canSubmit)}
 					isSubmitting={isSubmitting}
@@ -660,7 +866,7 @@ function toggleItem<T extends { id: string }>(prev: T[], item: T): T[] {
 
 /* ─── 関連申請選択 ─── */
 
-function FormSelector({
+export function FormSelector({
 	forms,
 	selectedForm,
 	onSelect,

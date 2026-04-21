@@ -366,6 +366,7 @@ export const updateDraftInquiryRequestSchema = z.object({
 	title: z.string().min(1, "件名を入力してください").optional(),
 	body: z.string().min(1, "内容を入力してください").optional(),
 	fileIds: z.array(z.string()).optional(),
+	relatedFormId: z.cuid().nullable().optional(),
 });
 export type UpdateDraftInquiryRequest = z.infer<
 	typeof updateDraftInquiryRequestSchema

@@ -59,51 +59,6 @@
 	gap: var(--space-2);
 }
 
-.editTitleInput {
-	flex: 1;
-	padding: var(--space-2);
-	border: 1px solid var(--gray-7);
-	border-radius: var(--radius-2);
-	font-size: var(--font-size-5);
-	font-weight: var(--font-weight-bold);
-	font-family: inherit;
-
-	&:focus {
-		outline: 2px solid var(--accent-9);
-		border-color: var(--accent-9);
-	}
-}
-
-.editBodySection {
-	padding: var(--space-4);
-	border: 1px solid var(--gray-6);
-	border-radius: var(--radius-3);
-	background: var(--gray-2);
-}
-
-.editBodyTextarea {
-	width: 100%;
-	padding: var(--space-3);
-	border: 1px solid var(--gray-7);
-	border-radius: var(--radius-2);
-	font-size: var(--font-size-2);
-	font-family: inherit;
-	resize: vertical;
-	min-height: 200px;
-
-	&:focus {
-		outline: 2px solid var(--accent-9);
-		border-color: var(--accent-9);
-	}
-}
-
-.editAttachmentSection {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-2);
-	margin-top: var(--space-3);
-}
-
 .titleRow {
 	display: flex;
 	align-items: flex-start;

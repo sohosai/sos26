@@ -126,7 +126,7 @@ function CommitteeSupportListPage() {
 					const { inquiry } = await createCommitteeInquiry({
 						title: params.title,
 						body: params.body,
-						relatedFormId: params.relatedFormId,
+						relatedFormId: params.relatedFormId ?? undefined,
 						projectId: params.projectId,
 						projectAssigneeUserIds: params.projectAssigneeUserIds,
 						committeeAssigneeUserIds: params.committeeAssigneeUserIds,
