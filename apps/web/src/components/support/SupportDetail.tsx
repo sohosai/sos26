@@ -760,7 +760,7 @@ export function SupportDetail({
 
 	const timelineEntries = buildTimelineEntries(
 		regularComments,
-		inquiry.activities
+		isDraftInquiry ? [] : inquiry.activities
 	);
 
 	return (
