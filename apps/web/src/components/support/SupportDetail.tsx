@@ -8,7 +8,7 @@ import {
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/primitives";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatProjectNumber } from "@/lib/format";
 import { AssigneeList, AssigneePopover } from "./AssigneeSection";
 import { statusConfig } from "./constants";
 import { NewInquiryForm } from "./NewInquiryForm";
@@ -785,6 +785,10 @@ export function SupportDetail({
 						</span>
 						<Heading size="5">{inquiry.title}</Heading>
 					</div>
+					<Text size="2" color="gray">
+						企画番号 {formatProjectNumber(inquiry.project.number)} / 団体名{" "}
+						{inquiry.project.organizationName} / 企画名 {inquiry.project.name}
+					</Text>
 					<Text size="2" color="gray">
 						{inquiry.createdBy.name} が{" "}
 						{formatDate(inquiry.createdAt, "datetime")} に作成
