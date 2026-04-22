@@ -65,6 +65,20 @@
 	gap: var(--space-3);
 }
 
+.projectMeta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-3);
+	color: var(--gray-11);
+}
+
+.projectMetaItem {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1);
+}
+
 .statusIcon {
 	flex-shrink: 0;
 	display: flex;

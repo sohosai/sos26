@@ -3,7 +3,10 @@ import {
 	IconArrowLeft,
 	IconCheck,
 	IconFileDescription,
+	IconFolder,
+	IconHash,
 	IconTrash,
+	IconUsers,
 } from "@tabler/icons-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -785,10 +788,22 @@ export function SupportDetail({
 						</span>
 						<Heading size="5">{inquiry.title}</Heading>
 					</div>
-					<Text size="2" color="gray">
-						企画番号 {formatProjectNumber(inquiry.project.number)} / 団体名{" "}
-						{inquiry.project.organizationName} / 企画名 {inquiry.project.name}
-					</Text>
+					<div className={styles.projectMeta}>
+						<span className={styles.projectMetaItem}>
+							<IconHash size={14} />
+							<Text size="2">
+								{formatProjectNumber(inquiry.project.number)}
+							</Text>
+						</span>
+						<span className={styles.projectMetaItem}>
+							<IconFolder size={14} />
+							<Text size="2">{inquiry.project.name}</Text>
+						</span>
+						<span className={styles.projectMetaItem}>
+							<IconUsers size={14} />
+							<Text size="2">{inquiry.project.organizationName}</Text>
+						</span>
+					</div>
 					<Text size="2" color="gray">
 						{inquiry.createdBy.name} が{" "}
 						{formatDate(inquiry.createdAt, "datetime")} に作成
