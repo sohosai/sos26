@@ -284,7 +284,12 @@ const relatedFormSummarySchema = z
 export const getProjectInquiryResponseSchema = z.object({
 	inquiry: inquirySchema.extend({
 		createdBy: userSummaryWithAffiliationSchema,
-		project: z.object({ id: z.cuid(), name: z.string() }),
+		project: z.object({
+			id: z.cuid(),
+			number: z.number(),
+			name: z.string(),
+			organizationName: z.string(),
+		}),
 		relatedForm: relatedFormSummarySchema,
 		projectAssignees: z.array(assigneeWithUserWithAffiliationSchema),
 		committeeAssignees: z.array(assigneeWithUserWithAffiliationSchema),
@@ -512,7 +517,12 @@ export type ListCommitteeInquiriesResponse = z.infer<
 export const getCommitteeInquiryResponseSchema = z.object({
 	inquiry: inquirySchema.extend({
 		createdBy: userSummaryWithAffiliationSchema,
-		project: z.object({ id: z.cuid(), name: z.string() }),
+		project: z.object({
+			id: z.cuid(),
+			number: z.number(),
+			name: z.string(),
+			organizationName: z.string(),
+		}),
 		relatedForm: relatedFormSummarySchema,
 		projectAssignees: z.array(assigneeWithUserWithAffiliationSchema),
 		committeeAssignees: z.array(assigneeWithUserWithAffiliationSchema),

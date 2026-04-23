@@ -1,14 +1,24 @@
-import { AlertDialog, Badge, Heading, Separator, Text } from "@radix-ui/themes";
+import {
+	AlertDialog,
+	Badge,
+	Heading,
+	Separator,
+	Text,
+	Tooltip,
+} from "@radix-ui/themes";
 import {
 	IconArrowLeft,
 	IconCheck,
 	IconFileDescription,
+	IconFolder,
+	IconHash,
 	IconTrash,
+	IconUsers,
 } from "@tabler/icons-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/primitives";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatProjectNumber } from "@/lib/format";
 import { AssigneeList, AssigneePopover } from "./AssigneeSection";
 import { statusConfig } from "./constants";
 import { NewInquiryForm } from "./NewInquiryForm";
@@ -784,6 +794,28 @@ export function SupportDetail({
 							<StatusIcon size={24} />
 						</span>
 						<Heading size="5">{inquiry.title}</Heading>
+					</div>
+					<div className={styles.projectMeta}>
+						<Tooltip content="企画番号">
+							<span className={styles.projectMetaItem}>
+								<IconHash size={14} />
+								<Text size="2">
+									{formatProjectNumber(inquiry.project.number)}
+								</Text>
+							</span>
+						</Tooltip>
+						<Tooltip content="企画名">
+							<span className={styles.projectMetaItem}>
+								<IconFolder size={14} />
+								<Text size="2">{inquiry.project.name}</Text>
+							</span>
+						</Tooltip>
+						<Tooltip content="団体名">
+							<span className={styles.projectMetaItem}>
+								<IconUsers size={14} />
+								<Text size="2">{inquiry.project.organizationName}</Text>
+							</span>
+						</Tooltip>
 					</div>
 					<Text size="2" color="gray">
 						{inquiry.createdBy.name} が{" "}

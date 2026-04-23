@@ -509,7 +509,14 @@ committeeInquiryRoute.get(
 			where: { id: inquiryId, deletedAt: null },
 			include: {
 				createdBy: { select: userSelect },
-				project: { select: { id: true, name: true } },
+				project: {
+					select: {
+						id: true,
+						number: true,
+						name: true,
+						organizationName: true,
+					},
+				},
 				relatedForm: { select: { id: true, title: true } },
 				assignees: {
 					where: { deletedAt: null },
