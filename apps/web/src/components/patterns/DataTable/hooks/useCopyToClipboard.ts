@@ -1,6 +1,6 @@
 import type { RowData, Table } from "@tanstack/react-table";
 import { useEffect } from "react";
-import { stringifyValue } from "../lib/formatValue";
+import { stringifyCellValue } from "../lib/formatValue";
 import type { CellId } from "./useSelection";
 
 function parseCellIds(selected: Set<CellId>): Map<number, Set<number>> {
@@ -42,8 +42,8 @@ function buildTsv<TData extends RowData>(
 			if (!cols.has(colIdx)) return "";
 			const col = visibleColumns[colIdx];
 			const value = rows[i]?.getValue(col?.id ?? "");
-			const dateFormat = col?.columnDef.meta?.dateFormat;
-			return stringifyValue(value, dateFormat);
+			const meta = col?.columnDef.meta;
+			return stringifyCellValue(value, meta);
 		});
 		lines.push(values.join("\t"));
 	}
