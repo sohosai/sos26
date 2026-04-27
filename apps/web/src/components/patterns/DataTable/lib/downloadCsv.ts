@@ -32,7 +32,8 @@ export function downloadCsv<T>(table: Table<T>) {
 			.filter(cell => cell.column.accessorFn != null)
 			.map(cell => {
 				const meta = cell.column.columnDef.meta;
-				return escapeCsvField(stringifyCellValue(cell.getValue(), meta));
+				const value = stringifyCellValue(cell.getValue(), meta, cell.column.id);
+				return escapeCsvField(value);
 			})
 	);
 

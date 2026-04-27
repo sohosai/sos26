@@ -1,5 +1,5 @@
 import type { ColumnMeta, RowData } from "@tanstack/react-table";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatProjectNumber } from "@/lib/format";
 
 export { formatDate };
 
@@ -40,9 +40,15 @@ function stringifyObject(obj: unknown): string {
 
 export function stringifyCellValue(
 	value: unknown,
-	meta: ColumnMeta<RowData, unknown> | undefined
+	meta: ColumnMeta<RowData, unknown> | undefined,
+	columnId?: string
 ): string {
 	if (value == null) return "";
+
+	// 企画番号カラムの場合、数値をパディング
+	if (columnId === "number" && typeof value === "number") {
+		return formatProjectNumber(value);
+	}
 
 	if (typeof value === "string") {
 		return selectLabelFromMeta(value, meta);
