@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import {
+	type CommitteeProjectAction,
 	listCommitteeProjectsQuerySchema,
 	type ProjectMemberRole,
 	type UpdateCommitteeProjectBaseInfoRequest,
@@ -20,12 +21,6 @@ const committeeProjectRoute = new Hono<AuthEnv>();
 
 type ProjectStatusFields = {
 	deletionStatus: "LOTTERY_LOSS" | "DELETED" | "PROJECT_WITHDRAWN" | null;
-};
-
-type ProjectActionItem = {
-	id: string;
-	title: string;
-	sentAt: Date;
 };
 
 function getProjectStatusFields(project: object): ProjectStatusFields {
@@ -55,43 +50,289 @@ function shouldNotifyDeletionStatusUpdate(
 	);
 }
 
-function mapFormActions(
-	formDeliveries: Array<{
-		id: string;
-		createdAt: Date;
-		formAuthorization: { form: { title: string; deletedAt: Date | null } };
-	}>
-): ProjectActionItem[] {
-	const actions: ProjectActionItem[] = [];
-	for (const delivery of formDeliveries) {
-		if (delivery.formAuthorization.form.deletedAt !== null) continue;
-		actions.push({
-			id: delivery.id,
-			title: delivery.formAuthorization.form.title,
-			sentAt: delivery.createdAt,
-		});
-		if (actions.length >= 20) break;
-	}
-	return actions;
+const PER_SOURCE_LIMIT = 20;
+
+async function fetchFormDeliveryActions(
+	projectId: string
+): Promise<CommitteeProjectAction[]> {
+	const rows = await prisma.formDelivery.findMany({
+		where: {
+			projectId,
+			formAuthorization: { form: { deletedAt: null } },
+		},
+		select: {
+			id: true,
+			createdAt: true,
+			formAuthorization: {
+				select: {
+					form: { select: { title: true } },
+					requestedBy: { select: { name: true } },
+				},
+			},
+		},
+		orderBy: { createdAt: "desc" },
+		take: PER_SOURCE_LIMIT,
+	});
+	return rows.map(d => ({
+		type: "FORM_DELIVERED",
+		id: d.id,
+		title: d.formAuthorization.form.title,
+		sentAt: d.createdAt,
+		actorName: d.formAuthorization.requestedBy.name,
+	}));
 }
 
-function mapNoticeActions(
-	noticeDeliveries: Array<{
-		id: string;
-		createdAt: Date;
-		noticeAuthorization: { notice: { title: string; deletedAt: Date | null } };
-	}>
-): ProjectActionItem[] {
-	const actions: ProjectActionItem[] = [];
-	for (const delivery of noticeDeliveries) {
-		if (delivery.noticeAuthorization.notice.deletedAt !== null) continue;
-		actions.push({
-			id: delivery.id,
-			title: delivery.noticeAuthorization.notice.title,
-			sentAt: delivery.createdAt,
+// 初回提出 (PROJECT_SUBMIT) — フォームごとに最も古いレコードのみ採用
+async function fetchFormSubmitActions(
+	projectId: string
+): Promise<CommitteeProjectAction[]> {
+	const rows = await prisma.formItemEditHistory.findMany({
+		where: {
+			projectId,
+			trigger: "PROJECT_SUBMIT",
+			formItem: { form: { deletedAt: null } },
+		},
+		select: {
+			id: true,
+			createdAt: true,
+			actor: { select: { name: true } },
+			formItem: { select: { form: { select: { id: true, title: true } } } },
+		},
+		orderBy: { createdAt: "asc" },
+		take: 200,
+	});
+
+	const seen = new Set<string>();
+	const out: CommitteeProjectAction[] = [];
+	for (const h of rows) {
+		const formId = h.formItem.form.id;
+		if (seen.has(formId)) continue;
+		seen.add(formId);
+		out.push({
+			type: "FORM_ANSWERED",
+			id: h.id,
+			title: h.formItem.form.title,
+			sentAt: h.createdAt,
+			actorName: h.actor.name,
 		});
-		if (actions.length >= 20) break;
+		if (out.length >= PER_SOURCE_LIMIT) break;
 	}
+	return out;
+}
+
+// 再提出 (PROJECT_RESUBMIT) — 同一フォーム×同一提出時刻でデデュープ
+async function fetchFormResubmitActions(
+	projectId: string
+): Promise<CommitteeProjectAction[]> {
+	const rows = await prisma.formItemEditHistory.findMany({
+		where: {
+			projectId,
+			trigger: "PROJECT_RESUBMIT",
+			formItem: { form: { deletedAt: null } },
+		},
+		select: {
+			id: true,
+			createdAt: true,
+			actor: { select: { name: true } },
+			formItem: { select: { form: { select: { id: true, title: true } } } },
+		},
+		orderBy: { createdAt: "desc" },
+		take: 200,
+	});
+
+	const seen = new Set<string>();
+	const out: CommitteeProjectAction[] = [];
+	for (const h of rows) {
+		const key = `${h.formItem.form.id}:${h.createdAt.getTime()}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		out.push({
+			type: "FORM_RESUBMITTED",
+			id: h.id,
+			title: h.formItem.form.title,
+			sentAt: h.createdAt,
+			actorName: h.actor.name,
+		});
+		if (out.length >= PER_SOURCE_LIMIT) break;
+	}
+	return out;
+}
+
+async function fetchNoticeDeliveryActions(
+	projectId: string
+): Promise<CommitteeProjectAction[]> {
+	const rows = await prisma.noticeDelivery.findMany({
+		where: {
+			projectId,
+			noticeAuthorization: { notice: { deletedAt: null } },
+		},
+		select: {
+			id: true,
+			createdAt: true,
+			noticeAuthorization: {
+				select: {
+					notice: { select: { title: true } },
+					requestedBy: { select: { name: true } },
+				},
+			},
+		},
+		orderBy: { createdAt: "desc" },
+		take: PER_SOURCE_LIMIT,
+	});
+	return rows.map(d => ({
+		type: "NOTICE_DELIVERED",
+		id: d.id,
+		title: d.noticeAuthorization.notice.title,
+		sentAt: d.createdAt,
+		actorName: d.noticeAuthorization.requestedBy.name,
+	}));
+}
+
+async function fetchOwnerNoticeReadActions(
+	projectId: string,
+	ownerId: string
+): Promise<CommitteeProjectAction[]> {
+	const rows = await prisma.noticeReadStatus.findMany({
+		where: {
+			userId: ownerId,
+			noticeDelivery: {
+				projectId,
+				noticeAuthorization: { notice: { deletedAt: null } },
+			},
+		},
+		select: {
+			id: true,
+			createdAt: true,
+			user: { select: { name: true } },
+			noticeDelivery: {
+				select: {
+					noticeAuthorization: {
+						select: { notice: { select: { title: true } } },
+					},
+				},
+			},
+		},
+		orderBy: { createdAt: "desc" },
+		take: PER_SOURCE_LIMIT,
+	});
+	return rows.map(r => ({
+		type: "NOTICE_READ_BY_OWNER",
+		id: r.id,
+		title: r.noticeDelivery.noticeAuthorization.notice.title,
+		sentAt: r.createdAt,
+		actorName: r.user.name,
+	}));
+}
+
+async function fetchInquiryCreationActions(
+	projectId: string
+): Promise<CommitteeProjectAction[]> {
+	const rows = await prisma.inquiry.findMany({
+		where: { projectId, deletedAt: null, isDraft: false },
+		select: {
+			id: true,
+			title: true,
+			createdAt: true,
+			creatorRole: true,
+			createdBy: { select: { name: true } },
+		},
+		orderBy: { createdAt: "desc" },
+		take: PER_SOURCE_LIMIT * 2,
+	});
+	return rows.map(i => ({
+		type:
+			i.creatorRole === "PROJECT"
+				? "INQUIRY_CREATED_BY_PROJECT"
+				: "INQUIRY_CREATED_BY_COMMITTEE",
+		id: i.id,
+		title: i.title,
+		sentAt: i.createdAt,
+		actorName: i.createdBy.name,
+	}));
+}
+
+async function fetchInquiryStatusActions(
+	projectId: string
+): Promise<CommitteeProjectAction[]> {
+	const rows = await prisma.inquiryActivity.findMany({
+		where: {
+			type: { in: ["STATUS_RESOLVED", "STATUS_REOPENED"] },
+			deletedAt: null,
+			inquiry: { projectId, deletedAt: null },
+		},
+		select: {
+			id: true,
+			createdAt: true,
+			type: true,
+			actor: { select: { name: true } },
+			inquiry: { select: { title: true } },
+		},
+		orderBy: { createdAt: "desc" },
+		take: PER_SOURCE_LIMIT,
+	});
+	return rows.map(a => ({
+		type:
+			a.type === "STATUS_RESOLVED"
+				? "INQUIRY_STATUS_RESOLVED"
+				: "INQUIRY_STATUS_REOPENED",
+		id: a.id,
+		title: a.inquiry.title,
+		sentAt: a.createdAt,
+		actorName: a.actor.name,
+	}));
+}
+
+async function fetchRegistrationFormSubmittedActions(
+	projectId: string
+): Promise<CommitteeProjectAction[]> {
+	const rows = await prisma.projectRegistrationFormResponse.findMany({
+		where: { projectId, deletedAt: null },
+		select: { id: true, submittedAt: true },
+		orderBy: { submittedAt: "desc" },
+		take: PER_SOURCE_LIMIT,
+	});
+	return rows.map(r => ({
+		type: "PROJECT_REGISTRATION_FORM_SUBMITTED",
+		id: r.id,
+		sentAt: r.submittedAt,
+	}));
+}
+
+function buildDeletionStatusActions(project: {
+	id: string;
+	updatedAt: Date;
+	deletionStatus: "LOTTERY_LOSS" | "DELETED" | "PROJECT_WITHDRAWN" | null;
+}): CommitteeProjectAction[] {
+	if (project.deletionStatus === null) return [];
+	return [
+		{
+			type: "PROJECT_DELETION_STATUS_CHANGED",
+			id: `project-deletion-status:${project.id}`,
+			sentAt: project.updatedAt,
+			deletionStatus: project.deletionStatus,
+		},
+	];
+}
+
+async function fetchProjectActions(project: {
+	id: string;
+	ownerId: string;
+	updatedAt: Date;
+	deletionStatus: "LOTTERY_LOSS" | "DELETED" | "PROJECT_WITHDRAWN" | null;
+}): Promise<CommitteeProjectAction[]> {
+	const groups = await Promise.all([
+		fetchFormDeliveryActions(project.id),
+		fetchFormSubmitActions(project.id),
+		fetchFormResubmitActions(project.id),
+		fetchNoticeDeliveryActions(project.id),
+		fetchOwnerNoticeReadActions(project.id, project.ownerId),
+		fetchInquiryCreationActions(project.id),
+		fetchInquiryStatusActions(project.id),
+		fetchRegistrationFormSubmittedActions(project.id),
+	]);
+
+	const actions = [...groups.flat(), ...buildDeletionStatusActions(project)];
+	actions.sort((a, b) => b.sentAt.getTime() - a.sentAt.getTime());
 	return actions;
 }
 
@@ -161,74 +402,17 @@ async function fetchCommitteeProjectDetailData(projectParam: string) {
 	});
 
 	if (!project) {
-		return {
-			project: null,
-			formDeliveries: [],
-			noticeDeliveries: [],
-			inquiries: [],
-		};
+		return { project: null, actions: [] as CommitteeProjectAction[] };
 	}
 
-	const [formDeliveries, noticeDeliveries, inquiries] = await Promise.all([
-		prisma.formDelivery.findMany({
-			where: {
-				projectId: project.id,
-				formAuthorization: {
-					form: {
-						deletedAt: null,
-					},
-				},
-			},
-			select: {
-				id: true,
-				createdAt: true,
-				formAuthorization: {
-					select: {
-						form: {
-							select: { title: true, deletedAt: true },
-						},
-					},
-				},
-			},
-			orderBy: { createdAt: "desc" },
-			take: 20,
-		}),
-		prisma.noticeDelivery.findMany({
-			where: {
-				projectId: project.id,
-				noticeAuthorization: {
-					notice: {
-						deletedAt: null,
-					},
-				},
-			},
-			select: {
-				id: true,
-				createdAt: true,
-				noticeAuthorization: {
-					select: {
-						notice: {
-							select: { title: true, deletedAt: true },
-						},
-					},
-				},
-			},
-			orderBy: { createdAt: "desc" },
-			take: 20,
-		}),
-		prisma.inquiry.findMany({
-			where: { projectId: project.id, deletedAt: null, isDraft: false },
-			select: {
-				id: true,
-				title: true,
-				createdAt: true,
-			},
-			orderBy: { createdAt: "desc" },
-			take: 20,
-		}),
-	]);
+	const actions = await fetchProjectActions({
+		id: project.id,
+		ownerId: project.ownerId,
+		updatedAt: project.updatedAt,
+		deletionStatus: project.deletionStatus,
+	});
 
-	return { project, formDeliveries, noticeDeliveries, inquiries };
+	return { project, actions };
 }
 
 async function resolveProjectPermissions(userId: string): Promise<{
@@ -550,7 +734,7 @@ committeeProjectRoute.get(
 		const user = c.get("user");
 		const permissions = await resolveProjectPermissions(user.id);
 
-		const { project, formDeliveries, noticeDeliveries, inquiries } =
+		const { project, actions } =
 			await fetchCommitteeProjectDetailData(projectId);
 
 		if (!project) {
@@ -558,8 +742,6 @@ committeeProjectRoute.get(
 		}
 
 		const status = getProjectStatusFields(project);
-		const formActions = mapFormActions(formDeliveries);
-		const noticeActions = mapNoticeActions(noticeDeliveries);
 
 		const result = {
 			...status,
@@ -578,15 +760,7 @@ committeeProjectRoute.get(
 			memberCount: project._count.projectMembers,
 			owner: maskContact(project.owner, permissions.canViewContacts),
 			subOwner: maskContact(project.subOwner, permissions.canViewContacts),
-			actions: {
-				forms: formActions,
-				notices: noticeActions,
-				inquiries: inquiries.map(i => ({
-					id: i.id,
-					title: i.title,
-					sentAt: i.createdAt,
-				})),
-			},
+			actions,
 			permissions,
 		};
 

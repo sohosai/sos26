@@ -32,11 +32,61 @@ const userSummarySchema = userSchema
 		telephoneNumber: userSchema.shape.telephoneNumber.nullable(),
 	});
 
-const committeeProjectActionSchema = z.object({
-	id: z.string(),
-	title: z.string(),
-	sentAt: z.coerce.date(),
-});
+/**
+ * 企画詳細ページの「アクション履歴」に並ぶ各イベント。
+ * 種別ごとにバッジ・文面が変わるため discriminated union で表現する。
+ */
+export const committeeProjectActionTypeSchema = z.enum([
+	"FORM_DELIVERED",
+	"FORM_ANSWERED",
+	"FORM_RESUBMITTED",
+	"NOTICE_DELIVERED",
+	"NOTICE_READ_BY_OWNER",
+	"INQUIRY_CREATED_BY_PROJECT",
+	"INQUIRY_CREATED_BY_COMMITTEE",
+	"INQUIRY_STATUS_RESOLVED",
+	"INQUIRY_STATUS_REOPENED",
+	"PROJECT_DELETION_STATUS_CHANGED",
+	"PROJECT_REGISTRATION_FORM_SUBMITTED",
+]);
+export type CommitteeProjectActionType = z.infer<
+	typeof committeeProjectActionTypeSchema
+>;
+
+const actionWithActor = <T extends CommitteeProjectActionType>(type: T) =>
+	z.object({
+		type: z.literal(type),
+		id: z.string(),
+		title: z.string(),
+		sentAt: z.coerce.date(),
+		actorName: z.string(),
+	});
+
+export const committeeProjectActionSchema = z.discriminatedUnion("type", [
+	actionWithActor("FORM_DELIVERED"),
+	actionWithActor("FORM_ANSWERED"),
+	actionWithActor("FORM_RESUBMITTED"),
+	actionWithActor("NOTICE_DELIVERED"),
+	actionWithActor("NOTICE_READ_BY_OWNER"),
+	actionWithActor("INQUIRY_CREATED_BY_PROJECT"),
+	actionWithActor("INQUIRY_CREATED_BY_COMMITTEE"),
+	actionWithActor("INQUIRY_STATUS_RESOLVED"),
+	actionWithActor("INQUIRY_STATUS_REOPENED"),
+	z.object({
+		type: z.literal("PROJECT_DELETION_STATUS_CHANGED"),
+		id: z.string(),
+		sentAt: z.coerce.date(),
+		deletionStatus: projectDeletionStatusSchema,
+	}),
+	z.object({
+		type: z.literal("PROJECT_REGISTRATION_FORM_SUBMITTED"),
+		id: z.string(),
+		sentAt: z.coerce.date(),
+	}),
+]);
+export type CommitteeProjectAction = z.infer<
+	typeof committeeProjectActionSchema
+>;
 
 const committeeProjectPermissionsSchema = z.object({
 	canEdit: z.boolean(),
@@ -109,11 +159,7 @@ export const committeeProjectDetailSchema = projectSchema
 		memberCount: z.number().int(),
 		owner: userSummarySchema,
 		subOwner: userSummarySchema.nullable(),
-		actions: z.object({
-			forms: z.array(committeeProjectActionSchema),
-			notices: z.array(committeeProjectActionSchema),
-			inquiries: z.array(committeeProjectActionSchema),
-		}),
+		actions: z.array(committeeProjectActionSchema),
 		permissions: committeeProjectPermissionsSchema,
 	});
 export type CommitteeProjectDetail = z.infer<

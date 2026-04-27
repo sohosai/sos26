@@ -10,6 +10,7 @@ import {
 	Text,
 } from "@radix-ui/themes";
 import type {
+	CommitteeProjectAction,
 	CommitteeProjectDetail,
 	ProjectDeletionStatus,
 } from "@sos26/shared";
@@ -46,6 +47,83 @@ function statusLabel(status: ProjectDeletionStatus | null): string {
 	return "有効";
 }
 
+type ActionDisplay = {
+	category: "申請" | "お知らせ" | "お問い合わせ" | "企画";
+	color: "blue" | "orange" | "green" | "gray";
+	text: string;
+};
+
+function getActionDisplay(action: CommitteeProjectAction): ActionDisplay {
+	switch (action.type) {
+		case "FORM_DELIVERED":
+			return {
+				category: "申請",
+				color: "blue",
+				text: `${action.actorName}が申請「${action.title}」を配信しました`,
+			};
+		case "FORM_ANSWERED":
+			return {
+				category: "申請",
+				color: "blue",
+				text: `${action.actorName}が申請「${action.title}」に回答しました`,
+			};
+		case "FORM_RESUBMITTED":
+			return {
+				category: "申請",
+				color: "blue",
+				text: `${action.actorName}が申請「${action.title}」に再提出しました`,
+			};
+		case "NOTICE_DELIVERED":
+			return {
+				category: "お知らせ",
+				color: "orange",
+				text: `${action.actorName}がお知らせ「${action.title}」を配信しました`,
+			};
+		case "NOTICE_READ_BY_OWNER":
+			return {
+				category: "お知らせ",
+				color: "orange",
+				text: `${action.actorName}（企画責任者）がお知らせ「${action.title}」を既読にしました`,
+			};
+		case "INQUIRY_CREATED_BY_PROJECT":
+			return {
+				category: "お問い合わせ",
+				color: "green",
+				text: `${action.actorName}が企画からお問い合わせ「${action.title}」を送信しました`,
+			};
+		case "INQUIRY_CREATED_BY_COMMITTEE":
+			return {
+				category: "お問い合わせ",
+				color: "green",
+				text: `${action.actorName}が実委からお問い合わせ「${action.title}」を送信しました`,
+			};
+		case "INQUIRY_STATUS_RESOLVED":
+			return {
+				category: "お問い合わせ",
+				color: "green",
+				text: `${action.actorName}がお問い合わせ「${action.title}」を解決済みにしました`,
+			};
+		case "INQUIRY_STATUS_REOPENED":
+			return {
+				category: "お問い合わせ",
+				color: "green",
+				text: `${action.actorName}がお問い合わせ「${action.title}」を再オープンしました`,
+			};
+		case "PROJECT_DELETION_STATUS_CHANGED":
+			return {
+				category: "企画",
+				color: "gray",
+				text: `企画ステータスが「${statusLabel(action.deletionStatus)}」に変更されました`,
+			};
+		case "PROJECT_REGISTRATION_FORM_SUBMITTED":
+			return {
+				category: "企画",
+				color: "gray",
+				text: "企画登録フォームが提出されました",
+			};
+	}
+}
+
 function CommitteeProjectInfoPage() {
 	const data = Route.useLoaderData();
 	const [project, setProject] = useState<CommitteeProjectDetail>(data.project);
@@ -55,22 +133,13 @@ function CommitteeProjectInfoPage() {
 	const [deletionStatus, setDeletionStatus] =
 		useState<DeletionStatusSelectValue>("DELETED");
 
-	const mixedActions = useMemo(() => {
-		return [
-			...project.actions.forms.map(item => ({
-				...item,
-				kind: "申請" as const,
-			})),
-			...project.actions.notices.map(item => ({
-				...item,
-				kind: "お知らせ" as const,
-			})),
-			...project.actions.inquiries.map(item => ({
-				...item,
-				kind: "お問い合わせ" as const,
-			})),
-		].sort((a, b) => +new Date(b.sentAt) - +new Date(a.sentAt));
-	}, [project.actions]);
+	const sortedActions = useMemo(
+		() =>
+			[...project.actions].sort(
+				(a, b) => +new Date(b.sentAt) - +new Date(a.sentAt)
+			),
+		[project.actions]
+	);
 
 	const applyProjectUpdate = (
 		updated: Omit<CommitteeProjectDetail, "actions" | "permissions">
@@ -197,24 +266,27 @@ function CommitteeProjectInfoPage() {
 			<Card>
 				<Heading size="4">アクション履歴</Heading>
 				<div className={styles.actionList}>
-					{mixedActions.length === 0 && (
+					{sortedActions.length === 0 && (
 						<Text size="2" color="gray">
 							履歴はありません。
 						</Text>
 					)}
-					{mixedActions.map(item => (
-						<div key={item.id} className={styles.actionRow}>
-							<div className={styles.actionMain}>
-								<Badge color="gray" variant="soft">
-									{item.kind}
-								</Badge>
-								<Text size="2">{item.title}</Text>
+					{sortedActions.map(action => {
+						const display = getActionDisplay(action);
+						return (
+							<div key={action.id} className={styles.actionRow}>
+								<div className={styles.actionMain}>
+									<Badge color={display.color} variant="soft">
+										{display.category}
+									</Badge>
+									<Text size="2">{display.text}</Text>
+								</div>
+								<span className={styles.actionTime}>
+									{formatDate(action.sentAt, "datetime")}
+								</span>
 							</div>
-							<span className={styles.actionTime}>
-								{formatDate(item.sentAt, "datetime")}
-							</span>
-						</div>
-					))}
+						);
+					})}
 				</div>
 			</Card>
 
