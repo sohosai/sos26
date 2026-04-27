@@ -16,11 +16,15 @@ export function downloadCsv<T>(table: Table<T>) {
 		h => h.column.accessorFn != null
 	);
 
-	const headers = dataHeaders.map(h =>
-		typeof h.column.columnDef.header === "string"
+	const headers = dataHeaders.map(h => {
+		const meta = h.column.columnDef.meta;
+		if (meta?.columnName) {
+			return meta.columnName;
+		}
+		return typeof h.column.columnDef.header === "string"
 			? h.column.columnDef.header
-			: h.column.id
-	);
+			: h.column.id;
+	});
 
 	const rows = table.getRowModel().rows.map(row =>
 		row
