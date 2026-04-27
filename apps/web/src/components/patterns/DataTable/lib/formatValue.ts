@@ -9,7 +9,9 @@ export function stringifyValue(
 ): string {
 	if (value == null) return "";
 	if (value instanceof Date) return formatDate(value, dateFormat ?? "date");
-	if (Array.isArray(value)) return value.join(" / ");
+	if (Array.isArray(value)) {
+		return value.map(stringifyObject).join(" , ");
+	}
 	return String(value);
 }
 
@@ -20,6 +22,20 @@ function selectLabelFromMeta(
 	const options = meta?.selectOptions;
 	if (!options) return value;
 	return options.find(o => o.value === value)?.label ?? value;
+}
+
+function stringifyObject(obj: unknown): string {
+	if (obj == null) return "";
+	if (typeof obj !== "object") return String(obj);
+
+	// ファイルオブジェクトの場合（fileName を持つ）
+	const record = obj as Record<string, unknown>;
+	if (record.fileName && typeof record.fileName === "string") {
+		return record.fileName;
+	} else if (record.label) {
+		return String(record.label);
+	}
+	return String(obj);
 }
 
 export function stringifyCellValue(
@@ -36,11 +52,13 @@ export function stringifyCellValue(
 		if (meta?.selectOptions) {
 			return value
 				.map(v =>
-					typeof v === "string" ? selectLabelFromMeta(v, meta) : String(v)
+					typeof v === "string"
+						? selectLabelFromMeta(v, meta)
+						: stringifyObject(v)
 				)
 				.join(" / ");
 		}
-		return value.join(" / ");
+		return value.map(stringifyObject).join(" , ");
 	}
 
 	if (value instanceof Date) {
