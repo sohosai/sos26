@@ -41,9 +41,10 @@ function buildTsv<TData extends RowData>(
 		const values = selectedColIndices.map(colIdx => {
 			if (!cols.has(colIdx)) return "";
 			const col = visibleColumns[colIdx];
-			const value = rows[i]?.getValue(col?.id ?? "");
+			const colId = col?.id ?? "";
+			const value = rows[i]?.getValue(colId);
 			const meta = col?.columnDef.meta;
-			return stringifyCellValue(value, meta);
+			return stringifyCellValue(value, meta, colId);
 		});
 		lines.push(values.join("\t"));
 	}

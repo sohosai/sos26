@@ -369,6 +369,7 @@ function buildFormValueReadOnlyColumn(
 					);
 				},
 				meta: {
+					columnName: col.name,
 					filterVariant: "select",
 					selectOptions: col.options.map(o => ({
 						value: o.id,
@@ -390,7 +391,7 @@ function buildFormValueReadOnlyColumn(
 					const v = props.getValue();
 					return v == null ? INACTIVE_PLACEHOLDER : <Text size="2">{v}</Text>;
 				},
-				meta: { filterVariant: "number" },
+				meta: { columnName: col.name, filterVariant: "number" },
 			}
 		);
 	}
@@ -405,7 +406,7 @@ function buildFormValueReadOnlyColumn(
 					if (isInactive(props.row.original)) return INACTIVE_PLACEHOLDER;
 					return <CompactFileCell files={props.getValue() as FormCellFile[]} />;
 				},
-				meta: { filterVariant: "text" },
+				meta: { columnName: col.name, filterVariant: "text" },
 			}
 		);
 	}
@@ -421,7 +422,7 @@ function buildFormValueReadOnlyColumn(
 				const v = props.getValue();
 				return v ? <Text size="2">{v}</Text> : INACTIVE_PLACEHOLDER;
 			},
-			meta: { filterVariant: "text" },
+			meta: { columnName: col.name, filterVariant: "text" },
 		}
 	);
 }
@@ -461,7 +462,12 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 						) : (
 							<SelectCell {...props} />
 						),
-					meta: { editable: true, selectOptions, filterVariant: "select" },
+					meta: {
+						columnName: col.name,
+						editable: true,
+						selectOptions,
+						filterVariant: "select",
+					},
 				}
 			);
 		}
@@ -478,7 +484,12 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 						) : (
 							<MultiSelectEditCell {...props} />
 						),
-					meta: { editable: true, selectOptions, filterVariant: "select" },
+					meta: {
+						columnName: col.name,
+						editable: true,
+						selectOptions,
+						filterVariant: "select",
+					},
 				}
 			);
 		}
@@ -495,7 +506,12 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 						) : (
 							<EditableCell {...props} />
 						),
-					meta: { editable: true, type: "number", filterVariant: "number" },
+					meta: {
+						columnName: col.name,
+						editable: true,
+						type: "number",
+						filterVariant: "number",
+					},
 				}
 			);
 		}
@@ -512,7 +528,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 						) : (
 							<CompactFileCell files={props.getValue() as FormCellFile[]} />
 						),
-					meta: { filterVariant: "text" },
+					meta: { columnName: col.name, filterVariant: "text" },
 				}
 			);
 		}
@@ -529,7 +545,12 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 					) : (
 						<EditableCell {...props} />
 					),
-				meta: { editable: true, type: "text", filterVariant: "text" },
+				meta: {
+					columnName: col.name,
+					editable: true,
+					type: "text",
+					filterVariant: "text",
+				},
 			}
 		);
 	}
@@ -546,6 +567,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 				header: () => <ColHeader col={col} />,
 				cell: SelectCell,
 				meta: {
+					columnName: col.name,
 					editable: true,
 					selectOptions,
 					filterVariant: "select",
@@ -566,6 +588,7 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 				header: () => <ColHeader col={col} />,
 				cell: MultiSelectEditCell,
 				meta: {
+					columnName: col.name,
 					editable: true,
 					selectOptions,
 					filterVariant: "select",
@@ -581,7 +604,12 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 				id: col.id,
 				header: () => <ColHeader col={col} />,
 				cell: EditableCell,
-				meta: { editable: true, type: "number", filterVariant: "number" },
+				meta: {
+					columnName: col.name,
+					editable: true,
+					type: "number",
+					filterVariant: "number",
+				},
 			}
 		);
 	}
@@ -593,7 +621,12 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 			id: col.id,
 			header: () => <ColHeader col={col} />,
 			cell: EditableCell,
-			meta: { editable: true, type: "text", filterVariant: "text" },
+			meta: {
+				columnName: col.name,
+				editable: true,
+				type: "text",
+				filterVariant: "text",
+			},
 		}
 	);
 }

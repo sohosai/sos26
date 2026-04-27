@@ -7,6 +7,7 @@ declare module "@tanstack/react-table" {
 		clearSelection?: () => void;
 	}
 	interface ColumnMeta<TData extends RowData, TValue> {
+		columnName?: string;
 		editable?: boolean;
 		type?: "text" | "number";
 		options?: string[];

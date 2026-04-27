@@ -198,6 +198,7 @@ function SetupPage() {
 			<form className={styles.form} onSubmit={handleSubmit}>
 				<TextField
 					label="名前"
+					placeholder="筑波 太郎"
 					value={name}
 					onChange={setName}
 					autoComplete="name"
@@ -205,6 +206,7 @@ function SetupPage() {
 
 				<TextField
 					label="名前（ふりがな）"
+					placeholder="つくば たろう"
 					value={namePhonetic}
 					onChange={setNamePhonetic}
 				/>
