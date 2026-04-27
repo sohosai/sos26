@@ -1,5 +1,5 @@
 import type { Table } from "@tanstack/react-table";
-import { stringifyValue } from "./formatValue";
+import { stringifyCellValue } from "./formatValue";
 
 function escapeCsvField(str: string): string {
 	if (/[,"\r\n]/.test(str)) {
@@ -27,8 +27,8 @@ export function downloadCsv<T>(table: Table<T>) {
 			.getVisibleCells()
 			.filter(cell => cell.column.accessorFn != null)
 			.map(cell => {
-				const dateFormat = cell.column.columnDef.meta?.dateFormat;
-				return escapeCsvField(stringifyValue(cell.getValue(), dateFormat));
+				const meta = cell.column.columnDef.meta;
+				return escapeCsvField(stringifyCellValue(cell.getValue(), meta));
 			})
 	);
 
