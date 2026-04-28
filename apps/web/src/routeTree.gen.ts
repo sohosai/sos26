@@ -51,8 +51,6 @@ import { Route as CommitteeNoticeNoticeIdIndexRouteImport } from './routes/commi
 import { Route as CommitteeFormsFormIdIndexRouteImport } from './routes/committee/forms/$formId/index'
 import { Route as AuthRegisterVerifyIndexRouteImport } from './routes/auth/register/verify/index'
 import { Route as AuthRegisterSetupIndexRouteImport } from './routes/auth/register/setup/index'
-import { Route as CommitteeFormsFormIdAnswersIndexRouteImport } from './routes/committee/forms/$formId/answers/index'
-import { Route as CommitteeFormsFormIdAnswersAnswerIdIndexRouteImport } from './routes/committee/forms/$formId/answers/$answerId/index'
 
 const SupportRouteRoute = SupportRouteRouteImport.update({
   id: '/support',
@@ -270,18 +268,6 @@ const AuthRegisterSetupIndexRoute = AuthRegisterSetupIndexRouteImport.update({
   path: '/register/setup/',
   getParentRoute: () => AuthRouteRoute,
 } as any)
-const CommitteeFormsFormIdAnswersIndexRoute =
-  CommitteeFormsFormIdAnswersIndexRouteImport.update({
-    id: '/forms/$formId/answers/',
-    path: '/forms/$formId/answers/',
-    getParentRoute: () => CommitteeRouteRoute,
-  } as any)
-const CommitteeFormsFormIdAnswersAnswerIdIndexRoute =
-  CommitteeFormsFormIdAnswersAnswerIdIndexRouteImport.update({
-    id: '/forms/$formId/answers/$answerId/',
-    path: '/forms/$formId/answers/$answerId/',
-    getParentRoute: () => CommitteeRouteRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -326,8 +312,6 @@ export interface FileRoutesByFullPath {
   '/committee/notice/$noticeId/': typeof CommitteeNoticeNoticeIdIndexRoute
   '/committee/project-registration/$formId/': typeof CommitteeProjectRegistrationFormIdIndexRoute
   '/dev/ui/components/': typeof DevUiComponentsIndexRoute
-  '/committee/forms/$formId/answers/': typeof CommitteeFormsFormIdAnswersIndexRoute
-  '/committee/forms/$formId/answers/$answerId/': typeof CommitteeFormsFormIdAnswersAnswerIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -367,8 +351,6 @@ export interface FileRoutesByTo {
   '/committee/notice/$noticeId': typeof CommitteeNoticeNoticeIdIndexRoute
   '/committee/project-registration/$formId': typeof CommitteeProjectRegistrationFormIdIndexRoute
   '/dev/ui/components': typeof DevUiComponentsIndexRoute
-  '/committee/forms/$formId/answers': typeof CommitteeFormsFormIdAnswersIndexRoute
-  '/committee/forms/$formId/answers/$answerId': typeof CommitteeFormsFormIdAnswersAnswerIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -414,8 +396,6 @@ export interface FileRoutesById {
   '/committee/notice/$noticeId/': typeof CommitteeNoticeNoticeIdIndexRoute
   '/committee/project-registration/$formId/': typeof CommitteeProjectRegistrationFormIdIndexRoute
   '/dev/ui/components/': typeof DevUiComponentsIndexRoute
-  '/committee/forms/$formId/answers/': typeof CommitteeFormsFormIdAnswersIndexRoute
-  '/committee/forms/$formId/answers/$answerId/': typeof CommitteeFormsFormIdAnswersAnswerIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -462,8 +442,6 @@ export interface FileRouteTypes {
     | '/committee/notice/$noticeId/'
     | '/committee/project-registration/$formId/'
     | '/dev/ui/components/'
-    | '/committee/forms/$formId/answers/'
-    | '/committee/forms/$formId/answers/$answerId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -503,8 +481,6 @@ export interface FileRouteTypes {
     | '/committee/notice/$noticeId'
     | '/committee/project-registration/$formId'
     | '/dev/ui/components'
-    | '/committee/forms/$formId/answers'
-    | '/committee/forms/$formId/answers/$answerId'
   id:
     | '__root__'
     | '/'
@@ -549,8 +525,6 @@ export interface FileRouteTypes {
     | '/committee/notice/$noticeId/'
     | '/committee/project-registration/$formId/'
     | '/dev/ui/components/'
-    | '/committee/forms/$formId/answers/'
-    | '/committee/forms/$formId/answers/$answerId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -861,20 +835,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRegisterSetupIndexRouteImport
       parentRoute: typeof AuthRouteRoute
     }
-    '/committee/forms/$formId/answers/': {
-      id: '/committee/forms/$formId/answers/'
-      path: '/forms/$formId/answers'
-      fullPath: '/committee/forms/$formId/answers/'
-      preLoaderRoute: typeof CommitteeFormsFormIdAnswersIndexRouteImport
-      parentRoute: typeof CommitteeRouteRoute
-    }
-    '/committee/forms/$formId/answers/$answerId/': {
-      id: '/committee/forms/$formId/answers/$answerId/'
-      path: '/forms/$formId/answers/$answerId'
-      fullPath: '/committee/forms/$formId/answers/$answerId/'
-      preLoaderRoute: typeof CommitteeFormsFormIdAnswersAnswerIdIndexRouteImport
-      parentRoute: typeof CommitteeRouteRoute
-    }
   }
 }
 
@@ -911,8 +871,6 @@ interface CommitteeRouteRouteChildren {
   CommitteeFormsFormIdIndexRoute: typeof CommitteeFormsFormIdIndexRoute
   CommitteeNoticeNoticeIdIndexRoute: typeof CommitteeNoticeNoticeIdIndexRoute
   CommitteeProjectRegistrationFormIdIndexRoute: typeof CommitteeProjectRegistrationFormIdIndexRoute
-  CommitteeFormsFormIdAnswersIndexRoute: typeof CommitteeFormsFormIdAnswersIndexRoute
-  CommitteeFormsFormIdAnswersAnswerIdIndexRoute: typeof CommitteeFormsFormIdAnswersAnswerIdIndexRoute
 }
 
 const CommitteeRouteRouteChildren: CommitteeRouteRouteChildren = {
@@ -930,9 +888,6 @@ const CommitteeRouteRouteChildren: CommitteeRouteRouteChildren = {
   CommitteeNoticeNoticeIdIndexRoute: CommitteeNoticeNoticeIdIndexRoute,
   CommitteeProjectRegistrationFormIdIndexRoute:
     CommitteeProjectRegistrationFormIdIndexRoute,
-  CommitteeFormsFormIdAnswersIndexRoute: CommitteeFormsFormIdAnswersIndexRoute,
-  CommitteeFormsFormIdAnswersAnswerIdIndexRoute:
-    CommitteeFormsFormIdAnswersAnswerIdIndexRoute,
 }
 
 const CommitteeRouteRouteWithChildren = CommitteeRouteRoute._addFileChildren(

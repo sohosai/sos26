@@ -37,10 +37,22 @@ vi.mock("../lib/prisma", () => ({
 		formDelivery: {
 			findMany: vi.fn(),
 		},
+		formItemEditHistory: {
+			findMany: vi.fn(),
+		},
 		noticeDelivery: {
 			findMany: vi.fn(),
 		},
+		noticeReadStatus: {
+			findMany: vi.fn(),
+		},
 		inquiry: {
+			findMany: vi.fn(),
+		},
+		inquiryActivity: {
+			findMany: vi.fn(),
+		},
+		projectRegistrationFormResponse: {
 			findMany: vi.fn(),
 		},
 	},
@@ -126,8 +138,14 @@ function setupAuth() {
 	mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 	mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
 	mockPrisma.formDelivery.findMany.mockResolvedValue([] as any);
+	mockPrisma.formItemEditHistory.findMany.mockResolvedValue([] as any);
 	mockPrisma.noticeDelivery.findMany.mockResolvedValue([] as any);
+	mockPrisma.noticeReadStatus.findMany.mockResolvedValue([] as any);
 	mockPrisma.inquiry.findMany.mockResolvedValue([] as any);
+	mockPrisma.inquiryActivity.findMany.mockResolvedValue([] as any);
+	mockPrisma.projectRegistrationFormResponse.findMany.mockResolvedValue(
+		[] as any
+	);
 }
 
 describe("GET /committee/projects", () => {

@@ -38,8 +38,21 @@
 .actionRow {
 	display: flex;
 	justify-content: space-between;
+	align-items: center;
 	gap: 8px;
-	padding: 10px 0;
+	padding: 10px 8px;
+	border-radius: 6px;
+	color: inherit;
+	text-decoration: none;
+}
+
+.actionRowLink {
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+.actionRowLink:hover {
+	background-color: var(--gray-3);
 }
 
 .actionMain {
@@ -49,14 +62,22 @@
 	min-width: 0;
 }
 
-.actionRow:not(:last-child) {
-	border-bottom: 1px solid var(--gray-5);
+.actionEnd {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
 }
 
 .actionTime {
 	color: var(--gray-10);
 	font-size: 12px;
 	white-space: nowrap;
+}
+
+.chevron {
+	color: var(--gray-9);
+	display: inline-flex;
 }
 
 .people {
@@ -105,6 +126,7 @@
 @media (max-width: 640px) {
 	.actionRow {
 		flex-direction: column;
+		align-items: flex-start;
 	}
 
 	.dialogActions {
