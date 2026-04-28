@@ -32,11 +32,70 @@ const userSummarySchema = userSchema
 		telephoneNumber: userSchema.shape.telephoneNumber.nullable(),
 	});
 
-const committeeProjectActionSchema = z.object({
-	id: z.string(),
-	title: z.string(),
-	sentAt: z.coerce.date(),
-});
+/**
+ * 企画詳細ページの「アクション履歴」に並ぶ各イベント。
+ * 種別ごとにバッジ・文面が変わるため discriminated union で表現する。
+ */
+export const committeeProjectActionTypeSchema = z.enum([
+	"FORM_DELIVERED",
+	"FORM_ANSWERED",
+	"FORM_RESUBMITTED",
+	"NOTICE_DELIVERED",
+	"NOTICE_READ_BY_OWNER",
+	"INQUIRY_CREATED_BY_PROJECT",
+	"INQUIRY_CREATED_BY_COMMITTEE",
+	"INQUIRY_STATUS_RESOLVED",
+	"INQUIRY_STATUS_REOPENED",
+	"PROJECT_DELETION_STATUS_CHANGED",
+	"PROJECT_REGISTRATION_FORM_SUBMITTED",
+]);
+export type CommitteeProjectActionType = z.infer<
+	typeof committeeProjectActionTypeSchema
+>;
+
+const titledActorAction = <T extends CommitteeProjectActionType>(type: T) =>
+	z.object({
+		type: z.literal(type),
+		id: z.string(),
+		title: z.string(),
+		sentAt: z.coerce.date(),
+		actorName: z.string(),
+	});
+
+const formAction = <T extends CommitteeProjectActionType>(type: T) =>
+	titledActorAction(type).extend({ formId: z.string() });
+
+const noticeAction = <T extends CommitteeProjectActionType>(type: T) =>
+	titledActorAction(type).extend({ noticeId: z.string() });
+
+const inquiryAction = <T extends CommitteeProjectActionType>(type: T) =>
+	titledActorAction(type).extend({ inquiryId: z.string() });
+
+export const committeeProjectActionSchema = z.discriminatedUnion("type", [
+	formAction("FORM_DELIVERED"),
+	formAction("FORM_ANSWERED"),
+	formAction("FORM_RESUBMITTED"),
+	noticeAction("NOTICE_DELIVERED"),
+	noticeAction("NOTICE_READ_BY_OWNER"),
+	inquiryAction("INQUIRY_CREATED_BY_PROJECT"),
+	inquiryAction("INQUIRY_CREATED_BY_COMMITTEE"),
+	inquiryAction("INQUIRY_STATUS_RESOLVED"),
+	inquiryAction("INQUIRY_STATUS_REOPENED"),
+	z.object({
+		type: z.literal("PROJECT_DELETION_STATUS_CHANGED"),
+		id: z.string(),
+		sentAt: z.coerce.date(),
+		deletionStatus: projectDeletionStatusSchema,
+	}),
+	z.object({
+		type: z.literal("PROJECT_REGISTRATION_FORM_SUBMITTED"),
+		id: z.string(),
+		sentAt: z.coerce.date(),
+	}),
+]);
+export type CommitteeProjectAction = z.infer<
+	typeof committeeProjectActionSchema
+>;
 
 const committeeProjectPermissionsSchema = z.object({
 	canEdit: z.boolean(),
@@ -109,11 +168,7 @@ export const committeeProjectDetailSchema = projectSchema
 		memberCount: z.number().int(),
 		owner: userSummarySchema,
 		subOwner: userSummarySchema.nullable(),
-		actions: z.object({
-			forms: z.array(committeeProjectActionSchema),
-			notices: z.array(committeeProjectActionSchema),
-			inquiries: z.array(committeeProjectActionSchema),
-		}),
+		actions: z.array(committeeProjectActionSchema),
 		permissions: committeeProjectPermissionsSchema,
 	});
 export type CommitteeProjectDetail = z.infer<
