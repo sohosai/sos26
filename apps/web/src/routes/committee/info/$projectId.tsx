@@ -14,6 +14,7 @@ import type {
 	CommitteeProjectDetail,
 	ProjectDeletionStatus,
 } from "@sos26/shared";
+import { IconChevronRight } from "@tabler/icons-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -53,17 +54,31 @@ type ActionDisplay = {
 	text: string;
 };
 
-function ActionLinkWrapper({
+function hasActionLink(type: CommitteeProjectAction["type"]): boolean {
+	return (
+		type !== "PROJECT_DELETION_STATUS_CHANGED" &&
+		type !== "PROJECT_REGISTRATION_FORM_SUBMITTED"
+	);
+}
+
+function ActionRowContainer({
 	action,
 	children,
 }: {
 	action: CommitteeProjectAction;
 	children: React.ReactNode;
 }) {
+	const className = `${styles.actionRow} ${
+		hasActionLink(action.type) ? styles.actionRowLink : ""
+	}`;
 	switch (action.type) {
 		case "FORM_DELIVERED":
 			return (
-				<Link to="/committee/forms/$formId" params={{ formId: action.formId }}>
+				<Link
+					to="/committee/forms/$formId"
+					params={{ formId: action.formId }}
+					className={className}
+				>
 					{children}
 				</Link>
 			);
@@ -74,6 +89,7 @@ function ActionLinkWrapper({
 					to="/committee/forms/$formId"
 					params={{ formId: action.formId }}
 					search={{ tab: "answers" }}
+					className={className}
 				>
 					{children}
 				</Link>
@@ -84,6 +100,7 @@ function ActionLinkWrapper({
 				<Link
 					to="/committee/notice/$noticeId"
 					params={{ noticeId: action.noticeId }}
+					className={className}
 				>
 					{children}
 				</Link>
@@ -96,13 +113,14 @@ function ActionLinkWrapper({
 				<Link
 					to="/committee/support/$inquiryId"
 					params={{ inquiryId: action.inquiryId }}
+					className={className}
 				>
 					{children}
 				</Link>
 			);
 		case "PROJECT_DELETION_STATUS_CHANGED":
 		case "PROJECT_REGISTRATION_FORM_SUBMITTED":
-			return <>{children}</>;
+			return <div className={className}>{children}</div>;
 	}
 }
 
@@ -327,19 +345,22 @@ function CommitteeProjectInfoPage() {
 					{sortedActions.map(action => {
 						const display = getActionDisplay(action);
 						return (
-							<div key={action.id} className={styles.actionRow}>
+							<ActionRowContainer key={action.id} action={action}>
 								<div className={styles.actionMain}>
 									<Badge color={display.color} variant="soft">
 										{display.category}
 									</Badge>
-									<ActionLinkWrapper action={action}>
-										<Text size="2">{display.text}</Text>
-									</ActionLinkWrapper>
+									<Text size="2">{display.text}</Text>
 								</div>
-								<span className={styles.actionTime}>
-									{formatDate(action.sentAt, "datetime")}
-								</span>
-							</div>
+								<div className={styles.actionEnd}>
+									<span className={styles.actionTime}>
+										{formatDate(action.sentAt, "datetime")}
+									</span>
+									{hasActionLink(action.type) && (
+										<IconChevronRight size={16} className={styles.chevron} />
+									)}
+								</div>
+							</ActionRowContainer>
 						);
 					})}
 				</div>
