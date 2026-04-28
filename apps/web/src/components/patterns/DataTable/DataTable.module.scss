@@ -1,7 +1,10 @@
 .root {
+	overflow: visible;
+
 	:global(.rt-TableRootTable) {
 		width: max-content;
 		min-width: 100%;
+		overflow: visible !important;
 	}
 
 	:global(.rt-TableHeader) {
@@ -17,13 +20,43 @@
 	}
 }
 
+.scrollContainer {
+	overflow-x: auto;
+	position: relative;
+}
+
 :global(.rt-TableCell) {
 	vertical-align: middle;
 }
 
+.pinnedHeaderCell,
+.pinnedBodyCell {
+	background-clip: padding-box;
+}
+
+.pinnedHeaderCell {
+	position: sticky !important;
+	z-index: 3;
+	background-color: var(--accent-2);
+}
+
+.pinnedBodyCell {
+	position: sticky !important;
+	z-index: 2;
+	background-color: var(--accent-1);
+}
+
+.pinnedLast {
+	box-shadow: 6px 0 6px -6px var(--gray-a8), var(--table-row-box-shadow);
+}
+
 .cellSelected {
-	background-color: var(--accent-a3);
+	background-color: var(--accent-3);
 	box-shadow: inset 0 0 0 1px var(--accent-7);
+}
+
+.pinnedBodyCell.cellSelected {
+	background-color: var(--accent-3);
 }
 
 .selecting {

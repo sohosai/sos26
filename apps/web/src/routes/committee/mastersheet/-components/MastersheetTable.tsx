@@ -65,6 +65,7 @@ type Props = {
 	initialSorting?: SortingState;
 	initialColumnVisibility?: VisibilityState;
 	initialColumnFilters?: ColumnFiltersState;
+	pinnedColumnIds?: string[];
 	onSortingChange?: (sorting: SortingState) => void;
 	onColumnVisibilityChange?: (visibility: VisibilityState) => void;
 	onColumnFiltersChange?: (filters: ColumnFiltersState) => void;
@@ -678,6 +679,7 @@ export function MastersheetTable({
 	initialSorting,
 	initialColumnVisibility,
 	initialColumnFilters,
+	pinnedColumnIds,
 	onSortingChange,
 	onColumnVisibilityChange,
 	onColumnFiltersChange,
@@ -752,6 +754,7 @@ export function MastersheetTable({
 		<DataTable<MastersheetRow>
 			data={tableData}
 			columns={tableColumns}
+			pinnedColumnIds={pinnedColumnIds}
 			features={{
 				sorting: true,
 				globalFilter: true,

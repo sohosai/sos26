@@ -36,6 +36,7 @@ const FIXED_COLUMN_IDS = [
 	"name",
 	"namePhonetic",
 	"type",
+	"location",
 	"organizationName",
 	"organizationNamePhonetic",
 	"ownerName",
@@ -68,6 +69,7 @@ function MastersheetPage() {
 		DEFAULT_HIDDEN_FIXED_COLUMNS
 	);
 	const [activeViewId, setActiveViewId] = useState<string | null>(null);
+	const [pinnedColumnIds, setPinnedColumnIds] = useState<string[]>([]);
 
 	async function handleColumnSuccess() {
 		await router.invalidate();
@@ -84,6 +86,20 @@ function MastersheetPage() {
 	function handleToggleColumn(columnId: string, visible: boolean) {
 		const next = { ...columnVisibility, [columnId]: visible };
 		setColumnVisibility(next);
+		if (!visible) {
+			setPinnedColumnIds(prev => prev.filter(id => id !== columnId));
+		}
+		setTableKey(k => k + 1);
+	}
+
+	function handleTogglePinColumn(columnId: string, pinned: boolean) {
+		setPinnedColumnIds(prev => {
+			if (pinned) {
+				if (prev.includes(columnId)) return prev;
+				return [...prev, columnId];
+			}
+			return prev.filter(id => id !== columnId);
+		});
 		setTableKey(k => k + 1);
 	}
 
@@ -103,6 +119,15 @@ function MastersheetPage() {
 		}
 		setColumnVisibility(completeVisibility);
 		setColumnFilters(viewState.columnFilters ?? DEFAULT_COLUMN_FILTERS);
+
+		const visibleIdSet = new Set(
+			(Object.entries(completeVisibility) as [string, boolean][])
+				.filter(([, v]) => v !== false)
+				.map(([id]) => id)
+		);
+		setPinnedColumnIds(
+			(viewState.pinnedColumnIds ?? []).filter(id => visibleIdSet.has(id))
+		);
 		setTableKey(k => k + 1);
 	}
 
@@ -143,6 +168,9 @@ function MastersheetPage() {
 							.filter(c => columnVisibility[c.id] !== false)
 							.map(c => c.id),
 					],
+					pinnedColumnIds: pinnedColumnIds.filter(
+						id => columnVisibility[id] !== false
+					),
 				}}
 				onSelectView={handleSelectView}
 				onActiveViewIdChange={handleActiveViewIdChange}
@@ -156,6 +184,7 @@ function MastersheetPage() {
 						initialSorting={sorting}
 						initialColumnVisibility={columnVisibility}
 						initialColumnFilters={columnFilters}
+						pinnedColumnIds={pinnedColumnIds}
 						onSortingChange={handleSortingChange}
 						onColumnVisibilityChange={handleColumnVisibilityChange}
 						onColumnFiltersChange={setColumnFilters}
@@ -178,7 +207,9 @@ function MastersheetPage() {
 				onOpenChange={setColumnPanelOpen}
 				columns={columns}
 				columnVisibility={columnVisibility}
+				pinnedColumnIds={pinnedColumnIds}
 				onToggleColumn={handleToggleColumn}
+				onTogglePinColumn={handleTogglePinColumn}
 				onSuccess={handleColumnSuccess}
 			/>
 		</div>

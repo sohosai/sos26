@@ -23,9 +23,9 @@ import {
 } from "@tabler/icons-react";
 import type { VisibilityState } from "@tanstack/react-table";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Button, IconButton, TextField } from "@/components/primitives";
+import { Button, IconButton, Switch, TextField } from "@/components/primitives";
 import {
 	createMastersheetAccessRequest,
 	createMastersheetColumn,
@@ -74,6 +74,10 @@ const FIXED_COLUMNS = [
 	{ id: "deletionStatus", name: "企画状況" },
 ];
 
+const PinColumnContext = createContext<
+	((columnId: string, pinned: boolean) => void) | null
+>(null);
+
 // ─────────────────────────────────────────────────────────────
 // 固定カラム行（トグルのみ、編集・削除なし）
 // ─────────────────────────────────────────────────────────────
@@ -81,12 +85,16 @@ const FIXED_COLUMNS = [
 function FixedColumnRow({
 	col,
 	isVisible,
+	isPinned,
 	onToggle,
 }: {
 	col: { id: string; name: string };
 	isVisible: boolean;
+	isPinned: boolean;
 	onToggle: (visible: boolean) => void;
 }) {
+	const onTogglePinColumn = useContext(PinColumnContext);
+
 	return (
 		<div className={styles.columnCard}>
 			<div className={styles.cardTop}>
@@ -97,13 +105,24 @@ function FixedColumnRow({
 								{col.name}
 							</Text>
 						</div>
-						<Button
-							size="1"
-							intent={isVisible ? "secondary" : "primary"}
-							onClick={() => onToggle(!isVisible)}
-						>
-							{isVisible ? "非表示にする" : "表示する"}
-						</Button>
+						<div className={styles.cardRight}>
+							<div className={styles.visibilityRow}>
+								<Switch
+									label="固定"
+									size="1"
+									checked={isPinned}
+									disabled={!isVisible || !onTogglePinColumn}
+									onCheckedChange={v => onTogglePinColumn?.(col.id, v)}
+								/>
+								<Button
+									size="1"
+									intent={isVisible ? "secondary" : "primary"}
+									onClick={() => onToggle(!isVisible)}
+								>
+									{isVisible ? "非表示にする" : "表示する"}
+								</Button>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -341,6 +360,7 @@ function getColumnTypeBadgeColor(type: string) {
 type AccessibleColumnRowProps = {
 	col: ApiColumn;
 	isVisible: boolean;
+	isPinned: boolean;
 	onToggle: (visible: boolean) => void;
 	onSuccess: () => void;
 	accessRequests: AccessRequest[];
@@ -350,6 +370,7 @@ type AccessibleColumnRowProps = {
 function AccessibleColumnRow({
 	col,
 	isVisible,
+	isPinned,
 	onToggle,
 	onSuccess,
 	accessRequests,
@@ -361,6 +382,7 @@ function AccessibleColumnRow({
 	const [showRequests, setShowRequests] = useState(false);
 	const [requestLoading, setRequestLoading] = useState<Set<string>>(new Set());
 
+	const onTogglePinColumn = useContext(PinColumnContext);
 	const colRequests = accessRequests.filter(r => r.columnId === col.id);
 
 	async function handleDelete() {
@@ -448,13 +470,22 @@ function AccessibleColumnRow({
 									</IconButton>
 								</div>
 							)}
-							<Button
-								size="1"
-								intent={isVisible ? "secondary" : "primary"}
-								onClick={() => onToggle(!isVisible)}
-							>
-								{isVisible ? "非表示にする" : "表示する"}
-							</Button>
+							<div className={styles.visibilityRow}>
+								<Switch
+									label="固定"
+									size="1"
+									checked={isPinned}
+									disabled={!isVisible || !onTogglePinColumn}
+									onCheckedChange={v => onTogglePinColumn?.(col.id, v)}
+								/>
+								<Button
+									size="1"
+									intent={isVisible ? "secondary" : "primary"}
+									onClick={() => onToggle(!isVisible)}
+								>
+									{isVisible ? "非表示にする" : "表示する"}
+								</Button>
+							</div>
 						</div>
 					</div>
 					{col.description && (
@@ -665,14 +696,18 @@ function PrfFormGroup({
 	form,
 	addedColumns,
 	columnVisibility,
+	pinnedColumnIds,
 	onToggleColumn,
+	onTogglePinColumn,
 	onAddAndShow,
 	adding,
 }: {
 	form: PrfFormSummary;
 	addedColumns: Map<string, ApiColumn>;
 	columnVisibility: VisibilityState;
+	pinnedColumnIds: string[];
 	onToggleColumn: (columnId: string, visible: boolean) => void;
+	onTogglePinColumn: (columnId: string, pinned: boolean) => void;
 	onAddAndShow: (item: ProjectRegistrationFormItem) => void;
 	adding: Set<string>;
 }) {
@@ -741,6 +776,15 @@ function PrfFormGroup({
 														{item.label}
 													</Text>
 												</div>
+												{col && (
+													<Switch
+														label="固定"
+														size="1"
+														checked={pinnedColumnIds.includes(col.id)}
+														disabled={!isVisible}
+														onCheckedChange={v => onTogglePinColumn(col.id, v)}
+													/>
+												)}
 												<Button
 													size="1"
 													intent={isVisible ? "secondary" : "primary"}
@@ -777,7 +821,9 @@ type Props = {
 	onOpenChange: (open: boolean) => void;
 	columns: ApiColumn[];
 	columnVisibility: VisibilityState;
+	pinnedColumnIds: string[];
 	onToggleColumn: (columnId: string, visible: boolean) => void;
+	onTogglePinColumn: (columnId: string, pinned: boolean) => void;
 	onSuccess: () => void;
 };
 
@@ -787,7 +833,9 @@ export function ColumnPanel({
 	onOpenChange,
 	columns,
 	columnVisibility,
+	pinnedColumnIds,
 	onToggleColumn,
+	onTogglePinColumn,
 	onSuccess,
 }: Props) {
 	const [searchText, setSearchText] = useState("");
@@ -966,104 +1014,84 @@ export function ColumnPanel({
 						</RadixTextField.Root>
 					</div>
 
-					<div className={styles.list}>
-						{isEmpty && (
-							<Text size="2" color="gray" className={styles.emptyMessage}>
-								カラムがありません
-							</Text>
-						)}
+					<PinColumnContext.Provider value={onTogglePinColumn}>
+						<div className={styles.list}>
+							{isEmpty && (
+								<Text size="2" color="gray" className={styles.emptyMessage}>
+									カラムがありません
+								</Text>
+							)}
 
-						{filteredFixedColumns.length > 0 && (
-							<>
+							{filteredFixedColumns.length > 0 && (
+								<>
+									<Section
+										label="基本カラム"
+										count={filteredFixedColumns.length}
+										isOpen={sectionsOpen.fixed}
+										onToggle={() => toggleSection("fixed")}
+									>
+										{filteredFixedColumns.map(col => (
+											<FixedColumnRow
+												key={col.id}
+												col={col}
+												isVisible={columnVisibility[col.id] !== false}
+												isPinned={pinnedColumnIds.includes(col.id)}
+												onToggle={v => onToggleColumn(col.id, v)}
+											/>
+										))}
+									</Section>
+									{(filteredPrfForms.length > 0 ||
+										visibleColumns.length > 0 ||
+										hiddenColumns.length > 0 ||
+										(!discoverLoading && requestable.length > 0)) && (
+										<Separator size="4" className={styles.separator} />
+									)}
+								</>
+							)}
+
+							{filteredPrfForms.length > 0 && (
+								<>
+									<Section
+										label="企画登録情報"
+										count={filteredPrfForms.length}
+										isOpen={sectionsOpen.prf}
+										onToggle={() => toggleSection("prf")}
+									>
+										{filteredPrfForms.map(form => (
+											<PrfFormGroup
+												key={form.id}
+												form={form}
+												addedColumns={prfItemToColumn}
+												columnVisibility={columnVisibility}
+												pinnedColumnIds={pinnedColumnIds}
+												onToggleColumn={onToggleColumn}
+												onTogglePinColumn={onTogglePinColumn}
+												onAddAndShow={handleAddAndShowPrfItem}
+												adding={prfAdding}
+											/>
+										))}
+									</Section>
+									{(visibleColumns.length > 0 ||
+										hiddenColumns.length > 0 ||
+										(!discoverLoading && requestable.length > 0)) && (
+										<Separator size="4" className={styles.separator} />
+									)}
+								</>
+							)}
+
+							{visibleColumns.length > 0 && (
 								<Section
-									label="基本カラム"
-									count={filteredFixedColumns.length}
-									isOpen={sectionsOpen.fixed}
-									onToggle={() => toggleSection("fixed")}
+									label="表示中"
+									count={visibleColumns.length}
+									isOpen={sectionsOpen.visible}
+									onToggle={() => toggleSection("visible")}
 								>
-									{filteredFixedColumns.map(col => (
-										<FixedColumnRow
-											key={col.id}
-											col={col}
-											isVisible={columnVisibility[col.id] !== false}
-											onToggle={v => onToggleColumn(col.id, v)}
-										/>
-									))}
-								</Section>
-								{(filteredPrfForms.length > 0 ||
-									visibleColumns.length > 0 ||
-									hiddenColumns.length > 0 ||
-									(!discoverLoading && requestable.length > 0)) && (
-									<Separator size="4" className={styles.separator} />
-								)}
-							</>
-						)}
-
-						{filteredPrfForms.length > 0 && (
-							<>
-								<Section
-									label="企画登録情報"
-									count={filteredPrfForms.length}
-									isOpen={sectionsOpen.prf}
-									onToggle={() => toggleSection("prf")}
-								>
-									{filteredPrfForms.map(form => (
-										<PrfFormGroup
-											key={form.id}
-											form={form}
-											addedColumns={prfItemToColumn}
-											columnVisibility={columnVisibility}
-											onToggleColumn={onToggleColumn}
-											onAddAndShow={handleAddAndShowPrfItem}
-											adding={prfAdding}
-										/>
-									))}
-								</Section>
-								{(visibleColumns.length > 0 ||
-									hiddenColumns.length > 0 ||
-									(!discoverLoading && requestable.length > 0)) && (
-									<Separator size="4" className={styles.separator} />
-								)}
-							</>
-						)}
-
-						{visibleColumns.length > 0 && (
-							<Section
-								label="表示中"
-								count={visibleColumns.length}
-								isOpen={sectionsOpen.visible}
-								onToggle={() => toggleSection("visible")}
-							>
-								{visibleColumns.map(col => (
-									<AccessibleColumnRow
-										key={col.id}
-										col={col}
-										isVisible={true}
-										onToggle={v => onToggleColumn(col.id, v)}
-										onSuccess={onSuccess}
-										accessRequests={accessRequests}
-										onRequestHandled={handleRequestHandled}
-									/>
-								))}
-							</Section>
-						)}
-
-						{hiddenColumns.length > 0 && (
-							<>
-								{visibleColumns.length > 0 && (
-									<Separator size="4" className={styles.separator} />
-								)}
-								<Section
-									label="非表示"
-									count={hiddenColumns.length}
-									isOpen={sectionsOpen.hidden}
-									onToggle={() => toggleSection("hidden")}
-								>
-									{hiddenColumns.map(col => (
+									{visibleColumns.map(col => (
 										<AccessibleColumnRow
 											key={col.id}
 											col={col}
-											isVisible={false}
+											isVisible={true}
+											isPinned={pinnedColumnIds.includes(col.id)}
 											onToggle={v => onToggleColumn(col.id, v)}
 											onSuccess={onSuccess}
 											accessRequests={accessRequests}
@@ -1071,38 +1099,65 @@ export function ColumnPanel({
 										/>
 									))}
 								</Section>
-							</>
-						)}
+							)}
 
-						{!discoverLoading && requestable.length > 0 && (
-							<>
-								{(visibleColumns.length > 0 || hiddenColumns.length > 0) && (
-									<Separator size="4" className={styles.separator} />
-								)}
-								<Section
-									label="他のカラム"
-									count={requestable.length}
-									isOpen={sectionsOpen.requestable}
-									onToggle={() => toggleSection("requestable")}
-								>
-									{requestable.map(col => (
-										<RequestableColumnRow
-											key={col.id}
-											col={col}
-											requesting={requesting.has(col.id)}
-											onRequest={() => handleRequest(col.id)}
-										/>
-									))}
-								</Section>
-							</>
-						)}
+							{hiddenColumns.length > 0 && (
+								<>
+									{visibleColumns.length > 0 && (
+										<Separator size="4" className={styles.separator} />
+									)}
+									<Section
+										label="非表示"
+										count={hiddenColumns.length}
+										isOpen={sectionsOpen.hidden}
+										onToggle={() => toggleSection("hidden")}
+									>
+										{hiddenColumns.map(col => (
+											<AccessibleColumnRow
+												key={col.id}
+												col={col}
+												isVisible={false}
+												isPinned={pinnedColumnIds.includes(col.id)}
+												onToggle={v => onToggleColumn(col.id, v)}
+												onSuccess={onSuccess}
+												accessRequests={accessRequests}
+												onRequestHandled={handleRequestHandled}
+											/>
+										))}
+									</Section>
+								</>
+							)}
 
-						{discoverLoading && (
-							<Text size="2" color="gray" className={styles.emptyMessage}>
-								読み込み中...
-							</Text>
-						)}
-					</div>
+							{!discoverLoading && requestable.length > 0 && (
+								<>
+									{(visibleColumns.length > 0 || hiddenColumns.length > 0) && (
+										<Separator size="4" className={styles.separator} />
+									)}
+									<Section
+										label="他のカラム"
+										count={requestable.length}
+										isOpen={sectionsOpen.requestable}
+										onToggle={() => toggleSection("requestable")}
+									>
+										{requestable.map(col => (
+											<RequestableColumnRow
+												key={col.id}
+												col={col}
+												requesting={requesting.has(col.id)}
+												onRequest={() => handleRequest(col.id)}
+											/>
+										))}
+									</Section>
+								</>
+							)}
+
+							{discoverLoading && (
+								<Text size="2" color="gray" className={styles.emptyMessage}>
+									読み込み中...
+								</Text>
+							)}
+						</div>
+					</PinColumnContext.Provider>
 				</Dialog.Content>
 			</Dialog.Root>
 
