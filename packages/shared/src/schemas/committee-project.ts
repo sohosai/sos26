@@ -53,7 +53,7 @@ export type CommitteeProjectActionType = z.infer<
 	typeof committeeProjectActionTypeSchema
 >;
 
-const actionWithActor = <T extends CommitteeProjectActionType>(type: T) =>
+const titledActorAction = <T extends CommitteeProjectActionType>(type: T) =>
 	z.object({
 		type: z.literal(type),
 		id: z.string(),
@@ -62,16 +62,25 @@ const actionWithActor = <T extends CommitteeProjectActionType>(type: T) =>
 		actorName: z.string(),
 	});
 
+const formAction = <T extends CommitteeProjectActionType>(type: T) =>
+	titledActorAction(type).extend({ formId: z.string() });
+
+const noticeAction = <T extends CommitteeProjectActionType>(type: T) =>
+	titledActorAction(type).extend({ noticeId: z.string() });
+
+const inquiryAction = <T extends CommitteeProjectActionType>(type: T) =>
+	titledActorAction(type).extend({ inquiryId: z.string() });
+
 export const committeeProjectActionSchema = z.discriminatedUnion("type", [
-	actionWithActor("FORM_DELIVERED"),
-	actionWithActor("FORM_ANSWERED"),
-	actionWithActor("FORM_RESUBMITTED"),
-	actionWithActor("NOTICE_DELIVERED"),
-	actionWithActor("NOTICE_READ_BY_OWNER"),
-	actionWithActor("INQUIRY_CREATED_BY_PROJECT"),
-	actionWithActor("INQUIRY_CREATED_BY_COMMITTEE"),
-	actionWithActor("INQUIRY_STATUS_RESOLVED"),
-	actionWithActor("INQUIRY_STATUS_REOPENED"),
+	formAction("FORM_DELIVERED"),
+	formAction("FORM_ANSWERED"),
+	formAction("FORM_RESUBMITTED"),
+	noticeAction("NOTICE_DELIVERED"),
+	noticeAction("NOTICE_READ_BY_OWNER"),
+	inquiryAction("INQUIRY_CREATED_BY_PROJECT"),
+	inquiryAction("INQUIRY_CREATED_BY_COMMITTEE"),
+	inquiryAction("INQUIRY_STATUS_RESOLVED"),
+	inquiryAction("INQUIRY_STATUS_REOPENED"),
 	z.object({
 		type: z.literal("PROJECT_DELETION_STATUS_CHANGED"),
 		id: z.string(),

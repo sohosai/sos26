@@ -65,7 +65,7 @@ async function fetchFormDeliveryActions(
 			createdAt: true,
 			formAuthorization: {
 				select: {
-					form: { select: { title: true } },
+					form: { select: { id: true, title: true } },
 					requestedBy: { select: { name: true } },
 				},
 			},
@@ -79,6 +79,7 @@ async function fetchFormDeliveryActions(
 		title: d.formAuthorization.form.title,
 		sentAt: d.createdAt,
 		actorName: d.formAuthorization.requestedBy.name,
+		formId: d.formAuthorization.form.id,
 	}));
 }
 
@@ -114,6 +115,7 @@ async function fetchFormSubmitActions(
 			title: h.formItem.form.title,
 			sentAt: h.createdAt,
 			actorName: h.actor.name,
+			formId,
 		});
 		if (out.length >= PER_SOURCE_LIMIT) break;
 	}
@@ -143,7 +145,8 @@ async function fetchFormResubmitActions(
 	const seen = new Set<string>();
 	const out: CommitteeProjectAction[] = [];
 	for (const h of rows) {
-		const key = `${h.formItem.form.id}:${h.createdAt.getTime()}`;
+		const formId = h.formItem.form.id;
+		const key = `${formId}:${h.createdAt.getTime()}`;
 		if (seen.has(key)) continue;
 		seen.add(key);
 		out.push({
@@ -152,6 +155,7 @@ async function fetchFormResubmitActions(
 			title: h.formItem.form.title,
 			sentAt: h.createdAt,
 			actorName: h.actor.name,
+			formId,
 		});
 		if (out.length >= PER_SOURCE_LIMIT) break;
 	}
@@ -171,7 +175,7 @@ async function fetchNoticeDeliveryActions(
 			createdAt: true,
 			noticeAuthorization: {
 				select: {
-					notice: { select: { title: true } },
+					notice: { select: { id: true, title: true } },
 					requestedBy: { select: { name: true } },
 				},
 			},
@@ -185,6 +189,7 @@ async function fetchNoticeDeliveryActions(
 		title: d.noticeAuthorization.notice.title,
 		sentAt: d.createdAt,
 		actorName: d.noticeAuthorization.requestedBy.name,
+		noticeId: d.noticeAuthorization.notice.id,
 	}));
 }
 
@@ -207,7 +212,7 @@ async function fetchOwnerNoticeReadActions(
 			noticeDelivery: {
 				select: {
 					noticeAuthorization: {
-						select: { notice: { select: { title: true } } },
+						select: { notice: { select: { id: true, title: true } } },
 					},
 				},
 			},
@@ -221,6 +226,7 @@ async function fetchOwnerNoticeReadActions(
 		title: r.noticeDelivery.noticeAuthorization.notice.title,
 		sentAt: r.createdAt,
 		actorName: r.user.name,
+		noticeId: r.noticeDelivery.noticeAuthorization.notice.id,
 	}));
 }
 
@@ -248,6 +254,7 @@ async function fetchInquiryCreationActions(
 		title: i.title,
 		sentAt: i.createdAt,
 		actorName: i.createdBy.name,
+		inquiryId: i.id,
 	}));
 }
 
@@ -264,6 +271,7 @@ async function fetchInquiryStatusActions(
 			id: true,
 			createdAt: true,
 			type: true,
+			inquiryId: true,
 			actor: { select: { name: true } },
 			inquiry: { select: { title: true } },
 		},
@@ -279,6 +287,7 @@ async function fetchInquiryStatusActions(
 		title: a.inquiry.title,
 		sentAt: a.createdAt,
 		actorName: a.actor.name,
+		inquiryId: a.inquiryId,
 	}));
 }
 

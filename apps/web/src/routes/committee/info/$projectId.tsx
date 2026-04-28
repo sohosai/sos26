@@ -14,7 +14,7 @@ import type {
 	CommitteeProjectDetail,
 	ProjectDeletionStatus,
 } from "@sos26/shared";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -52,6 +52,59 @@ type ActionDisplay = {
 	color: "blue" | "orange" | "green" | "gray";
 	text: string;
 };
+
+function ActionLinkWrapper({
+	action,
+	children,
+}: {
+	action: CommitteeProjectAction;
+	children: React.ReactNode;
+}) {
+	switch (action.type) {
+		case "FORM_DELIVERED":
+			return (
+				<Link to="/committee/forms/$formId" params={{ formId: action.formId }}>
+					{children}
+				</Link>
+			);
+		case "FORM_ANSWERED":
+		case "FORM_RESUBMITTED":
+			return (
+				<Link
+					to="/committee/forms/$formId"
+					params={{ formId: action.formId }}
+					search={{ tab: "answers" }}
+				>
+					{children}
+				</Link>
+			);
+		case "NOTICE_DELIVERED":
+		case "NOTICE_READ_BY_OWNER":
+			return (
+				<Link
+					to="/committee/notice/$noticeId"
+					params={{ noticeId: action.noticeId }}
+				>
+					{children}
+				</Link>
+			);
+		case "INQUIRY_CREATED_BY_PROJECT":
+		case "INQUIRY_CREATED_BY_COMMITTEE":
+		case "INQUIRY_STATUS_RESOLVED":
+		case "INQUIRY_STATUS_REOPENED":
+			return (
+				<Link
+					to="/committee/support/$inquiryId"
+					params={{ inquiryId: action.inquiryId }}
+				>
+					{children}
+				</Link>
+			);
+		case "PROJECT_DELETION_STATUS_CHANGED":
+		case "PROJECT_REGISTRATION_FORM_SUBMITTED":
+			return <>{children}</>;
+	}
+}
 
 function getActionDisplay(action: CommitteeProjectAction): ActionDisplay {
 	switch (action.type) {
@@ -279,7 +332,9 @@ function CommitteeProjectInfoPage() {
 									<Badge color={display.color} variant="soft">
 										{display.category}
 									</Badge>
-									<Text size="2">{display.text}</Text>
+									<ActionLinkWrapper action={action}>
+										<Text size="2">{display.text}</Text>
+									</ActionLinkWrapper>
 								</div>
 								<span className={styles.actionTime}>
 									{formatDate(action.sentAt, "datetime")}
