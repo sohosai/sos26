@@ -3,6 +3,7 @@ import {
 	Badge,
 	type BadgeProps,
 	Checkbox,
+	Flex,
 	Heading,
 	Popover,
 	Text,
@@ -25,7 +26,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { DataTable, NameCell } from "@/components/patterns";
+import { UserAvatar } from "@/components/common/UserAvatar";
+import { DataTable } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import {
 	createCommitteeMember,
@@ -459,14 +461,21 @@ function RouteComponent() {
 	};
 
 	const columns = [
-		memberColumnHelper.accessor(
-			row => ({ name: row.name, avatarFileId: row.avatarFileId }),
-			{
-				id: "name",
-				header: "名前",
-				cell: NameCell,
-			}
-		),
+		memberColumnHelper.accessor(row => `${row.name} ${row.email}`, {
+			id: "name",
+			header: "名前",
+			cell: ({ row }) => (
+				<Flex align="center" gap="2">
+					<UserAvatar
+						size={20}
+						name={row.original.name}
+						avatarFileId={row.original.avatarFileId}
+					/>
+					<span>{row.original.name}</span>
+				</Flex>
+			),
+			sortingFn: (a, b) => a.original.name.localeCompare(b.original.name, "ja"),
+		}),
 		memberColumnHelper.accessor("email", {
 			header: "メールアドレス",
 		}),
