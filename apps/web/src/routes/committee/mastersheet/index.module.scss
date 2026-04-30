@@ -9,3 +9,13 @@
 	min-width: 0;
 	overflow: auto;
 }
+
+@media (max-width: 900px) {
+	.layout {
+		flex-direction: column;
+	}
+
+	.tableWrapper {
+		width: 100%;
+	}
+}

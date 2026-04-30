@@ -7,6 +7,20 @@
 	top: var(--space-4);
 }
 
+@media (max-width: 768px) {
+	.sidebarWrapper {
+		position: static;
+	}
+
+	.authorizationActions {
+		flex-wrap: wrap;
+
+		& > * {
+			flex: 1 1 calc(50% - var(--space-2));
+		}
+	}
+}
+
 .sidebar {
 	display: flex;
 	flex-direction: column;

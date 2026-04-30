@@ -129,3 +129,39 @@
 	display: flex;
 	gap: var(--space-2);
 }
+
+@media (max-width: 640px) {
+	.body {
+		flex-direction: column;
+		height: auto;
+		max-height: 70dvh;
+		gap: var(--space-3);
+	}
+
+	.left {
+		width: 100%;
+		border-right: none;
+		border-bottom: 1px solid var(--gray-5);
+		padding-right: 0;
+		padding-bottom: var(--space-3);
+		max-height: 200px;
+	}
+
+	.right {
+		padding-left: 0;
+	}
+
+	.footer {
+		flex-direction: column;
+		align-items: stretch;
+		gap: var(--space-2);
+	}
+
+	.footerActions {
+		flex-direction: column-reverse;
+
+		& > * {
+			width: 100%;
+		}
+	}
+}

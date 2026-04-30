@@ -17,6 +17,20 @@
 	padding-top: var(--space-2);
 }
 
+@media (max-width: 640px) {
+	.actions {
+		flex-direction: column-reverse;
+
+		& > * {
+			width: 100%;
+		}
+	}
+
+	.optionRow {
+		flex-wrap: wrap;
+	}
+}
+
 .optionRow {
 	display: flex;
 	align-items: center;

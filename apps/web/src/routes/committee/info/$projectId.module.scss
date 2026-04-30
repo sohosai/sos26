@@ -123,6 +123,22 @@
 	min-height: 200px;
 }
 
+@media (max-width: 768px) {
+	.header {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.controls {
+		flex-direction: column;
+		align-items: stretch;
+
+		& > * {
+			width: 100%;
+		}
+	}
+}
+
 @media (max-width: 640px) {
 	.actionRow {
 		flex-direction: column;
@@ -131,6 +147,11 @@
 
 	.dialogActions {
 		justify-content: stretch;
+		flex-direction: column-reverse;
+
+		& > * {
+			width: 100%;
+		}
 	}
 
 	.loading {

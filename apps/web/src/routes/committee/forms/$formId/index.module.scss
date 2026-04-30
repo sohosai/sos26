@@ -153,3 +153,24 @@
 	gap: var(--space-2);
 	margin-top: var(--space-4);
 }
+
+@media (max-width: 768px) {
+	.tabs {
+		gap: 0;
+		overflow-x: auto;
+	}
+
+	.tab {
+		padding: var(--space-2);
+		flex-shrink: 0;
+		font-size: var(--font-size-1);
+	}
+
+	.deleteActions {
+		flex-direction: column-reverse;
+
+		& > * {
+			width: 100%;
+		}
+	}
+}
