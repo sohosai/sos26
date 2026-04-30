@@ -10,6 +10,13 @@
 	overflow: hidden;
 }
 
+@media (max-width: 900px) {
+	.panel {
+		width: 100%;
+		max-height: 60vh;
+	}
+}
+
 .header {
 	display: flex;
 	align-items: center;

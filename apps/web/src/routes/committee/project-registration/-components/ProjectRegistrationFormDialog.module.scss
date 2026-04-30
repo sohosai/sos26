@@ -63,3 +63,24 @@
 	border-top: 1px solid var(--gray-4);
 	flex-shrink: 0;
 }
+
+@media (max-width: 640px) {
+	.dialogHeader,
+	.dialogInner,
+	.dialogFooter {
+		padding-left: var(--space-4);
+		padding-right: var(--space-4);
+	}
+
+	.dialogFooter {
+		flex-direction: column-reverse;
+
+		& > * {
+			width: 100%;
+		}
+	}
+
+	.sortOrderRow {
+		flex-wrap: wrap;
+	}
+}

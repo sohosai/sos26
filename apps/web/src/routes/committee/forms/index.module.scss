@@ -12,3 +12,13 @@
 .formRow {
 	margin-bottom: var(--space-4);
 }
+
+@media (max-width: 768px) {
+	.page {
+		padding: var(--space-4);
+	}
+
+	.header {
+		margin-bottom: var(--space-4);
+	}
+}
