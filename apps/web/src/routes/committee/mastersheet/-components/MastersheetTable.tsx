@@ -688,6 +688,11 @@ export function MastersheetTable({
 }: Props) {
 	const router = useRouter();
 
+	const effectivePinnedColumnIds = useMemo(() => {
+		const ids = pinnedColumnIds ?? [];
+		return ["actions", ...ids.filter(id => id !== "actions")];
+	}, [pinnedColumnIds]);
+
 	const tableData = useMemo(
 		(): MastersheetRow[] =>
 			rows.map(row => ({
@@ -754,7 +759,7 @@ export function MastersheetTable({
 		<DataTable<MastersheetRow>
 			data={tableData}
 			columns={tableColumns}
-			pinnedColumnIds={pinnedColumnIds}
+			pinnedColumnIds={effectivePinnedColumnIds}
 			features={{
 				sorting: true,
 				globalFilter: true,
