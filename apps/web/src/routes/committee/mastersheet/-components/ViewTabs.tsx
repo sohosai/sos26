@@ -16,6 +16,8 @@ export type ViewState = {
 	sorting?: SortingState;
 	/** このビューで表示するカラム ID 一覧。未収録のカラムは非表示扱い */
 	knownColumnIds?: string[];
+	/** 左側に固定表示するカラム ID 一覧 */
+	pinnedColumnIds?: string[];
 	columnFilters?: ColumnFiltersState;
 };
 

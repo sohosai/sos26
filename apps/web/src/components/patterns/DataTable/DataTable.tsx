@@ -13,6 +13,7 @@ import {
 	IconSettings,
 } from "@tabler/icons-react";
 import {
+	type Cell,
 	type ColumnDef,
 	type ColumnFiltersState,
 	type FilterFn,
@@ -20,13 +21,24 @@ import {
 	getCoreRowModel,
 	getFilteredRowModel,
 	getSortedRowModel,
+	type Header,
+	type Table as ReactTable,
 	type RowData,
 	type RowSelectionState,
 	type SortingState,
 	useReactTable,
 	type VisibilityState,
 } from "@tanstack/react-table";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+	type CSSProperties,
+	type MouseEvent as ReactMouseEvent,
+	type ReactNode,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { Button, Checkbox } from "@/components/primitives";
 import { ColumnFilterPopover } from "./ColumnFilterPopover";
 import styles from "./DataTable.module.scss";
@@ -63,6 +75,8 @@ type DataTableProps<T> = {
 	data: T[];
 	// biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
 	columns: ColumnDef<T, any>[];
+	/** 左固定するカラムID（表示順は元の columns 順に従い、固定カラムを左側に寄せる） */
+	pinnedColumnIds?: string[];
 	features?: DataTableFeatures;
 	initialSorting?: SortingState;
 	initialGlobalFilter?: string;
@@ -158,9 +172,315 @@ function hasToolbar(f: Required<DataTableFeatures>, extra: ReactNode): boolean {
 	return !!(f.globalFilter || f.columnVisibility || f.csvExport || extra);
 }
 
+type PinnedCellStyle = {
+	isPinned: boolean;
+	left?: number;
+	className?: string;
+	style?: CSSProperties;
+};
+
+function getPinnedCellStyle(
+	columnId: string,
+	effectivePinnedSet: ReadonlySet<string>,
+	pinnedLeft: Record<string, number>,
+	lastPinnedId: string | undefined,
+	kind: "header" | "body"
+): PinnedCellStyle {
+	const isPinned = effectivePinnedSet.has(columnId);
+	if (!isPinned) return { isPinned };
+
+	const left = pinnedLeft[columnId] ?? 0;
+	const baseClass =
+		kind === "header" ? styles.pinnedHeaderCell : styles.pinnedBodyCell;
+	const className = `${baseClass}${
+		columnId === lastPinnedId ? ` ${styles.pinnedLast}` : ""
+	}`;
+	const zIndex = kind === "header" ? 3 : 2;
+	return {
+		isPinned,
+		left,
+		className,
+		style: { left, position: "sticky", zIndex },
+	};
+}
+
+function isSamePinnedLeft(
+	a: Record<string, number>,
+	b: Record<string, number>
+): boolean {
+	const aKeys = Object.keys(a);
+	const bKeys = Object.keys(b);
+	if (aKeys.length !== bKeys.length) return false;
+	for (const k of aKeys) {
+		if (a[k] !== b[k]) return false;
+	}
+	return true;
+}
+
+function buildOrderedColumns<T extends RowData>(
+	columns: ColumnDef<T, unknown>[],
+	pinnedColumnIds: string[] | undefined,
+	pinnedSet: ReadonlySet<string>
+): ColumnDef<T, unknown>[] {
+	if (!pinnedColumnIds?.length) return columns;
+	const pinned: ColumnDef<T, unknown>[] = [];
+	const rest: ColumnDef<T, unknown>[] = [];
+	for (const col of columns) {
+		const id = (col as { id?: string }).id;
+		if (id && pinnedSet.has(id)) pinned.push(col);
+		else rest.push(col);
+	}
+	return [...pinned, ...rest];
+}
+
+function buildTableColumns<T extends RowData>(
+	orderedColumns: ColumnDef<T, unknown>[],
+	features: Pick<Required<DataTableFeatures>, "columnFilter" | "rowSelection">
+): ColumnDef<T, unknown>[] {
+	const augmented: ColumnDef<T, unknown>[] = features.columnFilter
+		? orderedColumns.map(col => {
+				const variant = (col as { meta?: { filterVariant?: string } }).meta
+					?.filterVariant;
+				if (variant === "number")
+					return { ...col, filterFn: numberRangeFilterFn };
+				if (variant === "select")
+					return { ...col, filterFn: multiValueFilterFn };
+				return col;
+			})
+		: orderedColumns;
+
+	if (!features.rowSelection) return augmented;
+
+	const selectCol: ColumnDef<T, unknown> = {
+		id: "_select",
+		enableSorting: false,
+		enableHiding: false,
+		enableColumnFilter: false,
+		header: ({ table }) => (
+			<RadixCheckbox
+				size="1"
+				aria-label="全行を選択"
+				checked={table.getIsAllRowsSelected()}
+				onCheckedChange={val => table.toggleAllRowsSelected(!!val)}
+			/>
+		),
+		cell: ({ row }) => (
+			<RadixCheckbox
+				size="1"
+				aria-label="この行を選択"
+				checked={row.getIsSelected()}
+				onCheckedChange={val => row.toggleSelected(!!val)}
+				disabled={!row.getCanSelect()}
+			/>
+		),
+	};
+	return [selectCol, ...augmented];
+}
+
+function renderHeaderCell<T extends RowData>(args: {
+	header: Header<T, unknown>;
+	effectivePinnedSet: ReadonlySet<string>;
+	pinnedLeft: Record<string, number>;
+	lastPinnedId: string | undefined;
+	features: Required<DataTableFeatures>;
+}): ReactNode {
+	const { header, effectivePinnedSet, pinnedLeft, lastPinnedId, features } =
+		args;
+	const columnId = header.column.id;
+	const pinned = getPinnedCellStyle(
+		columnId,
+		effectivePinnedSet,
+		pinnedLeft,
+		lastPinnedId,
+		"header"
+	);
+
+	const canSort = header.column.getCanSort();
+	const onClick = canSort ? header.column.getToggleSortingHandler() : undefined;
+	const cursor = canSort ? "pointer" : "default";
+	const sortKey = (header.column.getIsSorted() || "none") as string;
+	const showFilter =
+		features.columnFilter && !!header.column.columnDef.meta?.filterVariant;
+
+	return (
+		<Table.ColumnHeaderCell
+			key={header.id}
+			data-column-id={columnId}
+			className={pinned.className}
+			style={{
+				whiteSpace: "nowrap",
+				...(pinned.style ?? {}),
+			}}
+		>
+			<Flex align="center" gap="1">
+				<Flex
+					align="center"
+					gap="1"
+					flexGrow="1"
+					onClick={onClick}
+					style={{ cursor, userSelect: "none" }}
+				>
+					{header.isPlaceholder
+						? null
+						: flexRender(header.column.columnDef.header, header.getContext())}
+					{canSort && sortIndicator[sortKey]}
+				</Flex>
+				{showFilter && <ColumnFilterPopover column={header.column} />}
+			</Flex>
+		</Table.ColumnHeaderCell>
+	);
+}
+
+function renderBodyCell<T extends RowData>(args: {
+	cell: Cell<T, unknown>;
+	rowIndex: number;
+	cellIndex: number;
+	effectivePinnedSet: ReadonlySet<string>;
+	pinnedLeft: Record<string, number>;
+	lastPinnedId: string | undefined;
+	cellSelection: boolean;
+	isSelected: (ri: number, ci: number) => boolean;
+	handleCellMouseDown: (ri: number, ci: number, e: ReactMouseEvent) => void;
+	handleCellMouseEnter: (ri: number, ci: number) => void;
+}): ReactNode {
+	const {
+		cell,
+		rowIndex,
+		cellIndex,
+		effectivePinnedSet,
+		pinnedLeft,
+		lastPinnedId,
+		cellSelection,
+		isSelected,
+		handleCellMouseDown,
+		handleCellMouseEnter,
+	} = args;
+
+	const columnId = cell.column.id;
+	const pinned = getPinnedCellStyle(
+		columnId,
+		effectivePinnedSet,
+		pinnedLeft,
+		lastPinnedId,
+		"body"
+	);
+	const selectedClass =
+		cellSelection && isSelected(rowIndex, cellIndex)
+			? ` ${styles.cellSelected}`
+			: "";
+	const className = `${pinned.className ?? ""}${selectedClass}`.trim();
+
+	return (
+		<Table.Cell
+			key={cell.id}
+			className={className || undefined}
+			style={{
+				whiteSpace: "nowrap",
+				...(pinned.style ?? {}),
+			}}
+			onMouseDown={
+				cellSelection
+					? e => handleCellMouseDown(rowIndex, cellIndex, e)
+					: undefined
+			}
+			onMouseEnter={
+				cellSelection
+					? () => handleCellMouseEnter(rowIndex, cellIndex)
+					: undefined
+			}
+		>
+			{flexRender(cell.column.columnDef.cell, cell.getContext())}
+		</Table.Cell>
+	);
+}
+
+function DataTableToolbar<T extends RowData>(props: {
+	show: boolean;
+	features: Required<DataTableFeatures>;
+	table: ReactTable<T>;
+	globalFilter: string;
+	setGlobalFilter: (v: string) => void;
+	columnFilters: ColumnFiltersState;
+	setColumnFilters: (v: ColumnFiltersState) => void;
+	toolbarExtra: ReactNode;
+}): ReactNode {
+	const {
+		show,
+		features,
+		table,
+		globalFilter,
+		setGlobalFilter,
+		columnFilters,
+		setColumnFilters,
+		toolbarExtra,
+	} = props;
+
+	if (!show) return null;
+
+	return (
+		<Flex gap="3" mb="3" align="end" className={styles.toolbar}>
+			{features.globalFilter && (
+				<Box maxWidth="300px" flexGrow="1" className={styles.searchBox}>
+					<TextField.Root
+						placeholder="検索..."
+						value={globalFilter}
+						onChange={e => setGlobalFilter(e.target.value)}
+					>
+						<TextField.Slot>
+							<IconSearch size={16} />
+						</TextField.Slot>
+					</TextField.Root>
+				</Box>
+			)}
+			<Box flexGrow="1" className={styles.toolbarSpacer} />
+			{features.columnVisibility && (
+				<Popover.Root>
+					<Popover.Trigger>
+						<Button intent="secondary">
+							<IconSettings size={16} /> 表示カラム
+						</Button>
+					</Popover.Trigger>
+					<Popover.Content>
+						<Flex direction="column" gap="2">
+							{table
+								.getAllColumns()
+								.filter(column => column.getCanHide())
+								.map(column => (
+									<Checkbox
+										key={column.id}
+										label={
+											typeof column.columnDef.header === "string"
+												? column.columnDef.header
+												: column.id
+										}
+										size="1"
+										checked={column.getIsVisible()}
+										onCheckedChange={value => column.toggleVisibility(!!value)}
+									/>
+								))}
+						</Flex>
+					</Popover.Content>
+				</Popover.Root>
+			)}
+			{features.columnFilter && columnFilters.length > 0 && (
+				<Button intent="secondary" onClick={() => setColumnFilters([])}>
+					<IconFilterOff size={16} /> フィルター解除
+				</Button>
+			)}
+			{features.csvExport && (
+				<Button intent="secondary" onClick={() => downloadCsv(table)}>
+					<IconDownload size={16} /> CSV出力
+				</Button>
+			)}
+			{toolbarExtra}
+		</Flex>
+	);
+}
+
 export function DataTable<T extends RowData>({
 	data,
 	columns,
+	pinnedColumnIds,
 	features: featuresProp,
 	initialSorting = [],
 	initialGlobalFilter = "",
@@ -178,6 +498,7 @@ export function DataTable<T extends RowData>({
 	selectionIgnoreRef,
 }: DataTableProps<T>) {
 	const f = { ...defaultFeatures, ...featuresProp };
+
 	// rowSelection=true のとき cell selection を無効化
 	const cellSelection = f.rowSelection ? false : f.selection;
 
@@ -192,6 +513,17 @@ export function DataTable<T extends RowData>({
 		useState<RowSelectionState>(initialRowSelection);
 	const tableRef = useRef<HTMLDivElement>(null);
 
+	const pinnedSet = useMemo(
+		() => new Set<string>(pinnedColumnIds ?? []),
+		[pinnedColumnIds]
+	);
+	const effectivePinnedSet = useMemo(() => {
+		const next = new Set(pinnedSet);
+		if (f.rowSelection) next.add("_select");
+		return next;
+	}, [pinnedSet, f.rowSelection]);
+	const [pinnedLeft, setPinnedLeft] = useState<Record<string, number>>({});
+
 	const {
 		selected,
 		isDragging,
@@ -202,47 +534,21 @@ export function DataTable<T extends RowData>({
 		handleMouseUp,
 	} = useSelection();
 
+	const orderedColumns = useMemo(() => {
+		return buildOrderedColumns(
+			columns as ColumnDef<T, unknown>[],
+			pinnedColumnIds,
+			pinnedSet
+		);
+	}, [columns, pinnedColumnIds, pinnedSet]);
+
 	// カラムにフィルター関数を付与 + rowSelection 用チェックボックスカラムを先頭に追加
 	const tableColumns = useMemo(() => {
-		const augmented: ColumnDef<T, unknown>[] = f.columnFilter
-			? columns.map(col => {
-					const variant = (col as { meta?: { filterVariant?: string } }).meta
-						?.filterVariant;
-					if (variant === "number")
-						return { ...col, filterFn: numberRangeFilterFn };
-					if (variant === "select")
-						return { ...col, filterFn: multiValueFilterFn };
-					return col;
-				})
-			: columns;
-
-		if (!f.rowSelection) return augmented;
-
-		const selectCol: ColumnDef<T, unknown> = {
-			id: "_select",
-			enableSorting: false,
-			enableHiding: false,
-			enableColumnFilter: false,
-			header: ({ table }) => (
-				<RadixCheckbox
-					size="1"
-					aria-label="全行を選択"
-					checked={table.getIsAllRowsSelected()}
-					onCheckedChange={val => table.toggleAllRowsSelected(!!val)}
-				/>
-			),
-			cell: ({ row }) => (
-				<RadixCheckbox
-					size="1"
-					aria-label="この行を選択"
-					checked={row.getIsSelected()}
-					onCheckedChange={val => row.toggleSelected(!!val)}
-					disabled={!row.getCanSelect()}
-				/>
-			),
-		};
-		return [selectCol, ...augmented];
-	}, [columns, f.columnFilter, f.rowSelection]);
+		return buildTableColumns(orderedColumns, {
+			columnFilter: f.columnFilter,
+			rowSelection: f.rowSelection,
+		});
+	}, [orderedColumns, f.columnFilter, f.rowSelection]);
 
 	const table = useReactTable({
 		data,
@@ -361,149 +667,87 @@ export function DataTable<T extends RowData>({
 
 	const showToolbar = hasToolbar(f, toolbarExtra);
 
+	const pinnedVisibleColumns = useMemo(() => {
+		if (!pinnedColumnIds?.length && !f.rowSelection) return [];
+		return table
+			.getVisibleLeafColumns()
+			.filter(c => effectivePinnedSet.has(c.id));
+	}, [pinnedColumnIds, f.rowSelection, effectivePinnedSet, table]);
+	const lastPinnedId = pinnedVisibleColumns.at(-1)?.id;
+
+	useLayoutEffect(() => {
+		if (!pinnedColumnIds?.length && !f.rowSelection) {
+			setPinnedLeft({});
+			return;
+		}
+
+		const next: Record<string, number> = {};
+		let left = 0;
+		for (const col of pinnedVisibleColumns) {
+			next[col.id] = left;
+			const el = tableRef.current?.querySelector<HTMLTableCellElement>(
+				`th[data-column-id="${col.id}"]`
+			);
+			const w = el?.getBoundingClientRect().width ?? 0;
+			left += w;
+		}
+		setPinnedLeft(prev => (isSamePinnedLeft(prev, next) ? prev : next));
+	}, [pinnedColumnIds, f.rowSelection, pinnedVisibleColumns]);
+
 	return (
 		<Box ref={tableRef}>
-			{showToolbar && (
-				<Flex gap="3" mb="3" align="end" className={styles.toolbar}>
-					{f.globalFilter && (
-						<Box maxWidth="300px" flexGrow="1" className={styles.searchBox}>
-							<TextField.Root
-								placeholder="検索..."
-								value={globalFilter}
-								onChange={e => setGlobalFilter(e.target.value)}
-							>
-								<TextField.Slot>
-									<IconSearch size={16} />
-								</TextField.Slot>
-							</TextField.Root>
-						</Box>
-					)}
-					<Box flexGrow="1" className={styles.toolbarSpacer} />
-					{f.columnVisibility && (
-						<Popover.Root>
-							<Popover.Trigger>
-								<Button intent="secondary">
-									<IconSettings size={16} /> 表示カラム
-								</Button>
-							</Popover.Trigger>
-							<Popover.Content>
-								<Flex direction="column" gap="2">
-									{table
-										.getAllColumns()
-										.filter(column => column.getCanHide())
-										.map(column => (
-											<Checkbox
-												key={column.id}
-												label={
-													typeof column.columnDef.header === "string"
-														? column.columnDef.header
-														: column.id
-												}
-												size="1"
-												checked={column.getIsVisible()}
-												onCheckedChange={value =>
-													column.toggleVisibility(!!value)
-												}
-											/>
-										))}
-								</Flex>
-							</Popover.Content>
-						</Popover.Root>
-					)}
-					{f.columnFilter && columnFilters.length > 0 && (
-						<Button intent="secondary" onClick={() => setColumnFilters([])}>
-							<IconFilterOff size={16} /> フィルター解除
-						</Button>
-					)}
-					{f.csvExport && (
-						<Button intent="secondary" onClick={() => downloadCsv(table)}>
-							<IconDownload size={16} /> CSV出力
-						</Button>
-					)}
-					{toolbarExtra}
-				</Flex>
-			)}
-			<Table.Root
-				variant="surface"
-				className={`${styles.root}${cellSelection && isDragging ? ` ${styles.selecting}` : ""}`}
-				style={{ overflowX: "auto" }}
-			>
-				<Table.Header>
-					{table.getHeaderGroups().map(headerGroup => (
-						<Table.Row key={headerGroup.id}>
-							{headerGroup.headers.map(header => (
-								<Table.ColumnHeaderCell
-									key={header.id}
-									style={{ whiteSpace: "nowrap" }}
-								>
-									<Flex align="center" gap="1">
-										<Flex
-											align="center"
-											gap="1"
-											flexGrow="1"
-											onClick={
-												header.column.getCanSort()
-													? header.column.getToggleSortingHandler()
-													: undefined
-											}
-											style={{
-												cursor: header.column.getCanSort()
-													? "pointer"
-													: "default",
-												userSelect: "none",
-											}}
-										>
-											{header.isPlaceholder
-												? null
-												: flexRender(
-														header.column.columnDef.header,
-														header.getContext()
-													)}
-											{header.column.getCanSort() &&
-												sortIndicator[
-													(header.column.getIsSorted() || "none") as string
-												]}
-										</Flex>
-										{f.columnFilter &&
-											header.column.columnDef.meta?.filterVariant && (
-												<ColumnFilterPopover column={header.column} />
-											)}
-									</Flex>
-								</Table.ColumnHeaderCell>
-							))}
-						</Table.Row>
-					))}
-				</Table.Header>
-				<Table.Body>
-					{table.getRowModel().rows.map((row, ri) => (
-						<Table.Row key={row.id}>
-							{row.getVisibleCells().map((cell, ci) => (
-								<Table.Cell
-									key={cell.id}
-									className={
-										cellSelection && isSelected(ri, ci)
-											? styles.cellSelected
-											: undefined
-									}
-									style={{ whiteSpace: "nowrap" }}
-									onMouseDown={
-										cellSelection
-											? e => handleCellMouseDown(ri, ci, e)
-											: undefined
-									}
-									onMouseEnter={
-										cellSelection
-											? () => handleCellMouseEnter(ri, ci)
-											: undefined
-									}
-								>
-									{flexRender(cell.column.columnDef.cell, cell.getContext())}
-								</Table.Cell>
-							))}
-						</Table.Row>
-					))}
-				</Table.Body>
-			</Table.Root>
+			{DataTableToolbar({
+				show: showToolbar,
+				features: f,
+				table,
+				globalFilter,
+				setGlobalFilter,
+				columnFilters,
+				setColumnFilters,
+				toolbarExtra,
+			})}
+			<div className={styles.scrollContainer}>
+				<Table.Root
+					variant="surface"
+					className={`${styles.root}${cellSelection && isDragging ? ` ${styles.selecting}` : ""}`}
+				>
+					<Table.Header>
+						{table.getHeaderGroups().map(headerGroup => (
+							<Table.Row key={headerGroup.id}>
+								{headerGroup.headers.map(header =>
+									renderHeaderCell({
+										header,
+										effectivePinnedSet,
+										pinnedLeft,
+										lastPinnedId,
+										features: f,
+									})
+								)}
+							</Table.Row>
+						))}
+					</Table.Header>
+					<Table.Body>
+						{table.getRowModel().rows.map((row, ri) => (
+							<Table.Row key={row.id}>
+								{row.getVisibleCells().map((cell, ci) =>
+									renderBodyCell({
+										cell,
+										rowIndex: ri,
+										cellIndex: ci,
+										effectivePinnedSet,
+										pinnedLeft,
+										lastPinnedId,
+										cellSelection,
+										isSelected,
+										handleCellMouseDown,
+										handleCellMouseEnter,
+									})
+								)}
+							</Table.Row>
+						))}
+					</Table.Body>
+				</Table.Root>
+			</div>
 		</Box>
 	);
 }

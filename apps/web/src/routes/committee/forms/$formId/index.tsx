@@ -563,6 +563,20 @@ function AnswersTab({
 	const columnHelper = createColumnHelper<AnswerRow>();
 
 	const columns = [
+		columnHelper.display({
+			id: "actions",
+			header: "操作",
+			cell: ({ row }) => (
+				<Button
+					intent="ghost"
+					size="1"
+					onClick={() => onViewDetail(row.original.id)}
+				>
+					<IconEye size={16} />
+					詳細
+				</Button>
+			),
+		}),
 		columnHelper.accessor("projectNumber", {
 			header: "企画番号",
 			cell: ctx => <Text size="2">{formatProjectNumber(ctx.getValue())}</Text>,
@@ -620,21 +634,6 @@ function AnswersTab({
 				},
 			})
 		),
-
-		columnHelper.display({
-			id: "actions",
-			header: "操作",
-			cell: ({ row }) => (
-				<Button
-					intent="ghost"
-					size="1"
-					onClick={() => onViewDetail(row.original.id)}
-				>
-					<IconEye size={16} />
-					詳細
-				</Button>
-			),
-		}),
 	];
 
 	if (rows.length === 0) {

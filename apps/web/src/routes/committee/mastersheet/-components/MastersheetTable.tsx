@@ -65,6 +65,7 @@ type Props = {
 	initialSorting?: SortingState;
 	initialColumnVisibility?: VisibilityState;
 	initialColumnFilters?: ColumnFiltersState;
+	pinnedColumnIds?: string[];
 	onSortingChange?: (sorting: SortingState) => void;
 	onColumnVisibilityChange?: (visibility: VisibilityState) => void;
 	onColumnFiltersChange?: (filters: ColumnFiltersState) => void;
@@ -678,6 +679,7 @@ export function MastersheetTable({
 	initialSorting,
 	initialColumnVisibility,
 	initialColumnFilters,
+	pinnedColumnIds,
 	onSortingChange,
 	onColumnVisibilityChange,
 	onColumnFiltersChange,
@@ -685,6 +687,11 @@ export function MastersheetTable({
 	selectionIgnoreRef,
 }: Props) {
 	const router = useRouter();
+
+	const effectivePinnedColumnIds = useMemo(() => {
+		const ids = pinnedColumnIds ?? [];
+		return ["actions", ...ids.filter(id => id !== "actions")];
+	}, [pinnedColumnIds]);
 
 	const tableData = useMemo(
 		(): MastersheetRow[] =>
@@ -752,6 +759,7 @@ export function MastersheetTable({
 		<DataTable<MastersheetRow>
 			data={tableData}
 			columns={tableColumns}
+			pinnedColumnIds={effectivePinnedColumnIds}
 			features={{
 				sorting: true,
 				globalFilter: true,
