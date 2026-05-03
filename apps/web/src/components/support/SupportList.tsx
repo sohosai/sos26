@@ -14,7 +14,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { UserAvatar } from "@/components/common/UserAvatar";
 import { Button, TextField } from "@/components/primitives";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatProjectNumber } from "@/lib/format";
 import { statusConfig } from "./constants";
 import styles from "./SupportList.module.scss";
 
@@ -44,9 +44,31 @@ export function SupportList({
 	const [searchQuery, setSearchQuery] = useState("");
 	const isCommittee = viewerRole === "committee";
 
-	const searched = searchQuery
-		? inquiries.filter(inq => inq.title.includes(searchQuery))
-		: inquiries;
+	const searched = (() => {
+		const q = searchQuery.trim().toLowerCase();
+		if (!q) return inquiries;
+		return inquiries.filter(inq => {
+			const inTitle = inq.title.toLowerCase().includes(q);
+			const inProjectName = inq.project?.name?.toLowerCase().includes(q);
+			const projectNumberFormatted =
+				inq.project && typeof inq.project.number === "number"
+					? formatProjectNumber(inq.project.number)
+					: "";
+			const inProjectNumberFormatted = projectNumberFormatted
+				.toLowerCase()
+				.includes(q);
+			const inProjectNumberRaw =
+				inq.project && inq.project.number !== undefined
+					? String(inq.project.number).includes(q)
+					: false;
+			return (
+				inTitle ||
+				inProjectName ||
+				inProjectNumberFormatted ||
+				inProjectNumberRaw
+			);
+		});
+	})();
 
 	const isAssignedToMe = (inq: InquirySummary) => {
 		const assignees = isCommittee
@@ -115,14 +137,20 @@ export function SupportList({
 						currentUser={currentUser}
 						basePath={basePath}
 						isAdmin={isAdmin}
+						viewerRole={viewerRole}
 					/>
 				) : activeTab === "draft" ? (
-					<CommitteeDraftList inquiries={draftItems} basePath={basePath} />
+					<CommitteeDraftList
+						inquiries={draftItems}
+						basePath={basePath}
+						viewerRole={viewerRole}
+					/>
 				) : (
 					<CommitteeResolvedList
 						inquiries={resolvedItems}
 						basePath={basePath}
 						isAssignedToMe={isAssignedToMe}
+						viewerRole={viewerRole}
 					/>
 				)
 			) : (
@@ -130,6 +158,7 @@ export function SupportList({
 					openItems={openItems}
 					resolvedItems={resolvedItems}
 					basePath={basePath}
+					viewerRole={viewerRole}
 				/>
 			)}
 		</div>
@@ -188,11 +217,13 @@ function CommitteeOpenSections({
 	currentUser,
 	basePath,
 	isAdmin,
+	viewerRole,
 }: {
 	inquiries: InquirySummary[];
 	currentUser: { id: string; name: string };
 	basePath: string;
 	isAdmin: boolean;
+	viewerRole: "project" | "committee";
 }) {
 	const isAssignedToMe = (inq: InquirySummary) =>
 		inq.committeeAssignees.some(a => a.user.id === currentUser.id);
@@ -251,6 +282,7 @@ function CommitteeOpenSections({
 								basePath={basePath}
 								isMyInquiry
 								showAssignees
+								viewerRole={viewerRole}
 							/>
 						))}
 					</ul>
@@ -276,6 +308,7 @@ function CommitteeOpenSections({
 								basePath={basePath}
 								isMyInquiry={false}
 								showAssignees
+								viewerRole={viewerRole}
 							/>
 						))}
 					</ul>
@@ -301,6 +334,7 @@ function CommitteeOpenSections({
 								basePath={basePath}
 								isMyInquiry={false}
 								showAssignees
+								viewerRole={viewerRole}
 							/>
 						))}
 					</ul>
@@ -314,10 +348,12 @@ function CommitteeResolvedList({
 	inquiries,
 	basePath,
 	isAssignedToMe,
+	viewerRole,
 }: {
 	inquiries: InquirySummary[];
 	basePath: string;
 	isAssignedToMe: (inq: InquirySummary) => boolean;
+	viewerRole: "project" | "committee";
 }) {
 	const items = inquiries.filter(inq => inq.status === "RESOLVED");
 
@@ -341,6 +377,7 @@ function CommitteeResolvedList({
 					basePath={basePath}
 					isMyInquiry={isAssignedToMe(inq)}
 					showAssignees
+					viewerRole={viewerRole}
 				/>
 			))}
 		</ul>
@@ -350,9 +387,11 @@ function CommitteeResolvedList({
 function CommitteeDraftList({
 	inquiries,
 	basePath,
+	viewerRole,
 }: {
 	inquiries: InquirySummary[];
 	basePath: string;
+	viewerRole: "project" | "committee";
 }) {
 	if (inquiries.length === 0) {
 		return (
@@ -374,6 +413,7 @@ function CommitteeDraftList({
 					basePath={basePath}
 					isMyInquiry={false}
 					showAssignees
+					viewerRole={viewerRole}
 				/>
 			))}
 		</ul>
@@ -384,10 +424,12 @@ function ProjectList({
 	openItems,
 	resolvedItems,
 	basePath,
+	viewerRole,
 }: {
 	openItems: InquirySummary[];
 	resolvedItems: InquirySummary[];
 	basePath: string;
+	viewerRole: "project" | "committee";
 }) {
 	if (openItems.length === 0 && resolvedItems.length === 0) {
 		return (
@@ -411,6 +453,7 @@ function ProjectList({
 							basePath={basePath}
 							isMyInquiry={false}
 							showAssignees={false}
+							viewerRole={viewerRole}
 						/>
 					))}
 				</ul>
@@ -434,6 +477,7 @@ function ProjectList({
 								basePath={basePath}
 								isMyInquiry={false}
 								showAssignees={false}
+								viewerRole={viewerRole}
 							/>
 						))}
 					</ul>
@@ -448,11 +492,13 @@ function InquiryCard({
 	basePath,
 	isMyInquiry,
 	showAssignees,
+	viewerRole,
 }: {
 	inquiry: InquirySummary;
 	basePath: string;
 	isMyInquiry: boolean;
 	showAssignees: boolean;
+	viewerRole: "project" | "committee";
 }) {
 	const navigate = useNavigate();
 	const config = statusConfig[inquiry.status];
@@ -496,6 +542,13 @@ function InquiryCard({
 							</Tooltip>
 						)}
 					</span>
+
+					{viewerRole === "committee" && (
+						<Text size="1" color="gray">
+							# {formatProjectNumber(inquiry.project.number)} /{" "}
+							{inquiry.project.name}
+						</Text>
+					)}
 
 					<Text size="1" color="gray">
 						{formatDate(inquiry.createdAt, "datetime")} に作成
