@@ -14,7 +14,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { UserAvatar } from "@/components/common/UserAvatar";
 import { Button, TextField } from "@/components/primitives";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatProjectNumber } from "@/lib/format";
 import { statusConfig } from "./constants";
 import styles from "./SupportList.module.scss";
 
@@ -496,6 +496,11 @@ function InquiryCard({
 							</Tooltip>
 						)}
 					</span>
+
+					<Text size="1" color="gray">
+						# {formatProjectNumber(inquiry.project.number)} /{" "}
+						{inquiry.project.name}
+					</Text>
 
 					<Text size="1" color="gray">
 						{formatDate(inquiry.createdAt, "datetime")} に作成

@@ -420,7 +420,7 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 				},
 		include: {
 			createdBy: { select: userSelect },
-			project: { select: { id: true, name: true } },
+			project: { select: { id: true, number: true, name: true } },
 			assignees: {
 				where: { deletedAt: null },
 				include: assigneeInclude,

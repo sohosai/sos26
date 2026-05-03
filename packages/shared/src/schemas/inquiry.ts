@@ -230,7 +230,7 @@ const inquirySummarySchema = z.object({
 	isDraft: z.boolean(),
 	hasUnreadComments: z.boolean(),
 	createdBy: userSummarySchema,
-	project: z.object({ id: z.cuid(), name: z.string() }),
+	project: z.object({ id: z.cuid(), number: z.number(), name: z.string() }),
 	projectAssignees: z.array(assigneeWithUserSchema),
 	committeeAssignees: z.array(assigneeWithUserSchema),
 	commentCount: z.number(),
