@@ -14,7 +14,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { UserAvatar } from "@/components/common/UserAvatar";
 import { Button, TextField } from "@/components/primitives";
-import { formatDate, formatProjectNumber } from "@/lib/format";
+import { formatProjectNumber, formatRelativeTime } from "@/lib/format";
 import { statusConfig } from "./constants";
 import styles from "./SupportList.module.scss";
 
@@ -546,14 +546,11 @@ function InquiryCard({
 					{viewerRole === "committee" && (
 						<Text size="1" color="gray">
 							# {formatProjectNumber(inquiry.project.number)} /{" "}
-							{inquiry.project.name}
+							{inquiry.project.name} /{" "}
+							{formatRelativeTime(inquiry.createdAt, "auto")} に作成
+							{inquiry.commentCount > 0 && ` / ${inquiry.commentCount}件の返信`}
 						</Text>
 					)}
-
-					<Text size="1" color="gray">
-						{formatDate(inquiry.createdAt, "datetime")} に作成
-						{inquiry.commentCount > 0 && ` / ${inquiry.commentCount}件の返信`}
-					</Text>
 
 					<span className={styles.cardTags}>
 						<Badge color={displayColor} size="1" variant="soft">
