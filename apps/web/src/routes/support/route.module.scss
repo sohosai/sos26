@@ -14,3 +14,28 @@
 		margin-left: 64px;
 	}
 }
+
+.publicLayout {
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+}
+
+.publicMain {
+	flex: 1;
+	background-color: var(--gray-2);
+	padding: var(--space-6);
+	overflow-y: auto;
+}
+
+@media (max-width: 900px) {
+	.main {
+		margin-left: 0;
+		padding: var(--space-4);
+		padding-top: calc(var(--space-8) + var(--space-2));
+	}
+
+	.publicMain {
+		padding: var(--space-4);
+	}
+}
