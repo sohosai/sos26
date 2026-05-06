@@ -1,28 +1,38 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useState } from "react";
+import { Header } from "@/components/layout/Header/Header";
 import {
 	committeeMenuItems,
 	projectMenuItems,
 	Sidebar,
 } from "@/components/layout/Sidebar";
-import {
-	preloadMemberEditPermission,
-	requireAuth,
-	useAuthStore,
-} from "@/lib/auth";
+import { preloadMemberEditPermission, useAuthStore } from "@/lib/auth";
 import styles from "./route.module.scss";
 
 export const Route = createFileRoute("/support")({
-	beforeLoad: async ({ location }) => {
-		await requireAuth(location.pathname);
-		await preloadMemberEditPermission();
+	beforeLoad: async () => {
+		const { isLoggedIn } = useAuthStore.getState();
+		if (isLoggedIn) {
+			await preloadMemberEditPermission();
+		}
 	},
 	component: SupportLayout,
 });
 
 function SupportLayout() {
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-	const { activePortal, isCommitteeMember } = useAuthStore();
+	const { activePortal, isCommitteeMember, isLoggedIn } = useAuthStore();
+
+	if (!isLoggedIn) {
+		return (
+			<div className={styles.publicLayout}>
+				<Header />
+				<main className={styles.publicMain}>
+					<Outlet />
+				</main>
+			</div>
+		);
+	}
 
 	const menuItems =
 		activePortal === "committee"
