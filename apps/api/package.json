@@ -29,6 +29,7 @@
     "@sendgrid/mail": "^8.1.6",
     "@sentry/bun": "^10.43.0",
     "@sos26/shared": "workspace:*",
+    "archiver": "^7.0.1",
     "firebase-admin": "^13.6.0",
     "hono": "^4.11.3",
     "isomorphic-dompurify": "^2.36.0",
