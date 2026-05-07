@@ -17,6 +17,7 @@ import {
 } from "@sos26/shared";
 import archiver from "archiver";
 import { Hono } from "hono";
+import pLimit from "p-limit";
 import { requirePermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
 import {
@@ -1219,6 +1220,7 @@ committeeFormRoute.get(
 		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>一旦
 		void (async () => {
 			const usedNames = new Set<string>();
+			const entries: Array<{ name: string; key: string }> = [];
 			for (const response of responses) {
 				const project = response.formDelivery.project;
 				for (const answer of response.answers) {
@@ -1252,12 +1254,21 @@ committeeFormRoute.get(
 							suffix += 1;
 						}
 						usedNames.add(entryName);
-
-						const fileStream = await fetchFileStream(file.key);
-						archive.append(fileStream, { name: entryName });
+						entries.push({ name: entryName, key: file.key });
 					}
 				}
 			}
+
+			// 5つまで並列処理
+			const limit = pLimit(5);
+			await Promise.all(
+				entries.map(entry =>
+					limit(async () => {
+						const fileStream = await fetchFileStream(entry.key);
+						archive.append(fileStream, { name: entry.name });
+					})
+				)
+			);
 
 			await archive.finalize();
 		})().catch(error => {
