@@ -130,13 +130,167 @@ function buildZipEntryFileName(params: {
 	].join("_");
 }
 
-// ファイル名を重複しないように変更
+// ファイルにサフィックスを付加
 function appendSuffixToPath(path: string, suffix: string): string {
 	const lastSlash = path.lastIndexOf("/");
 	const dir = lastSlash >= 0 ? path.slice(0, lastSlash + 1) : "";
 	const fileName = lastSlash >= 0 ? path.slice(lastSlash + 1) : path;
 	const { baseName, extension } = splitFileName(fileName);
 	return `${dir}${baseName}_${suffix}${extension}`;
+}
+
+type ZipFileLink = {
+	file: { key: string; fileName: string } | null;
+};
+
+type ZipAnswer = {
+	formItemId: string;
+	files: ZipFileLink[];
+};
+
+type ZipResponse = {
+	formDelivery: {
+		projectId: string;
+		project: { number: number; name: string };
+	};
+	answers: ZipAnswer[];
+};
+
+type ZipHistory = {
+	files: ZipFileLink[];
+};
+
+type ZipEntry = {
+	name: string;
+	key: string;
+};
+
+// 編集履歴がある場合は編集履歴を優先
+function resolveAnswerFiles(
+	answer: ZipAnswer,
+	history: ZipHistory | undefined
+): ZipFileLink[] {
+	return history ? history.files : answer.files;
+}
+
+// ファイル名を重複しないように変更
+function buildUniqueEntryName(params: {
+	dirName: string;
+	baseName: string;
+	usedNames: Set<string>;
+}): string {
+	const { dirName, baseName, usedNames } = params;
+	let entryName = `${dirName}/${baseName}`;
+	let suffix = 1;
+	while (usedNames.has(entryName)) {
+		entryName = appendSuffixToPath(`${dirName}/${baseName}`, String(suffix));
+		suffix += 1;
+	}
+	usedNames.add(entryName);
+	return entryName;
+}
+
+// 回答に紐づくファイルをZipEntryに変換
+function collectAnswerEntries(params: {
+	answer: ZipAnswer;
+	response: ZipResponse;
+	formTitle: string;
+	fileItemLabelMap: Map<string, string>;
+	latestByCell: Map<string, ZipHistory>;
+	usedNames: Set<string>;
+}): ZipEntry[] {
+	const {
+		answer,
+		response,
+		formTitle,
+		fileItemLabelMap,
+		latestByCell,
+		usedNames,
+	} = params;
+	const history = latestByCell.get(
+		`${answer.formItemId}:${response.formDelivery.projectId}`
+	);
+	const files = resolveAnswerFiles(answer, history);
+	if (files.length === 0) return [];
+
+	const itemLabel = fileItemLabelMap.get(answer.formItemId) ?? "ファイル";
+	const dirName = sanitizeFileNameSegment(itemLabel);
+
+	return files.flatMap(fileLink => {
+		const file = fileLink.file;
+		if (!file) return [];
+
+		const entryBaseName = buildZipEntryFileName({
+			projectNumber: response.formDelivery.project.number,
+			formTitle,
+			projectName: response.formDelivery.project.name,
+			originalFileName: file.fileName,
+		});
+
+		const entryName = buildUniqueEntryName({
+			dirName,
+			baseName: entryBaseName,
+			usedNames,
+		});
+
+		return [{ name: entryName, key: file.key }];
+	});
+}
+
+function collectResponseEntries(params: {
+	response: ZipResponse;
+	formTitle: string;
+	fileItemLabelMap: Map<string, string>;
+	latestByCell: Map<string, ZipHistory>;
+	usedNames: Set<string>;
+}): ZipEntry[] {
+	const { response, formTitle, fileItemLabelMap, latestByCell, usedNames } =
+		params;
+	return response.answers.flatMap(answer =>
+		collectAnswerEntries({
+			answer,
+			response,
+			formTitle,
+			fileItemLabelMap,
+			latestByCell,
+			usedNames,
+		})
+	);
+}
+
+function collectZipEntries(params: {
+	responses: ZipResponse[];
+	latestByCell: Map<string, ZipHistory>;
+	fileItemLabelMap: Map<string, string>;
+	formTitle: string;
+}): ZipEntry[] {
+	const { responses, latestByCell, fileItemLabelMap, formTitle } = params;
+	const usedNames = new Set<string>();
+	return responses.flatMap(response =>
+		collectResponseEntries({
+			response,
+			formTitle,
+			fileItemLabelMap,
+			latestByCell,
+			usedNames,
+		})
+	);
+}
+
+async function appendZipEntriesWithLimit(
+	archive: ReturnType<typeof archiver>,
+	entries: ZipEntry[],
+	concurrency: number
+): Promise<void> {
+	const limit = pLimit(concurrency);
+	await Promise.all(
+		entries.map(entry =>
+			limit(async () => {
+				const fileStream = await fetchFileStream(entry.key);
+				archive.append(fileStream, { name: entry.name });
+			})
+		)
+	);
 }
 
 async function fetchFileStream(key: string): Promise<Readable> {
@@ -1217,59 +1371,15 @@ committeeFormRoute.get(
 			stream.destroy(error);
 		});
 		archive.pipe(stream);
-		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>一旦
+
 		void (async () => {
-			const usedNames = new Set<string>();
-			const entries: Array<{ name: string; key: string }> = [];
-			for (const response of responses) {
-				const project = response.formDelivery.project;
-				for (const answer of response.answers) {
-					const history = latestByCell.get(
-						`${answer.formItemId}:${response.formDelivery.projectId}`
-					);
-					const files = history ? history.files : answer.files;
-					if (files.length === 0) continue;
-
-					const itemLabel =
-						fileItemLabelMap.get(answer.formItemId) ?? "ファイル";
-					const dirName = sanitizeFileNameSegment(itemLabel);
-
-					for (const fileLink of files) {
-						const file = fileLink.file;
-						if (!file) continue;
-
-						const entryBaseName = buildZipEntryFileName({
-							projectNumber: project.number,
-							formTitle: form.title,
-							projectName: project.name,
-							originalFileName: file.fileName,
-						});
-						let entryName = `${dirName}/${entryBaseName}`;
-						let suffix = 1;
-						while (usedNames.has(entryName)) {
-							entryName = appendSuffixToPath(
-								`${dirName}/${entryBaseName}`,
-								String(suffix)
-							);
-							suffix += 1;
-						}
-						usedNames.add(entryName);
-						entries.push({ name: entryName, key: file.key });
-					}
-				}
-			}
-
-			// 5つまで並列処理
-			const limit = pLimit(5);
-			await Promise.all(
-				entries.map(entry =>
-					limit(async () => {
-						const fileStream = await fetchFileStream(entry.key);
-						archive.append(fileStream, { name: entry.name });
-					})
-				)
-			);
-
+			const entries = collectZipEntries({
+				responses,
+				latestByCell,
+				fileItemLabelMap,
+				formTitle: form.title,
+			});
+			await appendZipEntriesWithLimit(archive, entries, 5);
 			await archive.finalize();
 		})().catch(error => {
 			const err =
