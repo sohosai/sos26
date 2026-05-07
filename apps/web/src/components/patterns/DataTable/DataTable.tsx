@@ -85,6 +85,8 @@ type DataTableProps<T> = {
 	onCellEdit?: (row: T, columnId: string, value: unknown) => void;
 	/** ツールバーに追加する任意の要素（ボタンなど） */
 	toolbarExtra?: ReactNode;
+	/** CSV出力ボタンの左側に表示する任意の要素 */
+	toolbarExtraBeforeCsv?: ReactNode;
 	/** ソート変化を通知 */
 	onSortingChange?: (sorting: SortingState) => void;
 	/** カラム表示変化を通知 */
@@ -168,8 +170,18 @@ function useChangeCallback<T>(
 	}, []);
 }
 
-function hasToolbar(f: Required<DataTableFeatures>, extra: ReactNode): boolean {
-	return !!(f.globalFilter || f.columnVisibility || f.csvExport || extra);
+function hasToolbar(
+	f: Required<DataTableFeatures>,
+	extra: ReactNode,
+	extraBeforeCsv: ReactNode
+): boolean {
+	return !!(
+		f.globalFilter ||
+		f.columnVisibility ||
+		f.csvExport ||
+		extra ||
+		extraBeforeCsv
+	);
 }
 
 type PinnedCellStyle = {
@@ -403,6 +415,7 @@ function DataTableToolbar<T extends RowData>(props: {
 	columnFilters: ColumnFiltersState;
 	setColumnFilters: (v: ColumnFiltersState) => void;
 	toolbarExtra: ReactNode;
+	toolbarExtraBeforeCsv: ReactNode;
 }): ReactNode {
 	const {
 		show,
@@ -413,6 +426,7 @@ function DataTableToolbar<T extends RowData>(props: {
 		columnFilters,
 		setColumnFilters,
 		toolbarExtra,
+		toolbarExtraBeforeCsv,
 	} = props;
 
 	if (!show) return null;
@@ -467,6 +481,7 @@ function DataTableToolbar<T extends RowData>(props: {
 					<IconFilterOff size={16} /> フィルター解除
 				</Button>
 			)}
+			{toolbarExtraBeforeCsv}
 			{features.csvExport && (
 				<Button intent="secondary" onClick={() => downloadCsv(table)}>
 					<IconDownload size={16} /> CSV出力
@@ -488,6 +503,7 @@ export function DataTable<T extends RowData>({
 	initialColumnFilters = [],
 	onCellEdit,
 	toolbarExtra,
+	toolbarExtraBeforeCsv,
 	onSortingChange,
 	onColumnVisibilityChange,
 	onColumnFiltersChange,
@@ -665,7 +681,7 @@ export function DataTable<T extends RowData>({
 		};
 	}, [clearSelection, cellSelection, selectionIgnoreRef]);
 
-	const showToolbar = hasToolbar(f, toolbarExtra);
+	const showToolbar = hasToolbar(f, toolbarExtra, toolbarExtraBeforeCsv);
 
 	const pinnedVisibleColumns = useMemo(() => {
 		if (!pinnedColumnIds?.length && !f.rowSelection) return [];
@@ -705,6 +721,7 @@ export function DataTable<T extends RowData>({
 				columnFilters,
 				setColumnFilters,
 				toolbarExtra,
+				toolbarExtraBeforeCsv,
 			})}
 			<div className={styles.scrollContainer}>
 				<Table.Root

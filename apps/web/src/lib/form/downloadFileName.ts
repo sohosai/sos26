@@ -3,7 +3,7 @@ import { formatProjectNumber } from "@/lib/format";
 const INVALID_FILE_NAME_CHARS = /[<>:"/\\|?*]/g;
 const LEADING_OR_TRAILING_PUNCTUATION = /^[.\s_]+|[.\s_]+$/g;
 
-function sanitizeFileNameSegment(value: string): string {
+export function sanitizeFileNameSegment(value: string): string {
 	const sanitized = value
 		.trim()
 		.replace(INVALID_FILE_NAME_CHARS, "_")

@@ -1,3 +1,4 @@
+import { PassThrough, Readable } from "node:stream";
 import type { CommitteeMember } from "@prisma/client";
 import {
 	addFormAttachmentRequestSchema,
@@ -14,6 +15,7 @@ import {
 	updateFormDetailRequestSchema,
 	updateFormViewersRequestSchema,
 } from "@sos26/shared";
+import archiver from "archiver";
 import { Hono } from "hono";
 import { requirePermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
@@ -37,6 +39,7 @@ import {
 	notifyFormAuthorizationRequested,
 } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
+import { getObject } from "../lib/storage/presign";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -55,6 +58,95 @@ const answerFilesInclude = {
 		file: { select: formAnswerFileSelect },
 	},
 };
+
+const formAnswerFileWithKeySelect = {
+	...formAnswerFileSelect,
+	key: true,
+} as const;
+
+const answerFilesWithKeyInclude = {
+	where: {
+		file: {
+			status: "CONFIRMED" as const,
+			deletedAt: null,
+		},
+	},
+	orderBy: { sortOrder: "asc" as const },
+	include: {
+		file: { select: formAnswerFileWithKeySelect },
+	},
+};
+
+const INVALID_FILE_NAME_CHARS = /[<>:"/\\|?*]/g;
+const LEADING_OR_TRAILING_PUNCTUATION = /^[.\s_]+|[.\s_]+$/g;
+
+// ファイル名として適さない文字を_に置換
+function sanitizeFileNameSegment(value: string): string {
+	const sanitized = value
+		.trim()
+		.replace(INVALID_FILE_NAME_CHARS, "_")
+		.replace(/\s+/g, " ")
+		.replace(/_+/g, "_")
+		.replace(LEADING_OR_TRAILING_PUNCTUATION, "");
+
+	return sanitized || "_";
+}
+
+// 拡張子を分離
+function splitFileName(fileName: string): {
+	baseName: string;
+	extension: string;
+} {
+	const lastDot = fileName.lastIndexOf(".");
+	if (lastDot <= 0) {
+		return { baseName: fileName, extension: "" };
+	}
+
+	return {
+		baseName: fileName.slice(0, lastDot),
+		extension: fileName.slice(lastDot),
+	};
+}
+
+// 企画番号を3桁の文字列に変換
+function formatProjectNumber(projectNumber: number): string {
+	return String(projectNumber).padStart(3, "0");
+}
+
+// ファイル名を作成
+function buildZipEntryFileName(params: {
+	projectNumber: number;
+	formTitle: string;
+	projectName: string;
+	originalFileName: string;
+}): string {
+	const { baseName, extension } = splitFileName(params.originalFileName);
+	return [
+		formatProjectNumber(params.projectNumber),
+		sanitizeFileNameSegment(params.formTitle),
+		sanitizeFileNameSegment(params.projectName),
+		`${sanitizeFileNameSegment(baseName)}${extension}`,
+	].join("_");
+}
+
+// ファイル名を重複しないように変更
+function appendSuffixToPath(path: string, suffix: string): string {
+	const lastSlash = path.lastIndexOf("/");
+	const dir = lastSlash >= 0 ? path.slice(0, lastSlash + 1) : "";
+	const fileName = lastSlash >= 0 ? path.slice(lastSlash + 1) : path;
+	const { baseName, extension } = splitFileName(fileName);
+	return `${dir}${baseName}_${suffix}${extension}`;
+}
+
+async function fetchFileStream(key: string): Promise<Readable> {
+	const s3Response = await getObject(key);
+	const s3Body = s3Response.Body;
+	if (!s3Body) {
+		throw Errors.internal("ファイルの取得に失敗しました");
+	}
+	const readable = s3Body.transformToWebStream();
+	return Readable.fromWeb(readable);
+}
 
 const getFormOrThrow = async (formId: string) => {
 	const form = await prisma.form.findFirst({
@@ -1041,6 +1133,147 @@ committeeFormRoute.get(
 				}),
 			})),
 		});
+	}
+);
+
+// ─────────────────────────────────────────
+// GET /committee/forms/:formId/responses/files.zip
+// 回答のファイルをまとめてダウンロード
+// ─────────────────────────────────────────
+committeeFormRoute.get(
+	"/:formId/responses/files.zip",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
+		const userId = c.get("user").id;
+		const committeeMember = c.get("committeeMember");
+
+		if (!(await canViewFormResponses(formId, userId, committeeMember))) {
+			throw Errors.forbidden("回答の閲覧権限がありません");
+		}
+
+		const form = await prisma.form.findFirst({
+			where: { id: formId, deletedAt: null },
+			select: {
+				title: true,
+				items: { select: { id: true, label: true, type: true } },
+			},
+		});
+		if (!form) throw Errors.notFound("申請が見つかりません");
+
+		const fileItems = form.items.filter(item => item.type === "FILE");
+		const fileItemIds = fileItems.map(item => item.id);
+		const fileItemLabelMap = new Map(
+			fileItems.map(item => [item.id, item.label])
+		);
+
+		const responses = await prisma.formResponse.findMany({
+			where: {
+				formDelivery: { formAuthorization: { formId } },
+				submittedAt: { not: null },
+			},
+			include: {
+				formDelivery: {
+					include: {
+						project: {
+							select: { id: true, number: true, name: true },
+						},
+					},
+				},
+				answers: {
+					where: fileItemIds.length ? { formItemId: { in: fileItemIds } } : {},
+					include: { files: answerFilesWithKeyInclude },
+				},
+			},
+			orderBy: { submittedAt: "desc" },
+		});
+
+		const projectIds = [
+			...new Set(responses.map(r => r.formDelivery.projectId)),
+		];
+		const allHistory =
+			fileItemIds.length && projectIds.length
+				? await prisma.formItemEditHistory.findMany({
+						where: {
+							formItemId: { in: fileItemIds },
+							projectId: { in: projectIds },
+						},
+						orderBy: { createdAt: "desc" },
+						include: { files: answerFilesWithKeyInclude },
+					})
+				: [];
+
+		const latestByCell = new Map<string, (typeof allHistory)[0]>();
+		for (const h of allHistory) {
+			const key = `${h.formItemId}:${h.projectId}`;
+			if (!latestByCell.has(key)) latestByCell.set(key, h);
+		}
+
+		const archive = archiver("zip", { zlib: { level: 6 } });
+		const stream = new PassThrough();
+		archive.on("error", (error: Error | undefined) => {
+			stream.destroy(error);
+		});
+		archive.pipe(stream);
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <explanation>一旦
+		void (async () => {
+			const usedNames = new Set<string>();
+			for (const response of responses) {
+				const project = response.formDelivery.project;
+				for (const answer of response.answers) {
+					const history = latestByCell.get(
+						`${answer.formItemId}:${response.formDelivery.projectId}`
+					);
+					const files = history ? history.files : answer.files;
+					if (files.length === 0) continue;
+
+					const itemLabel =
+						fileItemLabelMap.get(answer.formItemId) ?? "ファイル";
+					const dirName = sanitizeFileNameSegment(itemLabel);
+
+					for (const fileLink of files) {
+						const file = fileLink.file;
+						if (!file) continue;
+
+						const entryBaseName = buildZipEntryFileName({
+							projectNumber: project.number,
+							formTitle: form.title,
+							projectName: project.name,
+							originalFileName: file.fileName,
+						});
+						let entryName = `${dirName}/${entryBaseName}`;
+						let suffix = 1;
+						while (usedNames.has(entryName)) {
+							entryName = appendSuffixToPath(
+								`${dirName}/${entryBaseName}`,
+								String(suffix)
+							);
+							suffix += 1;
+						}
+						usedNames.add(entryName);
+
+						const fileStream = await fetchFileStream(file.key);
+						archive.append(fileStream, { name: entryName });
+					}
+				}
+			}
+
+			await archive.finalize();
+		})().catch(error => {
+			const err =
+				error instanceof Error ? error : new Error("ZIPの生成に失敗しました");
+			archive.destroy(err);
+		});
+		const downloadName = `${sanitizeFileNameSegment(form.title)}_files.zip`;
+		const encodedFileName = encodeURIComponent(downloadName);
+		c.header("Content-Type", "application/zip");
+		c.header(
+			"Content-Disposition",
+			`attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`
+		);
+
+		return c.body(Readable.toWeb(stream));
 	}
 );
 

@@ -37,6 +37,8 @@ import {
 	updateFormDetailEndpoint,
 	updateFormViewersEndpoint,
 } from "@sos26/shared";
+import { sanitizeFileNameSegment } from "../form/downloadFileName";
+import { httpClient } from "../http/client";
 import { callBodyApi, callGetApi, callNoBodyApi } from "./core";
 
 // ─────────────────────────────────────────────────────────────
@@ -238,6 +240,27 @@ export async function getFormResponse(
 	return callGetApi(getFormResponseEndpoint, {
 		pathParams: { formId, responseId },
 	});
+}
+
+/**
+ * GET /committee/forms/:formId/responses/files.zip
+ * 回答に含まれるファイルをまとめてダウンロード
+ */
+export async function downloadFormResponseFilesZip(
+	formId: string,
+	formTitle: string
+): Promise<void> {
+	const path = `committee/forms/${encodeURIComponent(formId)}/responses/files.zip`;
+	const response = await httpClient.get(path, { timeout: false });
+	const blob = await response.blob();
+	const objectUrl = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = objectUrl;
+	a.download = `${sanitizeFileNameSegment(formTitle)}_files.zip`;
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
+	URL.revokeObjectURL(objectUrl);
 }
 
 /**
