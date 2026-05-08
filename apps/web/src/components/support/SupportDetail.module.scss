@@ -293,14 +293,23 @@
 }
 
 .projectAssigneeProjectLink {
+	display: flex;
+	flex: 1;
+	justify-content: space-between;
+	align-items: center;
+	text-decoration: none;
+	color: var(--gray-11);
+	&:hover {
+		color: var(--gray-12);
+		text-decoration: underline;
+	}
+}
+
+.projectAssigneeProjectIcon {
 	margin-left: auto;
 	display: inline-flex;
 	align-items: center;
 	color: var(--gray-11);
-
-	&:hover {
-		color: var(--gray-12);
-	}
 
 	&:focus-visible {
 		outline: 2px solid var(--accent-8);

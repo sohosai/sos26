@@ -584,7 +584,6 @@ function SupportSidebar({
 				{viewerRole === "committee" && (
 					<div className={styles.projectAssigneeProjectHeader}>
 						<IconFolder size={18} />
-						<Text size="2">{inquiry.project.name}</Text>
 						<Link
 							to="/committee/info/$projectId"
 							params={{
@@ -593,7 +592,10 @@ function SupportSidebar({
 							className={styles.projectAssigneeProjectLink}
 							aria-label="企画詳細を開く"
 						>
-							<IconExternalLink size={14} />
+							<Text size="2">{inquiry.project.name}</Text>
+							<span className={styles.projectAssigneeProjectLinkIcon}>
+								<IconExternalLink size={14} />
+							</span>
 						</Link>
 					</div>
 				)}
