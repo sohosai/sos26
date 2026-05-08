@@ -139,6 +139,10 @@ export function AssigneeList({
 								size={28}
 								name={a.user.name}
 								avatarFileId={a.user.avatarFileId}
+								role={variant}
+								bureau={
+									(a.user as { committeeBureau?: string }).committeeBureau
+								}
 							/>
 						</span>
 						<div className={styles.assigneeNameBlock}>

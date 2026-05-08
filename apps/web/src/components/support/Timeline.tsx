@@ -287,7 +287,13 @@ export function TimelineItem({
 	return (
 		<div className={styles.timelineItem} data-draft={isDraft || undefined}>
 			<span className={styles.avatar}>
-				<UserAvatar size={28} name={name} avatarFileId={avatarFileId} />
+				<UserAvatar
+					size={28}
+					name={name}
+					avatarFileId={avatarFileId}
+					role={role}
+					bureau={committeeBureau}
+				/>
 			</span>
 			<div className={styles.timelineContent}>
 				<TimelineHeader

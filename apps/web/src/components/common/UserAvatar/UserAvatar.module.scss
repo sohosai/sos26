@@ -4,3 +4,17 @@
 	display: block;
 	flex-shrink: 0;
 }
+
+.fallbackContainer {
+	border-radius: 9999px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	overflow: hidden;
+}
+
+.withRing {
+	/* margin to prevent box-shadow from being clipped by overflow:hidden on parents if tight */
+	margin: 2px;
+}
