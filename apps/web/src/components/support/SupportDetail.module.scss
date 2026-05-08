@@ -290,6 +290,7 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-2);
+	color: var(--gray-11);
 }
 
 .projectAssigneeProjectLink {
@@ -303,6 +304,14 @@
 		color: var(--gray-12);
 		text-decoration: underline;
 	}
+}
+
+.projectAssigneeProjectLinkIcon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	line-height: 0;
 }
 
 .projectAssigneeProjectIcon {
