@@ -106,6 +106,7 @@ function TimelineBodySection({
 					onChange={onDraftBodyChange}
 					rows={4}
 					disabled={isDraftActionPending}
+					autoGrow
 				/>
 			</div>
 		);
