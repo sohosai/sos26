@@ -790,6 +790,7 @@ export function NewInquiryForm({
 						onChange={setBody}
 						rows={5}
 						required
+						autoGrow
 					/>
 
 					<FormSection

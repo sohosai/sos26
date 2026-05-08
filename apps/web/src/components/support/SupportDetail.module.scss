@@ -286,6 +286,47 @@
 	gap: var(--space-2);
 }
 
+.projectAssigneeProjectHeader {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	color: var(--gray-11);
+}
+
+.projectAssigneeProjectLink {
+	display: flex;
+	flex: 1;
+	justify-content: space-between;
+	align-items: center;
+	text-decoration: none;
+	color: var(--gray-11);
+	&:hover {
+		color: var(--gray-12);
+		text-decoration: underline;
+	}
+}
+
+.projectAssigneeProjectLinkIcon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	line-height: 0;
+}
+
+.projectAssigneeProjectIcon {
+	margin-left: auto;
+	display: inline-flex;
+	align-items: center;
+	color: var(--gray-11);
+
+	&:focus-visible {
+		outline: 2px solid var(--accent-8);
+		outline-offset: 2px;
+		border-radius: var(--radius-2);
+	}
+}
+
 .deleteActions {
 	display: flex;
 	gap: var(--space-2);
@@ -303,6 +344,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-2);
+	padding-left: 10px;
 }
 
 .assigneeItem {

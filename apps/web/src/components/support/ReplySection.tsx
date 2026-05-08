@@ -224,6 +224,7 @@ export function ReplySection({
 				onChange={setReplyText}
 				rows={3}
 				disabled={disabled}
+				autoGrow
 			/>
 			{!disabled && (
 				<ReplySelectedFiles files={replyFiles} onRemove={removeReplyFile} />
