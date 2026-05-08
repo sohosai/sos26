@@ -9,6 +9,7 @@ import {
 import {
 	IconArrowLeft,
 	IconCheck,
+	IconExternalLink,
 	IconFileDescription,
 	IconFolder,
 	IconHash,
@@ -580,9 +581,26 @@ function SupportSidebar({
 				<Text size="2" weight="medium" color="gray">
 					企画側 担当者
 				</Text>
+				{viewerRole === "committee" && (
+					<div className={styles.projectAssigneeProjectHeader}>
+						<IconFolder size={18} />
+						<Text size="2">{inquiry.project.name}</Text>
+						<Link
+							to="/committee/info/$projectId"
+							params={{
+								projectId: formatProjectNumber(inquiry.project.number),
+							}}
+							className={styles.projectAssigneeProjectLink}
+							aria-label="企画詳細を開く"
+						>
+							<IconExternalLink size={14} />
+						</Link>
+					</div>
+				)}
 				<AssigneeList
 					assignees={inquiry.projectAssignees}
 					variant="project"
+					hideAffiliation={viewerRole === "committee"}
 					canEdit={canEditProjectAssignee}
 					onRemove={onRemoveAssignee}
 				/>

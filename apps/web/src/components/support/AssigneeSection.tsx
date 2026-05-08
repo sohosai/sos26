@@ -108,11 +108,13 @@ export function AssigneeList({
 	assignees,
 	variant,
 	canEdit,
+	hideAffiliation = false,
 	onRemove,
 }: {
 	assignees: AssigneeInfo[];
 	variant: "project" | "committee";
 	canEdit: boolean;
+	hideAffiliation?: boolean;
 	onRemove: (assigneeId: string, userId: string) => void;
 }) {
 	if (assignees.length === 0) {
@@ -126,8 +128,9 @@ export function AssigneeList({
 	return (
 		<div className={styles.assigneeList}>
 			{assignees.map(a => {
-				const affiliation =
-					variant === "committee"
+				const affiliation = hideAffiliation
+					? undefined
+					: variant === "committee"
 						? a.user.committeeBureau
 						: a.user.affiliatedProjects.length > 0
 							? a.user.affiliatedProjects.join("・")

@@ -286,6 +286,29 @@
 	gap: var(--space-2);
 }
 
+.projectAssigneeProjectHeader {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+
+.projectAssigneeProjectLink {
+	margin-left: auto;
+	display: inline-flex;
+	align-items: center;
+	color: var(--gray-11);
+
+	&:hover {
+		color: var(--gray-12);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--accent-8);
+		outline-offset: 2px;
+		border-radius: var(--radius-2);
+	}
+}
+
 .deleteActions {
 	display: flex;
 	gap: var(--space-2);
@@ -303,6 +326,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-2);
+	padding-left: 10px;
 }
 
 .assigneeItem {
