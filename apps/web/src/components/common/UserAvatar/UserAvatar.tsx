@@ -1,8 +1,9 @@
+import { type Bureau, bureauLabelMap } from "@sos26/shared";
 import BoringAvatar from "boring-avatars";
 import { useStorageUrl } from "@/lib/storage";
 import styles from "./UserAvatar.module.scss";
 
-const BUREAU_COLORS: Record<string, string> = {
+const BUREAU_COLORS: Record<Bureau, string> = {
 	EXECUTIVE_BOARD: "#e07798",
 	FINANCE: "#fbe983",
 	GENERAL_AFFAIRS: "#16a765",
@@ -22,7 +23,7 @@ type UserAvatarProps = {
 	avatarFileId?: string | null;
 	size?: number;
 	role?: UserAvatarRole;
-	bureau?: string | null;
+	bureau?: Bureau | string | null;
 };
 
 export function UserAvatar({
@@ -34,31 +35,49 @@ export function UserAvatar({
 }: UserAvatarProps) {
 	const url = useStorageUrl(avatarFileId ?? "", true);
 
-	const ringColor =
-		role === "committee" && bureau ? BUREAU_COLORS[bureau] : undefined;
-	const dynamicStyle = ringColor
-		? { boxShadow: `0 0 0 2px ${ringColor}` }
-		: undefined;
-
-	if (avatarFileId && url) {
-		return (
-			<img
-				src={url}
-				alt={name}
-				width={size}
-				height={size}
-				className={`${styles.image} ${ringColor ? styles.withRing : ""}`}
-				style={{ width: size, height: size, ...dynamicStyle }}
-			/>
-		);
+	let validBureau: Bureau | undefined;
+	if (bureau) {
+		if (bureau in BUREAU_COLORS) {
+			validBureau = bureau as Bureau;
+		} else {
+			const entry = Object.entries(bureauLabelMap).find(
+				([_, label]) => label === bureau
+			);
+			if (entry) {
+				validBureau = entry[0] as Bureau;
+			}
+		}
 	}
 
+	const ringColor =
+		role === "committee" && validBureau
+			? BUREAU_COLORS[validBureau]
+			: undefined;
+
 	return (
-		<div
-			className={`${styles.fallbackContainer} ${ringColor ? styles.withRing : ""}`}
-			style={{ width: size, height: size, ...dynamicStyle }}
+		<span
+			className={`${styles.avatarWrapper} ${ringColor ? styles.withRing : ""}`}
+			style={
+				{
+					width: size,
+					height: size,
+					...(ringColor ? { "--ring-color": ringColor } : {}),
+				} as React.CSSProperties
+			}
 		>
-			<BoringAvatar size={size} name={name} variant="beam" />
-		</div>
+			{avatarFileId && url ? (
+				<img
+					src={url}
+					alt={name}
+					width={size}
+					height={size}
+					className={styles.image}
+				/>
+			) : (
+				<div className={styles.fallbackContainer}>
+					<BoringAvatar size={size} name={name} variant="beam" />
+				</div>
+			)}
+		</span>
 	);
 }

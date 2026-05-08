@@ -140,9 +140,7 @@ export function AssigneeList({
 								name={a.user.name}
 								avatarFileId={a.user.avatarFileId}
 								role={variant}
-								bureau={
-									(a.user as { committeeBureau?: string }).committeeBureau
-								}
+								bureau={a.user.committeeBureau}
 							/>
 						</span>
 						<div className={styles.assigneeNameBlock}>

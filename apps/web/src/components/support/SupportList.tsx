@@ -508,11 +508,8 @@ function InquiryCard({
 	const DisplayIcon = isDraft ? IconPencil : StatusIcon;
 
 	const allAssignees = [
-		...inquiry.committeeAssignees.map(a => ({
-			...a,
-			_role: "committee" as const,
-		})),
-		...inquiry.projectAssignees.map(a => ({ ...a, _role: "project" as const })),
+		...inquiry.committeeAssignees,
+		...inquiry.projectAssignees,
 	];
 
 	return (
@@ -567,11 +564,6 @@ function InquiryCard({
 												size={20}
 												name={a.user.name}
 												avatarFileId={a.user.avatarFileId}
-												role={a._role}
-												bureau={
-													(a.user as { committeeBureau?: string })
-														.committeeBureau
-												}
 											/>
 										</span>
 									</Tooltip>
