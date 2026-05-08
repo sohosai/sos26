@@ -164,7 +164,7 @@ function RouteComponent() {
 				<button
 					type="button"
 					className={styles.backLink}
-					onClick={() => navigate({ to: "/committee/notice" })}
+					onClick={() => window.history.back()}
 				>
 					<IconArrowLeft size={16} />
 					<Text size="2">お知らせ一覧に戻る</Text>
