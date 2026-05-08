@@ -16,7 +16,7 @@ import {
 	IconTrash,
 	IconUsers,
 } from "@tabler/icons-react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/primitives";
 import { formatDate, formatProjectNumber } from "@/lib/format";
@@ -672,7 +672,6 @@ export function SupportDetail({
 	onUpdateViewers,
 	isAssigneeOrAdmin = false,
 }: SupportDetailProps) {
-	const navigate = useNavigate();
 	const [activeReplyTab, setActiveReplyTab] = useState<"comment" | "draft">(
 		"comment"
 	);
@@ -799,7 +798,9 @@ export function SupportDetail({
 				<button
 					type="button"
 					className={styles.backLink}
-					onClick={() => navigate({ to: basePath as string })}
+					onClick={() => {
+						window.history.back();
+					}}
 				>
 					<IconArrowLeft size={16} />
 					<Text size="2">お問い合わせ一覧に戻る</Text>
