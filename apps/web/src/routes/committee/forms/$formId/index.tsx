@@ -568,7 +568,6 @@ function AnswersTab({
 	rows: AnswerRow[];
 	onViewDetail: (responseId: string) => void;
 }) {
-	const [isDownloading, setIsDownloading] = useState(false);
 	const columnHelper = createColumnHelper<AnswerRow>();
 	const hasFileItems = items.some(item => item.type === "FILE");
 
@@ -647,7 +646,6 @@ function AnswersTab({
 	];
 
 	const handleDownloadFiles = async () => {
-		setIsDownloading(true);
 		try {
 			await downloadFormResponseFilesZip(formId, formTitle);
 		} catch (error) {
@@ -658,8 +656,6 @@ function AnswersTab({
 				ui: { type: "toast" },
 				context: { formId },
 			});
-		} finally {
-			setIsDownloading(false);
 		}
 	};
 
@@ -687,11 +683,7 @@ function AnswersTab({
 			}}
 			toolbarExtraBeforeCsv={
 				hasFileItems ? (
-					<Button
-						intent="secondary"
-						onClick={handleDownloadFiles}
-						loading={isDownloading}
-					>
+					<Button intent="secondary" onClick={handleDownloadFiles}>
 						<IconDownload size={16} /> 一括ダウンロード
 					</Button>
 				) : null

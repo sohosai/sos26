@@ -245,22 +245,43 @@ export async function getFormResponse(
 /**
  * GET /committee/forms/:formId/responses/files.zip
  * 回答に含まれるファイルをまとめてダウンロード
+ * StreamSaver でストリーミングダウンロード（メモリ効率的）
  */
 export async function downloadFormResponseFilesZip(
 	formId: string,
 	formTitle: string
 ): Promise<void> {
+	const StreamSaver = await import("streamsaver");
+	const streamSaver = StreamSaver.default;
+
 	const path = `committee/forms/${encodeURIComponent(formId)}/responses/files.zip`;
 	const response = await httpClient.get(path, { timeout: false });
-	const blob = await response.blob();
-	const objectUrl = URL.createObjectURL(blob);
-	const a = document.createElement("a");
-	a.href = objectUrl;
-	a.download = `${sanitizeFileNameSegment(formTitle)}_files.zip`;
-	document.body.appendChild(a);
-	a.click();
-	document.body.removeChild(a);
-	URL.revokeObjectURL(objectUrl);
+
+	if (!response.body) {
+		throw new Error("レスポンスボディが空です");
+	}
+
+	const fileName = `${sanitizeFileNameSegment(formTitle)}_files.zip`;
+	const fileStream = streamSaver.createWriteStream(fileName);
+	const writer = fileStream.getWriter();
+
+	try {
+		const reader = response.body.getReader();
+		let done = false;
+
+		while (!done) {
+			const { done: streamDone, value } = await reader.read();
+			done = streamDone;
+			if (value) {
+				await writer.write(value);
+			}
+		}
+
+		await writer.close();
+	} catch (error) {
+		await writer.abort();
+		throw error;
+	}
 }
 
 /**
