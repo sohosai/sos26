@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildFormDownloadFileName } from "./downloadFileName";
+import { buildFormDownloadFileName } from "./filename";
 
 describe("buildFormDownloadFileName", () => {
 	test("企画番号を3桁ゼロ埋めして結合する", () => {

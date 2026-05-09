@@ -28,6 +28,7 @@ import {
 	removeFormAttachmentEndpoint,
 	removeFormCollaboratorEndpoint,
 	requestFormAuthorizationEndpoint,
+	sanitizeFileNameSegment,
 	type UpdateFormAuthorizationResponse,
 	type UpdateFormDetailRequest,
 	type UpdateFormDetailResponse,
@@ -37,7 +38,6 @@ import {
 	updateFormDetailEndpoint,
 	updateFormViewersEndpoint,
 } from "@sos26/shared";
-import { sanitizeFileNameSegment } from "../form/downloadFileName";
 import { httpClient } from "../http/client";
 import { callBodyApi, callGetApi, callNoBodyApi } from "./core";
 

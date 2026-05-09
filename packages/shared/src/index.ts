@@ -15,6 +15,7 @@ export * from "./endpoints/types";
 export * from "./endpoints/user";
 export * from "./errors";
 export * from "./lib/email";
+export * from "./lib/filename";
 export * from "./lib/form-pattern";
 export * from "./lib/phonetic";
 export * from "./lib/project-display-name";

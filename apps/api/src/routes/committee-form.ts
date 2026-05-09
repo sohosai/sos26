@@ -3,6 +3,8 @@ import type { CommitteeMember } from "@prisma/client";
 import {
 	addFormAttachmentRequestSchema,
 	addFormCollaboratorRequestSchema,
+	appendSuffixToPath,
+	buildFormDownloadFileName,
 	createFormRequestSchema,
 	editFormAnswerPathParamsSchema,
 	editFormAnswerRequestSchema,
@@ -11,6 +13,7 @@ import {
 	formIdPathParamsSchema,
 	formResponsePathParamsSchema,
 	requestFormAuthorizationRequestSchema,
+	sanitizeFileNameSegment,
 	updateFormAuthorizationRequestSchema,
 	updateFormDetailRequestSchema,
 	updateFormViewersRequestSchema,
@@ -77,67 +80,6 @@ const answerFilesWithKeyInclude = {
 		file: { select: formAnswerFileWithKeySelect },
 	},
 };
-
-const INVALID_FILE_NAME_CHARS = /[<>:"/\\|?*]/g;
-const LEADING_OR_TRAILING_PUNCTUATION = /^[.\s_]+|[.\s_]+$/g;
-
-// ファイル名として適さない文字を_に置換
-function sanitizeFileNameSegment(value: string): string {
-	const sanitized = value
-		.trim()
-		.replace(INVALID_FILE_NAME_CHARS, "_")
-		.replace(/\s+/g, " ")
-		.replace(/_+/g, "_")
-		.replace(LEADING_OR_TRAILING_PUNCTUATION, "");
-
-	return sanitized || "_";
-}
-
-// 拡張子を分離
-function splitFileName(fileName: string): {
-	baseName: string;
-	extension: string;
-} {
-	const lastDot = fileName.lastIndexOf(".");
-	if (lastDot <= 0) {
-		return { baseName: fileName, extension: "" };
-	}
-
-	return {
-		baseName: fileName.slice(0, lastDot),
-		extension: fileName.slice(lastDot),
-	};
-}
-
-// 企画番号を3桁の文字列に変換
-function formatProjectNumber(projectNumber: number): string {
-	return String(projectNumber).padStart(3, "0");
-}
-
-// ファイル名を作成
-function buildZipEntryFileName(params: {
-	projectNumber: number;
-	formTitle: string;
-	projectName: string;
-	originalFileName: string;
-}): string {
-	const { baseName, extension } = splitFileName(params.originalFileName);
-	return [
-		formatProjectNumber(params.projectNumber),
-		sanitizeFileNameSegment(params.formTitle),
-		sanitizeFileNameSegment(params.projectName),
-		`${sanitizeFileNameSegment(baseName)}${extension}`,
-	].join("_");
-}
-
-// ファイルにサフィックスを付加
-function appendSuffixToPath(path: string, suffix: string): string {
-	const lastSlash = path.lastIndexOf("/");
-	const dir = lastSlash >= 0 ? path.slice(0, lastSlash + 1) : "";
-	const fileName = lastSlash >= 0 ? path.slice(lastSlash + 1) : path;
-	const { baseName, extension } = splitFileName(fileName);
-	return `${dir}${baseName}_${suffix}${extension}`;
-}
 
 type ZipFileLink = {
 	file: { key: string; fileName: string } | null;
@@ -220,7 +162,7 @@ function collectAnswerEntries(params: {
 		const file = fileLink.file;
 		if (!file) return [];
 
-		const entryBaseName = buildZipEntryFileName({
+		const entryBaseName = buildFormDownloadFileName({
 			projectNumber: response.formDelivery.project.number,
 			formTitle,
 			projectName: response.formDelivery.project.name,
