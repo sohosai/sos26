@@ -1327,7 +1327,7 @@ committeeFormRoute.get(
 				fileItemLabelMap,
 				formTitle: form.title,
 			});
-			await appendZipEntriesWithLimit(archive, entries, 5);
+			await appendZipEntriesWithLimit(archive, entries, 3);
 			await archive.finalize();
 		})().catch(error => {
 			const err =
