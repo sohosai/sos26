@@ -1261,6 +1261,12 @@ committeeFormRoute.get(
 
 		const fileItems = form.items.filter(item => item.type === "FILE");
 		const fileItemIds = fileItems.map(item => item.id);
+
+		// ファイル項目がない場合はエラー
+		if (fileItemIds.length === 0) {
+			throw Errors.invalidRequest("ファイル項目がありません");
+		}
+
 		const fileItemLabelMap = new Map(
 			fileItems.map(item => [item.id, item.label])
 		);
@@ -1279,7 +1285,7 @@ committeeFormRoute.get(
 					},
 				},
 				answers: {
-					where: fileItemIds.length ? { formItemId: { in: fileItemIds } } : {},
+					where: { formItemId: { in: fileItemIds } },
 					include: { files: answerFilesWithKeyInclude },
 				},
 			},
