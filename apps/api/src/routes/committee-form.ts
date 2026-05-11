@@ -43,7 +43,7 @@ import {
 	notifyFormAuthorizationRequested,
 } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
-import { getObject } from "../lib/storage/presign";
+import { getObject, objectExists } from "../lib/storage/presign";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -1313,6 +1313,37 @@ committeeFormRoute.get(
 			if (!latestByCell.has(key)) latestByCell.set(key, h);
 		}
 
+		// エントリを事前に収集して、全ファイルが存在することを確認
+		const entries = collectZipEntries({
+			responses,
+			latestByCell,
+			fileItemLabelMap,
+			formTitle: form.title,
+		});
+
+		// ファイルが 1 個以上あれば、存在確認
+		const fileKeys = entries.map(e => e.key);
+		if (fileKeys.length > 0) {
+			// 並列で全ファイルの存在をチェック
+			const existenceResults = await Promise.allSettled(
+				fileKeys.map(key => objectExists(key))
+			);
+
+			// 1 個でも失敗または存在しないファイルがあればエラーを返す
+			const missingOrFailed = existenceResults
+				.map((result, i) => ({
+					key: fileKeys[i],
+					exists: result.status === "fulfilled" ? result.value : false,
+				}))
+				.filter(r => !r.exists);
+
+			if (missingOrFailed.length > 0) {
+				throw Errors.internal(
+					`ファイルが見つかりません: ${missingOrFailed.map(r => r.key).join(", ")}`
+				);
+			}
+		}
+
 		const archive = archiver("zip", { zlib: { level: 6 } });
 		const stream = new PassThrough();
 		archive.on("error", (error: Error | undefined) => {
@@ -1321,12 +1352,6 @@ committeeFormRoute.get(
 		archive.pipe(stream);
 
 		void (async () => {
-			const entries = collectZipEntries({
-				responses,
-				latestByCell,
-				fileItemLabelMap,
-				formTitle: form.title,
-			});
 			await appendZipEntriesWithLimit(archive, entries, 3);
 			await archive.finalize();
 		})().catch(error => {
