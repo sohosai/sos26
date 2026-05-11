@@ -28,6 +28,8 @@ type SupportListProps = {
 	basePath: string;
 	onNewInquiry: () => void;
 	isAdmin?: boolean;
+	committeeActiveTab?: CommitteeTab;
+	onCommitteeTabChange?: (tab: CommitteeTab) => void;
 };
 
 type CommitteeTab = "open" | "draft" | "resolved";
@@ -39,10 +41,18 @@ export function SupportList({
 	basePath,
 	onNewInquiry,
 	isAdmin = false,
+	committeeActiveTab,
+	onCommitteeTabChange,
 }: SupportListProps) {
-	const [activeTab, setActiveTab] = useState<CommitteeTab>("open");
+	const [localActiveTab, setLocalActiveTab] = useState<CommitteeTab>("open");
 	const [searchQuery, setSearchQuery] = useState("");
 	const isCommittee = viewerRole === "committee";
+	const activeTab = committeeActiveTab ?? localActiveTab;
+
+	const handleChangeTab = (tab: CommitteeTab) => {
+		setLocalActiveTab(tab);
+		onCommitteeTabChange?.(tab);
+	};
 
 	const searched = (() => {
 		const q = searchQuery.trim().toLowerCase();
@@ -116,7 +126,7 @@ export function SupportList({
 						activeTab={activeTab}
 						myCount={myCount}
 						draftCount={draftItems.length}
-						onChangeTab={setActiveTab}
+						onChangeTab={handleChangeTab}
 					/>
 				)}
 				<div className={styles.search}>

@@ -4,6 +4,7 @@ import {
 	useRouter,
 } from "@tanstack/react-router";
 import { useState } from "react";
+import { z } from "zod";
 import { NewInquiryForm } from "@/components/support/NewInquiryForm";
 import { SupportList } from "@/components/support/SupportList";
 import { listMyForms } from "@/lib/api/committee-form";
@@ -21,7 +22,12 @@ import {
 } from "@/lib/api/committee-project";
 import { useAuthStore } from "@/lib/auth";
 
+const searchSchema = z.object({
+	tab: z.enum(["open", "draft", "resolved"]).catch("open"),
+});
+
 export const Route = createFileRoute("/committee/support/")({
+	validateSearch: searchSchema,
 	component: CommitteeSupportListPage,
 	head: () => ({
 		meta: [
@@ -82,6 +88,7 @@ export const Route = createFileRoute("/committee/support/")({
 });
 
 function CommitteeSupportListPage() {
+	const { tab } = Route.useSearch();
 	const { inquiries, projects, committeeMembers, availableForms, isAdmin } =
 		Route.useLoaderData();
 	const [formOpen, setFormOpen] = useState(false);
@@ -111,6 +118,14 @@ function CommitteeSupportListPage() {
 				basePath="/committee/support"
 				onNewInquiry={() => setFormOpen(true)}
 				isAdmin={isAdmin}
+				committeeActiveTab={tab}
+				onCommitteeTabChange={nextTab => {
+					navigate({
+						to: ".",
+						search: prev => ({ ...prev, tab: nextTab }),
+						replace: true,
+					});
+				}}
 			/>
 			<NewInquiryForm
 				open={formOpen}
