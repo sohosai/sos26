@@ -21,20 +21,21 @@ self.onmessage = event => {
 			"/" +
 			(typeof data === "string" ? data : data.filename);
 	const port = event.ports[0];
-	const metadata = new Array(3);
-
-	metadata[1] = data;
-	metadata[2] = port;
+	const metadata = {
+		stream: null,
+		data: data,
+		port: port,
+	};
 
 	if (event.data.readableStream) {
-		metadata[0] = event.data.readableStream;
+		metadata.stream = event.data.readableStream;
 	} else if (event.data.transferringReadable) {
 		port.onmessage = evt => {
 			port.onmessage = null;
-			metadata[0] = evt.data.readableStream;
+			metadata.stream = evt.data.readableStream;
 		};
 	} else {
-		metadata[0] = createStream(port);
+		metadata.stream = createStream(port);
 	}
 
 	downloadMap.set(downloadUrl, metadata);
@@ -75,7 +76,7 @@ self.onfetch = event => {
 
 	if (!hijacked) return;
 
-	const [stream, data, port] = hijacked;
+	const { stream, data, port } = hijacked;
 
 	downloadMap.delete(url);
 
