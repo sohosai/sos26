@@ -103,13 +103,13 @@ self.onfetch = event => {
 	}
 
 	if (data.size) {
-		console.warn("Deprecated");
+		console.warn("Deprecated size:", data.size);
 		responseHeaders.set("Content-Length", data.size);
 	}
 
 	let fileName = typeof data === "string" ? data : data.filename;
 	if (fileName) {
-		console.warn("Deprecated");
+		console.warn("Deprecated filename:", fileName);
 		fileName = encodeURIComponent(fileName)
 			.replace(/['()]/g, escape)
 			.replace(/\*/g, "%2A");
