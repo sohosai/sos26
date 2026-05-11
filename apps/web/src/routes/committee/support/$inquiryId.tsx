@@ -104,7 +104,7 @@ function CommitteeSupportDetailPage() {
 				<Text as="p" size="2" color="gray">
 					指定されたお問い合わせは存在しないか、削除された可能性があります。
 				</Text>
-				<Link to="/committee/support">
+				<Link to="/committee/support" search={{ tab: "open" }}>
 					<Button intent="secondary">一覧に戻る</Button>
 				</Link>
 			</div>
@@ -294,7 +294,10 @@ function CommitteeSupportDetailPage() {
 				try {
 					await deleteDraftInquiry(inquiryId);
 					toast.success("下書きを削除しました");
-					router.navigate({ to: "/committee/support" });
+					router.navigate({
+						to: "/committee/support",
+						search: { tab: "draft" },
+					});
 				} catch (error) {
 					reportHandledError({
 						error,
