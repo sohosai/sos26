@@ -19,7 +19,6 @@ import { statusConfig } from "./constants";
 import styles from "./SupportList.module.scss";
 
 type InquirySummary = ListProjectInquiriesResponse["inquiries"][number];
-type AssigneeInfo = InquirySummary["projectAssignees"][number];
 
 type SupportListProps = {
 	inquiries: InquirySummary[];
@@ -517,7 +516,7 @@ function InquiryCard({
 	const displayColor = isDraft ? "orange" : config.color;
 	const DisplayIcon = isDraft ? IconPencil : StatusIcon;
 
-	const allAssignees: AssigneeInfo[] = [
+	const allAssignees = [
 		...inquiry.committeeAssignees,
 		...inquiry.projectAssignees,
 	];
