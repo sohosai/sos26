@@ -1338,9 +1338,10 @@ committeeFormRoute.get(
 				.filter(r => !r.exists);
 
 			if (missingOrFailed.length > 0) {
-				throw Errors.internal(
-					`ファイルが見つかりません: ${missingOrFailed.map(r => r.key).join(", ")}`
-				);
+				console.error("Failed to verify form attachment files for ZIP export", {
+					missingOrFailedKeys: missingOrFailed.map(r => r.key),
+				});
+				throw Errors.internal("一部のファイルを取得できませんでした");
 			}
 		}
 
