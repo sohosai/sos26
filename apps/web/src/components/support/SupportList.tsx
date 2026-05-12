@@ -10,7 +10,7 @@ import {
 	IconSearch,
 	IconUserCheck,
 } from "@tabler/icons-react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { UserAvatar } from "@/components/common/UserAvatar";
 import { Button, TextField } from "@/components/primitives";
@@ -510,7 +510,6 @@ function InquiryCard({
 	showAssignees: boolean;
 	viewerRole: "project" | "committee";
 }) {
-	const navigate = useNavigate();
 	const config = statusConfig[inquiry.status];
 	const StatusIcon = config.icon;
 	const isDraft = inquiry.isDraft;
@@ -523,14 +522,19 @@ function InquiryCard({
 		...inquiry.projectAssignees,
 	];
 
+	const inquiryDetailPath =
+		basePath === "/committee/support"
+			? "/committee/support/$inquiryId"
+			: "/project/support/$inquiryId";
+
 	return (
 		<li
 			className={`${styles.card} ${inquiry.status === "UNASSIGNED" ? styles.cardNew : ""}`}
 		>
-			<button
-				type="button"
+			<Link
+				to={inquiryDetailPath}
+				params={{ inquiryId: inquiry.id }}
 				className={styles.cardButton}
-				onClick={() => navigate({ to: `${basePath}/${inquiry.id}` as string })}
 			>
 				<span
 					className={styles.statusIcon}
@@ -588,7 +592,7 @@ function InquiryCard({
 						)}
 					</span>
 				</span>
-			</button>
+			</Link>
 		</li>
 	);
 }

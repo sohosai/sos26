@@ -19,6 +19,7 @@ const IMPORTANT_ERROR_OPERATIONS = [
 	"assignee_update",
 	"update_base_info",
 	"api_response_validation",
+	"download_files_zip",
 ] as const;
 
 type ImportantErrorOperation = (typeof IMPORTANT_ERROR_OPERATIONS)[number];

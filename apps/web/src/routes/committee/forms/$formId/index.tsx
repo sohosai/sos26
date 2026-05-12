@@ -13,6 +13,7 @@ import {
 	IconArrowLeft,
 	IconCalendar,
 	IconClock,
+	IconDownload,
 	IconEye,
 } from "@tabler/icons-react";
 import {
@@ -30,6 +31,7 @@ import {
 	addFormCollaborator,
 	approveFormAuthorization,
 	deleteForm,
+	downloadFormResponseFilesZip,
 	getFormDetail,
 	listFormResponses,
 	rejectFormAuthorization,
@@ -448,6 +450,8 @@ function RouteComponent() {
 					</div>
 				) : (
 					<AnswersTab
+						formId={form.id}
+						formTitle={form.title}
 						items={form.items}
 						rows={answerRows}
 						onViewDetail={setAnswerDialogResponseId}
@@ -555,15 +559,21 @@ function ContentTab({
 /* ─── 回答タブ ─── */
 
 function AnswersTab({
+	formId,
+	formTitle,
 	items,
 	rows,
 	onViewDetail,
 }: {
+	formId: string;
+	formTitle: string;
 	items: GetFormDetailResponse["form"]["items"];
 	rows: AnswerRow[];
 	onViewDetail: (responseId: string) => void;
 }) {
+	const [isDownloading, setIsDownloading] = useState(false);
 	const columnHelper = createColumnHelper<AnswerRow>();
+	const hasFileItems = items.some(item => item.type === "FILE");
 
 	const columns = [
 		columnHelper.display({
@@ -639,6 +649,23 @@ function AnswersTab({
 		),
 	];
 
+	const handleDownloadFiles = async () => {
+		setIsDownloading(true);
+		try {
+			await downloadFormResponseFilesZip(formId, formTitle);
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "download_files_zip",
+				userMessage: "ファイルの一括ダウンロードに失敗しました",
+				ui: { type: "toast" },
+				context: { formId },
+			});
+		} finally {
+			setIsDownloading(false);
+		}
+	};
+
 	if (rows.length === 0) {
 		return (
 			<div className={styles.emptyState}>
@@ -661,6 +688,18 @@ function AnswersTab({
 				copy: false,
 				csvExport: true,
 			}}
+			toolbarExtraBeforeCsv={
+				hasFileItems ? (
+					<Button
+						intent="secondary"
+						onClick={handleDownloadFiles}
+						disabled={isDownloading}
+						loading={isDownloading}
+					>
+						<IconDownload size={16} /> 一括ダウンロード
+					</Button>
+				) : null
+			}
 		/>
 	);
 }

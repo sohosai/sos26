@@ -1,7 +1,10 @@
+import { PassThrough, Readable } from "node:stream";
 import type { CommitteeMember } from "@prisma/client";
 import {
 	addFormAttachmentRequestSchema,
 	addFormCollaboratorRequestSchema,
+	appendSuffixToPath,
+	buildFormDownloadFileName,
 	createFormRequestSchema,
 	editFormAnswerPathParamsSchema,
 	editFormAnswerRequestSchema,
@@ -10,11 +13,14 @@ import {
 	formIdPathParamsSchema,
 	formResponsePathParamsSchema,
 	requestFormAuthorizationRequestSchema,
+	sanitizeFileNameSegment,
 	updateFormAuthorizationRequestSchema,
 	updateFormDetailRequestSchema,
 	updateFormViewersRequestSchema,
 } from "@sos26/shared";
+import archiver from "archiver";
 import { Hono } from "hono";
+import pLimit from "p-limit";
 import { requirePermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
 import {
@@ -37,6 +43,7 @@ import {
 	notifyFormAuthorizationRequested,
 } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
+import { getObject, objectExists } from "../lib/storage/presign";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -55,6 +62,188 @@ const answerFilesInclude = {
 		file: { select: formAnswerFileSelect },
 	},
 };
+
+const formAnswerFileWithKeySelect = {
+	...formAnswerFileSelect,
+	key: true,
+} as const;
+
+const answerFilesWithKeyInclude = {
+	where: {
+		file: {
+			status: "CONFIRMED" as const,
+			deletedAt: null,
+		},
+	},
+	orderBy: { sortOrder: "asc" as const },
+	include: {
+		file: { select: formAnswerFileWithKeySelect },
+	},
+};
+
+type ZipFileLink = {
+	file: { key: string; fileName: string } | null;
+};
+
+type ZipAnswer = {
+	formItemId: string;
+	files: ZipFileLink[];
+};
+
+type ZipResponse = {
+	formDelivery: {
+		projectId: string;
+		project: { number: number; name: string };
+	};
+	answers: ZipAnswer[];
+};
+
+type ZipHistory = {
+	files: ZipFileLink[];
+};
+
+type ZipEntry = {
+	name: string;
+	key: string;
+};
+
+// 編集履歴がある場合は編集履歴を優先
+function resolveAnswerFiles(
+	answer: ZipAnswer,
+	history: ZipHistory | undefined
+): ZipFileLink[] {
+	return history ? history.files : answer.files;
+}
+
+// ファイル名を重複しないように変更
+function buildUniqueEntryName(params: {
+	dirName: string;
+	baseName: string;
+	usedNames: Set<string>;
+}): string {
+	const { dirName, baseName, usedNames } = params;
+	let entryName = `${dirName}/${baseName}`;
+	let suffix = 1;
+	while (usedNames.has(entryName)) {
+		entryName = appendSuffixToPath(`${dirName}/${baseName}`, String(suffix));
+		suffix += 1;
+	}
+	usedNames.add(entryName);
+	return entryName;
+}
+
+// 回答に紐づくファイルをZipEntryに変換
+function collectAnswerEntries(params: {
+	answer: ZipAnswer;
+	response: ZipResponse;
+	formTitle: string;
+	fileItemLabelMap: Map<string, string>;
+	latestByCell: Map<string, ZipHistory>;
+	usedNames: Set<string>;
+}): ZipEntry[] {
+	const {
+		answer,
+		response,
+		formTitle,
+		fileItemLabelMap,
+		latestByCell,
+		usedNames,
+	} = params;
+	const history = latestByCell.get(
+		`${answer.formItemId}:${response.formDelivery.projectId}`
+	);
+	const files = resolveAnswerFiles(answer, history);
+	if (files.length === 0) return [];
+
+	const itemLabel = fileItemLabelMap.get(answer.formItemId) ?? "ファイル";
+	const dirName = sanitizeFileNameSegment(itemLabel);
+
+	return files.flatMap(fileLink => {
+		const file = fileLink.file;
+		if (!file) return [];
+
+		const entryBaseName = buildFormDownloadFileName({
+			projectNumber: response.formDelivery.project.number,
+			formTitle,
+			projectName: response.formDelivery.project.name,
+			originalFileName: file.fileName,
+		});
+
+		const entryName = buildUniqueEntryName({
+			dirName,
+			baseName: entryBaseName,
+			usedNames,
+		});
+
+		return [{ name: entryName, key: file.key }];
+	});
+}
+
+function collectResponseEntries(params: {
+	response: ZipResponse;
+	formTitle: string;
+	fileItemLabelMap: Map<string, string>;
+	latestByCell: Map<string, ZipHistory>;
+	usedNames: Set<string>;
+}): ZipEntry[] {
+	const { response, formTitle, fileItemLabelMap, latestByCell, usedNames } =
+		params;
+	return response.answers.flatMap(answer =>
+		collectAnswerEntries({
+			answer,
+			response,
+			formTitle,
+			fileItemLabelMap,
+			latestByCell,
+			usedNames,
+		})
+	);
+}
+
+function collectZipEntries(params: {
+	responses: ZipResponse[];
+	latestByCell: Map<string, ZipHistory>;
+	fileItemLabelMap: Map<string, string>;
+	formTitle: string;
+}): ZipEntry[] {
+	const { responses, latestByCell, fileItemLabelMap, formTitle } = params;
+	const usedNames = new Set<string>();
+	return responses.flatMap(response =>
+		collectResponseEntries({
+			response,
+			formTitle,
+			fileItemLabelMap,
+			latestByCell,
+			usedNames,
+		})
+	);
+}
+
+async function appendZipEntriesWithLimit(
+	archive: ReturnType<typeof archiver>,
+	entries: ZipEntry[],
+	concurrency: number
+): Promise<void> {
+	const limit = pLimit(concurrency);
+	await Promise.all(
+		entries.map(entry =>
+			limit(async () => {
+				const fileStream = await fetchFileStream(entry.key);
+				archive.append(fileStream, { name: entry.name });
+			})
+		)
+	);
+}
+
+async function fetchFileStream(key: string): Promise<Readable> {
+	const s3Response = await getObject(key);
+	const s3Body = s3Response.Body;
+	if (!s3Body) {
+		throw Errors.internal("ファイルの取得に失敗しました");
+	}
+	const readable = s3Body.transformToWebStream();
+	return Readable.fromWeb(readable);
+}
 
 const getFormOrThrow = async (formId: string) => {
 	const form = await prisma.form.findFirst({
@@ -1041,6 +1230,145 @@ committeeFormRoute.get(
 				}),
 			})),
 		});
+	}
+);
+
+// ─────────────────────────────────────────
+// GET /committee/forms/:formId/responses/files.zip
+// 回答のファイルをまとめてダウンロード
+// ─────────────────────────────────────────
+committeeFormRoute.get(
+	"/:formId/responses/files.zip",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const { formId } = formIdPathParamsSchema.parse(c.req.param());
+		const userId = c.get("user").id;
+		const committeeMember = c.get("committeeMember");
+
+		if (!(await canViewFormResponses(formId, userId, committeeMember))) {
+			throw Errors.forbidden("回答の閲覧権限がありません");
+		}
+
+		const form = await prisma.form.findFirst({
+			where: { id: formId, deletedAt: null },
+			select: {
+				title: true,
+				items: { select: { id: true, label: true, type: true } },
+			},
+		});
+		if (!form) throw Errors.notFound("申請が見つかりません");
+
+		const fileItems = form.items.filter(item => item.type === "FILE");
+		const fileItemIds = fileItems.map(item => item.id);
+
+		// ファイル項目がない場合はエラー
+		if (fileItemIds.length === 0) {
+			throw Errors.invalidRequest("ファイル項目がありません");
+		}
+
+		const fileItemLabelMap = new Map(
+			fileItems.map(item => [item.id, item.label])
+		);
+
+		const responses = await prisma.formResponse.findMany({
+			where: {
+				formDelivery: { formAuthorization: { formId } },
+				submittedAt: { not: null },
+			},
+			include: {
+				formDelivery: {
+					include: {
+						project: {
+							select: { id: true, number: true, name: true },
+						},
+					},
+				},
+				answers: {
+					where: { formItemId: { in: fileItemIds } },
+					include: { files: answerFilesWithKeyInclude },
+				},
+			},
+			orderBy: { submittedAt: "desc" },
+		});
+
+		const projectIds = [
+			...new Set(responses.map(r => r.formDelivery.projectId)),
+		];
+		const allHistory =
+			fileItemIds.length && projectIds.length
+				? await prisma.formItemEditHistory.findMany({
+						where: {
+							formItemId: { in: fileItemIds },
+							projectId: { in: projectIds },
+						},
+						orderBy: { createdAt: "desc" },
+						include: { files: answerFilesWithKeyInclude },
+					})
+				: [];
+
+		const latestByCell = new Map<string, (typeof allHistory)[0]>();
+		for (const h of allHistory) {
+			const key = `${h.formItemId}:${h.projectId}`;
+			if (!latestByCell.has(key)) latestByCell.set(key, h);
+		}
+
+		// エントリを事前に収集して、全ファイルが存在することを確認
+		const entries = collectZipEntries({
+			responses,
+			latestByCell,
+			fileItemLabelMap,
+			formTitle: form.title,
+		});
+
+		// ファイルが 1 個以上あれば、存在確認
+		const fileKeys = entries.map(e => e.key);
+		if (fileKeys.length > 0) {
+			// 並列で全ファイルの存在をチェック
+			const existenceResults = await Promise.allSettled(
+				fileKeys.map(key => objectExists(key))
+			);
+
+			// 1 個でも失敗または存在しないファイルがあればエラーを返す
+			const missingOrFailed = existenceResults
+				.map((result, i) => ({
+					key: fileKeys[i],
+					exists: result.status === "fulfilled" ? result.value : false,
+				}))
+				.filter(r => !r.exists);
+
+			if (missingOrFailed.length > 0) {
+				console.error("Failed to verify form attachment files for ZIP export", {
+					missingOrFailedKeys: missingOrFailed.map(r => r.key),
+				});
+				throw Errors.internal("一部のファイルを取得できませんでした");
+			}
+		}
+
+		const archive = archiver("zip", { zlib: { level: 6 } });
+		const stream = new PassThrough();
+		archive.on("error", (error: Error | undefined) => {
+			stream.destroy(error);
+		});
+		archive.pipe(stream);
+
+		void (async () => {
+			await appendZipEntriesWithLimit(archive, entries, 3);
+			await archive.finalize();
+		})().catch(error => {
+			const err =
+				error instanceof Error ? error : new Error("ZIPの生成に失敗しました");
+			archive.destroy(err);
+		});
+		const downloadName = `${sanitizeFileNameSegment(form.title)}_files.zip`;
+		const encodedFileName = encodeURIComponent(downloadName);
+		c.header("Content-Type", "application/zip");
+		c.header(
+			"Content-Disposition",
+			`attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`
+		);
+
+		return c.body(Readable.toWeb(stream));
 	}
 );
 
