@@ -40,6 +40,7 @@ export const inquirySchema = z.object({
 	relatedFormId: z.cuid().nullable(),
 	isDraft: z.boolean(),
 	createdAt: z.coerce.date(),
+	sentAt: z.coerce.date().nullable(),
 	updatedAt: z.coerce.date(),
 });
 export type Inquiry = z.infer<typeof inquirySchema>;
@@ -226,6 +227,7 @@ const inquirySummarySchema = z.object({
 	status: inquiryStatusSchema,
 	creatorRole: inquiryCreatorRoleSchema,
 	createdAt: z.coerce.date(),
+	sentAt: z.coerce.date().nullable(),
 	updatedAt: z.coerce.date(),
 	isDraft: z.boolean(),
 	hasUnreadComments: z.boolean(),

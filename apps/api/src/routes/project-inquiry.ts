@@ -299,6 +299,7 @@ projectInquiryRoute.post(
 				creatorRole: "PROJECT",
 				projectId: project.id,
 				relatedFormId,
+				sentAt: new Date(),
 				assignees: {
 					create: [
 						{ userId: user.id, side: "PROJECT", isCreator: true },
@@ -405,6 +406,7 @@ projectInquiryRoute.get(
 				status: inq.status,
 				creatorRole: inq.creatorRole,
 				createdAt: inq.createdAt,
+				sentAt: inq.sentAt,
 				updatedAt: inq.updatedAt,
 				isDraft: inq.isDraft,
 				hasUnreadComments: latestCommitteeActivityAt
@@ -549,6 +551,7 @@ projectInquiryRoute.get(
 			relatedFormId: inquiry.relatedFormId,
 			isDraft: inquiry.isDraft,
 			createdAt: inquiry.createdAt,
+			sentAt: inquiry.sentAt,
 			updatedAt: inquiry.updatedAt,
 			createdBy: withAffiliation(inquiry.createdBy, affiliations),
 			project: inquiry.project,
