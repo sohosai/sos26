@@ -2,6 +2,7 @@ import { Badge, Heading, Text, Tooltip } from "@radix-ui/themes";
 import type { ListProjectInquiriesResponse } from "@sos26/shared";
 import {
 	IconAlertCircle,
+	IconBell,
 	IconCircleCheck,
 	IconCircleDot,
 	IconEye,
@@ -517,6 +518,12 @@ function InquiryCard({
 	const displayColor = isDraft ? "orange" : config.color;
 	const DisplayIcon = isDraft ? IconPencil : StatusIcon;
 
+	const viewerSide = viewerRole === "committee" ? "COMMITTEE" : "PROJECT";
+	const needsResponse =
+		!isDraft &&
+		inquiry.status !== "RESOLVED" &&
+		inquiry.awaitingReplyFrom === viewerSide;
+
 	const allAssignees: AssigneeInfo[] = [
 		...inquiry.committeeAssignees,
 		...inquiry.projectAssignees,
@@ -554,6 +561,18 @@ function InquiryCard({
 							<Tooltip content="自分が担当">
 								<IconUserCheck size={14} className={styles.myBadge} />
 							</Tooltip>
+						)}
+						{needsResponse && (
+							<Badge
+								color="red"
+								size="1"
+								variant="solid"
+								radius="full"
+								className={styles.attentionBadge}
+							>
+								<IconBell size={12} />
+								未返信
+							</Badge>
 						)}
 					</span>
 

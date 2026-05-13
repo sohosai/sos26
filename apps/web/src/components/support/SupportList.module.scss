@@ -226,6 +226,12 @@
 	flex-shrink: 0;
 }
 
+.attentionBadge {
+	margin-left: auto;
+	flex-shrink: 0;
+	gap: 2px;
+}
+
 .cardTags {
 	display: flex;
 	align-items: center;
