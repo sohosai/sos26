@@ -104,6 +104,15 @@ function toTimelineRole(senderRole: "PROJECT" | "COMMITTEE") {
 	return senderRole === "COMMITTEE" ? "committee" : "project";
 }
 
+function getInquiryDisplayDate(
+	inquiry: Pick<InquiryDetail, "isDraft" | "createdAt" | "sentAt">
+): Date {
+	if (inquiry.isDraft) {
+		return inquiry.createdAt;
+	}
+	return inquiry.sentAt ?? inquiry.createdAt;
+}
+
 function getCommentDisplayDate(comment: CommentInfo): Date {
 	if (isCommitteeDraftComment(comment)) {
 		return comment.createdAt;
@@ -148,6 +157,7 @@ function InquiryTimeline({
 	onDeleteComment?: (commentId: string) => Promise<void>;
 	onUpdateDraft?: (commentId: string, body: string) => Promise<void>;
 }) {
+	const inquiryDisplayDate = getInquiryDisplayDate(inquiry);
 	return (
 		<div className={styles.timeline}>
 			<TimelineItem
@@ -156,7 +166,7 @@ function InquiryTimeline({
 				committeeBureau={inquiry.createdBy.committeeBureau}
 				affiliatedProjects={inquiry.createdBy.affiliatedProjects}
 				role={inquiry.creatorRole === "COMMITTEE" ? "committee" : "project"}
-				date={inquiry.createdAt}
+				date={inquiryDisplayDate}
 				body={inquiry.body}
 				attachments={inquiry.attachments}
 			/>
@@ -688,6 +698,7 @@ export function SupportDetail({
 	);
 
 	const isDraftInquiry = "isDraft" in inquiry && inquiry.isDraft === true;
+	const inquiryDisplayDate = getInquiryDisplayDate(inquiry);
 	const isOwnDraftInquiry =
 		isDraftInquiry && inquiry.createdById === currentUserId;
 	const config = isDraftInquiry
@@ -839,7 +850,8 @@ export function SupportDetail({
 					</div>
 					<Text size="2" color="gray">
 						{inquiry.createdBy.name} が{" "}
-						{formatDate(inquiry.createdAt, "datetime")} に作成
+						{formatDate(inquiryDisplayDate, "datetime")} に
+						{inquiry.isDraft ? "作成" : "送信"}
 					</Text>
 				</header>
 

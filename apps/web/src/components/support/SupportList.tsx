@@ -547,7 +547,13 @@ function InquiryCard({
 						<Text size="1" color="gray">
 							# {formatProjectNumber(inquiry.project.number)} /{" "}
 							{inquiry.project.name} /{" "}
-							{formatRelativeTime(inquiry.createdAt, "auto")} に作成
+							{formatRelativeTime(
+								inquiry.isDraft
+									? inquiry.createdAt
+									: (inquiry.sentAt ?? inquiry.createdAt),
+								"auto"
+							)}{" "}
+							に{inquiry.isDraft ? "作成" : "送信"}
 							{inquiry.commentCount > 0 && ` / ${inquiry.commentCount}件の返信`}
 						</Text>
 					)}
