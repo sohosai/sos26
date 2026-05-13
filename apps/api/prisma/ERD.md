@@ -300,6 +300,7 @@ erDiagram
   String projectId FK
   String relatedFormId FK "nullable"
   Boolean isDraft
+  DateTime sentAt "nullable"
   DateTime deletedAt "nullable"
   DateTime createdAt
   DateTime updatedAt
@@ -1007,6 +1008,7 @@ Properties as follows:
 - `projectId`:
 - `relatedFormId`:
 - `isDraft`:
+- `sentAt`:
 - `deletedAt`:
 - `createdAt`:
 - `updatedAt`:
