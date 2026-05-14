@@ -434,6 +434,78 @@ projectRoute.get(
 			},
 		});
 
+		const formItemIds = [
+			...new Set(
+				responses.flatMap(response =>
+					response.answers.map(answer => answer.formItem.id)
+				)
+			),
+		];
+		const latestHistoryByFormItemId = new Map<
+			string,
+			{
+				textValue: string | null;
+				numberValue: number | null;
+				files: {
+					sortOrder: number;
+					file: {
+						id: string;
+						fileName: string;
+						mimeType: string;
+						size: number;
+						isPublic: boolean;
+						createdAt: Date;
+					};
+				}[];
+				selectedOptions: { formItemOption: { id: string; label: string } }[];
+			}
+		>();
+		if (formItemIds.length > 0) {
+			const editHistories =
+				await prisma.projectRegistrationFormItemEditHistory.findMany({
+					where: {
+						projectId: project.id,
+						formItemId: { in: formItemIds },
+					},
+					include: {
+						files: {
+							orderBy: { sortOrder: "asc" },
+							include: {
+								file: {
+									select: {
+										id: true,
+										fileName: true,
+										mimeType: true,
+										size: true,
+										isPublic: true,
+										createdAt: true,
+									},
+								},
+							},
+						},
+						selectedOptions: {
+							include: {
+								formItemOption: { select: { id: true, label: true } },
+							},
+						},
+					},
+					orderBy: {
+						createdAt: "desc",
+					},
+				});
+
+			for (const history of editHistories) {
+				if (!latestHistoryByFormItemId.has(history.formItemId)) {
+					latestHistoryByFormItemId.set(history.formItemId, {
+						textValue: history.textValue,
+						numberValue: history.numberValue,
+						files: history.files,
+						selectedOptions: history.selectedOptions,
+					});
+				}
+			}
+		}
+
 		return c.json({
 			responses: responses.map(response => ({
 				id: response.id,
@@ -443,18 +515,25 @@ projectRoute.get(
 					title: response.form.title,
 					description: response.form.description,
 				},
-				answers: response.answers.map(answer => ({
-					formItemId: answer.formItem.id,
-					formItemLabel: answer.formItem.label,
-					type: answer.formItem.type,
-					textValue: answer.textValue,
-					numberValue: answer.numberValue,
-					files: mapAnswerFiles(answer.files),
-					selectedOptions: answer.selectedOptions.map(selected => ({
-						id: selected.formItemOption.id,
-						label: selected.formItemOption.label,
-					})),
-				})),
+				answers: response.answers.map(answer => {
+					const latestHistory = latestHistoryByFormItemId.get(
+						answer.formItem.id
+					);
+					return {
+						formItemId: answer.formItem.id,
+						formItemLabel: answer.formItem.label,
+						type: answer.formItem.type,
+						textValue: latestHistory?.textValue ?? answer.textValue,
+						numberValue: latestHistory?.numberValue ?? answer.numberValue,
+						files: mapAnswerFiles(latestHistory?.files ?? answer.files),
+						selectedOptions: (
+							latestHistory?.selectedOptions ?? answer.selectedOptions
+						).map(selected => ({
+							id: selected.formItemOption.id,
+							label: selected.formItemOption.label,
+						})),
+					};
+				}),
 			})),
 		});
 	}
