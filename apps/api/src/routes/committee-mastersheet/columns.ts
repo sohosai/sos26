@@ -17,6 +17,7 @@ import {
 	canViewColumn,
 	formatColumnDef,
 	getEditableFormIds,
+	getEditableProjectRegistrationFormIds,
 	getViewableFormIds,
 	requireColumnOwner,
 	syncColumnOptions,
@@ -426,12 +427,16 @@ columnsRoute.patch(
 			{ isolationLevel: "Serializable" }
 		);
 
-		const editableFormIds = await getEditableFormIds(userId);
+		const [editableFormIds, editablePrfFormIds] = await Promise.all([
+			getEditableFormIds(userId),
+			getEditableProjectRegistrationFormIds(userId),
+		]);
 		const canEdit = canEditColumn(
 			col as ColumnFull,
 			userId,
 			committeeMember,
-			editableFormIds
+			editableFormIds,
+			editablePrfFormIds
 		);
 
 		return c.json({ column: formatColumnDef(col, userId, canEdit) });

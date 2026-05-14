@@ -71,6 +71,24 @@ export const getEditableFormIds = async (userId: string) => {
 	return new Set(forms.map(f => f.id));
 };
 
+export const getEditableProjectRegistrationFormIds = async (userId: string) => {
+	const forms = await prisma.projectRegistrationForm.findMany({
+		where: {
+			deletedAt: null,
+			OR: [
+				{ ownerId: userId },
+				{
+					collaborators: {
+						some: { userId, deletedAt: null, isWrite: true },
+					},
+				},
+			],
+		},
+		select: { id: true },
+	});
+	return new Set(forms.map(f => f.id));
+};
+
 /**
  * 自分が閲覧可能（owner / collaborator / FormViewer の scope に合致）な申請 ID セットを返す。
  * FORM_ITEM カラムの閲覧範囲判定に使用する。
@@ -133,19 +151,23 @@ export function canViewColumn(
  * セル編集権チェック。
  * - FORM_ITEM: 申請の owner / collaborator のみ（viewer は不可）
  * - CUSTOM: canViewColumn と同じ（カラムにアクセスできる全員）
- * - PROJECT_REGISTRATION_FORM_ITEM: 不可（読み取り専用）
+ * - PROJECT_REGISTRATION_FORM_ITEM: 申請の owner / collaborator のみ（viewer は不可）
  */
 export function canEditColumn(
 	col: ColumnFull,
 	userId: string,
 	committeeMember: CommitteeMember,
-	editableFormIds: Set<string>
+	editableFormIds: Set<string>,
+	editablePrfFormIds: Set<string> = new Set()
 ): boolean {
 	if (col.type === "FORM_ITEM") {
 		return col.formItem !== null && editableFormIds.has(col.formItem.formId);
 	}
 	if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
-		return false;
+		return (
+			col.projectRegistrationFormItem !== null &&
+			editablePrfFormIds.has(col.projectRegistrationFormItem.formId)
+		);
 	}
 	// CUSTOM: 閲覧できる人＝編集できる人
 	return canViewColumn(col, userId, committeeMember, new Set());
@@ -353,11 +375,61 @@ export type PrfResponseWithAnswers =
 		};
 	}>;
 
+export type PrfHistoryWithOptions = {
+	id: string;
+	formItemId: string;
+	projectId: string;
+	textValue: string | null;
+	numberValue: number | null;
+	trigger: string;
+	createdAt: Date;
+	files: {
+		sortOrder: number;
+		file: {
+			id: string;
+			fileName: string;
+			mimeType: string;
+			size: number;
+			isPublic: boolean;
+			createdAt: Date;
+		};
+	}[];
+	selectedOptions: { formItemOptionId: string }[];
+};
+
+export async function fetchLatestPrfHistoryByCell(
+	formItemIds: string[]
+): Promise<Map<string, PrfHistoryWithOptions>> {
+	const result = new Map<string, PrfHistoryWithOptions>();
+	if (formItemIds.length === 0) return result;
+
+	const allHistory =
+		await prisma.projectRegistrationFormItemEditHistory.findMany({
+			where: { formItemId: { in: formItemIds } },
+			orderBy: { createdAt: "desc" },
+			include: {
+				files: {
+					orderBy: { sortOrder: "asc" },
+					include: { file: { select: formAnswerFileSelect } },
+				},
+				selectedOptions: { select: { formItemOptionId: true } },
+			},
+		});
+
+	for (const h of allHistory) {
+		const key = `${h.formItemId}:${h.projectId}`;
+		if (!result.has(key)) result.set(key, h);
+	}
+
+	return result;
+}
+
 export function buildPrfItemCell(
 	colId: string,
 	prfItem: { id: string; formId: string },
 	projectId: string,
-	responseByFormProject: Map<string, Map<string, PrfResponseWithAnswers>>
+	responseByFormProject: Map<string, Map<string, PrfResponseWithAnswers>>,
+	latestHistoryByCell?: Map<string, PrfHistoryWithOptions>
 ) {
 	const responseMap = responseByFormProject.get(prfItem.formId);
 	const response = responseMap?.get(projectId);
@@ -370,13 +442,32 @@ export function buildPrfItemCell(
 		};
 	}
 
+	const historyKey = `${prfItem.id}:${projectId}`;
+	const latestHistory = latestHistoryByCell?.get(historyKey);
+	if (latestHistory) {
+		return {
+			columnId: colId,
+			status: "COMMITTEE_EDITED" as const,
+			formValue: {
+				textValue: latestHistory.textValue,
+				numberValue: latestHistory.numberValue,
+				files: mapAnswerFiles(latestHistory.files),
+				selectedOptionIds: latestHistory.selectedOptions.map(
+					(s: { formItemOptionId: string }) => s.formItemOptionId
+				),
+			},
+		};
+	}
+
 	const answer = response.answers.find(a => a.formItemId === prfItem.id);
 	const formValue = answer
 		? {
 				textValue: answer.textValue,
 				numberValue: answer.numberValue,
 				files: mapAnswerFiles(answer.files),
-				selectedOptionIds: answer.selectedOptions.map(s => s.formItemOptionId),
+				selectedOptionIds: answer.selectedOptions.map(
+					(s: { formItemOptionId: string }) => s.formItemOptionId
+				),
 			}
 		: null;
 

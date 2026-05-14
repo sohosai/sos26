@@ -80,18 +80,23 @@ function formatValue(
 	return "（空）";
 }
 
-/** 重複を除いた FORM_ITEM セルのキーリストを返す */
-function getFormItemCells(
+/** 重複を除いた履歴対象セル（FORM_ITEM / PROJECT_REGISTRATION_FORM_ITEM）を返す */
+function getHistoryTargetCells(
 	cells: SelectedCell[],
 	columns: ApiColumn[]
 ): { columnId: string; projectId: string }[] {
-	const formItemColumnIds = new Set(
-		columns.filter(c => c.type === "FORM_ITEM").map(c => c.id)
+	const historyColumnIds = new Set(
+		columns
+			.filter(
+				c =>
+					c.type === "FORM_ITEM" || c.type === "PROJECT_REGISTRATION_FORM_ITEM"
+			)
+			.map(c => c.id)
 	);
 	const seen = new Set<string>();
 	const result: { columnId: string; projectId: string }[] = [];
 	for (const cell of cells) {
-		if (!formItemColumnIds.has(cell.columnId)) continue;
+		if (!historyColumnIds.has(cell.columnId)) continue;
 		const key = `${cell.columnId}:${cell.projectId}`;
 		if (seen.has(key)) continue;
 		seen.add(key);
@@ -128,8 +133,8 @@ export function HistoryPanel({
 
 	const hasSelection = selectedCells.length > 0;
 
-	const formItemCells = useMemo(
-		() => getFormItemCells(selectedCells, columns),
+	const historyTargetCells = useMemo(
+		() => getHistoryTargetCells(selectedCells, columns),
 		[selectedCells, columns]
 	);
 
@@ -138,7 +143,7 @@ export function HistoryPanel({
 	useEffect(() => {
 		if (!open) return;
 
-		const cellsToFetch = formItemCells;
+		const cellsToFetch = historyTargetCells;
 
 		// 内容が変わっていなければスキップ
 		const selectionKey = cellsToFetch
@@ -193,11 +198,11 @@ export function HistoryPanel({
 			});
 
 		return () => controller.abort();
-	}, [open, formItemCells, columnMap, projectMap]);
+	}, [open, historyTargetCells, columnMap, projectMap]);
 
 	if (!open) return null;
 
-	const formCellCount = hasSelection ? formItemCells.length : null;
+	const historyCellCount = hasSelection ? historyTargetCells.length : null;
 
 	return (
 		<div ref={ref} className={styles.panel}>
@@ -208,9 +213,9 @@ export function HistoryPanel({
 						<Text size="3" weight="bold">
 							編集履歴
 						</Text>
-						{formCellCount !== null && (
+						{historyCellCount !== null && (
 							<Badge size="1" variant="soft">
-								{formCellCount}件のセル
+								{historyCellCount}件のセル
 							</Badge>
 						)}
 					</div>

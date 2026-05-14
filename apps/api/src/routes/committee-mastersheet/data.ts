@@ -10,8 +10,10 @@ import {
 	canEditColumn,
 	canViewColumn,
 	fetchLatestHistoryByCell,
+	fetchLatestPrfHistoryByCell,
 	formatColumnDef,
 	getEditableFormIds,
+	getEditableProjectRegistrationFormIds,
 	getViewableFormIds,
 } from "./helpers";
 
@@ -60,10 +62,12 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 		orderBy: { sortOrder: "asc" },
 	});
 
-	const [editableFormIds, viewableFormIds] = await Promise.all([
-		getEditableFormIds(userId),
-		getViewableFormIds(userId, committeeMember),
-	]);
+	const [editableFormIds, editablePrfFormIds, viewableFormIds] =
+		await Promise.all([
+			getEditableFormIds(userId),
+			getEditableProjectRegistrationFormIds(userId),
+			getViewableFormIds(userId, committeeMember),
+		]);
 	const visibleColumns = allColumns.filter(col =>
 		canViewColumn(col as ColumnFull, userId, committeeMember, viewableFormIds)
 	);
@@ -199,6 +203,15 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 		prfResponseByFormProject.get(r.formId)?.set(r.projectId, r);
 	}
 
+	const prfItemIds = [
+		...new Set(
+			prfItemCols.flatMap(c =>
+				c.projectRegistrationFormItem ? [c.projectRegistrationFormItem.id] : []
+			)
+		),
+	];
+	const latestPrfHistoryByCell = await fetchLatestPrfHistoryByCell(prfItemIds);
+
 	// 5. CUSTOM: セル値をバッチ取得
 	const customColIds = customCols.map(c => c.id);
 	const cellValues = customColIds.length
@@ -240,7 +253,8 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 					col.id,
 					col.projectRegistrationFormItem,
 					project.id,
-					prfResponseByFormProject
+					prfResponseByFormProject,
+					latestPrfHistoryByCell
 				);
 			}
 			// CUSTOM
@@ -285,7 +299,8 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 					col as ColumnFull,
 					userId,
 					committeeMember,
-					editableFormIds
+					editableFormIds,
+					editablePrfFormIds
 				)
 			)
 		),
