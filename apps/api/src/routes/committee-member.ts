@@ -171,6 +171,41 @@ committeeMemberRoute.delete(
 );
 
 // ─────────────────────────────────────────────────────────────
+// GET /committee/members/directory
+// 候補者ピッカー用の委員メンバー一覧（最小情報・MEMBER_EDIT 不要）
+// ─────────────────────────────────────────────────────────────
+committeeMemberRoute.get(
+	"/directory",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const committeeMembers = await prisma.committeeMember.findMany({
+			where: { deletedAt: null },
+			select: {
+				id: true,
+				userId: true,
+				isExecutive: true,
+				Bureau: true,
+				user: {
+					select: {
+						id: true,
+						name: true,
+						avatarFileId: true,
+					},
+				},
+				permissions: {
+					select: {
+						permission: true,
+					},
+				},
+			},
+		});
+
+		return c.json({ committeeMembers });
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
 // GET /committee/members/me/permissions
 // 自分自身の権限一覧を取得（MEMBER_EDIT 不要）
 // ─────────────────────────────────────────────────────────────

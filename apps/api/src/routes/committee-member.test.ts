@@ -177,6 +177,76 @@ describe("GET /committee/members", () => {
 	});
 });
 
+describe("GET /committee/members/directory", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("正常系: MEMBER_EDIT 権限なしでも取得できる", async () => {
+		const app = makeApp();
+		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
+			uid: "firebase-uid-123",
+		} as any);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		// requireCommitteeMember 用（権限なし実委メンバー）
+		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		// directory 用の findMany は最小情報のみ
+		mockPrisma.committeeMember.findMany.mockResolvedValue([
+			{
+				id: mockCommitteeMember.id,
+				userId: mockCommitteeMember.userId,
+				isExecutive: mockCommitteeMember.isExecutive,
+				Bureau: mockCommitteeMember.Bureau,
+				user: {
+					id: mockUser.id,
+					name: mockUser.name,
+					avatarFileId: null,
+				},
+				permissions: [],
+			},
+		] as any);
+
+		const res = await app.request("/committee/members/directory", {
+			method: "GET",
+			headers: { Authorization: "Bearer valid-token" },
+		});
+
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.committeeMembers).toHaveLength(1);
+		expect(body.committeeMembers[0].user.name).toBe(mockUser.name);
+		// 個人情報が含まれないこと
+		expect(body.committeeMembers[0].user.email).toBeUndefined();
+		expect(body.committeeMembers[0].user.telephoneNumber).toBeUndefined();
+	});
+
+	it("認証なしで401エラー", async () => {
+		const app = makeApp();
+
+		const res = await app.request("/committee/members/directory", {
+			method: "GET",
+		});
+
+		expect(res.status).toBe(401);
+	});
+
+	it("非委員で403エラー", async () => {
+		const app = makeApp();
+		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
+			uid: "firebase-uid-123",
+		} as any);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		mockPrisma.committeeMember.findFirst.mockResolvedValue(null);
+
+		const res = await app.request("/committee/members/directory", {
+			method: "GET",
+			headers: { Authorization: "Bearer valid-token" },
+		});
+
+		expect(res.status).toBe(403);
+	});
+});
+
 describe("POST /committee/members", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();

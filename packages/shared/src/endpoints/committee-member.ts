@@ -7,6 +7,7 @@ import {
 	grantCommitteeMemberPermissionRequestSchema,
 	grantCommitteeMemberPermissionResponseSchema,
 	listCommitteeMemberPermissionsResponseSchema,
+	listCommitteeMembersDirectoryResponseSchema,
 	listCommitteeMembersResponseSchema,
 	revokeCommitteeMemberPermissionResponseSchema,
 	updateCommitteeMemberRequestSchema,
@@ -25,11 +26,14 @@ const committeeMemberPermissionPathParamsSchema = z.object({
 
 /**
  * GET /committee/members
- * 委員メンバー一覧を取得
+ * 委員メンバー一覧を取得（管理画面用・フル情報）
  *
- * - 認証 + 実委メンバー必須
+ * - 認証 + 実委メンバー + MEMBER_EDIT 権限必須
  * - deletedAt が null のメンバーのみ返す
- * - user 情報を含む
+ * - user 情報（email, telephoneNumber を含むフル User）を含む
+ *
+ * 候補者ピッカーなど MEMBER_EDIT を持たないユーザーが利用する場合は
+ * {@link listCommitteeMembersDirectoryEndpoint} を使うこと。
  */
 export const listCommitteeMembersEndpoint: GetEndpoint<
 	"/committee/members",
@@ -43,6 +47,29 @@ export const listCommitteeMembersEndpoint: GetEndpoint<
 	query: undefined,
 	request: undefined,
 	response: listCommitteeMembersResponseSchema,
+} as const;
+
+/**
+ * GET /committee/members/directory
+ * 候補者ピッカー用の委員メンバー一覧を取得
+ *
+ * - 認証 + 実委メンバー必須（MEMBER_EDIT 権限不要）
+ * - deletedAt が null のメンバーのみ返す
+ * - email / telephoneNumber などの個人情報は含まない
+ * - お知らせ／お問い合わせ／申請／企画登録などの担当者選択 UI で使用
+ */
+export const listCommitteeMembersDirectoryEndpoint: GetEndpoint<
+	"/committee/members/directory",
+	undefined,
+	undefined,
+	typeof listCommitteeMembersDirectoryResponseSchema
+> = {
+	method: "GET",
+	path: "/committee/members/directory",
+	pathParams: undefined,
+	query: undefined,
+	request: undefined,
+	response: listCommitteeMembersDirectoryResponseSchema,
 } as const;
 
 /**
