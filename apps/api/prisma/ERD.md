@@ -406,6 +406,28 @@ erDiagram
   String editHistoryId FK
   String formItemOptionId FK
 }
+"ProjectRegistrationFormItemEditHistory" {
+  String id PK
+  String formItemId FK
+  String projectId FK
+  String textValue "nullable"
+  Float numberValue "nullable"
+  String actorId FK
+  ProjectRegistrationFormItemEditHistoryTrigger trigger
+  DateTime createdAt
+}
+"ProjectRegistrationFormItemEditHistoryFile" {
+  String id PK
+  String editHistoryId FK
+  String fileId FK
+  Int sortOrder
+  DateTime createdAt
+}
+"ProjectRegistrationFormItemEditHistorySelectedOption" {
+  String id PK
+  String editHistoryId FK
+  String formItemOptionId FK
+}
 "MastersheetColumnViewer" {
   String id PK
   String columnId FK
@@ -597,6 +619,13 @@ erDiagram
 "FormItemEditHistoryFile" }o--|| "File" : file
 "FormItemEditHistorySelectedOption" }o--|| "FormItemEditHistory" : editHistory
 "FormItemEditHistorySelectedOption" }o--|| "FormItemOption" : formItemOption
+"ProjectRegistrationFormItemEditHistory" }o--|| "ProjectRegistrationFormItem" : formItem
+"ProjectRegistrationFormItemEditHistory" }o--|| "Project" : project
+"ProjectRegistrationFormItemEditHistory" }o--|| "User" : actor
+"ProjectRegistrationFormItemEditHistoryFile" }o--|| "ProjectRegistrationFormItemEditHistory" : editHistory
+"ProjectRegistrationFormItemEditHistoryFile" }o--|| "File" : file
+"ProjectRegistrationFormItemEditHistorySelectedOption" }o--|| "ProjectRegistrationFormItemEditHistory" : editHistory
+"ProjectRegistrationFormItemEditHistorySelectedOption" }o--|| "ProjectRegistrationFormItemOption" : formItemOption
 "MastersheetColumnViewer" }o--|| "MastersheetColumn" : column
 "MastersheetColumnViewer" }o--o| "User" : user
 "MastersheetAccessRequest" }o--|| "MastersheetColumn" : column
@@ -1142,6 +1171,37 @@ Properties as follows:
 - `createdAt`:
 
 ### `FormItemEditHistorySelectedOption`
+
+Properties as follows:
+
+- `id`:
+- `editHistoryId`:
+- `formItemOptionId`:
+
+### `ProjectRegistrationFormItemEditHistory`
+
+Properties as follows:
+
+- `id`:
+- `formItemId`:
+- `projectId`:
+- `textValue`:
+- `numberValue`:
+- `actorId`:
+- `trigger`:
+- `createdAt`:
+
+### `ProjectRegistrationFormItemEditHistoryFile`
+
+Properties as follows:
+
+- `id`:
+- `editHistoryId`:
+- `fileId`:
+- `sortOrder`:
+- `createdAt`:
+
+### `ProjectRegistrationFormItemEditHistorySelectedOption`
 
 Properties as follows:
 
