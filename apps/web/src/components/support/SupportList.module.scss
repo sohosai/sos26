@@ -72,7 +72,15 @@
 	font-weight: 600;
 }
 
+.filters {
+	display: flex;
+	align-items: center;
+	gap: var(--space-4);
+	flex-wrap: wrap;
+}
+
 .search {
+	flex: 1;
 	max-width: 320px;
 
 	/* label は SR のみ */
@@ -83,6 +91,11 @@
 		overflow: hidden;
 		clip: rect(0, 0, 0, 0);
 	}
+}
+
+.filterToggle {
+	display: flex;
+	align-items: center;
 }
 
 /* ─── Sections (committee open tab) ─── */
