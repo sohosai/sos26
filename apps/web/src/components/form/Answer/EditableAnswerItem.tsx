@@ -1,8 +1,8 @@
 import { Flex } from "@radix-ui/themes";
+import type { EditFormAnswerRequest } from "@sos26/shared";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
-import { editFormAnswer } from "@/lib/api/committee-form";
 import { isClientError } from "@/lib/http/error";
 import type { FormAnswerValue, FormItem } from "../type";
 import { isFileAnswerValue } from "../type";
@@ -11,7 +11,7 @@ import { AnswerField } from "./AnswerField";
 function buildEditPayload(
 	item: FormItem,
 	value: FormAnswerValue
-): Parameters<typeof editFormAnswer>[3] {
+): EditFormAnswerRequest {
 	switch (item.type) {
 		case "SELECT":
 			return {
@@ -53,6 +53,12 @@ type Props = {
 	initialValue: FormAnswerValue | undefined;
 	formId: string;
 	projectId: string;
+	onSave: (
+		formId: string,
+		formItemId: string,
+		projectId: string,
+		body: EditFormAnswerRequest
+	) => Promise<unknown>;
 };
 
 export function EditableAnswerItem({
@@ -60,6 +66,7 @@ export function EditableAnswerItem({
 	initialValue,
 	formId,
 	projectId,
+	onSave,
 }: Props) {
 	const [value, setValue] = useState<FormAnswerValue | undefined>(initialValue);
 	const [savedValue, setSavedValue] = useState<FormAnswerValue | undefined>(
@@ -76,7 +83,7 @@ export function EditableAnswerItem({
 		setSaving(true);
 		try {
 			const payload = buildEditPayload(item, value);
-			await editFormAnswer(formId, item.id, projectId, payload);
+			await onSave(formId, item.id, projectId, payload);
 			setSavedValue(value);
 			savedSerializedRef.current = serializeValue(value);
 			toast.success("回答を保存しました");
@@ -87,7 +94,7 @@ export function EditableAnswerItem({
 		} finally {
 			setSaving(false);
 		}
-	}, [formId, item, projectId, value, saving]);
+	}, [formId, item, projectId, value, saving, onSave]);
 
 	const handleCancel = useCallback(() => {
 		setValue(savedValue);

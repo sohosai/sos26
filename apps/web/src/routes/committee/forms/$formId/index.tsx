@@ -1,10 +1,4 @@
-import {
-	AlertDialog,
-	Badge,
-	type BadgeProps,
-	Heading,
-	Text,
-} from "@radix-ui/themes";
+import { AlertDialog, Badge, Heading, Text } from "@radix-ui/themes";
 import type {
 	GetFormDetailResponse,
 	ListFormResponsesResponse,
@@ -41,6 +35,10 @@ import {
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import { useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
+import {
+	type BaseAnswerRow,
+	buildAnswerValueMap,
+} from "@/lib/form/answer-table";
 import { formDetailToForm } from "@/lib/form/convert";
 import { getFormStatusFromAuth } from "@/lib/form/form-status";
 import { formatDate, formatProjectNumber } from "@/lib/format";
@@ -58,70 +56,20 @@ const searchSchema = z.object({
 
 /* ─── 回答テーブル用の型 ─── */
 
-type AnswerRow = {
-	id: string;
+type AnswerRow = BaseAnswerRow & {
 	projectNumber: number;
-	projectName: string;
-	submittedAt: Date | null;
-	answers: Record<string, string | TagValue[]>;
 };
-
-type TagValue = {
-	label: string;
-	color: BadgeProps["color"];
-};
-
-const TAG_COLORS = [
-	"gray",
-	"blue",
-	"green",
-	"orange",
-	"purple",
-	"teal",
-	"red",
-] as const;
-
-function hashString(str: string): number {
-	let hash = 5381;
-	for (let i = 0; i < str.length; i++) {
-		hash = (hash * 33) ^ str.charCodeAt(i);
-	}
-	return Math.abs(hash);
-}
-
-function getOptionColor(optionId: string): BadgeProps["color"] {
-	return TAG_COLORS[hashString(optionId) % TAG_COLORS.length];
-}
 
 function buildAnswerRows(
 	responses: ListFormResponsesResponse["responses"]
 ): AnswerRow[] {
 	return responses.map(r => {
-		const map: Record<string, string | TagValue[]> = {};
-
-		for (const a of r.answers) {
-			if (a.textValue != null) {
-				map[a.formItemId] = a.textValue;
-			} else if (a.numberValue != null) {
-				map[a.formItemId] = String(a.numberValue);
-			} else if (a.selectedOptions.length > 0) {
-				map[a.formItemId] = a.selectedOptions.map(o => ({
-					label: o.label,
-					color: getOptionColor(o.id),
-				}));
-			} else if (a.files.length > 0) {
-				map[a.formItemId] = `ファイル${a.files.length}件`;
-			} else {
-				map[a.formItemId] = "";
-			}
-		}
-
 		return {
 			id: r.id,
 			projectNumber: r.project.number,
 			projectName: r.project.name,
 			submittedAt: r.submittedAt,
-			answers: map,
+			answers: buildAnswerValueMap(r.answers),
 		};
 	});
 }

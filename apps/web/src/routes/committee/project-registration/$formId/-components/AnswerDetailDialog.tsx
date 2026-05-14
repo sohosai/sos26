@@ -9,7 +9,10 @@ import { useEffect, useState } from "react";
 import { AnswerField } from "@/components/form/Answer/AnswerField";
 import { EditableAnswerItem } from "@/components/form/Answer/EditableAnswerItem";
 import type { Form, FormAnswers } from "@/components/form/type";
-import { editFormAnswer, getFormResponse } from "@/lib/api/committee-form";
+import {
+	editProjectRegistrationFormAnswer,
+	getProjectRegistrationFormResponse,
+} from "@/lib/api/committee-project-registration-form";
 import { responseToAnswers } from "@/lib/form/utils";
 import { formatDate } from "@/lib/format";
 import styles from "./AnswerDetailDialog.module.scss";
@@ -19,9 +22,7 @@ type Props = {
 	onOpenChange: (open: boolean) => void;
 	formId: string;
 	responseId: string | null;
-	/** formDetailToForm 済みの Form を渡す（再取得を避ける） */
 	form: Form;
-	/** 回答編集権限があるか */
 	canEditAnswers: boolean;
 };
 
@@ -52,7 +53,7 @@ export function AnswerDetailDialog({
 		const controller = new AbortController();
 		setLoading(true);
 
-		getFormResponse(formId, responseId)
+		getProjectRegistrationFormResponse(formId, responseId)
 			.then(res => {
 				if (controller.signal.aborted) return;
 				const answers = responseToAnswers(res.response, form);
@@ -63,9 +64,7 @@ export function AnswerDetailDialog({
 					answers,
 				});
 			})
-			.catch(() => {
-				// abort 以外のエラーは無視
-			})
+			.catch(() => {})
 			.finally(() => {
 				if (!controller.signal.aborted) setLoading(false);
 			});
@@ -96,10 +95,10 @@ export function AnswerDetailDialog({
 										企画: {data.projectName}
 									</Text>
 									<Text size="2" color="gray">
-										提出日時:{" "}
+										提出日:{" "}
 										{data.submittedAt
 											? formatDate(data.submittedAt, "datetime")
-											: "—"}
+											: "-"}
 									</Text>
 								</div>
 							</header>
@@ -115,7 +114,7 @@ export function AnswerDetailDialog({
 												initialValue={data.answers[item.id]}
 												formId={formId}
 												projectId={data.projectId}
-												onSave={editFormAnswer}
+												onSave={editProjectRegistrationFormAnswer}
 											/>
 										) : (
 											<AnswerField
