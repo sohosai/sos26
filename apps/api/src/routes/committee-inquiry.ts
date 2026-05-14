@@ -271,6 +271,21 @@ function getCommentSentAt(comment: { createdAt: Date; sentAt: Date | null }) {
 	return comment.sentAt ?? comment.createdAt;
 }
 
+/**
+ * 次に返信が期待される側を計算する。
+ * 下書きは null、それ以外は最新コメントの送信者の反対側
+ * （コメントがなければ作成者の反対側）を返す。
+ */
+function computeAwaitingReplyFrom(params: {
+	isDraft: boolean;
+	creatorRole: "PROJECT" | "COMMITTEE";
+	latestSenderRole: "PROJECT" | "COMMITTEE" | null;
+}): "PROJECT" | "COMMITTEE" | null {
+	if (params.isDraft) return null;
+	const lastActor = params.latestSenderRole ?? params.creatorRole;
+	return lastActor === "PROJECT" ? "COMMITTEE" : "PROJECT";
+}
+
 // ─────────────────────────────────────────────────────────────
 // POST /committee/inquiries
 // お問い合わせを作成（企画側担当者の指定が必須）
@@ -452,12 +467,45 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 		orderBy: { updatedAt: "desc" },
 	});
 
+	// 最新コメントの送信者ロールを取得（awaitingReplyFrom 計算用）
+	const inquiryIds = inquiries.map(i => i.id);
+	const latestCommentsRaw =
+		inquiryIds.length === 0
+			? []
+			: await prisma.inquiryComment.findMany({
+					where: {
+						inquiryId: { in: inquiryIds },
+						deletedAt: null,
+						isDraft: false,
+					},
+					select: { inquiryId: true, senderRole: true },
+					orderBy: [
+						{ sentAt: { sort: "desc", nulls: "last" } },
+						{ createdAt: "desc" },
+					],
+				});
+	const latestSenderByInquiryId = new Map<string, "PROJECT" | "COMMITTEE">();
+	for (const c of latestCommentsRaw) {
+		if (!latestSenderByInquiryId.has(c.inquiryId)) {
+			latestSenderByInquiryId.set(
+				c.inquiryId,
+				c.senderRole as "PROJECT" | "COMMITTEE"
+			);
+		}
+	}
+
 	const formatted = inquiries.map(inq => {
 		const latestProjectComment = inq.comments[0] ?? null;
 		const latestProjectCommentAt = latestProjectComment
 			? getCommentSentAt(latestProjectComment)
 			: null;
 		const lastReadAt = inq.commentReadStatuses[0]?.lastReadAt ?? null;
+
+		const awaitingReplyFrom = computeAwaitingReplyFrom({
+			isDraft: inq.isDraft,
+			creatorRole: inq.creatorRole,
+			latestSenderRole: latestSenderByInquiryId.get(inq.id) ?? null,
+		});
 
 		return {
 			id: inq.id,
@@ -470,6 +518,7 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 			hasUnreadComments: latestProjectCommentAt
 				? !lastReadAt || latestProjectCommentAt.getTime() > lastReadAt.getTime()
 				: false,
+			awaitingReplyFrom,
 			createdBy: inq.createdBy,
 			project: inq.project,
 			projectAssignees: inq.assignees
