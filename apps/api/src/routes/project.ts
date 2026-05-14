@@ -77,6 +77,37 @@ const buildPrismaAnswerData = (
 			: undefined,
 });
 
+const buildPrismaPrfEditHistoryData = (
+	answer: RegistrationFormAnswersInput["answers"][number],
+	projectId: string,
+	actorId: string,
+	trigger: "PROJECT_SUBMIT" | "PROJECT_RESUBMIT"
+) => ({
+	formItemId: answer.formItemId,
+	projectId,
+	actorId,
+	trigger,
+	textValue: "textValue" in answer ? answer.textValue : null,
+	numberValue: "numberValue" in answer ? answer.numberValue : null,
+	files:
+		"fileIds" in answer && answer.fileIds.length > 0
+			? {
+					create: normalizeFileIds(answer.fileIds).map((fileId, sortOrder) => ({
+						fileId,
+						sortOrder,
+					})),
+				}
+			: undefined,
+	selectedOptions:
+		"selectedOptionIds" in answer && answer.selectedOptionIds?.length
+			? {
+					create: answer.selectedOptionIds.map(formItemOptionId => ({
+						formItemOptionId,
+					})),
+				}
+			: undefined,
+});
+
 // 企画登録フォームの過不足・内容チェック
 async function validateRegistrationFormAnswers(
 	applicableForms: {
@@ -515,6 +546,7 @@ projectRoute.post(
 			assertFileMimeTypeConstraints(formItems, answers, fileMap);
 		}
 
+		const actorId = c.get("user").id;
 		const createdResponse = await prisma.$transaction(async tx => {
 			const existing = await tx.projectRegistrationFormResponse.findFirst({
 				where: {
@@ -527,7 +559,7 @@ projectRoute.post(
 				throw Errors.alreadyExists("既に回答済みの申請です");
 			}
 
-			return await tx.projectRegistrationFormResponse.create({
+			const created = await tx.projectRegistrationFormResponse.create({
 				data: {
 					formId,
 					projectId: project.id,
@@ -583,6 +615,21 @@ projectRoute.post(
 					},
 				},
 			});
+
+			await Promise.all(
+				answers.map(a =>
+					tx.projectRegistrationFormItemEditHistory.create({
+						data: buildPrismaPrfEditHistoryData(
+							a,
+							project.id,
+							actorId,
+							"PROJECT_SUBMIT"
+						),
+					})
+				)
+			);
+
+			return created;
 		});
 
 		return c.json({
@@ -1310,6 +1357,7 @@ projectRoute.patch(
 		}
 
 		// トランザクションで既存回答をソフトデリートして新規作成
+		const actorId = c.get("user").id;
 		const updatedResponse = await prisma.$transaction(async tx => {
 			// 既存の回答データをソフトデリート
 			await tx.projectRegistrationFormAnswer.updateMany({
@@ -1321,7 +1369,7 @@ projectRoute.patch(
 			});
 
 			// 新しい回答を作成
-			return await tx.projectRegistrationFormResponse.update({
+			const updated = await tx.projectRegistrationFormResponse.update({
 				where: { id: responseId },
 				data: {
 					answers: {
@@ -1376,6 +1424,21 @@ projectRoute.patch(
 					},
 				},
 			});
+
+			await Promise.all(
+				answers.map(a =>
+					tx.projectRegistrationFormItemEditHistory.create({
+						data: buildPrismaPrfEditHistoryData(
+							a,
+							project.id,
+							actorId,
+							"PROJECT_RESUBMIT"
+						),
+					})
+				)
+			);
+
+			return updated;
 		});
 
 		// レスポンス整形
