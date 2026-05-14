@@ -19,6 +19,14 @@ const committeeMemberRoute = new Hono<AuthEnv>();
 // 委員メンバー一覧を取得
 // ─────────────────────────────────────────────────────────────
 committeeMemberRoute.get("/", requireAuth, requireCommitteeMember, async c => {
+	const user = c.get("user");
+	await requirePermission(
+		prisma,
+		user.id,
+		"MEMBER_EDIT",
+		"メンバー編集権限がありません"
+	);
+
 	const committeeMembers = await prisma.committeeMember.findMany({
 		where: { deletedAt: null },
 		include: { user: true, permissions: true },

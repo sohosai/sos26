@@ -95,16 +95,6 @@ function makeApp() {
 	return app;
 }
 
-/** 認証 + 実委メンバーチェックをセットアップ（権限チェックなし） */
-function setupAuth() {
-	mockFirebaseAuth.verifyIdToken.mockResolvedValue({
-		uid: "firebase-uid-123",
-	} as any);
-	mockPrisma.user.findFirst.mockResolvedValue(mockUser);
-	// requireCommitteeMember 用
-	mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
-}
-
 /** 認証 + 実委メンバーチェック + MEMBER_EDIT 権限チェックをセットアップ */
 function setupAuthWithMemberEdit() {
 	mockFirebaseAuth.verifyIdToken.mockResolvedValue({
@@ -124,7 +114,7 @@ describe("GET /committee/members", () => {
 
 	it("正常系: 委員メンバー一覧を取得", async () => {
 		const app = makeApp();
-		setupAuth();
+		setupAuthWithMemberEdit();
 		mockPrisma.committeeMember.findMany.mockResolvedValue([
 			{ ...mockCommitteeMember, user: mockUser },
 		] as any);
@@ -157,6 +147,26 @@ describe("GET /committee/members", () => {
 		} as any);
 		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 		mockPrisma.committeeMember.findFirst.mockResolvedValue(null);
+
+		const res = await app.request("/committee/members", {
+			method: "GET",
+			headers: { Authorization: "Bearer valid-token" },
+		});
+
+		expect(res.status).toBe(403);
+	});
+
+	it("MEMBER_EDIT権限なしで403エラー", async () => {
+		const app = makeApp();
+		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
+			uid: "firebase-uid-123",
+		} as any);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		// requireCommitteeMember は通るが MEMBER_EDIT 権限なし
+		mockPrisma.committeeMember.findFirst.mockResolvedValue({
+			...mockCommitteeMember,
+			permissions: [],
+		} as any);
 
 		const res = await app.request("/committee/members", {
 			method: "GET",
