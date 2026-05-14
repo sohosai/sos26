@@ -1,12 +1,8 @@
 .layout {
-	display: grid;
-	grid-template-columns: 1fr 260px;
-	gap: var(--space-6);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-5);
 	max-width: 1100px;
-
-	@media (max-width: 768px) {
-		grid-template-columns: 1fr;
-	}
 }
 
 .main {
@@ -121,49 +117,15 @@
 	gap: var(--space-3);
 }
 
-.answerTableWrapper {
-	overflow: auto;
-	border: 1px solid var(--gray-6);
-	border-radius: var(--radius-3);
-}
+.contentLayout {
+	display: grid;
+	grid-template-columns: 1fr 280px;
+	gap: var(--space-6);
+	align-items: start;
 
-.answerTable {
-	width: 100%;
-	border-collapse: collapse;
-	font-size: var(--font-size-1);
-
-	th,
-	td {
-		padding: var(--space-2);
-		border-bottom: 1px solid var(--gray-6);
-		vertical-align: top;
-		white-space: nowrap;
+	@media (max-width: 768px) {
+		grid-template-columns: 1fr;
 	}
-
-	th {
-		position: sticky;
-		top: 0;
-		background: var(--color-panel-solid);
-		z-index: 1;
-		text-align: left;
-		font-weight: 600;
-	}
-}
-
-.answerRow {
-	cursor: pointer;
-
-	&:hover {
-		background: var(--gray-2);
-	}
-}
-
-.tags {
-	display: inline-flex;
-	gap: var(--space-1);
-	flex-wrap: wrap;
-	max-width: 280px;
-	white-space: normal;
 }
 
 @media (max-width: 768px) {

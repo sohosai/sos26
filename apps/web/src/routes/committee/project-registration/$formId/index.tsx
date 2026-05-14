@@ -3,15 +3,22 @@ import type {
 	ListProjectRegistrationFormResponsesResponse,
 	ProjectRegistrationFormDetail,
 } from "@sos26/shared";
-import { IconArrowLeft, IconCalendar, IconClock } from "@tabler/icons-react";
+import {
+	IconArrowLeft,
+	IconCalendar,
+	IconClock,
+	IconEye,
+} from "@tabler/icons-react";
 import {
 	createFileRoute,
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
+import { createColumnHelper } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { Form } from "@/components/form/type";
+import { DataTable, DateCell, NameCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { listCommitteeMembers } from "@/lib/api/committee-member";
 import {
@@ -44,6 +51,8 @@ import styles from "./index.module.scss";
 type AnswerRow = BaseAnswerRow & {
 	organizationName: string;
 };
+
+const answerColumnHelper = createColumnHelper<AnswerRow>();
 
 function buildAnswerRows(
 	responses: ListProjectRegistrationFormResponsesResponse["responses"]
@@ -186,6 +195,83 @@ function RouteComponent() {
 
 	const previewForm = useMemo(() => formDetailToPreviewForm(form), [form]);
 	const answerRows = useMemo(() => buildAnswerRows(responses), [responses]);
+	const answerColumns = useMemo(
+		() => [
+			answerColumnHelper.display({
+				id: "actions",
+				header: "操作",
+				cell: ({ row }) => (
+					<Button
+						intent="ghost"
+						size="1"
+						onClick={() => {
+							setSelectedResponseId(row.original.id);
+							setAnswerDialogOpen(true);
+						}}
+					>
+						<IconEye size={16} />
+						詳細
+					</Button>
+				),
+			}),
+			answerColumnHelper.accessor("projectName", {
+				header: "企画",
+				cell: NameCell,
+			}),
+			answerColumnHelper.accessor("organizationName", {
+				header: "団体名",
+				cell: ctx => <Text size="2">{ctx.getValue()}</Text>,
+			}),
+			answerColumnHelper.accessor("submittedAt", {
+				header: "提出日時",
+				cell: DateCell,
+				meta: { dateFormat: "datetime" },
+			}),
+			...previewForm.items.map(item =>
+				answerColumnHelper.accessor(row => row.answers[item.id] ?? "", {
+					id: item.id,
+					header: item.label,
+					cell: ctx => {
+						const value = ctx.getValue();
+						if (!value || (Array.isArray(value) && value.length === 0)) {
+							return (
+								<Text size="2" color="gray">
+									—
+								</Text>
+							);
+						}
+
+						if (Array.isArray(value)) {
+							return (
+								<div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+									{value.map(v => (
+										<Badge key={v.label} variant="soft" color={v.color}>
+											{v.label}
+										</Badge>
+									))}
+								</div>
+							);
+						}
+
+						if (item.type === "FILE") {
+							return (
+								<Badge variant="soft" color="blue">
+									{value as string}
+								</Badge>
+							);
+						}
+
+						return (
+							<Text size="2" truncate>
+								{value as string}
+							</Text>
+						);
+					},
+				})
+			),
+		],
+		[previewForm.items]
+	);
 
 	if (!user) return null;
 
@@ -392,66 +478,40 @@ function RouteComponent() {
 								まだ回答がありません。
 							</Text>
 						) : (
-							<div className={styles.answerTableWrapper}>
-								<table className={styles.answerTable}>
-									<thead>
-										<tr>
-											<th>企画名</th>
-											<th>団体名</th>
-											<th>提出日</th>
-											{previewForm.items.map(item => (
-												<th key={item.id}>{item.label}</th>
-											))}
-										</tr>
-									</thead>
-									<tbody>
-										{answerRows.map(row => (
-											<tr
-												key={row.id}
-												className={styles.answerRow}
-												onClick={() => {
-													setSelectedResponseId(row.id);
-													setAnswerDialogOpen(true);
-												}}
-											>
-												<td>{row.projectName}</td>
-												<td>{row.organizationName}</td>
-												<td>
-													{row.submittedAt
-														? formatDate(row.submittedAt, "date")
-														: "-"}
-												</td>
-												{previewForm.items.map(item => {
-													const v = row.answers[item.id];
-													return (
-														<td key={item.id}>
-															{Array.isArray(v) ? (
-																<div className={styles.tags}>
-																	{v.map(t => (
-																		<Badge
-																			key={t.label}
-																			color={t.color}
-																			size="1"
-																		>
-																			{t.label}
-																		</Badge>
-																	))}
-																</div>
-															) : (
-																(v as string)
-															)}
-														</td>
-													);
-												})}
-											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
+							<DataTable<AnswerRow>
+								data={answerRows}
+								columns={answerColumns}
+								features={{
+									sorting: true,
+									globalFilter: true,
+									columnVisibility: false,
+									selection: false,
+									copy: false,
+									csvExport: true,
+								}}
+							/>
 						)}
 					</section>
 				) : (
-					<FormItemsPreview items={previewForm.items} />
+					<div className={styles.contentLayout}>
+						<FormItemsPreview items={previewForm.items} />
+						<ProjectRegistrationFormDetailSidebar
+							form={form}
+							userId={user.id}
+							isOwner={isOwner}
+							canEdit={canEdit}
+							availableMembers={availableMembers}
+							approvers={approvers}
+							removingId={removingId}
+							onAddCollaborator={handleAddCollaborator}
+							onRemoveCollaborator={handleRemoveCollaborator}
+							onApprove={handleApprove}
+							onReject={handleReject}
+							onAuthRequestSuccess={() => router.invalidate()}
+							onEdit={() => setEditDialogOpen(true)}
+							onDelete={() => setDeleteConfirmOpen(true)}
+						/>
+					</div>
 				)}
 
 				<AnswerDetailDialog
@@ -463,23 +523,6 @@ function RouteComponent() {
 					canEditAnswers={canEditAnswers}
 				/>
 			</div>
-
-			<ProjectRegistrationFormDetailSidebar
-				form={form}
-				userId={user.id}
-				isOwner={isOwner}
-				canEdit={canEdit}
-				availableMembers={availableMembers}
-				approvers={approvers}
-				removingId={removingId}
-				onAddCollaborator={handleAddCollaborator}
-				onRemoveCollaborator={handleRemoveCollaborator}
-				onApprove={handleApprove}
-				onReject={handleReject}
-				onAuthRequestSuccess={() => router.invalidate()}
-				onEdit={() => setEditDialogOpen(true)}
-				onDelete={() => setDeleteConfirmOpen(true)}
-			/>
 
 			<EditProjectRegistrationFormDialog
 				open={editDialogOpen}
