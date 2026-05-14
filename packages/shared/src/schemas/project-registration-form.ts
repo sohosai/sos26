@@ -431,3 +431,43 @@ export const listProjectRegistrationFormResponsesResponseSchema = z.object({
 export type ListProjectRegistrationFormResponsesResponse = z.infer<
 	typeof listProjectRegistrationFormResponsesResponseSchema
 >;
+
+// ─── 回答詳細（委員会側）───
+
+export const committeeProjectRegistrationFormResponsePathParamsSchema =
+	z.object({
+		formId: z.cuid(),
+		responseId: z.cuid(),
+	});
+
+export const getProjectRegistrationFormResponseResponseSchema = z.object({
+	response: projectRegistrationFormResponseSummarySchema,
+});
+export type GetProjectRegistrationFormResponseResponse = z.infer<
+	typeof getProjectRegistrationFormResponseResponseSchema
+>;
+
+// ─── 回答編集（委員会側・1項目単位、履歴として保存）───
+
+export const editProjectRegistrationFormAnswerPathParamsSchema = z.object({
+	formId: z.cuid(),
+	formItemId: z.cuid(),
+	projectId: z.cuid(),
+});
+
+export const editProjectRegistrationFormAnswerRequestSchema = z.object({
+	textValue: z.string().nullable().optional(),
+	numberValue: z.number().nullable().optional(),
+	fileIds: z.array(z.string()).optional(),
+	selectedOptionIds: z.array(z.string()).optional(),
+});
+export type EditProjectRegistrationFormAnswerRequest = z.infer<
+	typeof editProjectRegistrationFormAnswerRequestSchema
+>;
+
+export const editProjectRegistrationFormAnswerResponseSchema = z.object({
+	answer: projectRegistrationFormResponseAnswerSchema,
+});
+export type EditProjectRegistrationFormAnswerResponse = z.infer<
+	typeof editProjectRegistrationFormAnswerResponseSchema
+>;
