@@ -191,6 +191,7 @@ function getCommentSentAt(comment: { createdAt: Date; sentAt: Date | null }) {
 }
 
 function getLatestCommitteeActivityAt(inquiry: {
+	sentAt: Date | null;
 	creatorRole: "PROJECT" | "COMMITTEE";
 	createdAt: Date;
 	comments: Array<{ createdAt: Date; sentAt: Date | null }>;
@@ -200,7 +201,9 @@ function getLatestCommitteeActivityAt(inquiry: {
 		? getCommentSentAt(latestCommitteeComment)
 		: null;
 	const committeeCreatedAt =
-		inquiry.creatorRole === "COMMITTEE" ? inquiry.createdAt : null;
+		inquiry.creatorRole === "COMMITTEE"
+			? (inquiry.sentAt ?? inquiry.createdAt)
+			: null;
 
 	if (latestCommitteeCommentAt && committeeCreatedAt) {
 		return latestCommitteeCommentAt.getTime() > committeeCreatedAt.getTime()
