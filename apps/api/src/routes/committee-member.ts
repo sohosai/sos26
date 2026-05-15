@@ -36,6 +36,41 @@ committeeMemberRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 });
 
 // ─────────────────────────────────────────────────────────────
+// GET /committee/members/directory
+// 候補者ピッカー用の委員メンバー一覧（最小情報・MEMBER_EDIT 不要）
+// ─────────────────────────────────────────────────────────────
+committeeMemberRoute.get(
+	"/directory",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const committeeMembers = await prisma.committeeMember.findMany({
+			where: { deletedAt: null },
+			select: {
+				id: true,
+				userId: true,
+				isExecutive: true,
+				Bureau: true,
+				user: {
+					select: {
+						id: true,
+						name: true,
+						avatarFileId: true,
+					},
+				},
+				permissions: {
+					select: {
+						permission: true,
+					},
+				},
+			},
+		});
+
+		return c.json({ committeeMembers });
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
 // POST /committee/members
 // 委員メンバーを作成
 // ─────────────────────────────────────────────────────────────
@@ -167,41 +202,6 @@ committeeMemberRoute.delete(
 		});
 
 		return c.json({ success: true });
-	}
-);
-
-// ─────────────────────────────────────────────────────────────
-// GET /committee/members/directory
-// 候補者ピッカー用の委員メンバー一覧（最小情報・MEMBER_EDIT 不要）
-// ─────────────────────────────────────────────────────────────
-committeeMemberRoute.get(
-	"/directory",
-	requireAuth,
-	requireCommitteeMember,
-	async c => {
-		const committeeMembers = await prisma.committeeMember.findMany({
-			where: { deletedAt: null },
-			select: {
-				id: true,
-				userId: true,
-				isExecutive: true,
-				Bureau: true,
-				user: {
-					select: {
-						id: true,
-						name: true,
-						avatarFileId: true,
-					},
-				},
-				permissions: {
-					select: {
-						permission: true,
-					},
-				},
-			},
-		});
-
-		return c.json({ committeeMembers });
 	}
 );
 

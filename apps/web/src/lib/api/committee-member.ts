@@ -45,7 +45,7 @@ export async function listCommitteeMembersDirectory(): Promise<ListCommitteeMemb
 }
 
 /**
- * POST /committee-members
+ * POST /committee/members
  * 委員メンバーを作成
  */
 export async function createCommitteeMember(
@@ -55,7 +55,7 @@ export async function createCommitteeMember(
 }
 
 /**
- * PATCH /committee-members/:id
+ * PATCH /committee/members/:id
  * 委員メンバーを更新
  */
 export async function updateCommitteeMember(
@@ -68,7 +68,7 @@ export async function updateCommitteeMember(
 }
 
 /**
- * DELETE /committee-members/:id
+ * DELETE /committee/members/:id
  * 委員メンバーをソフトデリート
  */
 export async function deleteCommitteeMember(

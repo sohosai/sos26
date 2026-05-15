@@ -139,7 +139,7 @@ export type ListCommitteeMembersDirectoryResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
-// POST /committee-members
+// POST /committee/members
 // ─────────────────────────────────────────────────────────────
 
 /**
@@ -165,7 +165,7 @@ export type CreateCommitteeMemberResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
-// PATCH /committee-members/:id
+// PATCH /committee/members/:id
 // ─────────────────────────────────────────────────────────────
 
 /**
@@ -190,7 +190,7 @@ export type UpdateCommitteeMemberResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
-// DELETE /committee-members/:id
+// DELETE /committee/members/:id
 // ─────────────────────────────────────────────────────────────
 
 /**
