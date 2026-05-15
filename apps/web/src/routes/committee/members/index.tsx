@@ -32,7 +32,6 @@ import { Button } from "@/components/primitives";
 import {
 	createCommitteeMember,
 	deleteCommitteeMember,
-	getMyPermissions,
 	grantCommitteeMemberPermission,
 	listCommitteeMembers,
 	revokeCommitteeMemberPermission,
@@ -295,14 +294,12 @@ export const Route = createFileRoute("/committee/members/")({
 		meta: [{ title: "メンバー管理 | 雙峰祭オンラインシステム" }],
 	}),
 	loader: async () => {
-		const { permissions } = await getMyPermissions();
-		const hasMemberEdit = permissions.some(p => p.permission === "MEMBER_EDIT");
-
-		if (!hasMemberEdit) {
-			throw new ForbiddenError();
-		}
-
-		const data = await listCommitteeMembers();
+		const data = await listCommitteeMembers().catch(error => {
+			if (isClientError(error) && error.code === "FORBIDDEN") {
+				throw new ForbiddenError();
+			}
+			throw error;
+		});
 
 		return {
 			members: data.committeeMembers.map(m => ({
