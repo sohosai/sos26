@@ -80,7 +80,7 @@ export type CommitteeMemberPermission = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
-// GET /committee-members
+// GET /committee/members
 // ─────────────────────────────────────────────────────────────
 
 /**
