@@ -40,7 +40,11 @@ const FIXED_COLUMN_IDS = [
 	"organizationName",
 	"organizationNamePhonetic",
 	"ownerName",
+	"ownerEmail",
+	"ownerTel",
 	"subOwnerName",
+	"subOwnerEmail",
+	"subOwnerTel",
 	"deletionStatus",
 ] as const;
 
@@ -51,6 +55,10 @@ const DEFAULT_COLUMN_FILTERS: ColumnFiltersState = [
 const DEFAULT_HIDDEN_FIXED_COLUMNS: Record<string, boolean> = {
 	namePhonetic: false,
 	organizationNamePhonetic: false,
+	ownerEmail: false,
+	ownerTel: false,
+	subOwnerEmail: false,
+	subOwnerTel: false,
 };
 
 function MastersheetPage() {

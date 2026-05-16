@@ -229,6 +229,26 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
 		meta: { filterVariant: "text" },
 	}),
+	columnHelper.accessor(row => row.project.owner.email ?? "", {
+		id: "ownerEmail",
+		header: "企画責任者メールアドレス",
+		cell: ctx => {
+			const value = ctx.getValue() as string;
+			if (!value) return NO_PERMISSION_PLACEHOLDER;
+			return <Text size="2">{value}</Text>;
+		},
+		meta: { filterVariant: "text" },
+	}),
+	columnHelper.accessor(row => row.project.owner.telephoneNumber ?? "", {
+		id: "ownerTel",
+		header: "企画責任者電話番号",
+		cell: ctx => {
+			const value = ctx.getValue() as string;
+			if (!value) return NO_PERMISSION_PLACEHOLDER;
+			return <Text size="2">{value}</Text>;
+		},
+		meta: { filterVariant: "text" },
+	}),
 	columnHelper.accessor(row => row.project.subOwner?.name ?? "", {
 		id: "subOwnerName",
 		header: "副企画責任者",
@@ -244,6 +264,50 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 		},
 		meta: { filterVariant: "text" },
 	}),
+	columnHelper.accessor(
+		row => {
+			if (!row.project.subOwner) return "__NO_SUB_OWNER__";
+			return row.project.subOwner.email ?? "";
+		},
+		{
+			id: "subOwnerEmail",
+			header: "副企画責任者メールアドレス",
+			cell: ctx => {
+				const value = ctx.getValue() as string;
+				if (value === "__NO_SUB_OWNER__")
+					return (
+						<Text size="2" color="gray">
+							─
+						</Text>
+					);
+				if (!value) return NO_PERMISSION_PLACEHOLDER;
+				return <Text size="2">{value}</Text>;
+			},
+			meta: { filterVariant: "text" },
+		}
+	),
+	columnHelper.accessor(
+		row => {
+			if (!row.project.subOwner) return "__NO_SUB_OWNER__";
+			return row.project.subOwner.telephoneNumber ?? "";
+		},
+		{
+			id: "subOwnerTel",
+			header: "副企画責任者電話番号",
+			cell: ctx => {
+				const value = ctx.getValue() as string;
+				if (value === "__NO_SUB_OWNER__")
+					return (
+						<Text size="2" color="gray">
+							─
+						</Text>
+					);
+				if (!value) return NO_PERMISSION_PLACEHOLDER;
+				return <Text size="2">{value}</Text>;
+			},
+			meta: { filterVariant: "text" },
+		}
+	),
 	columnHelper.accessor(
 		row =>
 			(row.project.deletionStatus ??
@@ -285,6 +349,12 @@ function isFormItemInactive(row: MastersheetRow, colId: string): boolean {
 const INACTIVE_PLACEHOLDER = (
 	<Text color="gray" size="2">
 		─
+	</Text>
+);
+
+const NO_PERMISSION_PLACEHOLDER = (
+	<Text color="gray" size="2">
+		権限なし
 	</Text>
 );
 

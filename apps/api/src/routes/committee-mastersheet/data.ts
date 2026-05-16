@@ -25,6 +25,16 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 	const userId = c.get("user").id;
 	const committeeMember = c.get("committeeMember");
 
+	// 企画責任者・副企画責任者の連絡先（メール・電話）は PROJECT_VIEW 権限を持つ
+	// 実委人にのみ含めて返す
+	const memberPermissions = await prisma.committeeMemberPermission.findMany({
+		where: { committeeMemberId: committeeMember.id },
+		select: { permission: true },
+	});
+	const canViewContacts = memberPermissions.some(
+		p => p.permission === "PROJECT_VIEW"
+	);
+
 	// 1. カラム一覧 + 権限フィルタ
 	const allColumns = await prisma.mastersheetColumn.findMany({
 		include: {
@@ -78,8 +88,24 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 	const projects = await prisma.project.findMany({
 		where: { deletedAt: null },
 		include: {
-			owner: { select: { id: true, name: true, avatarFileId: true } },
-			subOwner: { select: { id: true, name: true, avatarFileId: true } },
+			owner: {
+				select: {
+					id: true,
+					name: true,
+					avatarFileId: true,
+					email: true,
+					telephoneNumber: true,
+				},
+			},
+			subOwner: {
+				select: {
+					id: true,
+					name: true,
+					avatarFileId: true,
+					email: true,
+					telephoneNumber: true,
+				},
+			},
 		},
 		orderBy: { number: "asc" },
 	});
@@ -269,8 +295,26 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 				organizationName: project.organizationName,
 				deletionStatus: project.deletionStatus ?? null,
 				organizationNamePhonetic: project.organizationNamePhonetic,
-				owner: project.owner,
-				subOwner: project.subOwner ?? null,
+				owner: {
+					id: project.owner.id,
+					name: project.owner.name,
+					avatarFileId: project.owner.avatarFileId,
+					email: canViewContacts ? project.owner.email : null,
+					telephoneNumber: canViewContacts
+						? project.owner.telephoneNumber
+						: null,
+				},
+				subOwner: project.subOwner
+					? {
+							id: project.subOwner.id,
+							name: project.subOwner.name,
+							avatarFileId: project.subOwner.avatarFileId,
+							email: canViewContacts ? project.subOwner.email : null,
+							telephoneNumber: canViewContacts
+								? project.subOwner.telephoneNumber
+								: null,
+						}
+					: null,
 			},
 			cells,
 		};
