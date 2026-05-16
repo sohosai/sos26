@@ -7,8 +7,13 @@ import {
 	createProjectRegistrationFormEndpoint,
 	type DeleteProjectRegistrationFormResponse,
 	deleteProjectRegistrationFormEndpoint,
+	type EditProjectRegistrationFormAnswerRequest,
+	type EditProjectRegistrationFormAnswerResponse,
+	editProjectRegistrationFormAnswerEndpoint,
 	type GetProjectRegistrationFormDetailResponse,
+	type GetProjectRegistrationFormResponseResponse,
 	getProjectRegistrationFormDetailEndpoint,
+	getProjectRegistrationFormResponseEndpoint,
 	type ListProjectRegistrationFormResponsesResponse,
 	type ListProjectRegistrationFormsResponse,
 	listProjectRegistrationFormResponsesEndpoint,
@@ -147,5 +152,25 @@ export async function listProjectRegistrationFormResponses(
 ): Promise<ListProjectRegistrationFormResponsesResponse> {
 	return callGetApi(listProjectRegistrationFormResponsesEndpoint, {
 		pathParams: { formId },
+	});
+}
+
+export async function getProjectRegistrationFormResponse(
+	formId: string,
+	responseId: string
+): Promise<GetProjectRegistrationFormResponseResponse> {
+	return callGetApi(getProjectRegistrationFormResponseEndpoint, {
+		pathParams: { formId, responseId },
+	});
+}
+
+export async function editProjectRegistrationFormAnswer(
+	formId: string,
+	formItemId: string,
+	projectId: string,
+	body: EditProjectRegistrationFormAnswerRequest
+): Promise<EditProjectRegistrationFormAnswerResponse> {
+	return callBodyApi(editProjectRegistrationFormAnswerEndpoint, body, {
+		pathParams: { formId, formItemId, projectId },
 	});
 }

@@ -77,6 +77,37 @@ const buildPrismaAnswerData = (
 			: undefined,
 });
 
+const buildPrismaPrfEditHistoryData = (
+	answer: RegistrationFormAnswersInput["answers"][number],
+	projectId: string,
+	actorId: string,
+	trigger: "PROJECT_SUBMIT" | "PROJECT_RESUBMIT"
+) => ({
+	formItemId: answer.formItemId,
+	projectId,
+	actorId,
+	trigger,
+	textValue: "textValue" in answer ? answer.textValue : null,
+	numberValue: "numberValue" in answer ? answer.numberValue : null,
+	files:
+		"fileIds" in answer && answer.fileIds.length > 0
+			? {
+					create: normalizeFileIds(answer.fileIds).map((fileId, sortOrder) => ({
+						fileId,
+						sortOrder,
+					})),
+				}
+			: undefined,
+	selectedOptions:
+		"selectedOptionIds" in answer && answer.selectedOptionIds?.length
+			? {
+					create: answer.selectedOptionIds.map(formItemOptionId => ({
+						formItemOptionId,
+					})),
+				}
+			: undefined,
+});
+
 // 企画登録フォームの過不足・内容チェック
 async function validateRegistrationFormAnswers(
 	applicableForms: {
@@ -403,6 +434,78 @@ projectRoute.get(
 			},
 		});
 
+		const formItemIds = [
+			...new Set(
+				responses.flatMap(response =>
+					response.answers.map(answer => answer.formItem.id)
+				)
+			),
+		];
+		const latestHistoryByFormItemId = new Map<
+			string,
+			{
+				textValue: string | null;
+				numberValue: number | null;
+				files: {
+					sortOrder: number;
+					file: {
+						id: string;
+						fileName: string;
+						mimeType: string;
+						size: number;
+						isPublic: boolean;
+						createdAt: Date;
+					};
+				}[];
+				selectedOptions: { formItemOption: { id: string; label: string } }[];
+			}
+		>();
+		if (formItemIds.length > 0) {
+			const editHistories =
+				await prisma.projectRegistrationFormItemEditHistory.findMany({
+					where: {
+						projectId: project.id,
+						formItemId: { in: formItemIds },
+					},
+					include: {
+						files: {
+							orderBy: { sortOrder: "asc" },
+							include: {
+								file: {
+									select: {
+										id: true,
+										fileName: true,
+										mimeType: true,
+										size: true,
+										isPublic: true,
+										createdAt: true,
+									},
+								},
+							},
+						},
+						selectedOptions: {
+							include: {
+								formItemOption: { select: { id: true, label: true } },
+							},
+						},
+					},
+					orderBy: {
+						createdAt: "desc",
+					},
+				});
+
+			for (const history of editHistories) {
+				if (!latestHistoryByFormItemId.has(history.formItemId)) {
+					latestHistoryByFormItemId.set(history.formItemId, {
+						textValue: history.textValue,
+						numberValue: history.numberValue,
+						files: history.files,
+						selectedOptions: history.selectedOptions,
+					});
+				}
+			}
+		}
+
 		return c.json({
 			responses: responses.map(response => ({
 				id: response.id,
@@ -412,18 +515,25 @@ projectRoute.get(
 					title: response.form.title,
 					description: response.form.description,
 				},
-				answers: response.answers.map(answer => ({
-					formItemId: answer.formItem.id,
-					formItemLabel: answer.formItem.label,
-					type: answer.formItem.type,
-					textValue: answer.textValue,
-					numberValue: answer.numberValue,
-					files: mapAnswerFiles(answer.files),
-					selectedOptions: answer.selectedOptions.map(selected => ({
-						id: selected.formItemOption.id,
-						label: selected.formItemOption.label,
-					})),
-				})),
+				answers: response.answers.map(answer => {
+					const latestHistory = latestHistoryByFormItemId.get(
+						answer.formItem.id
+					);
+					return {
+						formItemId: answer.formItem.id,
+						formItemLabel: answer.formItem.label,
+						type: answer.formItem.type,
+						textValue: latestHistory?.textValue ?? answer.textValue,
+						numberValue: latestHistory?.numberValue ?? answer.numberValue,
+						files: mapAnswerFiles(latestHistory?.files ?? answer.files),
+						selectedOptions: (
+							latestHistory?.selectedOptions ?? answer.selectedOptions
+						).map(selected => ({
+							id: selected.formItemOption.id,
+							label: selected.formItemOption.label,
+						})),
+					};
+				}),
 			})),
 		});
 	}
@@ -515,6 +625,7 @@ projectRoute.post(
 			assertFileMimeTypeConstraints(formItems, answers, fileMap);
 		}
 
+		const actorId = c.get("user").id;
 		const createdResponse = await prisma.$transaction(async tx => {
 			const existing = await tx.projectRegistrationFormResponse.findFirst({
 				where: {
@@ -527,7 +638,7 @@ projectRoute.post(
 				throw Errors.alreadyExists("既に回答済みの申請です");
 			}
 
-			return await tx.projectRegistrationFormResponse.create({
+			const created = await tx.projectRegistrationFormResponse.create({
 				data: {
 					formId,
 					projectId: project.id,
@@ -583,6 +694,21 @@ projectRoute.post(
 					},
 				},
 			});
+
+			await Promise.all(
+				answers.map(a =>
+					tx.projectRegistrationFormItemEditHistory.create({
+						data: buildPrismaPrfEditHistoryData(
+							a,
+							project.id,
+							actorId,
+							"PROJECT_SUBMIT"
+						),
+					})
+				)
+			);
+
+			return created;
 		});
 
 		return c.json({
@@ -1310,6 +1436,7 @@ projectRoute.patch(
 		}
 
 		// トランザクションで既存回答をソフトデリートして新規作成
+		const actorId = c.get("user").id;
 		const updatedResponse = await prisma.$transaction(async tx => {
 			// 既存の回答データをソフトデリート
 			await tx.projectRegistrationFormAnswer.updateMany({
@@ -1321,7 +1448,7 @@ projectRoute.patch(
 			});
 
 			// 新しい回答を作成
-			return await tx.projectRegistrationFormResponse.update({
+			const updated = await tx.projectRegistrationFormResponse.update({
 				where: { id: responseId },
 				data: {
 					answers: {
@@ -1376,6 +1503,21 @@ projectRoute.patch(
 					},
 				},
 			});
+
+			await Promise.all(
+				answers.map(a =>
+					tx.projectRegistrationFormItemEditHistory.create({
+						data: buildPrismaPrfEditHistoryData(
+							a,
+							project.id,
+							actorId,
+							"PROJECT_RESUBMIT"
+						),
+					})
+				)
+			);
+
+			return updated;
 		});
 
 		// レスポンス整形

@@ -1,26 +1,41 @@
-import { AlertDialog, Badge, Heading, Separator, Text } from "@radix-ui/themes";
-import type { ProjectRegistrationFormDetail } from "@sos26/shared";
-import { IconArrowLeft, IconCalendar, IconClock } from "@tabler/icons-react";
+import { AlertDialog, Badge, Heading, Text } from "@radix-ui/themes";
+import type {
+	ListProjectRegistrationFormResponsesResponse,
+	ProjectRegistrationFormDetail,
+} from "@sos26/shared";
+import {
+	IconArrowLeft,
+	IconCalendar,
+	IconClock,
+	IconEye,
+} from "@tabler/icons-react";
 import {
 	createFileRoute,
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
+import { createColumnHelper } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { Form } from "@/components/form/type";
+import { DataTable, DateCell, NameCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import {
 	addProjectRegistrationFormCollaborator,
 	deleteProjectRegistrationForm,
 	getProjectRegistrationFormDetail,
+	listProjectRegistrationFormResponses,
 	listProjectRegistrationForms,
 	removeProjectRegistrationFormCollaborator,
 	updateProjectRegistrationFormAuthorization,
 } from "@/lib/api/committee-project-registration-form";
 import { useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
+import {
+	type BaseAnswerRow,
+	buildAnswerValueMap,
+} from "@/lib/form/answer-table";
 import { getProjectRegistrationFormStatus } from "@/lib/form/form-status";
 import { formatDate } from "@/lib/format";
 import {
@@ -28,9 +43,30 @@ import {
 	PROJECT_TYPE_LABELS,
 } from "@/lib/project/options";
 import { FormItemsPreview } from "@/routes/committee/forms/$formId/-components/FormItemsPreview";
+import { AnswerDetailDialog } from "./-components/AnswerDetailDialog";
 import { EditProjectRegistrationFormDialog } from "./-components/EditProjectRegistrationFormDialog";
 import { ProjectRegistrationFormDetailSidebar } from "./-components/ProjectRegistrationFormDetailSidebar";
 import styles from "./index.module.scss";
+
+type AnswerRow = BaseAnswerRow & {
+	organizationName: string;
+};
+
+const answerColumnHelper = createColumnHelper<AnswerRow>();
+
+function buildAnswerRows(
+	responses: ListProjectRegistrationFormResponsesResponse["responses"]
+): AnswerRow[] {
+	return responses.map(r => {
+		return {
+			id: r.id,
+			projectName: r.project.name,
+			organizationName: r.project.organizationName,
+			submittedAt: r.submittedAt,
+			answers: buildAnswerValueMap(r.answers),
+		};
+	});
+}
 
 function formDetailToPreviewForm(form: ProjectRegistrationFormDetail): Form {
 	return {
@@ -60,11 +96,14 @@ export const Route = createFileRoute(
 		meta: [{ title: "企画登録フォーム詳細 | 雙峰祭オンラインシステム" }],
 	}),
 	loader: async ({ params }) => {
-		const [{ form }, { committeeMembers }, { forms: allForms }] =
+		const [{ form }, { committeeMembers }, { forms: allForms }, responsesRes] =
 			await Promise.all([
 				getProjectRegistrationFormDetail(params.formId),
 				listCommitteeMembersPicker(),
 				listProjectRegistrationForms(),
+				listProjectRegistrationFormResponses(params.formId).catch(() => ({
+					responses: [],
+				})),
 			]);
 		const currentUserId = useAuthStore.getState().user?.id;
 		const currentMember = committeeMembers.find(
@@ -111,14 +150,27 @@ export const Route = createFileRoute(
 				filterTypes: f.filterTypes,
 				filterLocations: f.filterLocations,
 			}));
-		return { form, canCreate, approvers, availableMembers, activeForms };
+		return {
+			form,
+			canCreate,
+			approvers,
+			availableMembers,
+			activeForms,
+			responses: responsesRes.responses,
+		};
 	},
 });
 
 function RouteComponent() {
 	const { formId } = Route.useParams();
-	const { form, canCreate, approvers, availableMembers, activeForms } =
-		Route.useLoaderData();
+	const {
+		form,
+		canCreate,
+		approvers,
+		availableMembers,
+		activeForms,
+		responses,
+	} = Route.useLoaderData();
 	const navigate = useNavigate();
 	const router = useRouter();
 	const { user } = useAuthStore();
@@ -127,6 +179,11 @@ function RouteComponent() {
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [removingId, setRemovingId] = useState<string | null>(null);
+	const [activeTab, setActiveTab] = useState<"content" | "answers">("content");
+	const [answerDialogOpen, setAnswerDialogOpen] = useState(false);
+	const [selectedResponseId, setSelectedResponseId] = useState<string | null>(
+		null
+	);
 
 	const isOwner = form.ownerId === user?.id;
 	const isWriteCollaborator = form.collaborators.some(
@@ -134,8 +191,87 @@ function RouteComponent() {
 	);
 	const canEdit =
 		(isOwner || isWriteCollaborator) && canCreate && !form.isActive;
+	const canEditAnswers = isOwner || isWriteCollaborator;
 
 	const previewForm = useMemo(() => formDetailToPreviewForm(form), [form]);
+	const answerRows = useMemo(() => buildAnswerRows(responses), [responses]);
+	const answerColumns = useMemo(
+		() => [
+			answerColumnHelper.display({
+				id: "actions",
+				header: "操作",
+				cell: ({ row }) => (
+					<Button
+						intent="ghost"
+						size="1"
+						onClick={() => {
+							setSelectedResponseId(row.original.id);
+							setAnswerDialogOpen(true);
+						}}
+					>
+						<IconEye size={16} />
+						詳細
+					</Button>
+				),
+			}),
+			answerColumnHelper.accessor("projectName", {
+				header: "企画",
+				cell: NameCell,
+			}),
+			answerColumnHelper.accessor("organizationName", {
+				header: "団体名",
+				cell: ctx => <Text size="2">{ctx.getValue()}</Text>,
+			}),
+			answerColumnHelper.accessor("submittedAt", {
+				header: "提出日時",
+				cell: DateCell,
+				meta: { dateFormat: "datetime" },
+			}),
+			...previewForm.items.map(item =>
+				answerColumnHelper.accessor(row => row.answers[item.id] ?? "", {
+					id: item.id,
+					header: item.label,
+					cell: ctx => {
+						const value = ctx.getValue();
+						if (!value || (Array.isArray(value) && value.length === 0)) {
+							return (
+								<Text size="2" color="gray">
+									—
+								</Text>
+							);
+						}
+
+						if (Array.isArray(value)) {
+							return (
+								<div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+									{value.map(v => (
+										<Badge key={v.label} variant="soft" color={v.color}>
+											{v.label}
+										</Badge>
+									))}
+								</div>
+							);
+						}
+
+						if (item.type === "FILE") {
+							return (
+								<Badge variant="soft" color="blue">
+									{value as string}
+								</Badge>
+							);
+						}
+
+						return (
+							<Text size="2" truncate>
+								{value as string}
+							</Text>
+						);
+					},
+				})
+			),
+		],
+		[previewForm.items]
+	);
 
 	if (!user) return null;
 
@@ -309,27 +445,84 @@ function RouteComponent() {
 					</div>
 				</header>
 
-				<Separator size="4" />
+				<div className={styles.tabs} role="tablist" aria-label="表示切替">
+					<button
+						type="button"
+						role="tab"
+						aria-selected={activeTab === "content"}
+						data-active={activeTab === "content" || undefined}
+						className={styles.tabButton}
+						onClick={() => setActiveTab("content")}
+					>
+						内容
+					</button>
+					<button
+						type="button"
+						role="tab"
+						aria-selected={activeTab === "answers"}
+						data-active={activeTab === "answers" || undefined}
+						className={styles.tabButton}
+						onClick={() => setActiveTab("answers")}
+					>
+						回答
+						{responses.length > 0 && (
+							<span className={styles.tabBadge}>{responses.length}</span>
+						)}
+					</button>
+				</div>
 
-				<FormItemsPreview items={previewForm.items} />
+				{activeTab === "answers" ? (
+					<section className={styles.answersSection}>
+						{answerRows.length === 0 ? (
+							<Text size="2" color="gray">
+								まだ回答がありません。
+							</Text>
+						) : (
+							<DataTable<AnswerRow>
+								data={answerRows}
+								columns={answerColumns}
+								features={{
+									sorting: true,
+									globalFilter: true,
+									columnVisibility: false,
+									selection: false,
+									copy: false,
+									csvExport: true,
+								}}
+							/>
+						)}
+					</section>
+				) : (
+					<div className={styles.contentLayout}>
+						<FormItemsPreview items={previewForm.items} />
+						<ProjectRegistrationFormDetailSidebar
+							form={form}
+							userId={user.id}
+							isOwner={isOwner}
+							canEdit={canEdit}
+							availableMembers={availableMembers}
+							approvers={approvers}
+							removingId={removingId}
+							onAddCollaborator={handleAddCollaborator}
+							onRemoveCollaborator={handleRemoveCollaborator}
+							onApprove={handleApprove}
+							onReject={handleReject}
+							onAuthRequestSuccess={() => router.invalidate()}
+							onEdit={() => setEditDialogOpen(true)}
+							onDelete={() => setDeleteConfirmOpen(true)}
+						/>
+					</div>
+				)}
+
+				<AnswerDetailDialog
+					open={answerDialogOpen}
+					onOpenChange={setAnswerDialogOpen}
+					formId={formId}
+					responseId={selectedResponseId}
+					form={previewForm}
+					canEditAnswers={canEditAnswers}
+				/>
 			</div>
-
-			<ProjectRegistrationFormDetailSidebar
-				form={form}
-				userId={user.id}
-				isOwner={isOwner}
-				canEdit={canEdit}
-				availableMembers={availableMembers}
-				approvers={approvers}
-				removingId={removingId}
-				onAddCollaborator={handleAddCollaborator}
-				onRemoveCollaborator={handleRemoveCollaborator}
-				onApprove={handleApprove}
-				onReject={handleReject}
-				onAuthRequestSuccess={() => router.invalidate()}
-				onEdit={() => setEditDialogOpen(true)}
-				onDelete={() => setDeleteConfirmOpen(true)}
-			/>
 
 			<EditProjectRegistrationFormDialog
 				open={editDialogOpen}

@@ -1,6 +1,9 @@
 import {
 	addProjectRegistrationFormCollaboratorRequestSchema,
 	createProjectRegistrationFormRequestSchema,
+	editFormAnswerPathParamsSchema,
+	editFormAnswerRequestSchema,
+	formResponsePathParamsSchema,
 	projectRegistrationFormAuthorizationPathParamsSchema,
 	projectRegistrationFormCollaboratorPathParamsSchema,
 	projectRegistrationFormIdPathParamsSchema,
@@ -11,7 +14,11 @@ import {
 import { Hono } from "hono";
 import { requirePermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
-import { formAnswerFileSelect, mapAnswerFiles } from "../lib/form-answer-files";
+import {
+	formAnswerFileSelect,
+	mapAnswerFiles,
+	normalizeFileIds,
+} from "../lib/form-answer-files";
 import {
 	constraintsToPrisma,
 	mapFormToApiShape,
@@ -79,7 +86,33 @@ const requireOwner = async (formId: string, userId: string) => {
 	return form;
 };
 
-// PROJECT_REGISTRATION_FORM_CREATE 権限チェック
+const requireAnswerEditor = async (formId: string, userId: string) => {
+	const form = await prisma.projectRegistrationForm.findFirst({
+		where: { id: formId, deletedAt: null },
+		include: {
+			items: {
+				include: { options: { orderBy: { sortOrder: "asc" } } },
+				orderBy: { sortOrder: "asc" },
+			},
+			collaborators: {
+				where: { deletedAt: null },
+				select: { userId: true, isWrite: true },
+			},
+		},
+	});
+	if (!form) throw Errors.notFound("企画登録フォームが見つかりません");
+
+	const isOwner = form.ownerId === userId;
+	const isWriteCollaborator = form.collaborators.some(
+		c => c.userId === userId && c.isWrite
+	);
+	if (!isOwner && !isWriteCollaborator) {
+		throw Errors.forbidden("回答の編集権限がありません");
+	}
+
+	return form;
+};
+
 const requireCreatePermission = async (committeeMemberId: string) => {
 	const cm = await prisma.committeeMember.findUnique({
 		where: { id: committeeMemberId },
@@ -745,6 +778,34 @@ committeeProjectRegistrationFormRoute.get(
 			orderBy: { submittedAt: "desc" },
 		});
 
+		const formItemIds = [
+			...new Set(responses.flatMap(r => r.answers.map(a => a.formItemId))),
+		];
+		const projectIds = [...new Set(responses.map(r => r.projectId))];
+		const allHistory =
+			formItemIds.length && projectIds.length
+				? await prisma.projectRegistrationFormItemEditHistory.findMany({
+						where: {
+							formItemId: { in: formItemIds },
+							projectId: { in: projectIds },
+						},
+						orderBy: { createdAt: "desc" },
+						include: {
+							files: answerFilesInclude,
+							selectedOptions: {
+								include: {
+									formItemOption: { select: { id: true, label: true } },
+								},
+							},
+						},
+					})
+				: [];
+		const latestByCell = new Map<string, (typeof allHistory)[number]>();
+		for (const h of allHistory) {
+			const key = `${h.formItemId}:${h.projectId}`;
+			if (!latestByCell.has(key)) latestByCell.set(key, h);
+		}
+
 		return c.json({
 			responses: responses.map(r => ({
 				id: r.id,
@@ -754,17 +815,223 @@ committeeProjectRegistrationFormRoute.get(
 					organizationName: r.project.organizationName,
 				},
 				submittedAt: r.submittedAt,
-				answers: r.answers.map(a => ({
-					formItemId: a.formItemId,
-					textValue: a.textValue,
-					numberValue: a.numberValue,
-					files: mapAnswerFiles(a.files),
-					selectedOptions: a.selectedOptions.map(s => ({
-						id: s.formItemOption.id,
-						label: s.formItemOption.label,
-					})),
-				})),
+				answers: r.answers.map(a => {
+					const history = latestByCell.get(`${a.formItemId}:${r.projectId}`);
+					const textValue = history?.textValue ?? a.textValue;
+					const numberValue = history?.numberValue ?? a.numberValue;
+					const files = history
+						? mapAnswerFiles(history.files)
+						: mapAnswerFiles(a.files);
+					const selectedOptions = history
+						? history.selectedOptions.map(s => ({
+								id: s.formItemOption.id,
+								label: s.formItemOption.label,
+							}))
+						: a.selectedOptions.map(s => ({
+								id: s.formItemOption.id,
+								label: s.formItemOption.label,
+							}));
+					return {
+						formItemId: a.formItemId,
+						textValue,
+						numberValue,
+						files,
+						selectedOptions,
+					};
+				}),
 			})),
+		});
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// GET /committee/project-registration-forms/:formId/responses/:responseId
+// 回答詳細（実委人全員が閲覧可）
+// ─────────────────────────────────────────────────────────────
+committeeProjectRegistrationFormRoute.get(
+	"/:formId/responses/:responseId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const { formId, responseId } = formResponsePathParamsSchema.parse(
+			c.req.param()
+		);
+		await getFormOrThrow(formId);
+
+		const r = await prisma.projectRegistrationFormResponse.findFirst({
+			where: { id: responseId, formId, deletedAt: null },
+			include: {
+				project: { select: { id: true, name: true, organizationName: true } },
+				answers: {
+					where: { deletedAt: null },
+					include: {
+						files: answerFilesInclude,
+						selectedOptions: {
+							include: {
+								formItemOption: { select: { id: true, label: true } },
+							},
+						},
+					},
+				},
+			},
+		});
+		if (!r) throw Errors.notFound("回答が見つかりません");
+
+		const formItemIds = r.answers.map(a => a.formItemId);
+		const allHistory = formItemIds.length
+			? await prisma.projectRegistrationFormItemEditHistory.findMany({
+					where: { formItemId: { in: formItemIds }, projectId: r.projectId },
+					orderBy: { createdAt: "desc" },
+					include: {
+						files: answerFilesInclude,
+						selectedOptions: {
+							include: {
+								formItemOption: { select: { id: true, label: true } },
+							},
+						},
+					},
+				})
+			: [];
+		const latestByItem = new Map<string, (typeof allHistory)[number]>();
+		for (const h of allHistory) {
+			if (!latestByItem.has(h.formItemId)) latestByItem.set(h.formItemId, h);
+		}
+
+		return c.json({
+			response: {
+				id: r.id,
+				project: r.project,
+				submittedAt: r.submittedAt,
+				answers: r.answers.map(a => {
+					const history = latestByItem.get(a.formItemId);
+					const textValue = history?.textValue ?? a.textValue;
+					const numberValue = history?.numberValue ?? a.numberValue;
+					const files = history
+						? mapAnswerFiles(history.files)
+						: mapAnswerFiles(a.files);
+					const selectedOptions = history
+						? history.selectedOptions.map(s => ({
+								id: s.formItemOption.id,
+								label: s.formItemOption.label,
+							}))
+						: a.selectedOptions.map(s => ({
+								id: s.formItemOption.id,
+								label: s.formItemOption.label,
+							}));
+					return {
+						formItemId: a.formItemId,
+						textValue,
+						numberValue,
+						files,
+						selectedOptions,
+					};
+				}),
+			},
+		});
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// PUT /committee/project-registration-forms/:formId/answers/:formItemId/:projectId
+// 回答の編集（申請のオーナー、共同編集者が回答済みの企画を編集可能）
+// ─────────────────────────────────────────────────────────────
+committeeProjectRegistrationFormRoute.put(
+	"/:formId/answers/:formItemId/:projectId",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const { formId, formItemId, projectId } =
+			editFormAnswerPathParamsSchema.parse(c.req.param());
+		const userId = c.get("user").id;
+
+		const form = await requireAnswerEditor(formId, userId);
+		const formItem = form.items.find(item => item.id === formItemId);
+		if (!formItem) throw Errors.invalidRequest("フォーム項目が不正です");
+
+		const project = await prisma.project.findFirst({
+			where: { id: projectId, deletedAt: null },
+		});
+		if (!project) throw Errors.notFound("企画が見つかりません");
+
+		const body = await c.req.json().catch(() => ({}));
+		const data = editFormAnswerRequestSchema.parse(body);
+
+		const [response, latestHistory] = await Promise.all([
+			prisma.projectRegistrationFormResponse.findFirst({
+				where: { formId, projectId, deletedAt: null },
+				select: { id: true },
+			}),
+			prisma.projectRegistrationFormItemEditHistory.findFirst({
+				where: { formItemId, projectId },
+				select: { id: true },
+			}),
+		]);
+		if (!response && !latestHistory) {
+			throw Errors.invalidRequest("未回答の企画は編集できません");
+		}
+
+		const history = await prisma.$transaction(async tx => {
+			const created = await tx.projectRegistrationFormItemEditHistory.create({
+				data: {
+					formItemId,
+					projectId,
+					textValue: data.textValue ?? null,
+					numberValue: data.numberValue ?? null,
+					actorId: userId,
+					trigger: "COMMITTEE_EDIT",
+				},
+			});
+
+			const fileIds = normalizeFileIds(data.fileIds);
+			if (fileIds.length > 0) {
+				await tx.projectRegistrationFormItemEditHistoryFile.createMany({
+					data: fileIds.map((fileId, sortOrder) => ({
+						editHistoryId: created.id,
+						fileId,
+						sortOrder,
+					})),
+				});
+			}
+
+			if (data.selectedOptionIds?.length) {
+				const validIds = new Set(formItem.options.map(o => o.id));
+				const invalid = data.selectedOptionIds.filter(id => !validIds.has(id));
+				if (invalid.length > 0) throw Errors.invalidRequest("選択肢が不正です");
+
+				await tx.projectRegistrationFormItemEditHistorySelectedOption.createMany(
+					{
+						data: data.selectedOptionIds.map(optionId => ({
+							editHistoryId: created.id,
+							formItemOptionId: optionId,
+						})),
+					}
+				);
+			}
+
+			return tx.projectRegistrationFormItemEditHistory.findUniqueOrThrow({
+				where: { id: created.id },
+				include: {
+					files: answerFilesInclude,
+					selectedOptions: {
+						include: {
+							formItemOption: { select: { id: true, label: true } },
+						},
+					},
+				},
+			});
+		});
+
+		return c.json({
+			answer: {
+				formItemId,
+				textValue: history.textValue,
+				numberValue: history.numberValue,
+				files: mapAnswerFiles(history.files),
+				selectedOptions: history.selectedOptions.map(s => ({
+					id: s.formItemOption.id,
+					label: s.formItemOption.label,
+				})),
+			},
 		});
 	}
 );

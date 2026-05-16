@@ -1,10 +1,15 @@
 import {
 	addProjectRegistrationFormCollaboratorRequestSchema,
 	addProjectRegistrationFormCollaboratorResponseSchema,
+	committeeProjectRegistrationFormResponsePathParamsSchema,
 	createProjectRegistrationFormRequestSchema,
 	createProjectRegistrationFormResponseSchema,
 	deleteProjectRegistrationFormResponseSchema,
+	editProjectRegistrationFormAnswerPathParamsSchema,
+	editProjectRegistrationFormAnswerRequestSchema,
+	editProjectRegistrationFormAnswerResponseSchema,
 	getProjectRegistrationFormDetailResponseSchema,
+	getProjectRegistrationFormResponseResponseSchema,
 	listProjectRegistrationFormResponsesResponseSchema,
 	listProjectRegistrationFormsResponseSchema,
 	projectRegistrationFormAuthorizationPathParamsSchema,
@@ -217,4 +222,42 @@ export const listProjectRegistrationFormResponsesEndpoint: GetEndpoint<
 	query: undefined,
 	request: undefined,
 	response: listProjectRegistrationFormResponsesResponseSchema,
+} as const;
+
+/**
+ * GET /committee/project-registration-forms/:formId/responses/:responseId
+ * 回答詳細
+ */
+export const getProjectRegistrationFormResponseEndpoint: GetEndpoint<
+	"/committee/project-registration-forms/:formId/responses/:responseId",
+	typeof committeeProjectRegistrationFormResponsePathParamsSchema,
+	undefined,
+	typeof getProjectRegistrationFormResponseResponseSchema
+> = {
+	method: "GET",
+	path: "/committee/project-registration-forms/:formId/responses/:responseId",
+	pathParams: committeeProjectRegistrationFormResponsePathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: getProjectRegistrationFormResponseResponseSchema,
+} as const;
+
+/**
+ * PUT /committee/project-registration-forms/:formId/answers/:formItemId/:projectId
+ * 回答の編集（履歴として追加）
+ */
+export const editProjectRegistrationFormAnswerEndpoint: BodyEndpoint<
+	"PUT",
+	"/committee/project-registration-forms/:formId/answers/:formItemId/:projectId",
+	typeof editProjectRegistrationFormAnswerPathParamsSchema,
+	undefined,
+	typeof editProjectRegistrationFormAnswerRequestSchema,
+	typeof editProjectRegistrationFormAnswerResponseSchema
+> = {
+	method: "PUT",
+	path: "/committee/project-registration-forms/:formId/answers/:formItemId/:projectId",
+	pathParams: editProjectRegistrationFormAnswerPathParamsSchema,
+	query: undefined,
+	request: editProjectRegistrationFormAnswerRequestSchema,
+	response: editProjectRegistrationFormAnswerResponseSchema,
 } as const;
