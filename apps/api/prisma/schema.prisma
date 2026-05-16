@@ -110,7 +110,7 @@ model User {
   mastersheetViews                               MastersheetView[]
 
   // FormItemEditHistory関連
-  formItemEditHistory FormItemEditHistory[] @relation("FormItemEditHistoryActor")
+  formItemEditHistory                    FormItemEditHistory[]                    @relation("FormItemEditHistoryActor")
   projectRegistrationFormItemEditHistory ProjectRegistrationFormItemEditHistory[] @relation("ProjectRegFormItemEditHistoryActor")
 
   @@unique([firebaseUid, deletedAt])
@@ -197,8 +197,8 @@ model Project {
   projectRegistrationFormResponses ProjectRegistrationFormResponse[]
   projectSubOwnerRequests          ProjectSubOwnerRequest[]
 
-  mastersheetCellValues MastersheetCellValue[]
-  formItemEditHistory   FormItemEditHistory[]
+  mastersheetCellValues                  MastersheetCellValue[]
+  formItemEditHistory                    FormItemEditHistory[]
   projectRegistrationFormItemEditHistory ProjectRegistrationFormItemEditHistory[]
 
   @@index([ownerId])
@@ -378,13 +378,13 @@ model File {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  noticeAttachments                  NoticeAttachment[]
-  inquiryAttachments                 InquiryAttachment[]
-  formAttachments                    FormAttachment[]
-  formAnswerFiles                    FormAnswerFile[]
-  formItemEditHistoryFiles           FormItemEditHistoryFile[]
+  noticeAttachments                           NoticeAttachment[]
+  inquiryAttachments                          InquiryAttachment[]
+  formAttachments                             FormAttachment[]
+  formAnswerFiles                             FormAnswerFile[]
+  formItemEditHistoryFiles                    FormItemEditHistoryFile[]
   projectRegistrationFormItemEditHistoryFiles ProjectRegistrationFormItemEditHistoryFile[]
-  projectRegistrationFormAnswerFiles ProjectRegistrationFormAnswerFile[]
+  projectRegistrationFormAnswerFiles          ProjectRegistrationFormAnswerFile[]
 
   @@index([uploadedById])
   @@index([status])
@@ -1297,17 +1297,17 @@ enum ProjectRegistrationFormItemEditHistoryTrigger {
 }
 
 model ProjectRegistrationFormItemEditHistory {
-  id           String                              @id @default(cuid())
-  formItemId   String
-  formItem     ProjectRegistrationFormItem         @relation(fields: [formItemId], references: [id], onDelete: Cascade)
-  projectId    String
-  project      Project                             @relation(fields: [projectId], references: [id])
-  textValue    String?
-  numberValue  Float?
-  actorId      String
-  actor        User                                @relation("ProjectRegFormItemEditHistoryActor", fields: [actorId], references: [id])
-  trigger      ProjectRegistrationFormItemEditHistoryTrigger
-  createdAt    DateTime                            @default(now())
+  id          String                                        @id @default(cuid())
+  formItemId  String
+  formItem    ProjectRegistrationFormItem                   @relation(fields: [formItemId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project                                       @relation(fields: [projectId], references: [id])
+  textValue   String?
+  numberValue Float?
+  actorId     String
+  actor       User                                          @relation("ProjectRegFormItemEditHistoryActor", fields: [actorId], references: [id])
+  trigger     ProjectRegistrationFormItemEditHistoryTrigger
+  createdAt   DateTime                                      @default(now())
 
   files           ProjectRegistrationFormItemEditHistoryFile[]
   selectedOptions ProjectRegistrationFormItemEditHistorySelectedOption[]
@@ -1323,7 +1323,7 @@ model ProjectRegistrationFormItemEditHistoryFile {
   sortOrder     Int
 
   editHistory ProjectRegistrationFormItemEditHistory @relation(fields: [editHistoryId], references: [id], onDelete: Cascade)
-  file        File                                  @relation(fields: [fileId], references: [id])
+  file        File                                   @relation(fields: [fileId], references: [id])
 
   createdAt DateTime @default(now())
 
@@ -1333,7 +1333,7 @@ model ProjectRegistrationFormItemEditHistoryFile {
 }
 
 model ProjectRegistrationFormItemEditHistorySelectedOption {
-  id               String @id @default(cuid())
+  id               String                                 @id @default(cuid())
   editHistoryId    String
   editHistory      ProjectRegistrationFormItemEditHistory @relation(fields: [editHistoryId], references: [id], onDelete: Cascade)
   formItemOptionId String
@@ -1504,7 +1504,7 @@ model ProjectRegistrationFormItem {
   options ProjectRegistrationFormItemOption[]
 
   // 回答
-  answers ProjectRegistrationFormAnswer[]
+  answers       ProjectRegistrationFormAnswer[]
   editHistories ProjectRegistrationFormItemEditHistory[]
 
   // マスターシートカラム
@@ -1529,7 +1529,7 @@ model ProjectRegistrationFormItemOption {
   sortOrder Int
 
   // 回答での選択
-  selectedIn ProjectRegistrationFormAnswerSelectedOption[]
+  selectedIn              ProjectRegistrationFormAnswerSelectedOption[]
   selectedInEditHistories ProjectRegistrationFormItemEditHistorySelectedOption[]
 
   createdAt DateTime @default(now())
