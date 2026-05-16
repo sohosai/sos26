@@ -19,6 +19,14 @@ const committeeMemberRoute = new Hono<AuthEnv>();
 // 委員メンバー一覧を取得
 // ─────────────────────────────────────────────────────────────
 committeeMemberRoute.get("/", requireAuth, requireCommitteeMember, async c => {
+	const user = c.get("user");
+	await requirePermission(
+		prisma,
+		user.id,
+		"MEMBER_EDIT",
+		"メンバー編集権限がありません"
+	);
+
 	const committeeMembers = await prisma.committeeMember.findMany({
 		where: { deletedAt: null },
 		include: { user: true, permissions: true },
@@ -26,6 +34,41 @@ committeeMemberRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 
 	return c.json({ committeeMembers });
 });
+
+// ─────────────────────────────────────────────────────────────
+// GET /committee/members/picker
+// 候補者ピッカー用の委員メンバー一覧（最小情報・MEMBER_EDIT 不要）
+// ─────────────────────────────────────────────────────────────
+committeeMemberRoute.get(
+	"/picker",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const committeeMembers = await prisma.committeeMember.findMany({
+			where: { deletedAt: null },
+			select: {
+				id: true,
+				userId: true,
+				isExecutive: true,
+				Bureau: true,
+				user: {
+					select: {
+						id: true,
+						name: true,
+						avatarFileId: true,
+					},
+				},
+				permissions: {
+					select: {
+						permission: true,
+					},
+				},
+			},
+		});
+
+		return c.json({ committeeMembers });
+	}
+);
 
 // ─────────────────────────────────────────────────────────────
 // POST /committee/members

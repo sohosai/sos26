@@ -10,9 +10,11 @@ import {
 	getMyPermissionsEndpoint,
 	grantCommitteeMemberPermissionEndpoint,
 	type ListCommitteeMemberPermissionsResponse,
+	type ListCommitteeMembersPickerResponse,
 	type ListCommitteeMembersResponse,
 	listCommitteeMemberPermissionsEndpoint,
 	listCommitteeMembersEndpoint,
+	listCommitteeMembersPickerEndpoint,
 	type RevokeCommitteeMemberPermissionResponse,
 	revokeCommitteeMemberPermissionEndpoint,
 	type UpdateCommitteeMemberRequest,
@@ -22,15 +24,28 @@ import {
 import { callBodyApi, callGetApi, callNoBodyApi } from "./core";
 
 /**
- * GET /committee-members
- * 委員メンバー一覧を取得
+ * GET /committee/members
+ * 委員メンバー一覧を取得（管理画面用・フル情報）
+ *
+ * MEMBER_EDIT 権限が必須。候補者ピッカーなど MEMBER_EDIT を持たない
+ * ユーザーが利用する場合は {@link listCommitteeMembersPicker} を使うこと。
  */
 export async function listCommitteeMembers(): Promise<ListCommitteeMembersResponse> {
 	return callGetApi(listCommitteeMembersEndpoint);
 }
 
 /**
- * POST /committee-members
+ * GET /committee/members/picker
+ * 候補者ピッカー用の委員メンバー一覧を取得（最小情報）
+ *
+ * MEMBER_EDIT 権限は不要。email / telephoneNumber などの個人情報は含まない。
+ */
+export async function listCommitteeMembersPicker(): Promise<ListCommitteeMembersPickerResponse> {
+	return callGetApi(listCommitteeMembersPickerEndpoint);
+}
+
+/**
+ * POST /committee/members
  * 委員メンバーを作成
  */
 export async function createCommitteeMember(
@@ -40,7 +55,7 @@ export async function createCommitteeMember(
 }
 
 /**
- * PATCH /committee-members/:id
+ * PATCH /committee/members/:id
  * 委員メンバーを更新
  */
 export async function updateCommitteeMember(
@@ -53,7 +68,7 @@ export async function updateCommitteeMember(
 }
 
 /**
- * DELETE /committee-members/:id
+ * DELETE /committee/members/:id
  * 委員メンバーをソフトデリート
  */
 export async function deleteCommitteeMember(

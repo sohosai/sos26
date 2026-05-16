@@ -10,7 +10,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { Form } from "@/components/form/type";
 import { Button } from "@/components/primitives";
-import { listCommitteeMembers } from "@/lib/api/committee-member";
+import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import {
 	addProjectRegistrationFormCollaborator,
 	deleteProjectRegistrationForm,
@@ -63,7 +63,7 @@ export const Route = createFileRoute(
 		const [{ form }, { committeeMembers }, { forms: allForms }] =
 			await Promise.all([
 				getProjectRegistrationFormDetail(params.formId),
-				listCommitteeMembers(),
+				listCommitteeMembersPicker(),
 				listProjectRegistrationForms(),
 			]);
 		const currentUserId = useAuthStore.getState().user?.id;

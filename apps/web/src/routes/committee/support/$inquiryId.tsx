@@ -22,7 +22,7 @@ import {
 } from "@/lib/api/committee-inquiry";
 import {
 	getMyPermissions,
-	listCommitteeMembers,
+	listCommitteeMembersPicker,
 } from "@/lib/api/committee-member";
 import { listCommitteeProjectMembers } from "@/lib/api/committee-project";
 import { useAuthStore } from "@/lib/auth";
@@ -40,7 +40,7 @@ export const Route = createFileRoute("/committee/support/$inquiryId")({
 		const { committeeMember } = useAuthStore.getState();
 		const inquiryRes = await getCommitteeInquiry(params.inquiryId);
 		const [membersRes, projectMembersRes, formsRes] = await Promise.all([
-			listCommitteeMembers(),
+			listCommitteeMembersPicker(),
 			listCommitteeProjectMembers(inquiryRes.inquiry.projectId),
 			listMyForms(),
 		]);

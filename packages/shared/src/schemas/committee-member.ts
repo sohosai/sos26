@@ -80,7 +80,7 @@ export type CommitteeMemberPermission = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
-// GET /committee-members
+// GET /committee/members
 // ─────────────────────────────────────────────────────────────
 
 /**
@@ -100,7 +100,46 @@ export type ListCommitteeMembersResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
-// POST /committee-members
+// GET /committee/members/picker
+// 候補者ピッカー用の最小情報のみを返すエンドポイント
+// （email / telephoneNumber などの個人情報は含まない）
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 候補者ピッカー用の委員メンバーエントリ
+ *
+ * - user は { id, name, avatarFileId } のみ
+ * - permissions は { permission } のみ（NOTICE_DELIVER / FORM_DELIVER などの抽出に必要）
+ */
+export const committeeMemberPickerEntrySchema = z.object({
+	id: z.cuid(),
+	userId: z.string().min(1),
+	isExecutive: z.boolean(),
+	Bureau: bureauSchema,
+	user: userSchema.pick({
+		id: true,
+		name: true,
+		avatarFileId: true,
+	}),
+	permissions: z.array(
+		z.object({
+			permission: committeePermissionSchema,
+		})
+	),
+});
+export type CommitteeMemberPickerEntry = z.infer<
+	typeof committeeMemberPickerEntrySchema
+>;
+
+export const listCommitteeMembersPickerResponseSchema = z.object({
+	committeeMembers: z.array(committeeMemberPickerEntrySchema),
+});
+export type ListCommitteeMembersPickerResponse = z.infer<
+	typeof listCommitteeMembersPickerResponseSchema
+>;
+
+// ─────────────────────────────────────────────────────────────
+// POST /committee/members
 // ─────────────────────────────────────────────────────────────
 
 /**
@@ -126,7 +165,7 @@ export type CreateCommitteeMemberResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
-// PATCH /committee-members/:id
+// PATCH /committee/members/:id
 // ─────────────────────────────────────────────────────────────
 
 /**
@@ -151,7 +190,7 @@ export type UpdateCommitteeMemberResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
-// DELETE /committee-members/:id
+// DELETE /committee/members/:id
 // ─────────────────────────────────────────────────────────────
 
 /**
