@@ -182,7 +182,7 @@ describe("GET /committee/members", () => {
 	});
 });
 
-describe("GET /committee/members/directory", () => {
+describe("GET /committee/members/picker", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
@@ -195,7 +195,7 @@ describe("GET /committee/members/directory", () => {
 		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 		// requireCommitteeMember 用（権限なし実委メンバー）
 		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
-		// directory 用の findMany は最小情報のみ
+		// picker 用の findMany は最小情報のみ
 		mockPrisma.committeeMember.findMany.mockResolvedValue([
 			{
 				id: mockCommitteeMember.id,
@@ -211,7 +211,7 @@ describe("GET /committee/members/directory", () => {
 			},
 		] as any);
 
-		const res = await app.request("/committee/members/directory", {
+		const res = await app.request("/committee/members/picker", {
 			method: "GET",
 			headers: { Authorization: "Bearer valid-token" },
 		});
@@ -228,7 +228,7 @@ describe("GET /committee/members/directory", () => {
 	it("認証なしで401エラー", async () => {
 		const app = makeApp();
 
-		const res = await app.request("/committee/members/directory", {
+		const res = await app.request("/committee/members/picker", {
 			method: "GET",
 		});
 
@@ -243,7 +243,7 @@ describe("GET /committee/members/directory", () => {
 		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
 		mockPrisma.committeeMember.findFirst.mockResolvedValue(null);
 
-		const res = await app.request("/committee/members/directory", {
+		const res = await app.request("/committee/members/picker", {
 			method: "GET",
 			headers: { Authorization: "Bearer valid-token" },
 		});

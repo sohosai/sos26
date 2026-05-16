@@ -14,7 +14,7 @@ import {
 } from "@/lib/api/committee-inquiry";
 import {
 	getMyPermissions,
-	listCommitteeMembersDirectory,
+	listCommitteeMembersPicker,
 } from "@/lib/api/committee-member";
 import {
 	listCommitteeProjectMembers,
@@ -42,7 +42,7 @@ export const Route = createFileRoute("/committee/support/")({
 			[
 				listCommitteeInquiries(),
 				listCommitteeProjects(),
-				listCommitteeMembersDirectory(),
+				listCommitteeMembersPicker(),
 				listMyForms(),
 			]
 		);

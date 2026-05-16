@@ -100,7 +100,7 @@ export type ListCommitteeMembersResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────
-// GET /committee/members/directory
+// GET /committee/members/picker
 // 候補者ピッカー用の最小情報のみを返すエンドポイント
 // （email / telephoneNumber などの個人情報は含まない）
 // ─────────────────────────────────────────────────────────────
@@ -111,7 +111,7 @@ export type ListCommitteeMembersResponse = z.infer<
  * - user は { id, name, avatarFileId } のみ
  * - permissions は { permission } のみ（NOTICE_DELIVER / FORM_DELIVER などの抽出に必要）
  */
-export const committeeMemberDirectoryEntrySchema = z.object({
+export const committeeMemberPickerEntrySchema = z.object({
 	id: z.cuid(),
 	userId: z.string().min(1),
 	isExecutive: z.boolean(),
@@ -127,15 +127,15 @@ export const committeeMemberDirectoryEntrySchema = z.object({
 		})
 	),
 });
-export type CommitteeMemberDirectoryEntry = z.infer<
-	typeof committeeMemberDirectoryEntrySchema
+export type CommitteeMemberPickerEntry = z.infer<
+	typeof committeeMemberPickerEntrySchema
 >;
 
-export const listCommitteeMembersDirectoryResponseSchema = z.object({
-	committeeMembers: z.array(committeeMemberDirectoryEntrySchema),
+export const listCommitteeMembersPickerResponseSchema = z.object({
+	committeeMembers: z.array(committeeMemberPickerEntrySchema),
 });
-export type ListCommitteeMembersDirectoryResponse = z.infer<
-	typeof listCommitteeMembersDirectoryResponseSchema
+export type ListCommitteeMembersPickerResponse = z.infer<
+	typeof listCommitteeMembersPickerResponseSchema
 >;
 
 // ─────────────────────────────────────────────────────────────

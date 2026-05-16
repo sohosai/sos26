@@ -36,11 +36,11 @@ committeeMemberRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// GET /committee/members/directory
+// GET /committee/members/picker
 // 候補者ピッカー用の委員メンバー一覧（最小情報・MEMBER_EDIT 不要）
 // ─────────────────────────────────────────────────────────────
 committeeMemberRoute.get(
-	"/directory",
+	"/picker",
 	requireAuth,
 	requireCommitteeMember,
 	async c => {

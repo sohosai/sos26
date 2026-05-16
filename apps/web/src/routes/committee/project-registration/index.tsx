@@ -5,7 +5,7 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { useState } from "react";
 import { DataTable, DateCell, NameCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
-import { listCommitteeMembersDirectory } from "@/lib/api/committee-member";
+import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import { listProjectRegistrationForms } from "@/lib/api/committee-project-registration-form";
 import { useAuthStore } from "@/lib/auth";
 import {
@@ -47,7 +47,7 @@ export const Route = createFileRoute("/committee/project-registration/")({
 	loader: async (): Promise<LoaderData> => {
 		const [{ forms }, { committeeMembers }] = await Promise.all([
 			listProjectRegistrationForms(),
-			listCommitteeMembersDirectory(),
+			listCommitteeMembersPicker(),
 		]);
 
 		const currentUserId = useAuthStore.getState().user?.id;

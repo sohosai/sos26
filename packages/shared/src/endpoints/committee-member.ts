@@ -7,7 +7,7 @@ import {
 	grantCommitteeMemberPermissionRequestSchema,
 	grantCommitteeMemberPermissionResponseSchema,
 	listCommitteeMemberPermissionsResponseSchema,
-	listCommitteeMembersDirectoryResponseSchema,
+	listCommitteeMembersPickerResponseSchema,
 	listCommitteeMembersResponseSchema,
 	revokeCommitteeMemberPermissionResponseSchema,
 	updateCommitteeMemberRequestSchema,
@@ -33,7 +33,7 @@ const committeeMemberPermissionPathParamsSchema = z.object({
  * - user 情報（email, telephoneNumber を含むフル User）を含む
  *
  * 候補者ピッカーなど MEMBER_EDIT を持たないユーザーが利用する場合は
- * {@link listCommitteeMembersDirectoryEndpoint} を使うこと。
+ * {@link listCommitteeMembersPickerEndpoint} を使うこと。
  */
 export const listCommitteeMembersEndpoint: GetEndpoint<
 	"/committee/members",
@@ -50,7 +50,7 @@ export const listCommitteeMembersEndpoint: GetEndpoint<
 } as const;
 
 /**
- * GET /committee/members/directory
+ * GET /committee/members/picker
  * 候補者ピッカー用の委員メンバー一覧を取得
  *
  * - 認証 + 実委メンバー必須（MEMBER_EDIT 権限不要）
@@ -58,18 +58,18 @@ export const listCommitteeMembersEndpoint: GetEndpoint<
  * - email / telephoneNumber などの個人情報は含まない
  * - お知らせ／お問い合わせ／申請／企画登録などの担当者選択 UI で使用
  */
-export const listCommitteeMembersDirectoryEndpoint: GetEndpoint<
-	"/committee/members/directory",
+export const listCommitteeMembersPickerEndpoint: GetEndpoint<
+	"/committee/members/picker",
 	undefined,
 	undefined,
-	typeof listCommitteeMembersDirectoryResponseSchema
+	typeof listCommitteeMembersPickerResponseSchema
 > = {
 	method: "GET",
-	path: "/committee/members/directory",
+	path: "/committee/members/picker",
 	pathParams: undefined,
 	query: undefined,
 	request: undefined,
-	response: listCommitteeMembersDirectoryResponseSchema,
+	response: listCommitteeMembersPickerResponseSchema,
 } as const;
 
 /**

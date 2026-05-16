@@ -10,11 +10,11 @@ import {
 	getMyPermissionsEndpoint,
 	grantCommitteeMemberPermissionEndpoint,
 	type ListCommitteeMemberPermissionsResponse,
-	type ListCommitteeMembersDirectoryResponse,
+	type ListCommitteeMembersPickerResponse,
 	type ListCommitteeMembersResponse,
 	listCommitteeMemberPermissionsEndpoint,
-	listCommitteeMembersDirectoryEndpoint,
 	listCommitteeMembersEndpoint,
+	listCommitteeMembersPickerEndpoint,
 	type RevokeCommitteeMemberPermissionResponse,
 	revokeCommitteeMemberPermissionEndpoint,
 	type UpdateCommitteeMemberRequest,
@@ -28,20 +28,20 @@ import { callBodyApi, callGetApi, callNoBodyApi } from "./core";
  * 委員メンバー一覧を取得（管理画面用・フル情報）
  *
  * MEMBER_EDIT 権限が必須。候補者ピッカーなど MEMBER_EDIT を持たない
- * ユーザーが利用する場合は {@link listCommitteeMembersDirectory} を使うこと。
+ * ユーザーが利用する場合は {@link listCommitteeMembersPicker} を使うこと。
  */
 export async function listCommitteeMembers(): Promise<ListCommitteeMembersResponse> {
 	return callGetApi(listCommitteeMembersEndpoint);
 }
 
 /**
- * GET /committee/members/directory
+ * GET /committee/members/picker
  * 候補者ピッカー用の委員メンバー一覧を取得（最小情報）
  *
  * MEMBER_EDIT 権限は不要。email / telephoneNumber などの個人情報は含まない。
  */
-export async function listCommitteeMembersDirectory(): Promise<ListCommitteeMembersDirectoryResponse> {
-	return callGetApi(listCommitteeMembersDirectoryEndpoint);
+export async function listCommitteeMembersPicker(): Promise<ListCommitteeMembersPickerResponse> {
+	return callGetApi(listCommitteeMembersPickerEndpoint);
 }
 
 /**
