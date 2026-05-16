@@ -239,10 +239,14 @@ async function fetchInquiryCreationActions(
 			id: true,
 			title: true,
 			createdAt: true,
+			sentAt: true,
 			creatorRole: true,
 			createdBy: { select: { name: true } },
 		},
-		orderBy: { createdAt: "desc" },
+		orderBy: [
+			{ sentAt: { sort: "desc", nulls: "last" } },
+			{ createdAt: "desc" },
+		],
 		take: PER_SOURCE_LIMIT * 2,
 	});
 	return rows.map(i => ({
@@ -252,7 +256,7 @@ async function fetchInquiryCreationActions(
 				: "INQUIRY_CREATED_BY_COMMITTEE",
 		id: i.id,
 		title: i.title,
-		sentAt: i.createdAt,
+		sentAt: i.sentAt ?? i.createdAt,
 		actorName: i.createdBy.name,
 		inquiryId: i.id,
 	}));

@@ -522,6 +522,61 @@ function ProjectList({
 	);
 }
 
+function resolveInquiryStatusDisplay(inquiry: InquirySummary) {
+	if (inquiry.isDraft) {
+		return {
+			label: "下書き",
+			color: "orange" as const,
+			icon: IconPencil,
+			status: "DRAFT" as const,
+		};
+	}
+	const config = statusConfig[inquiry.status];
+	return {
+		label: config.label,
+		color: config.color,
+		icon: config.icon,
+		status: inquiry.status,
+	};
+}
+
+function getInquiryPublishedAt(inquiry: InquirySummary) {
+	if (inquiry.isDraft) return inquiry.createdAt;
+	return inquiry.sentAt ?? inquiry.createdAt;
+}
+
+function CommitteeInquiryMeta({ inquiry }: { inquiry: InquirySummary }) {
+	return (
+		<Text size="1" color="gray">
+			# {formatProjectNumber(inquiry.project.number)} / {inquiry.project.name} /{" "}
+			{formatRelativeTime(getInquiryPublishedAt(inquiry), "auto")} に
+			{inquiry.isDraft ? "作成" : "送信"}
+			{inquiry.commentCount > 0 ? ` / ${inquiry.commentCount}件の返信` : ""}
+		</Text>
+	);
+}
+
+function InquiryAssignees({ assignees }: { assignees: AssigneeInfo[] }) {
+	return (
+		<span className={styles.assignees}>
+			{assignees.slice(0, 3).map(a => (
+				<Tooltip key={a.id} content={a.user.name}>
+					<span className={styles.avatar}>
+						<UserAvatar
+							size={20}
+							name={a.user.name}
+							avatarFileId={a.user.avatarFileId}
+						/>
+					</span>
+				</Tooltip>
+			))}
+			{assignees.length > 3 ? (
+				<span className={styles.avatarMore}>+{assignees.length - 3}</span>
+			) : null}
+		</span>
+	);
+}
+
 function InquiryCard({
 	inquiry,
 	basePath,
@@ -535,12 +590,8 @@ function InquiryCard({
 	showAssignees: boolean;
 	viewerRole: "project" | "committee";
 }) {
-	const config = statusConfig[inquiry.status];
-	const StatusIcon = config.icon;
+	const display = resolveInquiryStatusDisplay(inquiry);
 	const isDraft = inquiry.isDraft;
-	const displayLabel = isDraft ? "下書き" : config.label;
-	const displayColor = isDraft ? "orange" : config.color;
-	const DisplayIcon = isDraft ? IconPencil : StatusIcon;
 
 	const viewerSide = viewerRole === "committee" ? "COMMITTEE" : "PROJECT";
 	const needsResponse =
@@ -552,6 +603,8 @@ function InquiryCard({
 		...inquiry.committeeAssignees,
 		...inquiry.projectAssignees,
 	];
+	const showMyAssigneeBadge = isMyInquiry && showAssignees;
+	const showCommitteeMeta = viewerRole === "committee";
 
 	const inquiryDetailPath =
 		basePath === "/committee/support"
@@ -567,12 +620,9 @@ function InquiryCard({
 				params={{ inquiryId: inquiry.id }}
 				className={styles.cardButton}
 			>
-				<span
-					className={styles.statusIcon}
-					data-status={isDraft ? "DRAFT" : inquiry.status}
-				>
-					<Tooltip content={displayLabel}>
-						<DisplayIcon size={20} />
+				<span className={styles.statusIcon} data-status={display.status}>
+					<Tooltip content={display.label}>
+						<display.icon size={20} />
 					</Tooltip>
 				</span>
 
@@ -581,7 +631,7 @@ function InquiryCard({
 						<Text size="3" weight="medium">
 							{inquiry.title}
 						</Text>
-						{isMyInquiry && showAssignees && (
+						{showMyAssigneeBadge && (
 							<Tooltip content="自分が担当">
 								<IconUserCheck size={14} className={styles.myBadge} />
 							</Tooltip>
@@ -600,39 +650,17 @@ function InquiryCard({
 						)}
 					</span>
 
-					{viewerRole === "committee" && (
-						<Text size="1" color="gray">
-							# {formatProjectNumber(inquiry.project.number)} /{" "}
-							{inquiry.project.name} /{" "}
-							{formatRelativeTime(inquiry.createdAt, "auto")} に作成
-							{inquiry.commentCount > 0 && ` / ${inquiry.commentCount}件の返信`}
-						</Text>
-					)}
+					{showCommitteeMeta ? (
+						<CommitteeInquiryMeta inquiry={inquiry} />
+					) : null}
 
 					<span className={styles.cardTags}>
-						<Badge color={displayColor} size="1" variant="soft">
-							{displayLabel}
+						<Badge color={display.color} size="1" variant="soft">
+							{display.label}
 						</Badge>
-						{showAssignees && (
-							<span className={styles.assignees}>
-								{allAssignees.slice(0, 3).map(a => (
-									<Tooltip key={a.id} content={a.user.name}>
-										<span className={styles.avatar}>
-											<UserAvatar
-												size={20}
-												name={a.user.name}
-												avatarFileId={a.user.avatarFileId}
-											/>
-										</span>
-									</Tooltip>
-								))}
-								{allAssignees.length > 3 && (
-									<span className={styles.avatarMore}>
-										+{allAssignees.length - 3}
-									</span>
-								)}
-							</span>
-						)}
+						{showAssignees ? (
+							<InquiryAssignees assignees={allAssignees} />
+						) : null}
 					</span>
 				</span>
 			</Link>

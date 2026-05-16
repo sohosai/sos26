@@ -334,6 +334,7 @@ committeeInquiryRoute.post(
 				projectId,
 				relatedFormId,
 				isDraft: isDraft ?? false,
+				sentAt: isDraft ? null : new Date(),
 				assignees: {
 					create: [
 						// 作成者（実委側）
@@ -513,6 +514,7 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 			status: inq.status,
 			creatorRole: inq.creatorRole,
 			createdAt: inq.createdAt,
+			sentAt: inq.sentAt,
 			updatedAt: inq.updatedAt,
 			isDraft: inq.isDraft,
 			hasUnreadComments: latestProjectCommentAt
@@ -656,6 +658,7 @@ committeeInquiryRoute.get(
 			relatedFormId: inquiry.relatedFormId,
 			isDraft: inquiry.isDraft,
 			createdAt: inquiry.createdAt,
+			sentAt: inquiry.sentAt,
 			updatedAt: inquiry.updatedAt,
 			createdBy: withAffiliation(inquiry.createdBy, affiliations),
 			project: inquiry.project,
@@ -1575,13 +1578,15 @@ committeeInquiryRoute.post(
 			throw Errors.forbidden("下書きの作成者のみが送信できます");
 		}
 
-		// 送信（isDraft を false に更新）
+		// 送信（isDraft を false に更新 & sentAt を確定）
 		const published = await prisma.$transaction(async tx => {
+			const publishedAt = new Date();
 			const updated = await tx.inquiry.update({
 				where: { id: inquiryId },
 				data: {
 					isDraft: false,
-					updatedAt: new Date(),
+					sentAt: publishedAt,
+					updatedAt: publishedAt,
 				},
 			});
 
@@ -1598,9 +1603,7 @@ committeeInquiryRoute.post(
 			projectAssigneeUserIds,
 		});
 
-		return c.json({
-			inquiry: published,
-		});
+		return c.json({ inquiry: published });
 	}
 );
 

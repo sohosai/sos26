@@ -206,6 +206,7 @@ function computeAwaitingReplyFrom(params: {
 }
 
 function getLatestCommitteeActivityAt(inquiry: {
+	sentAt: Date | null;
 	creatorRole: "PROJECT" | "COMMITTEE";
 	createdAt: Date;
 	comments: Array<{ createdAt: Date; sentAt: Date | null }>;
@@ -215,7 +216,9 @@ function getLatestCommitteeActivityAt(inquiry: {
 		? getCommentSentAt(latestCommitteeComment)
 		: null;
 	const committeeCreatedAt =
-		inquiry.creatorRole === "COMMITTEE" ? inquiry.createdAt : null;
+		inquiry.creatorRole === "COMMITTEE"
+			? (inquiry.sentAt ?? inquiry.createdAt)
+			: null;
 
 	if (latestCommitteeCommentAt && committeeCreatedAt) {
 		return latestCommitteeCommentAt.getTime() > committeeCreatedAt.getTime()
@@ -314,6 +317,7 @@ projectInquiryRoute.post(
 				creatorRole: "PROJECT",
 				projectId: project.id,
 				relatedFormId,
+				sentAt: new Date(),
 				assignees: {
 					create: [
 						{ userId: user.id, side: "PROJECT", isCreator: true },
@@ -453,6 +457,7 @@ projectInquiryRoute.get(
 				status: inq.status,
 				creatorRole: inq.creatorRole,
 				createdAt: inq.createdAt,
+				sentAt: inq.sentAt,
 				updatedAt: inq.updatedAt,
 				isDraft: inq.isDraft,
 				hasUnreadComments: latestCommitteeActivityAt
@@ -598,6 +603,7 @@ projectInquiryRoute.get(
 			relatedFormId: inquiry.relatedFormId,
 			isDraft: inquiry.isDraft,
 			createdAt: inquiry.createdAt,
+			sentAt: inquiry.sentAt,
 			updatedAt: inquiry.updatedAt,
 			createdBy: withAffiliation(inquiry.createdBy, affiliations),
 			project: inquiry.project,
