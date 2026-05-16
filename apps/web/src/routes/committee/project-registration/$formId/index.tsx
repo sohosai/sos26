@@ -3,7 +3,6 @@ import type { ProjectRegistrationFormDetail } from "@sos26/shared";
 import { IconArrowLeft, IconCalendar, IconClock } from "@tabler/icons-react";
 import {
 	createFileRoute,
-	Link,
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
@@ -248,10 +247,14 @@ function RouteComponent() {
 	return (
 		<div className={styles.layout}>
 			<div className={styles.main}>
-				<Link to="/committee/project-registration" className={styles.backLink}>
+				<button
+					type="button"
+					className={styles.backLink}
+					onClick={() => window.history.back()}
+				>
 					<IconArrowLeft size={16} />
 					<Text size="2">企画登録管理に戻る</Text>
-				</Link>
+				</button>
 
 				<header className={styles.titleSection}>
 					<div>

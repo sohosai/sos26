@@ -231,6 +231,8 @@ const inquirySummarySchema = z.object({
 	updatedAt: z.coerce.date(),
 	isDraft: z.boolean(),
 	hasUnreadComments: z.boolean(),
+	/** 次に返信が期待される側。null は下書きや解決済みなど対応不要時。 */
+	awaitingReplyFrom: inquiryCreatorRoleSchema.nullable(),
 	createdBy: userSummarySchema,
 	project: z.object({ id: z.cuid(), number: z.number(), name: z.string() }),
 	projectAssignees: z.array(assigneeWithUserSchema),

@@ -2,6 +2,7 @@ import { Badge, Heading, Text, Tooltip } from "@radix-ui/themes";
 import type { ListProjectInquiriesResponse } from "@sos26/shared";
 import {
 	IconAlertCircle,
+	IconBell,
 	IconCircleCheck,
 	IconCircleDot,
 	IconEye,
@@ -10,10 +11,10 @@ import {
 	IconSearch,
 	IconUserCheck,
 } from "@tabler/icons-react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { UserAvatar } from "@/components/common/UserAvatar";
-import { Button, TextField } from "@/components/primitives";
+import { Button, Switch, TextField } from "@/components/primitives";
 import { formatProjectNumber, formatRelativeTime } from "@/lib/format";
 import { statusConfig } from "./constants";
 import styles from "./SupportList.module.scss";
@@ -28,6 +29,8 @@ type SupportListProps = {
 	basePath: string;
 	onNewInquiry: () => void;
 	isAdmin?: boolean;
+	committeeActiveTab?: CommitteeTab;
+	onCommitteeTabChange?: (tab: CommitteeTab) => void;
 };
 
 type CommitteeTab = "open" | "draft" | "resolved";
@@ -39,10 +42,20 @@ export function SupportList({
 	basePath,
 	onNewInquiry,
 	isAdmin = false,
+	committeeActiveTab,
+	onCommitteeTabChange,
 }: SupportListProps) {
-	const [activeTab, setActiveTab] = useState<CommitteeTab>("open");
+	const [localActiveTab, setLocalActiveTab] = useState<CommitteeTab>("open");
 	const [searchQuery, setSearchQuery] = useState("");
+	const [onlyUnreplied, setOnlyUnreplied] = useState(false);
 	const isCommittee = viewerRole === "committee";
+	const activeTab = committeeActiveTab ?? localActiveTab;
+	const showUnrepliedFilter = isCommittee && activeTab === "open";
+
+	const handleChangeTab = (tab: CommitteeTab) => {
+		setLocalActiveTab(tab);
+		onCommitteeTabChange?.(tab);
+	};
 
 	const searched = (() => {
 		const q = searchQuery.trim().toLowerCase();
@@ -83,12 +96,19 @@ export function SupportList({
 
 	// 企画者側: 未解決 / 解決済みに分割
 	const draftItems = searched.filter(inq => inq.isDraft);
-	const openItems = searched.filter(
+	const openItemsAll = searched.filter(
 		inq => inq.status !== "RESOLVED" && !inq.isDraft
 	);
+	const unrepliedActive = showUnrepliedFilter && onlyUnreplied;
+	const openItems = unrepliedActive
+		? openItemsAll.filter(inq => inq.awaitingReplyFrom === "COMMITTEE")
+		: openItemsAll;
 	const resolvedItems = searched.filter(
 		inq => inq.status === "RESOLVED" && !inq.isDraft
 	);
+	const openEmptyMessage = unrepliedActive
+		? "未返信のお問い合わせはありません"
+		: "未完了のお問い合わせはありません";
 
 	return (
 		<div className={styles.container}>
@@ -116,17 +136,29 @@ export function SupportList({
 						activeTab={activeTab}
 						myCount={myCount}
 						draftCount={draftItems.length}
-						onChangeTab={setActiveTab}
+						onChangeTab={handleChangeTab}
 					/>
 				)}
-				<div className={styles.search}>
-					<TextField
-						label="検索"
-						placeholder="キーワードで検索..."
-						value={searchQuery}
-						onChange={setSearchQuery}
-						type="search"
-					/>
+				<div className={styles.filters}>
+					<div className={styles.search}>
+						<TextField
+							label="検索"
+							placeholder="キーワードで検索..."
+							value={searchQuery}
+							onChange={setSearchQuery}
+							type="search"
+						/>
+					</div>
+					{showUnrepliedFilter && (
+						<div className={styles.filterToggle}>
+							<Switch
+								label="未返信のみ"
+								size="1"
+								checked={onlyUnreplied}
+								onCheckedChange={setOnlyUnreplied}
+							/>
+						</div>
+					)}
 				</div>
 			</div>
 
@@ -138,6 +170,7 @@ export function SupportList({
 						basePath={basePath}
 						isAdmin={isAdmin}
 						viewerRole={viewerRole}
+						emptyMessage={openEmptyMessage}
 					/>
 				) : activeTab === "draft" ? (
 					<CommitteeDraftList
@@ -218,12 +251,14 @@ function CommitteeOpenSections({
 	basePath,
 	isAdmin,
 	viewerRole,
+	emptyMessage,
 }: {
 	inquiries: InquirySummary[];
 	currentUser: { id: string; name: string };
 	basePath: string;
 	isAdmin: boolean;
 	viewerRole: "project" | "committee";
+	emptyMessage: string;
 }) {
 	const isAssignedToMe = (inq: InquirySummary) =>
 		inq.committeeAssignees.some(a => a.user.id === currentUser.id);
@@ -255,7 +290,7 @@ function CommitteeOpenSections({
 			<div className={styles.empty}>
 				<IconSearch size={40} />
 				<Text size="3" color="gray">
-					未完了のお問い合わせはありません
+					{emptyMessage}
 				</Text>
 			</div>
 		);
@@ -555,8 +590,15 @@ function InquiryCard({
 	showAssignees: boolean;
 	viewerRole: "project" | "committee";
 }) {
-	const navigate = useNavigate();
 	const display = resolveInquiryStatusDisplay(inquiry);
+	const isDraft = inquiry.isDraft;
+
+	const viewerSide = viewerRole === "committee" ? "COMMITTEE" : "PROJECT";
+	const needsResponse =
+		!isDraft &&
+		inquiry.status !== "RESOLVED" &&
+		inquiry.awaitingReplyFrom === viewerSide;
+
 	const allAssignees: AssigneeInfo[] = [
 		...inquiry.committeeAssignees,
 		...inquiry.projectAssignees,
@@ -564,14 +606,19 @@ function InquiryCard({
 	const showMyAssigneeBadge = isMyInquiry && showAssignees;
 	const showCommitteeMeta = viewerRole === "committee";
 
+	const inquiryDetailPath =
+		basePath === "/committee/support"
+			? "/committee/support/$inquiryId"
+			: "/project/support/$inquiryId";
+
 	return (
 		<li
 			className={`${styles.card} ${inquiry.status === "UNASSIGNED" ? styles.cardNew : ""}`}
 		>
-			<button
-				type="button"
+			<Link
+				to={inquiryDetailPath}
+				params={{ inquiryId: inquiry.id }}
 				className={styles.cardButton}
-				onClick={() => navigate({ to: `${basePath}/${inquiry.id}` as string })}
 			>
 				<span className={styles.statusIcon} data-status={display.status}>
 					<Tooltip content={display.label}>
@@ -589,6 +636,18 @@ function InquiryCard({
 								<IconUserCheck size={14} className={styles.myBadge} />
 							</Tooltip>
 						)}
+						{needsResponse && (
+							<Badge
+								color="red"
+								size="1"
+								variant="solid"
+								radius="full"
+								className={styles.attentionBadge}
+							>
+								<IconBell size={12} />
+								未返信
+							</Badge>
+						)}
 					</span>
 
 					{showCommitteeMeta ? (
@@ -604,7 +663,7 @@ function InquiryCard({
 						) : null}
 					</span>
 				</span>
-			</button>
+			</Link>
 		</li>
 	);
 }
