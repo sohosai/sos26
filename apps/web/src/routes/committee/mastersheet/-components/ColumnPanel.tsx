@@ -35,7 +35,7 @@ import {
 	updateMastersheetAccessRequest,
 	updateMastersheetColumn,
 } from "@/lib/api/committee-mastersheet";
-import { listCommitteeMembers } from "@/lib/api/committee-member";
+import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import {
 	getProjectRegistrationFormDetail,
 	listProjectRegistrationForms,
@@ -232,7 +232,7 @@ function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 	}
 
 	useEffect(() => {
-		listCommitteeMembers()
+		listCommitteeMembersPicker()
 			.then(res =>
 				setCommitteeMembers(
 					res.committeeMembers.map(m => ({ id: m.user.id, name: m.user.name }))

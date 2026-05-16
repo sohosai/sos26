@@ -32,7 +32,7 @@ import {
 	removeFormCollaborator,
 	updateFormViewers,
 } from "@/lib/api/committee-form";
-import { listCommitteeMembers } from "@/lib/api/committee-member";
+import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import { useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
 import {
@@ -85,7 +85,7 @@ export const Route = createFileRoute("/committee/forms/$formId/")({
 	loader: async ({ params }) => {
 		const [formRes, membersRes, responsesRes] = await Promise.all([
 			getFormDetail(params.formId),
-			listCommitteeMembers(),
+			listCommitteeMembersPicker(),
 			listFormResponses(params.formId).catch(() => ({ responses: [] })),
 		]);
 		return {

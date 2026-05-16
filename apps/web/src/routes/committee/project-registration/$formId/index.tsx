@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import type { Form } from "@/components/form/type";
 import { DataTable, DateCell, NameCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
-import { listCommitteeMembers } from "@/lib/api/committee-member";
+import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import {
 	addProjectRegistrationFormCollaborator,
 	deleteProjectRegistrationForm,
@@ -99,7 +99,7 @@ export const Route = createFileRoute(
 		const [{ form }, { committeeMembers }, { forms: allForms }, responsesRes] =
 			await Promise.all([
 				getProjectRegistrationFormDetail(params.formId),
-				listCommitteeMembers(),
+				listCommitteeMembersPicker(),
 				listProjectRegistrationForms(),
 				listProjectRegistrationFormResponses(params.formId).catch(() => ({
 					responses: [],

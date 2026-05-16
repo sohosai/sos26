@@ -15,7 +15,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AttachmentPreviewButton } from "@/components/filePreview/AttachmentPreviewButton";
 import { Button } from "@/components/primitives";
-import { listCommitteeMembers } from "@/lib/api/committee-member";
+import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import {
 	addCollaborator,
 	deleteNotice,
@@ -41,7 +41,7 @@ export const Route = createFileRoute("/committee/notice/$noticeId/")({
 	loader: async ({ params }) => {
 		const [noticeRes, membersRes] = await Promise.all([
 			getNotice(params.noticeId),
-			listCommitteeMembers(),
+			listCommitteeMembersPicker(),
 		]);
 		return {
 			notice: noticeRes.notice,

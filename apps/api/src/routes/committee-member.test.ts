@@ -95,16 +95,6 @@ function makeApp() {
 	return app;
 }
 
-/** 認証 + 実委メンバーチェックをセットアップ（権限チェックなし） */
-function setupAuth() {
-	mockFirebaseAuth.verifyIdToken.mockResolvedValue({
-		uid: "firebase-uid-123",
-	} as any);
-	mockPrisma.user.findFirst.mockResolvedValue(mockUser);
-	// requireCommitteeMember 用
-	mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
-}
-
 /** 認証 + 実委メンバーチェック + MEMBER_EDIT 権限チェックをセットアップ */
 function setupAuthWithMemberEdit() {
 	mockFirebaseAuth.verifyIdToken.mockResolvedValue({
@@ -117,6 +107,19 @@ function setupAuthWithMemberEdit() {
 	);
 }
 
+/** 認証 + 実委メンバーチェックのみ（MEMBER_EDIT 権限なし）をセットアップ */
+function setupAuthWithoutMemberEdit() {
+	mockFirebaseAuth.verifyIdToken.mockResolvedValue({
+		uid: "firebase-uid-123",
+	} as any);
+	mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+	// requireCommitteeMember は通るが MEMBER_EDIT 権限なし
+	mockPrisma.committeeMember.findFirst.mockResolvedValue({
+		...mockCommitteeMember,
+		permissions: [],
+	} as any);
+}
+
 describe("GET /committee/members", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -124,7 +127,7 @@ describe("GET /committee/members", () => {
 
 	it("正常系: 委員メンバー一覧を取得", async () => {
 		const app = makeApp();
-		setupAuth();
+		setupAuthWithMemberEdit();
 		mockPrisma.committeeMember.findMany.mockResolvedValue([
 			{ ...mockCommitteeMember, user: mockUser },
 		] as any);
@@ -165,6 +168,88 @@ describe("GET /committee/members", () => {
 
 		expect(res.status).toBe(403);
 	});
+
+	it("MEMBER_EDIT権限なしで403エラー", async () => {
+		const app = makeApp();
+		setupAuthWithoutMemberEdit();
+
+		const res = await app.request("/committee/members", {
+			method: "GET",
+			headers: { Authorization: "Bearer valid-token" },
+		});
+
+		expect(res.status).toBe(403);
+	});
+});
+
+describe("GET /committee/members/picker", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("正常系: MEMBER_EDIT 権限なしでも取得できる", async () => {
+		const app = makeApp();
+		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
+			uid: "firebase-uid-123",
+		} as any);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		// requireCommitteeMember 用（権限なし実委メンバー）
+		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		// picker 用の findMany は最小情報のみ
+		mockPrisma.committeeMember.findMany.mockResolvedValue([
+			{
+				id: mockCommitteeMember.id,
+				userId: mockCommitteeMember.userId,
+				isExecutive: mockCommitteeMember.isExecutive,
+				Bureau: mockCommitteeMember.Bureau,
+				user: {
+					id: mockUser.id,
+					name: mockUser.name,
+					avatarFileId: null,
+				},
+				permissions: [],
+			},
+		] as any);
+
+		const res = await app.request("/committee/members/picker", {
+			method: "GET",
+			headers: { Authorization: "Bearer valid-token" },
+		});
+
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.committeeMembers).toHaveLength(1);
+		expect(body.committeeMembers[0].user.name).toBe(mockUser.name);
+		// 個人情報が含まれないこと
+		expect(body.committeeMembers[0].user.email).toBeUndefined();
+		expect(body.committeeMembers[0].user.telephoneNumber).toBeUndefined();
+	});
+
+	it("認証なしで401エラー", async () => {
+		const app = makeApp();
+
+		const res = await app.request("/committee/members/picker", {
+			method: "GET",
+		});
+
+		expect(res.status).toBe(401);
+	});
+
+	it("非委員で403エラー", async () => {
+		const app = makeApp();
+		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
+			uid: "firebase-uid-123",
+		} as any);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		mockPrisma.committeeMember.findFirst.mockResolvedValue(null);
+
+		const res = await app.request("/committee/members/picker", {
+			method: "GET",
+			headers: { Authorization: "Bearer valid-token" },
+		});
+
+		expect(res.status).toBe(403);
+	});
 });
 
 describe("POST /committee/members", () => {
@@ -174,15 +259,7 @@ describe("POST /committee/members", () => {
 
 	it("MEMBER_EDIT権限なしで403エラー", async () => {
 		const app = makeApp();
-		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
-			uid: "firebase-uid-123",
-		} as any);
-		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
-		// requireCommitteeMember + requirePermission（権限なし）
-		mockPrisma.committeeMember.findFirst.mockResolvedValue({
-			...mockCommitteeMember,
-			permissions: [],
-		} as any);
+		setupAuthWithoutMemberEdit();
 
 		const res = await app.request("/committee/members", {
 			method: "POST",
