@@ -70,7 +70,11 @@ const FIXED_COLUMNS = [
 	{ id: "organizationName", name: "団体名" },
 	{ id: "organizationNamePhonetic", name: "団体名（ふりがな）" },
 	{ id: "ownerName", name: "企画責任者" },
+	{ id: "ownerEmail", name: "企画責任者メールアドレス" },
+	{ id: "ownerTel", name: "企画責任者電話番号" },
 	{ id: "subOwnerName", name: "副企画責任者" },
+	{ id: "subOwnerEmail", name: "副企画責任者メールアドレス" },
+	{ id: "subOwnerTel", name: "副企画責任者電話番号" },
 	{ id: "deletionStatus", name: "企画状況" },
 ];
 
