@@ -1,9 +1,6 @@
 -- CreateEnum
 CREATE TYPE "ProjectRegistrationFormItemEditHistoryTrigger" AS ENUM ('PROJECT_SUBMIT', 'PROJECT_RESUBMIT', 'COMMITTEE_EDIT', 'MASTERSHEET_EDIT');
 
--- AlterTable
-ALTER TABLE "Inquiry" DROP COLUMN "sentAt";
-
 -- CreateTable
 CREATE TABLE "ProjectRegistrationFormItemEditHistory" (
     "id" TEXT NOT NULL,
