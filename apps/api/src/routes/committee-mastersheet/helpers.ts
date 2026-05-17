@@ -445,9 +445,13 @@ export function buildPrfItemCell(
 	const historyKey = `${prfItem.id}:${projectId}`;
 	const latestHistory = latestHistoryByCell?.get(historyKey);
 	if (latestHistory) {
+		const status =
+			latestHistory.trigger === "COMMITTEE_EDIT"
+				? ("COMMITTEE_EDITED" as const)
+				: ("SUBMITTED" as const);
 		return {
 			columnId: colId,
-			status: "COMMITTEE_EDITED" as const,
+			status,
 			formValue: {
 				textValue: latestHistory.textValue,
 				numberValue: latestHistory.numberValue,
