@@ -817,8 +817,8 @@ committeeProjectRegistrationFormRoute.get(
 				submittedAt: r.submittedAt,
 				answers: r.answers.map(a => {
 					const history = latestByCell.get(`${a.formItemId}:${r.projectId}`);
-					const textValue = history?.textValue ?? a.textValue;
-					const numberValue = history?.numberValue ?? a.numberValue;
+					const textValue = history ? history.textValue : a.textValue;
+					const numberValue = history ? history.numberValue : a.numberValue;
 					const files = history
 						? mapAnswerFiles(history.files)
 						: mapAnswerFiles(a.files);
@@ -904,8 +904,8 @@ committeeProjectRegistrationFormRoute.get(
 				submittedAt: r.submittedAt,
 				answers: r.answers.map(a => {
 					const history = latestByItem.get(a.formItemId);
-					const textValue = history?.textValue ?? a.textValue;
-					const numberValue = history?.numberValue ?? a.numberValue;
+					const textValue = history ? history.textValue : a.textValue;
+					const numberValue = history ? history.numberValue : a.numberValue;
 					const files = history
 						? mapAnswerFiles(history.files)
 						: mapAnswerFiles(a.files);

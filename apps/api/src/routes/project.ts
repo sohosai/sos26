@@ -523,8 +523,12 @@ projectRoute.get(
 						formItemId: answer.formItem.id,
 						formItemLabel: answer.formItem.label,
 						type: answer.formItem.type,
-						textValue: latestHistory?.textValue ?? answer.textValue,
-						numberValue: latestHistory?.numberValue ?? answer.numberValue,
+						textValue: latestHistory
+							? latestHistory.textValue
+							: answer.textValue,
+						numberValue: latestHistory
+							? latestHistory.numberValue
+							: answer.numberValue,
 						files: mapAnswerFiles(latestHistory?.files ?? answer.files),
 						selectedOptions: (
 							latestHistory?.selectedOptions ?? answer.selectedOptions
