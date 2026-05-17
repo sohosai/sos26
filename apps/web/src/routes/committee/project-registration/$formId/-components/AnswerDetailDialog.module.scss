@@ -21,6 +21,14 @@
 	min-height: 200px;
 }
 
+.error {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	min-height: 200px;
+	text-align: center;
+}
+
 .header {
 	display: flex;
 	flex-direction: column;
@@ -41,4 +49,3 @@
 	gap: var(--space-5);
 	margin-top: var(--space-4);
 }
-

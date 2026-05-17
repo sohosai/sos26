@@ -41,16 +41,19 @@ export function AnswerDetailDialog({
 	canEditAnswers,
 }: Props) {
 	const [data, setData] = useState<ResponseData | null>(null);
+	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 
 	useEffect(() => {
 		if (!open || !responseId) {
 			setData(null);
+			setError(null);
 			return;
 		}
 
 		const controller = new AbortController();
 		setLoading(true);
+		setError(null);
 
 		getFormResponse(formId, responseId)
 			.then(res => {
@@ -64,7 +67,9 @@ export function AnswerDetailDialog({
 				});
 			})
 			.catch(() => {
-				// abort 以外のエラーは無視
+				if (controller.signal.aborted) return;
+				setData(null);
+				setError("回答の取得に失敗しました。時間をおいて再度お試しください。");
 			})
 			.finally(() => {
 				if (!controller.signal.aborted) setLoading(false);
@@ -81,9 +86,21 @@ export function AnswerDetailDialog({
 				</VisuallyHidden>
 
 				<div className={styles.dialogInner}>
-					{loading || !data ? (
+					{loading ? (
 						<div className={styles.loading}>
 							<Spinner size="3" />
+						</div>
+					) : error ? (
+						<div className={styles.error}>
+							<Text size="2" color="red">
+								{error}
+							</Text>
+						</div>
+					) : !data ? (
+						<div className={styles.error}>
+							<Text size="2" color="red">
+								回答データが見つかりませんでした。
+							</Text>
 						</div>
 					) : (
 						<>
