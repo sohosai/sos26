@@ -759,7 +759,7 @@ committeeProjectRegistrationFormRoute.get(
 			},
 			include: {
 				project: {
-					select: { id: true, name: true, organizationName: true },
+					select: { id: true, number: true, name: true },
 				},
 				answers: {
 					where: {
@@ -811,8 +811,8 @@ committeeProjectRegistrationFormRoute.get(
 				id: r.id,
 				project: {
 					id: r.project.id,
+					number: r.project.number,
 					name: r.project.name,
-					organizationName: r.project.organizationName,
 				},
 				submittedAt: r.submittedAt,
 				answers: r.answers.map(a => {
@@ -861,7 +861,9 @@ committeeProjectRegistrationFormRoute.get(
 		const r = await prisma.projectRegistrationFormResponse.findFirst({
 			where: { id: responseId, formId, deletedAt: null },
 			include: {
-				project: { select: { id: true, name: true, organizationName: true } },
+				project: {
+					select: { id: true, number: true, name: true },
+				},
 				answers: {
 					where: { deletedAt: null },
 					include: {

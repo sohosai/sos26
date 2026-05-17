@@ -418,8 +418,8 @@ export const projectRegistrationFormResponseSummarySchema = z.object({
 	id: z.string(),
 	project: z.object({
 		id: z.string(),
+		number: z.number().int(),
 		name: z.string(),
-		organizationName: z.string(),
 	}),
 	submittedAt: z.coerce.date(),
 	answers: z.array(projectRegistrationFormResponseAnswerSchema),

@@ -49,7 +49,7 @@ import { ProjectRegistrationFormDetailSidebar } from "./-components/ProjectRegis
 import styles from "./index.module.scss";
 
 type AnswerRow = BaseAnswerRow & {
-	organizationName: string;
+	projectNumber: number;
 };
 
 const answerColumnHelper = createColumnHelper<AnswerRow>();
@@ -60,8 +60,8 @@ function buildAnswerRows(
 	return responses.map(r => {
 		return {
 			id: r.id,
+			projectNumber: r.project.number,
 			projectName: r.project.name,
-			organizationName: r.project.organizationName,
 			submittedAt: r.submittedAt,
 			answers: buildAnswerValueMap(r.answers),
 		};
@@ -214,13 +214,13 @@ function RouteComponent() {
 					</Button>
 				),
 			}),
+			answerColumnHelper.accessor("projectNumber", {
+				header: "企画番号",
+				cell: ctx => <Text size="2">{ctx.getValue()}</Text>,
+			}),
 			answerColumnHelper.accessor("projectName", {
 				header: "企画",
 				cell: NameCell,
-			}),
-			answerColumnHelper.accessor("organizationName", {
-				header: "団体名",
-				cell: ctx => <Text size="2">{ctx.getValue()}</Text>,
 			}),
 			answerColumnHelper.accessor("submittedAt", {
 				header: "提出日時",
