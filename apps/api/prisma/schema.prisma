@@ -1293,7 +1293,6 @@ enum ProjectRegistrationFormItemEditHistoryTrigger {
   PROJECT_SUBMIT
   PROJECT_RESUBMIT
   COMMITTEE_EDIT
-  MASTERSHEET_EDIT
 }
 
 model ProjectRegistrationFormItemEditHistory {
