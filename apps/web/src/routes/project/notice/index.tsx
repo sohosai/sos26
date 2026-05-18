@@ -5,12 +5,18 @@ import { IconEye } from "@tabler/icons-react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useCallback, useEffect, useState } from "react";
+import { z } from "zod";
 import { DataTable, DateCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { listProjectNotices } from "@/lib/api/project-notice";
 import { useProjectStore } from "@/lib/project/store";
+import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 import { NoticeDetailDialog } from "./-components/NoticeDetailDialog";
 import styles from "./index.module.scss";
+
+const searchSchema = z.object({
+	projectId: z.string().optional(),
+});
 
 const getBureauLabel = (bureau: string): string =>
 	bureauLabelMap[bureau as Bureau] ?? bureau;
@@ -31,6 +37,10 @@ export const Route = createFileRoute("/project/notice/")({
 	head: () => ({
 		meta: [{ title: "お知らせ | 雙峰祭オンラインシステム" }],
 	}),
+	validateSearch: searchSchema,
+	beforeLoad: ({ search }) => {
+		syncSelectedProjectFromSearch(search.projectId);
+	},
 	loader: async () => {
 		const { selectedProjectId } = useProjectStore.getState();
 		if (!selectedProjectId) return { notices: [] as NoticeRow[] };

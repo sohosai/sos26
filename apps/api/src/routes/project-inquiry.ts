@@ -740,6 +740,7 @@ projectInquiryRoute.post(
 
 		void notifyInquiryCommentAdded({
 			inquiryId,
+			projectId: inquiry.projectId,
 			inquiryTitle: inquiry.title,
 			commenterUserId: user.id,
 			commenterName: user.name,

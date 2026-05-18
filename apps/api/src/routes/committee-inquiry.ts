@@ -824,6 +824,7 @@ committeeInquiryRoute.post(
 		if (!isDraft) {
 			void notifyInquiryCommentAdded({
 				inquiryId,
+				projectId: inquiry.projectId,
 				inquiryTitle: inquiry.title,
 				commenterUserId: user.id,
 				commenterName: user.name,
@@ -925,6 +926,7 @@ committeeInquiryRoute.post(
 		// 通知を送信
 		void notifyInquiryCommentAdded({
 			inquiryId,
+			projectId: existingComment.inquiry.projectId,
 			inquiryTitle: existingComment.inquiry.title,
 			commenterUserId: user.id,
 			commenterName: user.name,

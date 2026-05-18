@@ -3,12 +3,18 @@ import { IconEdit, IconLock } from "@tabler/icons-react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useCallback, useEffect, useState } from "react";
+import { z } from "zod";
 import { DataTable, DateCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { listProjectForms } from "@/lib/api/project-form";
 import { useProjectStore } from "@/lib/project/store";
+import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 import { ProjectFormAnswerDialog } from "./-components/ProjectFormAnswerDialog";
 import styles from "./index.module.scss";
+
+const searchSchema = z.object({
+	projectId: z.string().optional(),
+});
 
 type FormRow = {
 	formDeliveryId: string;
@@ -30,6 +36,10 @@ export const Route = createFileRoute("/project/forms/")({
 	head: () => ({
 		meta: [{ title: "申請 | 雙峰祭オンラインシステム" }],
 	}),
+	validateSearch: searchSchema,
+	beforeLoad: ({ search }) => {
+		syncSelectedProjectFromSearch(search.projectId);
+	},
 	loader: async () => {
 		const { selectedProjectId } = useProjectStore.getState();
 		if (!selectedProjectId) return { forms: [] as FormRow[] };
