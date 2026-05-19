@@ -101,7 +101,7 @@ function EmptyProjectState({
 
 export const Route = createFileRoute("/project")({
 	beforeLoad: async ({ location }) => {
-		await requireAuth(location.pathname);
+		await requireAuth(location.href);
 		useAuthStore.getState().setActivePortal("project");
 		await preloadMemberEditPermission();
 
