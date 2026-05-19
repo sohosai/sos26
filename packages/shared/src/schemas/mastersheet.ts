@@ -111,6 +111,17 @@ const userSummarySchema = userSchema.pick({
 	avatarFileId: true,
 });
 
+/**
+ * 企画責任者・副企画責任者の連絡先情報
+ *
+ * - email / telephoneNumber は PROJECT_VIEW 権限を持つ実委人にのみ含まれ、
+ *   それ以外のユーザーには `null` で返される
+ */
+const projectOwnerWithContactSchema = userSummarySchema.extend({
+	email: z.string().nullable(),
+	telephoneNumber: z.string().nullable(),
+});
+
 const columnOptionSchema = z.object({
 	id: z.string(),
 	label: z.string(),
@@ -192,8 +203,8 @@ export const getMastersheetDataResponseSchema = z.object({
 				organizationName: z.string(),
 				deletionStatus: projectDeletionStatusSchema.nullable(),
 				organizationNamePhonetic: z.string(),
-				owner: userSummarySchema,
-				subOwner: userSummarySchema.nullable(),
+				owner: projectOwnerWithContactSchema,
+				subOwner: projectOwnerWithContactSchema.nullable(),
 			}),
 			cells: z.array(mastersheetCellSchema),
 		})
