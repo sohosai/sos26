@@ -1,8 +1,8 @@
 import {
 	addProjectRegistrationFormCollaboratorRequestSchema,
 	createProjectRegistrationFormRequestSchema,
-	editFormAnswerPathParamsSchema,
-	editFormAnswerRequestSchema,
+	editProjectRegistrationFormAnswerPathParamsSchema,
+	editProjectRegistrationFormAnswerRequestSchema,
 	formResponsePathParamsSchema,
 	projectRegistrationFormAuthorizationPathParamsSchema,
 	projectRegistrationFormCollaboratorPathParamsSchema,
@@ -943,7 +943,7 @@ committeeProjectRegistrationFormRoute.put(
 	requireCommitteeMember,
 	async c => {
 		const { formId, formItemId, projectId } =
-			editFormAnswerPathParamsSchema.parse(c.req.param());
+			editProjectRegistrationFormAnswerPathParamsSchema.parse(c.req.param());
 		const userId = c.get("user").id;
 
 		const form = await requireAnswerEditor(formId, userId);
@@ -956,7 +956,7 @@ committeeProjectRegistrationFormRoute.put(
 		if (!project) throw Errors.notFound("企画が見つかりません");
 
 		const body = await c.req.json().catch(() => ({}));
-		const data = editFormAnswerRequestSchema.parse(body);
+		const data = editProjectRegistrationFormAnswerRequestSchema.parse(body);
 
 		const [response, latestHistory] = await Promise.all([
 			prisma.projectRegistrationFormResponse.findFirst({
