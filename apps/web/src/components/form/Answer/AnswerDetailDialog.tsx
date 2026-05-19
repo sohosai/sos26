@@ -5,17 +5,37 @@ import {
 	Text,
 	VisuallyHidden,
 } from "@radix-ui/themes";
-import { useEffect, useState } from "react";
-import { AnswerField } from "@/components/form/Answer/AnswerField";
-import { EditableAnswerItem } from "@/components/form/Answer/EditableAnswerItem";
-import type { Form, FormAnswers } from "@/components/form/type";
-import {
-	editProjectRegistrationFormAnswer,
-	getProjectRegistrationFormResponse,
-} from "@/lib/api/committee-project-registration-form";
+import { type ComponentProps, useEffect, useState } from "react";
 import { responseToAnswers } from "@/lib/form/utils";
 import { formatDate } from "@/lib/format";
+import type { Form, FormAnswers } from "../type";
 import styles from "./AnswerDetailDialog.module.scss";
+import { AnswerField } from "./AnswerField";
+import { EditableAnswerItem } from "./EditableAnswerItem";
+
+type AnswerResponse = Parameters<typeof responseToAnswers>[0];
+
+type ResponseData = {
+	projectId: string;
+	projectName: string;
+	submittedAt: Date | null;
+	answers: FormAnswers;
+};
+
+type FetchResponse = (
+	formId: string,
+	responseId: string
+) => Promise<{
+	response: AnswerResponse & {
+		project: {
+			id: string;
+			name: string;
+		};
+		submittedAt: Date | null;
+	};
+}>;
+
+type SaveAnswer = ComponentProps<typeof EditableAnswerItem>["onSave"];
 
 type Props = {
 	open: boolean;
@@ -24,13 +44,10 @@ type Props = {
 	responseId: string | null;
 	form: Form;
 	canEditAnswers: boolean;
-};
-
-type ResponseData = {
-	projectId: string;
-	projectName: string;
-	submittedAt: Date | null;
-	answers: FormAnswers;
+	fetchResponse: FetchResponse;
+	onSave: SaveAnswer;
+	submittedAtLabel?: string;
+	submittedAtFallback?: string;
 };
 
 export function AnswerDetailDialog({
@@ -40,6 +57,10 @@ export function AnswerDetailDialog({
 	responseId,
 	form,
 	canEditAnswers,
+	fetchResponse,
+	onSave,
+	submittedAtLabel = "提出日時",
+	submittedAtFallback = "—",
 }: Props) {
 	const [data, setData] = useState<ResponseData | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -56,7 +77,7 @@ export function AnswerDetailDialog({
 		setLoading(true);
 		setError(null);
 
-		getProjectRegistrationFormResponse(formId, responseId)
+		fetchResponse(formId, responseId)
 			.then(res => {
 				if (controller.signal.aborted) return;
 				const answers = responseToAnswers(res.response, form);
@@ -77,7 +98,7 @@ export function AnswerDetailDialog({
 			});
 
 		return () => controller.abort();
-	}, [open, responseId, formId, form]);
+	}, [open, responseId, formId, form, fetchResponse]);
 
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -114,10 +135,10 @@ export function AnswerDetailDialog({
 										企画: {data.projectName}
 									</Text>
 									<Text size="2" color="gray">
-										提出日:{" "}
+										{submittedAtLabel}:{" "}
 										{data.submittedAt
 											? formatDate(data.submittedAt, "datetime")
-											: "-"}
+											: submittedAtFallback}
 									</Text>
 								</div>
 							</header>
@@ -133,7 +154,7 @@ export function AnswerDetailDialog({
 												initialValue={data.answers[item.id]}
 												formId={formId}
 												projectId={data.projectId}
-												onSave={editProjectRegistrationFormAnswer}
+												onSave={onSave}
 											/>
 										) : (
 											<AnswerField

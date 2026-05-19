@@ -19,6 +19,7 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { z } from "zod";
 import { AttachmentPreviewButton } from "@/components/filePreview/AttachmentPreviewButton";
+import { AnswerDetailDialog } from "@/components/form/Answer/AnswerDetailDialog";
 import { DataTable, DateCell, NameCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import {
@@ -26,7 +27,9 @@ import {
 	approveFormAuthorization,
 	deleteForm,
 	downloadFormResponseFilesZip,
+	editFormAnswer,
 	getFormDetail,
+	getFormResponse,
 	listFormResponses,
 	rejectFormAuthorization,
 	removeFormCollaborator,
@@ -42,7 +45,6 @@ import {
 import { formDetailToForm } from "@/lib/form/convert";
 import { getFormStatusFromAuth } from "@/lib/form/form-status";
 import { formatDate, formatProjectNumber } from "@/lib/format";
-import { AnswerDetailDialog } from "./-components/AnswerDetailDialog";
 import { EditFormDialog } from "./-components/EditFormDialog";
 import { FormDetailSidebar } from "./-components/FormDetailSidebar";
 import { FormItemsPreview } from "./-components/FormItemsPreview";
@@ -454,6 +456,8 @@ function RouteComponent() {
 				responseId={answerDialogResponseId}
 				form={previewForm}
 				canEditAnswers={canEditAnswers}
+				fetchResponse={getFormResponse}
+				onSave={editFormAnswer}
 			/>
 		</div>
 	);

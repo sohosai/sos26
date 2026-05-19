@@ -17,6 +17,7 @@ import {
 import { createColumnHelper } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { AnswerDetailDialog } from "@/components/form/Answer/AnswerDetailDialog";
 import type { Form } from "@/components/form/type";
 import { DataTable, DateCell, NameCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
@@ -24,7 +25,9 @@ import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import {
 	addProjectRegistrationFormCollaborator,
 	deleteProjectRegistrationForm,
+	editProjectRegistrationFormAnswer,
 	getProjectRegistrationFormDetail,
+	getProjectRegistrationFormResponse,
 	listProjectRegistrationFormResponses,
 	listProjectRegistrationForms,
 	removeProjectRegistrationFormCollaborator,
@@ -43,7 +46,6 @@ import {
 	PROJECT_TYPE_LABELS,
 } from "@/lib/project/options";
 import { FormItemsPreview } from "@/routes/committee/forms/$formId/-components/FormItemsPreview";
-import { AnswerDetailDialog } from "./-components/AnswerDetailDialog";
 import { EditProjectRegistrationFormDialog } from "./-components/EditProjectRegistrationFormDialog";
 import { ProjectRegistrationFormDetailSidebar } from "./-components/ProjectRegistrationFormDetailSidebar";
 import styles from "./index.module.scss";
@@ -521,6 +523,10 @@ function RouteComponent() {
 					responseId={selectedResponseId}
 					form={previewForm}
 					canEditAnswers={canEditAnswers}
+					fetchResponse={getProjectRegistrationFormResponse}
+					onSave={editProjectRegistrationFormAnswer}
+					submittedAtLabel="提出日"
+					submittedAtFallback="-"
 				/>
 			</div>
 
