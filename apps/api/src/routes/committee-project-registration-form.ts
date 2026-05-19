@@ -1,9 +1,9 @@
 import {
 	addProjectRegistrationFormCollaboratorRequestSchema,
+	committeeProjectRegistrationFormResponsePathParamsSchema,
 	createProjectRegistrationFormRequestSchema,
 	editProjectRegistrationFormAnswerPathParamsSchema,
 	editProjectRegistrationFormAnswerRequestSchema,
-	formResponsePathParamsSchema,
 	projectRegistrationFormAuthorizationPathParamsSchema,
 	projectRegistrationFormCollaboratorPathParamsSchema,
 	projectRegistrationFormIdPathParamsSchema,
@@ -853,9 +853,10 @@ committeeProjectRegistrationFormRoute.get(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const { formId, responseId } = formResponsePathParamsSchema.parse(
-			c.req.param()
-		);
+		const { formId, responseId } =
+			committeeProjectRegistrationFormResponsePathParamsSchema.parse(
+				c.req.param()
+			);
 		await getFormOrThrow(formId);
 
 		const r = await prisma.projectRegistrationFormResponse.findFirst({
