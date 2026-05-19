@@ -240,7 +240,7 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 		meta: { filterVariant: "text" },
 	}),
 	columnHelper.accessor(row => row.project.owner.telephoneNumber ?? "", {
-		id: "ownerTel",
+		id: "ownerTelephoneNumber",
 		header: "企画責任者電話番号",
 		cell: ctx => {
 			const value = ctx.getValue() as string;
@@ -292,7 +292,7 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 			return row.project.subOwner.telephoneNumber ?? "";
 		},
 		{
-			id: "subOwnerTel",
+			id: "subOwnerTelephoneNumber",
 			header: "副企画責任者電話番号",
 			cell: ctx => {
 				const value = ctx.getValue() as string;
