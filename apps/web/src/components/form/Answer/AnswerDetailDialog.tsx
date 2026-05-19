@@ -5,31 +5,49 @@ import {
 	Text,
 	VisuallyHidden,
 } from "@radix-ui/themes";
-import { useEffect, useState } from "react";
-import { AnswerField } from "@/components/form/Answer/AnswerField";
-import { EditableAnswerItem } from "@/components/form/Answer/EditableAnswerItem";
-import type { Form, FormAnswers } from "@/components/form/type";
-import { getFormResponse } from "@/lib/api/committee-form";
+import { type ComponentProps, useEffect, useState } from "react";
 import { responseToAnswers } from "@/lib/form/utils";
 import { formatDate } from "@/lib/format";
+import type { Form, FormAnswers } from "../type";
 import styles from "./AnswerDetailDialog.module.scss";
+import { AnswerField } from "./AnswerField";
+import { EditableAnswerItem } from "./EditableAnswerItem";
 
-type Props = {
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
-	formId: string;
-	responseId: string | null;
-	/** formDetailToForm 済みの Form を渡す（再取得を避ける） */
-	form: Form;
-	/** 回答編集権限があるか */
-	canEditAnswers: boolean;
-};
+type AnswerResponse = Parameters<typeof responseToAnswers>[0];
 
 type ResponseData = {
 	projectId: string;
 	projectName: string;
 	submittedAt: Date | null;
 	answers: FormAnswers;
+};
+
+type FetchResponse = (
+	formId: string,
+	responseId: string
+) => Promise<{
+	response: AnswerResponse & {
+		project: {
+			id: string;
+			name: string;
+		};
+		submittedAt: Date | null;
+	};
+}>;
+
+type SaveAnswer = ComponentProps<typeof EditableAnswerItem>["onSave"];
+
+type Props = {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+	formId: string;
+	responseId: string | null;
+	form: Form;
+	canEditAnswers: boolean;
+	fetchResponse: FetchResponse;
+	onSave: SaveAnswer;
+	submittedAtLabel?: string;
+	submittedAtFallback?: string;
 };
 
 export function AnswerDetailDialog({
@@ -39,20 +57,27 @@ export function AnswerDetailDialog({
 	responseId,
 	form,
 	canEditAnswers,
+	fetchResponse,
+	onSave,
+	submittedAtLabel = "提出日時",
+	submittedAtFallback = "—",
 }: Props) {
 	const [data, setData] = useState<ResponseData | null>(null);
+	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 
 	useEffect(() => {
 		if (!open || !responseId) {
 			setData(null);
+			setError(null);
 			return;
 		}
 
 		const controller = new AbortController();
 		setLoading(true);
+		setError(null);
 
-		getFormResponse(formId, responseId)
+		fetchResponse(formId, responseId)
 			.then(res => {
 				if (controller.signal.aborted) return;
 				const answers = responseToAnswers(res.response, form);
@@ -64,14 +89,16 @@ export function AnswerDetailDialog({
 				});
 			})
 			.catch(() => {
-				// abort 以外のエラーは無視
+				if (controller.signal.aborted) return;
+				setData(null);
+				setError("回答の取得に失敗しました。時間をおいて再度お試しください。");
 			})
 			.finally(() => {
 				if (!controller.signal.aborted) setLoading(false);
 			});
 
 		return () => controller.abort();
-	}, [open, responseId, formId, form]);
+	}, [open, responseId, formId, form, fetchResponse]);
 
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -81,9 +108,21 @@ export function AnswerDetailDialog({
 				</VisuallyHidden>
 
 				<div className={styles.dialogInner}>
-					{loading || !data ? (
+					{loading ? (
 						<div className={styles.loading}>
 							<Spinner size="3" />
+						</div>
+					) : error ? (
+						<div className={styles.error}>
+							<Text size="2" color="red">
+								{error}
+							</Text>
+						</div>
+					) : !data ? (
+						<div className={styles.error}>
+							<Text size="2" color="red">
+								回答データが見つかりませんでした。
+							</Text>
 						</div>
 					) : (
 						<>
@@ -96,10 +135,10 @@ export function AnswerDetailDialog({
 										企画: {data.projectName}
 									</Text>
 									<Text size="2" color="gray">
-										提出日時:{" "}
+										{submittedAtLabel}:{" "}
 										{data.submittedAt
 											? formatDate(data.submittedAt, "datetime")
-											: "—"}
+											: submittedAtFallback}
 									</Text>
 								</div>
 							</header>
@@ -115,6 +154,7 @@ export function AnswerDetailDialog({
 												initialValue={data.answers[item.id]}
 												formId={formId}
 												projectId={data.projectId}
+												onSave={onSave}
 											/>
 										) : (
 											<AnswerField

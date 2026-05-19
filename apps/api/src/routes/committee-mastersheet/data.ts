@@ -10,8 +10,10 @@ import {
 	canEditColumn,
 	canViewColumn,
 	fetchLatestHistoryByCell,
+	fetchLatestPrfHistoryByCell,
 	formatColumnDef,
 	getEditableFormIds,
+	getEditableProjectRegistrationFormIds,
 	getViewableFormIds,
 } from "./helpers";
 
@@ -24,6 +26,15 @@ export const dataRoute = new Hono<AuthEnv>();
 dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 	const userId = c.get("user").id;
 	const committeeMember = c.get("committeeMember");
+
+	// 企画責任者・副企画責任者の連絡先（メール・電話）は PROJECT_VIEW 権限を持つ実委人にのみ含めて返す
+	const memberPermissions = await prisma.committeeMemberPermission.findMany({
+		where: { committeeMemberId: committeeMember.id },
+		select: { permission: true },
+	});
+	const canViewContacts = memberPermissions.some(
+		p => p.permission === "PROJECT_VIEW"
+	);
 
 	// 1. カラム一覧 + 権限フィルタ
 	const allColumns = await prisma.mastersheetColumn.findMany({
@@ -60,10 +71,12 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 		orderBy: { sortOrder: "asc" },
 	});
 
-	const [editableFormIds, viewableFormIds] = await Promise.all([
-		getEditableFormIds(userId),
-		getViewableFormIds(userId, committeeMember),
-	]);
+	const [editableFormIds, editablePrfFormIds, viewableFormIds] =
+		await Promise.all([
+			getEditableFormIds(userId),
+			getEditableProjectRegistrationFormIds(userId),
+			getViewableFormIds(userId, committeeMember),
+		]);
 	const visibleColumns = allColumns.filter(col =>
 		canViewColumn(col as ColumnFull, userId, committeeMember, viewableFormIds)
 	);
@@ -78,8 +91,24 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 	const projects = await prisma.project.findMany({
 		where: { deletedAt: null },
 		include: {
-			owner: { select: { id: true, name: true, avatarFileId: true } },
-			subOwner: { select: { id: true, name: true, avatarFileId: true } },
+			owner: {
+				select: {
+					id: true,
+					name: true,
+					avatarFileId: true,
+					email: true,
+					telephoneNumber: true,
+				},
+			},
+			subOwner: {
+				select: {
+					id: true,
+					name: true,
+					avatarFileId: true,
+					email: true,
+					telephoneNumber: true,
+				},
+			},
 		},
 		orderBy: { number: "asc" },
 	});
@@ -199,6 +228,15 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 		prfResponseByFormProject.get(r.formId)?.set(r.projectId, r);
 	}
 
+	const prfItemIds = [
+		...new Set(
+			prfItemCols.flatMap(c =>
+				c.projectRegistrationFormItem ? [c.projectRegistrationFormItem.id] : []
+			)
+		),
+	];
+	const latestPrfHistoryByCell = await fetchLatestPrfHistoryByCell(prfItemIds);
+
 	// 5. CUSTOM: セル値をバッチ取得
 	const customColIds = customCols.map(c => c.id);
 	const cellValues = customColIds.length
@@ -240,7 +278,8 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 					col.id,
 					col.projectRegistrationFormItem,
 					project.id,
-					prfResponseByFormProject
+					prfResponseByFormProject,
+					latestPrfHistoryByCell
 				);
 			}
 			// CUSTOM
@@ -269,8 +308,26 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 				organizationName: project.organizationName,
 				deletionStatus: project.deletionStatus ?? null,
 				organizationNamePhonetic: project.organizationNamePhonetic,
-				owner: project.owner,
-				subOwner: project.subOwner ?? null,
+				owner: {
+					id: project.owner.id,
+					name: project.owner.name,
+					avatarFileId: project.owner.avatarFileId,
+					email: canViewContacts ? project.owner.email : null,
+					telephoneNumber: canViewContacts
+						? project.owner.telephoneNumber
+						: null,
+				},
+				subOwner: project.subOwner
+					? {
+							id: project.subOwner.id,
+							name: project.subOwner.name,
+							avatarFileId: project.subOwner.avatarFileId,
+							email: canViewContacts ? project.subOwner.email : null,
+							telephoneNumber: canViewContacts
+								? project.subOwner.telephoneNumber
+								: null,
+						}
+					: null,
 			},
 			cells,
 		};
@@ -285,7 +342,8 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 					col as ColumnFull,
 					userId,
 					committeeMember,
-					editableFormIds
+					editableFormIds,
+					editablePrfFormIds
 				)
 			)
 		),

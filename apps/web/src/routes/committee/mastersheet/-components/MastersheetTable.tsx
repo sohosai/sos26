@@ -229,6 +229,26 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 		cell: ctx => <Text size="2">{ctx.getValue() as string}</Text>,
 		meta: { filterVariant: "text" },
 	}),
+	columnHelper.accessor(row => row.project.owner.email ?? "", {
+		id: "ownerEmail",
+		header: "企画責任者メールアドレス",
+		cell: ctx => {
+			const value = ctx.getValue() as string;
+			if (!value) return NO_PERMISSION_PLACEHOLDER;
+			return <Text size="2">{value}</Text>;
+		},
+		meta: { filterVariant: "text" },
+	}),
+	columnHelper.accessor(row => row.project.owner.telephoneNumber ?? "", {
+		id: "ownerTelephoneNumber",
+		header: "企画責任者電話番号",
+		cell: ctx => {
+			const value = ctx.getValue() as string;
+			if (!value) return NO_PERMISSION_PLACEHOLDER;
+			return <Text size="2">{value}</Text>;
+		},
+		meta: { filterVariant: "text" },
+	}),
 	columnHelper.accessor(row => row.project.subOwner?.name ?? "", {
 		id: "subOwnerName",
 		header: "副企画責任者",
@@ -244,6 +264,50 @@ const fixedColumns: ColumnDef<MastersheetRow, any>[] = [
 		},
 		meta: { filterVariant: "text" },
 	}),
+	columnHelper.accessor(
+		row => {
+			if (!row.project.subOwner) return "__NO_SUB_OWNER__";
+			return row.project.subOwner.email ?? "";
+		},
+		{
+			id: "subOwnerEmail",
+			header: "副企画責任者メールアドレス",
+			cell: ctx => {
+				const value = ctx.getValue() as string;
+				if (value === "__NO_SUB_OWNER__")
+					return (
+						<Text size="2" color="gray">
+							─
+						</Text>
+					);
+				if (!value) return NO_PERMISSION_PLACEHOLDER;
+				return <Text size="2">{value}</Text>;
+			},
+			meta: { filterVariant: "text" },
+		}
+	),
+	columnHelper.accessor(
+		row => {
+			if (!row.project.subOwner) return "__NO_SUB_OWNER__";
+			return row.project.subOwner.telephoneNumber ?? "";
+		},
+		{
+			id: "subOwnerTelephoneNumber",
+			header: "副企画責任者電話番号",
+			cell: ctx => {
+				const value = ctx.getValue() as string;
+				if (value === "__NO_SUB_OWNER__")
+					return (
+						<Text size="2" color="gray">
+							─
+						</Text>
+					);
+				if (!value) return NO_PERMISSION_PLACEHOLDER;
+				return <Text size="2">{value}</Text>;
+			},
+			meta: { filterVariant: "text" },
+		}
+	),
 	columnHelper.accessor(
 		row =>
 			(row.project.deletionStatus ??
@@ -285,6 +349,12 @@ function isFormItemInactive(row: MastersheetRow, colId: string): boolean {
 const INACTIVE_PLACEHOLDER = (
 	<Text color="gray" size="2">
 		─
+	</Text>
+);
+
+const NO_PERMISSION_PLACEHOLDER = (
+	<Text color="gray" size="2">
+		権限なし
 	</Text>
 );
 
@@ -428,120 +498,72 @@ function buildFormValueReadOnlyColumn(
 	);
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
-function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
-	// 企画登録情報由来カラムは読み取り専用
-	if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
-		return buildFormValueReadOnlyColumn(
-			col,
-			col.projectRegistrationFormItemType,
-			false
-		);
-	}
+/** 申請由来／企画登録情報由来の formValue ベースの編集可能カラム */
+function buildEditableFormValueColumn(
+	col: ApiColumn,
+	itemType:
+		| ApiColumn["formItemType"]
+		| ApiColumn["projectRegistrationFormItemType"],
+	isInactive: (row: MastersheetRow) => boolean
+	// biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
+): ColumnDef<MastersheetRow, any> {
+	const selectOptions = col.options.map(o => ({
+		value: o.id,
+		label: o.label,
+	}));
 
-	// FORM_ITEM で viewer のみ（編集権限なし）の場合も読み取り専用
-	if (col.type === "FORM_ITEM" && !col.canEdit) {
-		return buildFormValueReadOnlyColumn(col, col.formItemType, true);
-	}
-
-	if (col.type === "FORM_ITEM") {
-		const itemType = col.formItemType;
-		const selectOptions = col.options.map(o => ({
-			value: o.id,
-			label: o.label,
-		}));
-
-		if (itemType === "SELECT") {
-			return columnHelper.accessor(
-				row => row.cells[col.id]?.formValue?.selectedOptionIds?.[0] ?? "",
-				{
-					id: col.id,
-					header: () => <ColHeader col={col} />,
-					cell: props =>
-						isFormItemInactive(props.row.original, col.id) ? (
-							INACTIVE_PLACEHOLDER
-						) : (
-							<SelectCell {...props} />
-						),
-					meta: {
-						columnName: col.name,
-						editable: true,
-						selectOptions,
-						filterVariant: "select",
-					},
-				}
-			);
-		}
-
-		if (itemType === "CHECKBOX") {
-			return columnHelper.accessor(
-				row => row.cells[col.id]?.formValue?.selectedOptionIds ?? [],
-				{
-					id: col.id,
-					header: () => <ColHeader col={col} />,
-					cell: props =>
-						isFormItemInactive(props.row.original, col.id) ? (
-							INACTIVE_PLACEHOLDER
-						) : (
-							<MultiSelectEditCell {...props} />
-						),
-					meta: {
-						columnName: col.name,
-						editable: true,
-						selectOptions,
-						filterVariant: "select",
-					},
-				}
-			);
-		}
-
-		if (itemType === "NUMBER") {
-			return columnHelper.accessor(
-				row => row.cells[col.id]?.formValue?.numberValue ?? null,
-				{
-					id: col.id,
-					header: () => <ColHeader col={col} />,
-					cell: props =>
-						isFormItemInactive(props.row.original, col.id) ? (
-							INACTIVE_PLACEHOLDER
-						) : (
-							<EditableCell {...props} />
-						),
-					meta: {
-						columnName: col.name,
-						editable: true,
-						type: "number",
-						filterVariant: "number",
-					},
-				}
-			);
-		}
-
-		if (itemType === "FILE") {
-			return columnHelper.accessor(
-				row => row.cells[col.id]?.formValue?.files ?? [],
-				{
-					id: col.id,
-					header: () => <ColHeader col={col} />,
-					cell: props =>
-						isFormItemInactive(props.row.original, col.id) ? (
-							INACTIVE_PLACEHOLDER
-						) : (
-							<CompactFileCell files={props.getValue() as FormCellFile[]} />
-						),
-					meta: { columnName: col.name, filterVariant: "text" },
-				}
-			);
-		}
-
-		// TEXT / TEXTAREA
+	if (itemType === "SELECT") {
 		return columnHelper.accessor(
-			row => row.cells[col.id]?.formValue?.textValue ?? "",
+			row => row.cells[col.id]?.formValue?.selectedOptionIds?.[0] ?? "",
 			{
 				id: col.id,
 				header: () => <ColHeader col={col} />,
 				cell: props =>
-					isFormItemInactive(props.row.original, col.id) ? (
+					isInactive(props.row.original) ? (
+						INACTIVE_PLACEHOLDER
+					) : (
+						<SelectCell {...props} />
+					),
+				meta: {
+					columnName: col.name,
+					editable: true,
+					selectOptions,
+					filterVariant: "select",
+				},
+			}
+		);
+	}
+
+	if (itemType === "CHECKBOX") {
+		return columnHelper.accessor(
+			row => row.cells[col.id]?.formValue?.selectedOptionIds ?? [],
+			{
+				id: col.id,
+				header: () => <ColHeader col={col} />,
+				cell: props =>
+					isInactive(props.row.original) ? (
+						INACTIVE_PLACEHOLDER
+					) : (
+						<MultiSelectEditCell {...props} />
+					),
+				meta: {
+					columnName: col.name,
+					editable: true,
+					selectOptions,
+					filterVariant: "select",
+				},
+			}
+		);
+	}
+
+	if (itemType === "NUMBER") {
+		return columnHelper.accessor(
+			row => row.cells[col.id]?.formValue?.numberValue ?? null,
+			{
+				id: col.id,
+				header: () => <ColHeader col={col} />,
+				cell: props =>
+					isInactive(props.row.original) ? (
 						INACTIVE_PLACEHOLDER
 					) : (
 						<EditableCell {...props} />
@@ -549,13 +571,56 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 				meta: {
 					columnName: col.name,
 					editable: true,
-					type: "text",
-					filterVariant: "text",
+					type: "number",
+					filterVariant: "number",
 				},
 			}
 		);
 	}
 
+	if (itemType === "FILE") {
+		return columnHelper.accessor(
+			row => row.cells[col.id]?.formValue?.files ?? [],
+			{
+				id: col.id,
+				header: () => <ColHeader col={col} />,
+				cell: props =>
+					isInactive(props.row.original) ? (
+						INACTIVE_PLACEHOLDER
+					) : (
+						<CompactFileCell files={props.getValue() as FormCellFile[]} />
+					),
+				meta: { columnName: col.name, filterVariant: "text" },
+			}
+		);
+	}
+
+	// TEXT / TEXTAREA
+	return columnHelper.accessor(
+		row => row.cells[col.id]?.formValue?.textValue ?? "",
+		{
+			id: col.id,
+			header: () => <ColHeader col={col} />,
+			cell: props =>
+				isInactive(props.row.original) ? (
+					INACTIVE_PLACEHOLDER
+				) : (
+					<EditableCell {...props} />
+				),
+			meta: {
+				columnName: col.name,
+				editable: true,
+				type: "text",
+				filterVariant: "text",
+			},
+		}
+	);
+}
+
+function buildEditableCustomColumn(
+	col: ApiColumn
+	// biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
+): ColumnDef<MastersheetRow, any> {
 	if (col.dataType === "SELECT") {
 		const selectOptions = col.options.map(o => ({
 			value: o.id,
@@ -632,8 +697,37 @@ function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
 	);
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: TanStack Table requires any for mixed column value types
+function buildDynamicColumn(col: ApiColumn): ColumnDef<MastersheetRow, any> {
+	if (col.type === "FORM_ITEM") {
+		return col.canEdit
+			? buildEditableFormValueColumn(col, col.formItemType, row =>
+					isFormItemInactive(row, col.id)
+				)
+			: buildFormValueReadOnlyColumn(col, col.formItemType, true);
+	}
+
+	if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
+		return col.canEdit
+			? buildEditableFormValueColumn(
+					col,
+					col.projectRegistrationFormItemType,
+					row => isFormItemInactive(row, col.id)
+				)
+			: buildFormValueReadOnlyColumn(
+					col,
+					col.projectRegistrationFormItemType,
+					false
+				);
+	}
+
+	return buildEditableCustomColumn(col);
+}
+
 function buildEditPayload(
-	formItemType: ApiColumn["formItemType"],
+	formItemType:
+		| ApiColumn["formItemType"]
+		| ApiColumn["projectRegistrationFormItemType"],
 	value: unknown
 ): EditFormItemCellRequest {
 	if (formItemType === "SELECT") {
@@ -670,6 +764,49 @@ function buildCustomPayload(
 		};
 	}
 	return { textValue: typeof value === "string" ? value : null };
+}
+
+async function saveFormItemCellEdit(
+	col: ApiColumn,
+	projectId: string,
+	value: unknown
+): Promise<boolean> {
+	if (!col.canEdit || col.type !== "FORM_ITEM") return false;
+	await editFormItemCell(
+		col.id,
+		projectId,
+		buildEditPayload(col.formItemType, value)
+	);
+	return true;
+}
+
+async function savePrfItemCellEdit(
+	col: ApiColumn,
+	projectId: string,
+	value: unknown
+): Promise<boolean> {
+	if (!col.canEdit || col.type !== "PROJECT_REGISTRATION_FORM_ITEM")
+		return false;
+	await editFormItemCell(
+		col.id,
+		projectId,
+		buildEditPayload(col.projectRegistrationFormItemType, value)
+	);
+	return true;
+}
+
+async function saveCustomCellEdit(
+	col: ApiColumn,
+	projectId: string,
+	value: unknown
+): Promise<boolean> {
+	if (col.type !== "CUSTOM") return false;
+	await upsertMastersheetCell(
+		col.id,
+		projectId,
+		buildCustomPayload(col.dataType, value)
+	);
+	return true;
 }
 
 export function MastersheetTable({
@@ -728,22 +865,11 @@ export function MastersheetTable({
 		if (!col) return;
 
 		try {
-			if (col.type === "FORM_ITEM") {
-				if (!col.canEdit) return; // viewer は編集不可
-				await editFormItemCell(
-					columnId,
-					row.project.id,
-					buildEditPayload(col.formItemType, value)
-				);
-			} else if (col.type === "PROJECT_REGISTRATION_FORM_ITEM") {
-				return; // 読み取り専用
-			} else {
-				await upsertMastersheetCell(
-					columnId,
-					row.project.id,
-					buildCustomPayload(col.dataType, value)
-				);
-			}
+			const didSave =
+				(await saveFormItemCellEdit(col, row.project.id, value)) ||
+				(await savePrfItemCellEdit(col, row.project.id, value)) ||
+				(await saveCustomCellEdit(col, row.project.id, value));
+			if (!didSave) return;
 		} catch (error) {
 			toast.error(
 				isClientError(error) ? error.message : "セルの更新に失敗しました"
