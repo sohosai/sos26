@@ -25,8 +25,7 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 	const userId = c.get("user").id;
 	const committeeMember = c.get("committeeMember");
 
-	// 企画責任者・副企画責任者の連絡先（メール・電話）は PROJECT_VIEW 権限を持つ
-	// 実委人にのみ含めて返す
+	// 企画責任者・副企画責任者の連絡先（メール・電話）は PROJECT_VIEW 権限を持つ実委人にのみ含めて返す
 	const memberPermissions = await prisma.committeeMemberPermission.findMany({
 		where: { committeeMemberId: committeeMember.id },
 		select: { permission: true },
