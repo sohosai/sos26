@@ -9,10 +9,12 @@ export async function notifyNoticeDelivered(input: {
 	projectIds: string[];
 }): Promise<boolean> {
 	try {
-		// 対象企画のメンバー全員のメールを取得
+		// 対象企画ごとにメンバーを取得し、企画ごとに通知を送る
+		// 複数企画に同じユーザーが所属する場合は複数通知が届く（各企画ごとに既読化が必要なため）
 		const projects = await prisma.project.findMany({
 			where: { id: { in: input.projectIds }, deletedAt: null },
 			select: {
+				id: true,
 				ownerId: true,
 				subOwnerId: true,
 				projectMembers: {
@@ -22,43 +24,43 @@ export async function notifyNoticeDelivered(input: {
 			},
 		});
 
-		const userIds = new Set<string>();
-		for (const project of projects) {
-			userIds.add(project.ownerId);
-			if (project.subOwnerId) {
-				userIds.add(project.subOwnerId);
-			}
-			for (const member of project.projectMembers) {
-				userIds.add(member.userId);
-			}
-		}
-
-		if (userIds.size === 0) {
-			return true;
-		}
-
-		const users = await prisma.user.findMany({
-			where: { id: { in: [...userIds] }, deletedAt: null },
-			select: { email: true },
-		});
-
-		const url = `${env.APP_URL}/project/notice/`;
-
 		await Promise.all(
-			users.map(user =>
-				sendNoticeDeliveredEmail({
-					email: user.email,
+			projects.map(async project => {
+				const userIds = new Set<string>();
+				userIds.add(project.ownerId);
+				if (project.subOwnerId) {
+					userIds.add(project.subOwnerId);
+				}
+				for (const member of project.projectMembers) {
+					userIds.add(member.userId);
+				}
+
+				if (userIds.size === 0) return;
+
+				const users = await prisma.user.findMany({
+					where: { id: { in: [...userIds] }, deletedAt: null },
+					select: { email: true },
+				});
+
+				const url = `${env.APP_URL}/project/notice/?projectId=${project.id}`;
+
+				await Promise.all(
+					users.map(user =>
+						sendNoticeDeliveredEmail({
+							email: user.email,
+							noticeTitle: input.noticeTitle,
+							noticeBodyPreview: input.noticeBodyPreview,
+							url,
+						})
+					)
+				);
+				await sendNoticeDeliveredPush({
+					userIds: [...userIds],
 					noticeTitle: input.noticeTitle,
-					noticeBodyPreview: input.noticeBodyPreview,
 					url,
-				})
-			)
+				});
+			})
 		);
-		await sendNoticeDeliveredPush({
-			userIds: [...userIds],
-			noticeTitle: input.noticeTitle,
-			url,
-		});
 
 		return true;
 	} catch (err) {

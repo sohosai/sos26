@@ -5,6 +5,7 @@ import { sendInquiryCommentAddedPush } from "../push";
 
 export async function notifyInquiryCommentAdded(input: {
 	inquiryId: string;
+	projectId: string;
 	inquiryTitle: string;
 	commenterUserId: string;
 	commenterName: string;
@@ -25,12 +26,13 @@ export async function notifyInquiryCommentAdded(input: {
 			},
 		});
 
+		// 企画側リンクには projectId を付与して、複数企画所属時に正しい企画へ自動切替する
+		const projectUrl = `${env.APP_URL}/project/support/${input.inquiryId}?projectId=${input.projectId}`;
+		const committeeUrl = `${env.APP_URL}/committee/support/${input.inquiryId}`;
+
 		await Promise.all(
 			assignees.map(assignee => {
-				const url =
-					assignee.side === "COMMITTEE"
-						? `${env.APP_URL}/committee/support/${input.inquiryId}`
-						: `${env.APP_URL}/project/support/${input.inquiryId}`;
+				const url = assignee.side === "COMMITTEE" ? committeeUrl : projectUrl;
 
 				return sendInquiryCommentAddedEmail({
 					email: assignee.user.email,
@@ -53,12 +55,12 @@ export async function notifyInquiryCommentAdded(input: {
 			sendInquiryCommentAddedPush({
 				userIds: committeeUserIds,
 				inquiryTitle: input.inquiryTitle,
-				url: `${env.APP_URL}/committee/support/${input.inquiryId}`,
+				url: committeeUrl,
 			}),
 			sendInquiryCommentAddedPush({
 				userIds: projectUserIds,
 				inquiryTitle: input.inquiryTitle,
-				url: `${env.APP_URL}/project/support/${input.inquiryId}`,
+				url: projectUrl,
 			}),
 		]);
 	} catch (err) {

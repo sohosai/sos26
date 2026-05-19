@@ -1,6 +1,7 @@
 import { Heading, Text } from "@radix-ui/themes";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Button } from "@/components/primitives";
 import { SupportDetail } from "@/components/support/SupportDetail";
 import { listProjectMembers } from "@/lib/api/project";
@@ -13,6 +14,11 @@ import {
 } from "@/lib/api/project-inquiry";
 import { useAuthStore } from "@/lib/auth";
 import { useProjectStore } from "@/lib/project/store";
+import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
+
+const searchSchema = z.object({
+	projectId: z.string().optional(),
+});
 
 export const Route = createFileRoute("/project/support/$inquiryId")({
 	component: ProjectSupportDetailPage,
@@ -22,6 +28,10 @@ export const Route = createFileRoute("/project/support/$inquiryId")({
 			{ name: "description", content: "お問い合わせ詳細" },
 		],
 	}),
+	validateSearch: searchSchema,
+	beforeLoad: ({ search }) => {
+		syncSelectedProjectFromSearch(search.projectId);
+	},
 	loader: async ({ params }) => {
 		const { selectedProjectId } = useProjectStore.getState();
 		if (!selectedProjectId) return null;
