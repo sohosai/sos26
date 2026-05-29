@@ -699,15 +699,16 @@ export function NewInquiryForm({
 
 	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const { files } = e.target;
+		if (files) {
+			const { valid, invalid } = partitionFiles(Array.from(files));
+			setFileError(
+				invalid.length > 0
+					? `対応していないファイル形式です（${allowedFileExtensions}）`
+					: null
+			);
+			if (valid.length > 0) setSelectedFiles(prev => [...prev, ...valid]);
+		}
 		e.target.value = "";
-		if (!files) return;
-		const { valid, invalid } = partitionFiles(Array.from(files));
-		setFileError(
-			invalid.length > 0
-				? `対応していないファイル形式です（${allowedFileExtensions}）`
-				: null
-		);
-		if (valid.length > 0) setSelectedFiles(prev => [...prev, ...valid]);
 	};
 
 	const removeFile = (index: number) => {
