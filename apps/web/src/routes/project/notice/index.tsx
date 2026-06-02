@@ -16,12 +16,10 @@ import { Button } from "@/components/primitives";
 import { getProjectNotice, listProjectNotices } from "@/lib/api/project-notice";
 import { isClientError } from "@/lib/http/error";
 import { useProjectStore } from "@/lib/project/store";
-import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 import { NoticeDetailDialog } from "./-components/NoticeDetailDialog";
 import styles from "./index.module.scss";
 
 const searchSchema = z.object({
-	projectId: z.string().optional(),
 	noticeId: z.string().optional(),
 });
 
@@ -98,9 +96,6 @@ export const Route = createFileRoute("/project/notice/")({
 		meta: [{ title: "お知らせ | 雙峰祭オンラインシステム" }],
 	}),
 	validateSearch: searchSchema,
-	beforeLoad: ({ search }) => {
-		syncSelectedProjectFromSearch(search.projectId);
-	},
 	loader: async () => {
 		const { selectedProjectId } = useProjectStore.getState();
 		if (!selectedProjectId) return { notices: [] as NoticeRow[] };
@@ -150,8 +145,7 @@ function RouteComponent() {
 		}
 
 		const controller = new AbortController();
-		const preferredProjectId =
-			search.projectId ?? selectedProjectId ?? undefined;
+		const preferredProjectId = selectedProjectId ?? undefined;
 		void resolveNoticeProject(
 			targetNoticeId,
 			preferredProjectId,
@@ -164,10 +158,7 @@ function RouteComponent() {
 						useProjectStore.getState().setSelectedProjectId(result.projectId);
 						navigate({
 							to: "/project/notice",
-							search: {
-								projectId: result.projectId,
-								noticeId: targetNoticeId,
-							},
+							search: { noticeId: targetNoticeId },
 							replace: true,
 						});
 						return;
@@ -188,7 +179,7 @@ function RouteComponent() {
 			});
 
 		return () => controller.abort();
-	}, [search.noticeId, search.projectId, selectedProjectId, navigate]);
+	}, [search.noticeId, selectedProjectId, navigate]);
 
 	const handleRead = useCallback(
 		(noticeId: string) => {
@@ -235,16 +226,11 @@ function RouteComponent() {
 				<Button
 					intent="secondary"
 					size="1"
-					onClick={() =>
-						navigate({
-							to: "/project/notice",
-							search: {
-								projectId: selectedProjectId ?? undefined,
-								noticeId: row.original.id,
-							},
-							replace: true,
-						})
-					}
+					onClick={() => {
+						setSelectedNoticeProjectId(selectedProjectId);
+						setSelectedNoticeId(row.original.id);
+						setPreloadedNotice(null);
+					}}
 				>
 					<IconEye size={16} />
 					お知らせを見る
@@ -289,11 +275,13 @@ function RouteComponent() {
 					setSelectedNoticeId(null);
 					setSelectedNoticeProjectId(null);
 					setPreloadedNotice(null);
-					navigate({
-						to: "/project/notice",
-						search: { projectId: selectedProjectId ?? undefined },
-						replace: true,
-					});
+					if (search.noticeId) {
+						navigate({
+							to: "/project/notice",
+							search: {},
+							replace: true,
+						});
+					}
 				}}
 				initialNotice={preloadedNotice}
 				onRead={handleRead}
