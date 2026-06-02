@@ -38,6 +38,11 @@ type NoticeRow = {
 };
 type NoticeDetail = GetProjectNoticeResponse["notice"];
 type ResolvedNotice = { projectId: string; notice: NoticeDetail };
+type SelectedNotice = {
+	id: string;
+	projectId: string;
+	initialNotice: NoticeDetail | null;
+};
 
 const noticeColumnHelper = createColumnHelper<NoticeRow>();
 const resolvedNoticeCache = new Map<string, ResolvedNotice>();
@@ -47,6 +52,16 @@ function getResolvedNoticeCacheKey(
 	noticeId: string
 ): string {
 	return `${projectId}:${noticeId}`;
+}
+
+function markCachedNoticeRead(noticeId: string) {
+	for (const [key, resolved] of resolvedNoticeCache) {
+		if (resolved.notice.id !== noticeId || resolved.notice.isRead) continue;
+		resolvedNoticeCache.set(key, {
+			...resolved,
+			notice: { ...resolved.notice, isRead: true },
+		});
+	}
 }
 
 function isNoticeUnavailableError(error: unknown): boolean {
@@ -142,11 +157,7 @@ function RouteComponent() {
 		setNotices(initialNotices);
 	}, [initialNotices]);
 
-	const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
-	const [selectedNoticeProjectId, setSelectedNoticeProjectId] = useState<
-		string | null
-	>(null);
-	const [preloadedNotice, setPreloadedNotice] = useState<NoticeDetail | null>(
+	const [selectedNotice, setSelectedNotice] = useState<SelectedNotice | null>(
 		null
 	);
 
@@ -155,9 +166,7 @@ function RouteComponent() {
 	useEffect(() => {
 		const targetNoticeId = search.noticeId;
 		if (!targetNoticeId) {
-			setSelectedNoticeId(null);
-			setSelectedNoticeProjectId(null);
-			setPreloadedNotice(null);
+			setSelectedNotice(null);
 			return;
 		}
 
@@ -182,9 +191,11 @@ function RouteComponent() {
 						return;
 					}
 
-					setSelectedNoticeProjectId(result.projectId);
-					setSelectedNoticeId(targetNoticeId);
-					setPreloadedNotice(result.notice);
+					setSelectedNotice({
+						id: targetNoticeId,
+						projectId: result.projectId,
+						initialNotice: result.notice,
+					});
 				} else {
 					toast.error("このお知らせを表示する権限がありません");
 					navigate({ to: "/project/notice", search: {}, replace: true });
@@ -204,6 +215,7 @@ function RouteComponent() {
 			setNotices(prev =>
 				prev.map(n => (n.id === noticeId ? { ...n, isRead: true } : n))
 			);
+			markCachedNoticeRead(noticeId);
 			void router.invalidate();
 		},
 		[router]
@@ -245,9 +257,12 @@ function RouteComponent() {
 					intent="secondary"
 					size="1"
 					onClick={() => {
-						setSelectedNoticeProjectId(selectedProjectId);
-						setSelectedNoticeId(row.original.id);
-						setPreloadedNotice(null);
+						if (!selectedProjectId) return;
+						setSelectedNotice({
+							id: row.original.id,
+							projectId: selectedProjectId,
+							initialNotice: null,
+						});
 					}}
 				>
 					<IconEye size={16} />
@@ -287,12 +302,10 @@ function RouteComponent() {
 			/>
 
 			<NoticeDetailDialog
-				noticeId={selectedNoticeId}
-				projectId={selectedNoticeProjectId ?? ""}
+				noticeId={selectedNotice?.id ?? null}
+				projectId={selectedNotice?.projectId ?? ""}
 				onClose={() => {
-					setSelectedNoticeId(null);
-					setSelectedNoticeProjectId(null);
-					setPreloadedNotice(null);
+					setSelectedNotice(null);
 					if (search.noticeId) {
 						navigate({
 							to: "/project/notice",
@@ -301,7 +314,7 @@ function RouteComponent() {
 						});
 					}
 				}}
-				initialNotice={preloadedNotice}
+				initialNotice={selectedNotice?.initialNotice ?? null}
 				onRead={handleRead}
 			/>
 		</div>
