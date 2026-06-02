@@ -34,7 +34,7 @@ export function NoticeDetailDialog({
 	const [isLoading, setIsLoading] = useState(false);
 
 	useEffect(() => {
-		if (!noticeId) return;
+		if (!noticeId || !projectId) return;
 		let cancelled = false;
 		setIsLoading(true);
 

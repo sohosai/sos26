@@ -1,14 +1,20 @@
 import { Badge, Heading, Text } from "@radix-ui/themes";
 import type { Bureau } from "@sos26/shared";
-import { bureauLabelMap } from "@sos26/shared";
+import { bureauLabelMap, ErrorCode } from "@sos26/shared";
 import { IconEye } from "@tabler/icons-react";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	useNavigate,
+	useRouter,
+} from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { DataTable, DateCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
-import { listProjectNotices } from "@/lib/api/project-notice";
+import { getProjectNotice, listProjectNotices } from "@/lib/api/project-notice";
+import { isClientError } from "@/lib/http/error";
 import { useProjectStore } from "@/lib/project/store";
 import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 import { NoticeDetailDialog } from "./-components/NoticeDetailDialog";
@@ -16,6 +22,7 @@ import styles from "./index.module.scss";
 
 const searchSchema = z.object({
 	projectId: z.string().optional(),
+	noticeId: z.string().optional(),
 });
 
 const getBureauLabel = (bureau: string): string =>
@@ -31,6 +38,33 @@ type NoticeRow = {
 };
 
 const noticeColumnHelper = createColumnHelper<NoticeRow>();
+
+function isNoticeUnavailableError(error: unknown): boolean {
+	return (
+		isClientError(error) &&
+		(error.code === ErrorCode.NOT_FOUND || error.code === ErrorCode.FORBIDDEN)
+	);
+}
+
+async function resolveNoticeAcrossProjects(
+	noticeId: string,
+	signal: AbortSignal
+): Promise<{ projectId: string } | null> {
+	const { projects } = useProjectStore.getState();
+	for (const project of projects) {
+		if (signal.aborted) return null;
+		try {
+			await getProjectNotice(project.id, noticeId);
+			return { projectId: project.id };
+		} catch (error) {
+			if (!isNoticeUnavailableError(error)) {
+				throw error;
+			}
+			// 次の企画で試行
+		}
+	}
+	return null;
+}
 
 export const Route = createFileRoute("/project/notice/")({
 	component: RouteComponent,
@@ -60,7 +94,9 @@ export const Route = createFileRoute("/project/notice/")({
 
 function RouteComponent() {
 	const { notices: initialNotices } = Route.useLoaderData();
+	const search = Route.useSearch();
 	const router = useRouter();
+	const navigate = useNavigate();
 	const [notices, setNotices] = useState<NoticeRow[]>(initialNotices);
 	const { selectedProjectId } = useProjectStore();
 
@@ -69,6 +105,53 @@ function RouteComponent() {
 	}, [initialNotices]);
 
 	const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
+	const [selectedNoticeProjectId, setSelectedNoticeProjectId] = useState<
+		string | null
+	>(null);
+
+	// /committee/notice/{noticeId}/ から振り替えられた場合、所属企画を順に探して
+	// 該当のお知らせを自動でダイアログ表示する。
+	useEffect(() => {
+		const targetNoticeId = search.noticeId;
+		if (!targetNoticeId) {
+			setSelectedNoticeId(null);
+			setSelectedNoticeProjectId(null);
+			return;
+		}
+
+		const controller = new AbortController();
+		void resolveNoticeAcrossProjects(targetNoticeId, controller.signal)
+			.then(result => {
+				if (controller.signal.aborted) return;
+				if (result) {
+					if (selectedProjectId !== result.projectId) {
+						useProjectStore.getState().setSelectedProjectId(result.projectId);
+						navigate({
+							to: "/project/notice",
+							search: {
+								projectId: result.projectId,
+								noticeId: targetNoticeId,
+							},
+							replace: true,
+						});
+						return;
+					}
+
+					setSelectedNoticeProjectId(result.projectId);
+					setSelectedNoticeId(targetNoticeId);
+				} else {
+					toast.error("このお知らせを表示する権限がありません");
+					navigate({ to: "/project/notice", search: {}, replace: true });
+				}
+			})
+			.catch(() => {
+				if (controller.signal.aborted) return;
+				toast.error("お知らせの取得に失敗しました");
+				navigate({ to: "/project/notice", search: {}, replace: true });
+			});
+
+		return () => controller.abort();
+	}, [search.noticeId, selectedProjectId, navigate]);
 
 	const handleRead = useCallback(
 		(noticeId: string) => {
@@ -115,7 +198,16 @@ function RouteComponent() {
 				<Button
 					intent="secondary"
 					size="1"
-					onClick={() => setSelectedNoticeId(row.original.id)}
+					onClick={() =>
+						navigate({
+							to: "/project/notice",
+							search: {
+								projectId: selectedProjectId ?? undefined,
+								noticeId: row.original.id,
+							},
+							replace: true,
+						})
+					}
 				>
 					<IconEye size={16} />
 					お知らせを見る
@@ -155,8 +247,16 @@ function RouteComponent() {
 
 			<NoticeDetailDialog
 				noticeId={selectedNoticeId}
-				projectId={selectedProjectId ?? ""}
-				onClose={() => setSelectedNoticeId(null)}
+				projectId={selectedNoticeProjectId ?? ""}
+				onClose={() => {
+					setSelectedNoticeId(null);
+					setSelectedNoticeProjectId(null);
+					navigate({
+						to: "/project/notice",
+						search: { projectId: selectedProjectId ?? undefined },
+						replace: true,
+					});
+				}}
 				onRead={handleRead}
 			/>
 		</div>
