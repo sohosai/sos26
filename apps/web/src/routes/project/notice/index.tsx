@@ -35,8 +35,17 @@ type NoticeRow = {
 	isRead: boolean;
 };
 type NoticeDetail = GetProjectNoticeResponse["notice"];
+type ResolvedNotice = { projectId: string; notice: NoticeDetail };
 
 const noticeColumnHelper = createColumnHelper<NoticeRow>();
+const resolvedNoticeCache = new Map<string, ResolvedNotice>();
+
+function getResolvedNoticeCacheKey(
+	projectId: string,
+	noticeId: string
+): string {
+	return `${projectId}:${noticeId}`;
+}
 
 function isNoticeUnavailableError(error: unknown): boolean {
 	return (
@@ -45,15 +54,25 @@ function isNoticeUnavailableError(error: unknown): boolean {
 	);
 }
 
-async function tryResolveNoticeInProject(
+async function getNoticeDetailInProject(
 	projectId: string,
 	noticeId: string,
 	signal: AbortSignal
-): Promise<{ projectId: string; notice: NoticeDetail } | null> {
+): Promise<ResolvedNotice | null> {
 	if (signal.aborted) return null;
+	const cached = resolvedNoticeCache.get(
+		getResolvedNoticeCacheKey(projectId, noticeId)
+	);
+	if (cached) return cached;
+
 	try {
 		const { notice } = await getProjectNotice(projectId, noticeId);
-		return { projectId, notice };
+		const resolved = { projectId, notice };
+		resolvedNoticeCache.set(
+			getResolvedNoticeCacheKey(projectId, noticeId),
+			resolved
+		);
+		return resolved;
 	} catch (error) {
 		if (!isNoticeUnavailableError(error)) {
 			throw error;
@@ -65,27 +84,20 @@ async function tryResolveNoticeInProject(
 async function resolveNoticeProject(
 	noticeId: string,
 	preferredProjectId: string | undefined,
+	preferredNotices: NoticeRow[],
 	signal: AbortSignal
-): Promise<{ projectId: string; notice: NoticeDetail } | null> {
-	if (preferredProjectId) {
-		const preferredResult = await tryResolveNoticeInProject(
-			preferredProjectId,
-			noticeId,
-			signal
-		);
-		if (preferredResult) return preferredResult;
+): Promise<ResolvedNotice | null> {
+	if (preferredProjectId && preferredNotices.some(n => n.id === noticeId)) {
+		return getNoticeDetailInProject(preferredProjectId, noticeId, signal);
 	}
 
 	const { projects } = useProjectStore.getState();
 	for (const project of projects) {
 		if (project.id === preferredProjectId) continue;
 		if (signal.aborted) return null;
-		const result = await tryResolveNoticeInProject(
-			project.id,
-			noticeId,
-			signal
-		);
-		if (result) return result;
+		const { notices } = await listProjectNotices(project.id);
+		if (!notices.some(n => n.id === noticeId)) continue;
+		return getNoticeDetailInProject(project.id, noticeId, signal);
 	}
 	return null;
 }
@@ -149,6 +161,7 @@ function RouteComponent() {
 		void resolveNoticeProject(
 			targetNoticeId,
 			preferredProjectId,
+			initialNotices,
 			controller.signal
 		)
 			.then(result => {
@@ -179,7 +192,7 @@ function RouteComponent() {
 			});
 
 		return () => controller.abort();
-	}, [search.noticeId, selectedProjectId, navigate]);
+	}, [search.noticeId, selectedProjectId, navigate, initialNotices]);
 
 	const handleRead = useCallback(
 		(noticeId: string) => {
