@@ -1,5 +1,5 @@
 import { Badge, Heading, Text } from "@radix-ui/themes";
-import type { Bureau } from "@sos26/shared";
+import type { Bureau, GetProjectNoticeResponse } from "@sos26/shared";
 import { bureauLabelMap, ErrorCode } from "@sos26/shared";
 import { IconEye } from "@tabler/icons-react";
 import {
@@ -36,6 +36,7 @@ type NoticeRow = {
 	deliveredAt: Date;
 	isRead: boolean;
 };
+type NoticeDetail = GetProjectNoticeResponse["notice"];
 
 const noticeColumnHelper = createColumnHelper<NoticeRow>();
 
@@ -46,22 +47,47 @@ function isNoticeUnavailableError(error: unknown): boolean {
 	);
 }
 
-async function resolveNoticeAcrossProjects(
+async function tryResolveNoticeInProject(
+	projectId: string,
 	noticeId: string,
 	signal: AbortSignal
-): Promise<{ projectId: string } | null> {
+): Promise<{ projectId: string; notice: NoticeDetail } | null> {
+	if (signal.aborted) return null;
+	try {
+		const { notice } = await getProjectNotice(projectId, noticeId);
+		return { projectId, notice };
+	} catch (error) {
+		if (!isNoticeUnavailableError(error)) {
+			throw error;
+		}
+		return null;
+	}
+}
+
+async function resolveNoticeProject(
+	noticeId: string,
+	preferredProjectId: string | undefined,
+	signal: AbortSignal
+): Promise<{ projectId: string; notice: NoticeDetail } | null> {
+	if (preferredProjectId) {
+		const preferredResult = await tryResolveNoticeInProject(
+			preferredProjectId,
+			noticeId,
+			signal
+		);
+		if (preferredResult) return preferredResult;
+	}
+
 	const { projects } = useProjectStore.getState();
 	for (const project of projects) {
+		if (project.id === preferredProjectId) continue;
 		if (signal.aborted) return null;
-		try {
-			await getProjectNotice(project.id, noticeId);
-			return { projectId: project.id };
-		} catch (error) {
-			if (!isNoticeUnavailableError(error)) {
-				throw error;
-			}
-			// 次の企画で試行
-		}
+		const result = await tryResolveNoticeInProject(
+			project.id,
+			noticeId,
+			signal
+		);
+		if (result) return result;
 	}
 	return null;
 }
@@ -108,6 +134,9 @@ function RouteComponent() {
 	const [selectedNoticeProjectId, setSelectedNoticeProjectId] = useState<
 		string | null
 	>(null);
+	const [preloadedNotice, setPreloadedNotice] = useState<NoticeDetail | null>(
+		null
+	);
 
 	// /committee/notice/{noticeId}/ から振り替えられた場合、所属企画を順に探して
 	// 該当のお知らせを自動でダイアログ表示する。
@@ -116,11 +145,18 @@ function RouteComponent() {
 		if (!targetNoticeId) {
 			setSelectedNoticeId(null);
 			setSelectedNoticeProjectId(null);
+			setPreloadedNotice(null);
 			return;
 		}
 
 		const controller = new AbortController();
-		void resolveNoticeAcrossProjects(targetNoticeId, controller.signal)
+		const preferredProjectId =
+			search.projectId ?? selectedProjectId ?? undefined;
+		void resolveNoticeProject(
+			targetNoticeId,
+			preferredProjectId,
+			controller.signal
+		)
 			.then(result => {
 				if (controller.signal.aborted) return;
 				if (result) {
@@ -139,6 +175,7 @@ function RouteComponent() {
 
 					setSelectedNoticeProjectId(result.projectId);
 					setSelectedNoticeId(targetNoticeId);
+					setPreloadedNotice(result.notice);
 				} else {
 					toast.error("このお知らせを表示する権限がありません");
 					navigate({ to: "/project/notice", search: {}, replace: true });
@@ -151,7 +188,7 @@ function RouteComponent() {
 			});
 
 		return () => controller.abort();
-	}, [search.noticeId, selectedProjectId, navigate]);
+	}, [search.noticeId, search.projectId, selectedProjectId, navigate]);
 
 	const handleRead = useCallback(
 		(noticeId: string) => {
@@ -251,12 +288,14 @@ function RouteComponent() {
 				onClose={() => {
 					setSelectedNoticeId(null);
 					setSelectedNoticeProjectId(null);
+					setPreloadedNotice(null);
 					navigate({
 						to: "/project/notice",
 						search: { projectId: selectedProjectId ?? undefined },
 						replace: true,
 					});
 				}}
+				initialNotice={preloadedNotice}
 				onRead={handleRead}
 			/>
 		</div>

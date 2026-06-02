@@ -9,6 +9,7 @@ import {
 	requireCommitteeMember,
 	useAuthStore,
 } from "@/lib/auth";
+import { useProjectStore } from "@/lib/project/store";
 import styles from "./route.module.scss";
 
 // /committee/notice/{noticeId}/ から noticeId を抽出する
@@ -33,9 +34,13 @@ export const Route = createFileRoute("/committee")({
 		const { isCommitteeMember } = useAuthStore.getState();
 		if (!isCommitteeMember && isCommitteeNoticePath(location.pathname)) {
 			const noticeId = extractNoticeIdFromPath(location.pathname);
+			const { selectedProjectId } = useProjectStore.getState();
 			throw redirect({
 				to: "/project/notice",
-				search: noticeId ? { noticeId } : {},
+				search: {
+					...(selectedProjectId ? { projectId: selectedProjectId } : {}),
+					...(noticeId ? { noticeId } : {}),
+				},
 			});
 		}
 
