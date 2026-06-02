@@ -16,10 +16,12 @@ import { Button } from "@/components/primitives";
 import { getProjectNotice, listProjectNotices } from "@/lib/api/project-notice";
 import { isClientError } from "@/lib/http/error";
 import { useProjectStore } from "@/lib/project/store";
+import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 import { NoticeDetailDialog } from "./-components/NoticeDetailDialog";
 import styles from "./index.module.scss";
 
 const searchSchema = z.object({
+	projectId: z.string().optional(),
 	noticeId: z.string().optional(),
 });
 
@@ -108,6 +110,9 @@ export const Route = createFileRoute("/project/notice/")({
 		meta: [{ title: "お知らせ | 雙峰祭オンラインシステム" }],
 	}),
 	validateSearch: searchSchema,
+	beforeLoad: ({ search }) => {
+		syncSelectedProjectFromSearch(search.projectId);
+	},
 	loader: async () => {
 		const { selectedProjectId } = useProjectStore.getState();
 		if (!selectedProjectId) return { notices: [] as NoticeRow[] };
@@ -291,7 +296,7 @@ function RouteComponent() {
 					if (search.noticeId) {
 						navigate({
 							to: "/project/notice",
-							search: {},
+							search: { projectId: search.projectId },
 							replace: true,
 						});
 					}
