@@ -32,6 +32,7 @@ function CommitteeLayout() {
 				collapsed={sidebarCollapsed}
 				onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
 				menuItems={committeeMenuItems}
+				logoTo="/committee"
 			/>
 			<main
 				className={`${styles.main} ${sidebarCollapsed ? styles.collapsed : ""}`}
