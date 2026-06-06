@@ -16,7 +16,7 @@ import {
 	IconTrash,
 	IconUsers,
 } from "@tabler/icons-react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/primitives";
 import { formatDate, formatProjectNumber } from "@/lib/format";
@@ -682,6 +682,7 @@ export function SupportDetail({
 	onUpdateViewers,
 	isAssigneeOrAdmin = false,
 }: SupportDetailProps) {
+	const router = useRouter();
 	const [activeReplyTab, setActiveReplyTab] = useState<"comment" | "draft">(
 		"comment"
 	);
@@ -803,15 +804,33 @@ export function SupportDetail({
 		isDraftInquiry ? [] : inquiry.activities
 	);
 
+	// 「お問い合わせ一覧へ戻る」ボタンのクリック・ハンドラ
+	const handleBackToList = () => {
+		// 案件一覧へ戻る際，実委人/企画者 画面どちらかによって振り分け
+		if (viewerRole === "committee") {
+			router.navigate({
+				to: "/committee/support",
+				search: {
+					tab: isDraftInquiry // 下書きの場合は draft タブを，そうでないならステータスに応じたタブを選択
+						? "draft"
+						: inquiry.status === "RESOLVED"
+							? "resolved"
+							: "open",
+				},
+			});
+			return;
+		}
+
+		router.navigate({ to: "/project/support" });
+	};
+
 	return (
 		<div className={styles.layout}>
 			<div className={styles.main}>
 				<button
 					type="button"
 					className={styles.backLink}
-					onClick={() => {
-						window.history.back();
-					}}
+					onClick={handleBackToList}
 				>
 					<IconArrowLeft size={16} />
 					<Text size="2">お問い合わせ一覧に戻る</Text>
