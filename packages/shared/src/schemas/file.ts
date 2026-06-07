@@ -19,6 +19,9 @@ export const allowedMimeTypes = [
 	"application/pdf",
 	"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	// 動画
+	"video/mp4",
+	"video/quicktime",
 ] as const;
 
 export const mimeTypeSchema = z.enum(allowedMimeTypes);
@@ -34,13 +37,16 @@ export const mimeTypeLabels: Record<AllowedMimeType, string> = {
 	"application/vnd.openxmlformats-officedocument.wordprocessingml.document":
 		"DOCX",
 	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "XLSX",
+	"video/mp4": "MP4",
+	"video/quicktime": "MOV",
 };
 
 /** HTML input accept 属性用の文字列 */
 export const fileAcceptAttribute = allowedMimeTypes.join(",");
 
 /** 人間が読めるファイル形式一覧 */
-export const allowedFileExtensions = "JPEG, PNG, GIF, WebP, PDF, DOCX, XLSX";
+export const allowedFileExtensions =
+	"JPEG, PNG, GIF, WebP, PDF, DOCX, XLSX, MP4, MOV";
 
 /** 指定MIMEタイプ配列から accept 属性文字列を生成（未指定時は全許可） */
 export function buildFileAcceptAttribute(

@@ -1,4 +1,5 @@
 import type { FileInfo } from "@sos26/shared";
+import { fileAcceptAttribute } from "@sos26/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -84,11 +85,7 @@ function StorageDevPage() {
 			<section>
 				<h2>ファイルアップロード</h2>
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<input
-						ref={fileInputRef}
-						type="file"
-						accept="image/jpeg,image/png,image/gif,image/webp,application/pdf,.docx,.xlsx"
-					/>
+					<input ref={fileInputRef} type="file" accept={fileAcceptAttribute} />
 					<label>
 						<input
 							type="checkbox"

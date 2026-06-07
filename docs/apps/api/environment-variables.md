@@ -44,7 +44,7 @@ apps/apiで使用する環境変数の設定方法とリファレンスです。
 | `S3_ACCESS_KEY_ID` | S3 アクセスキー | なし | ✅ |
 | `S3_SECRET_ACCESS_KEY` | S3 シークレットキー | なし | ✅ |
 | `S3_PRESIGNED_URL_EXPIRES` | Presigned URL の有効期限（秒） | `3600` | ❌ |
-| `S3_MAX_FILE_SIZE` | 最大ファイルサイズ（バイト） | `10485760` | ❌ |
+| `S3_MAX_FILE_SIZE` | 最大ファイルサイズ（バイト） | `1000000000` | ❌ |
 | `FILE_TOKEN_SECRET` | ファイルトークン署名用秘密鍵（32文字以上） | なし | ✅ |
 
 ## 設定方法
@@ -87,7 +87,7 @@ S3_BUCKET=your-bucket-name
 S3_ACCESS_KEY_ID=your_access_key
 S3_SECRET_ACCESS_KEY=your_secret_key
 # S3_PRESIGNED_URL_EXPIRES=3600  # デフォルト1時間
-# S3_MAX_FILE_SIZE=10485760  # デフォルト10MB
+# S3_MAX_FILE_SIZE=1000000000  # デフォルト1GB
 
 # ファイルトークン（openssl rand -base64 48 等で生成）
 FILE_TOKEN_SECRET=your-file-token-secret-at-least-32-chars
@@ -173,7 +173,7 @@ FILE_TOKEN_SECRET=your-file-token-secret-at-least-32-chars
 
 **S3_MAX_FILE_SIZE:**
 - 1以上の整数（バイト）
-- 既定は `10485760`（10MB）
+- 既定は `1000000000`（1GB）
 
 **FILE_TOKEN_SECRET:**
 - 32文字以上の文字列
