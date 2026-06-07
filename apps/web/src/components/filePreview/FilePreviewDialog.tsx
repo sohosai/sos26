@@ -35,10 +35,10 @@ function isZoomable(ext: string) {
 function Viewer({ file, scale }: { file: File; scale: number }) {
 	const ext = getExt(file);
 	const isImage = ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext);
-	const isVideo = ["mp4", "mov"].includes(ext);
+	const isPreviewableMedia = isImage || ext === "mp4";
 	const [mediaUrl, setMediaUrl] = useState<string | null>(null);
 	useEffect(() => {
-		if (!isImage && !isVideo) {
+		if (!isPreviewableMedia) {
 			setMediaUrl(null);
 			return;
 		}
@@ -49,16 +49,22 @@ function Viewer({ file, scale }: { file: File; scale: number }) {
 		return () => {
 			URL.revokeObjectURL(objectUrl);
 		};
-	}, [file, isImage, isVideo]);
+	}, [file, isPreviewableMedia]);
 
 	if (ext === "pdf")
 		return <PdfViewer file={file} scale={scale * PDF_BASE_SCALE} />;
 	if (ext === "xlsx" || ext === "xls") return <ExcelViewer file={file} />;
 
 	if (ext === "docx") return <WordViewer file={file} />;
-	if (isVideo && mediaUrl)
+	if (ext === "mp4" && mediaUrl)
 		// biome-ignore lint/a11y/useMediaCaption: ユーザーアップロード動画のプレビュー（キャプションファイルなし）
 		return <video src={mediaUrl} controls className={styles.video} />;
+	if (ext === "mov")
+		return (
+			<div className={styles.unsupported}>
+				<Text size="2">この形式（MOV）はプレビューできません</Text>
+			</div>
+		);
 	if (isImage && mediaUrl)
 		return <img src={mediaUrl} className={styles.image} alt={file.name} />;
 
