@@ -79,7 +79,7 @@ function TextConstraintEditor({
 	onUpdate,
 }: TextConstraintEditorProps) {
 	const textConstraints = pickTextConstraints(constraints);
-	const [open, setOpen] = useState(() => textConstraints !== null);
+	const [open, setOpen] = useState(true);
 	const hasConstraints = textConstraints !== null;
 
 	const update = (partial: Partial<TextConstraints>) => {
@@ -190,7 +190,7 @@ function FileConstraintEditor({
 	onUpdate,
 }: FileConstraintEditorProps) {
 	const fileConstraints = pickFileConstraints(constraints);
-	const [open, setOpen] = useState(() => fileConstraints !== null);
+	const [open, setOpen] = useState(true);
 	const hasConstraints = fileConstraints !== null;
 
 	const update = (partial: Partial<FileConstraints>) => {
