@@ -16,7 +16,7 @@ import {
 	IconTrash,
 	IconUsers,
 } from "@tabler/icons-react";
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, useCanGoBack, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/primitives";
 import { formatDate, formatProjectNumber } from "@/lib/format";
@@ -683,6 +683,7 @@ export function SupportDetail({
 	isAssigneeOrAdmin = false,
 }: SupportDetailProps) {
 	const router = useRouter();
+	const canGoBack = useCanGoBack();
 	const [activeReplyTab, setActiveReplyTab] = useState<"comment" | "draft">(
 		"comment"
 	);
@@ -806,6 +807,11 @@ export function SupportDetail({
 
 	// 「お問い合わせ一覧へ戻る」ボタンのクリック・ハンドラ
 	const handleBackToList = () => {
+		if (canGoBack) {
+			window.history.back();
+			return;
+		}
+
 		// 案件一覧へ戻る際，実委人/企画者 画面どちらかによって振り分け
 		if (viewerRole === "committee") {
 			router.navigate({
