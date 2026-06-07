@@ -109,6 +109,14 @@
 	}
 }
 
+.itemCheckbox {
+	cursor: pointer;
+}
+
+.itemCardDisabled .itemCheckbox {
+	cursor: not-allowed;
+}
+
 .itemInfo {
 	display: flex;
 	align-items: center;
