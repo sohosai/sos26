@@ -30,6 +30,7 @@ export function AttachmentPreviewButton({ attachment }: Props) {
 			return;
 		}
 
+		setOpen(true);
 		setIsLoading(true);
 		try {
 			const fetched = await fetchFile(
@@ -39,9 +40,9 @@ export function AttachmentPreviewButton({ attachment }: Props) {
 				attachment.isPublic
 			);
 			setFile(fetched);
-			setOpen(true);
 		} catch {
 			toast.error("ファイルの取得に失敗しました");
+			setOpen(false);
 		} finally {
 			setIsLoading(false);
 		}
@@ -74,6 +75,7 @@ export function AttachmentPreviewButton({ attachment }: Props) {
 				open={open}
 				onOpenChange={setOpen}
 				onDownload={handleDownload}
+				loading={isLoading}
 			/>
 		</>
 	);

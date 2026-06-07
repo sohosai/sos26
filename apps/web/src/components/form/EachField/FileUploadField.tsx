@@ -170,6 +170,7 @@ export function FileUploadField({
 	};
 
 	const handleUploadedFilePreview = async (file: UploadedFileValue) => {
+		setOpen(true);
 		setLoadingFileId(file.id);
 		try {
 			const fetchedFile = await fetchFile(
@@ -180,9 +181,9 @@ export function FileUploadField({
 			);
 			setPreviewFile(fetchedFile);
 			setPreviewedUploadedFile(file);
-			setOpen(true);
 		} catch {
 			toast.error("ファイルの取得に失敗しました");
+			setOpen(false);
 		} finally {
 			setLoadingFileId(current => (current === file.id ? null : current));
 		}
@@ -311,6 +312,7 @@ export function FileUploadField({
 				open={open}
 				onOpenChange={setOpen}
 				onDownload={previewedUploadedFile ? handleDownload : undefined}
+				loading={loadingFileId !== null && previewFile === null}
 			/>
 		</div>
 	);

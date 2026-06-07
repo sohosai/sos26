@@ -1,4 +1,4 @@
-import { Dialog, Text, VisuallyHidden } from "@radix-ui/themes";
+import { Dialog, Spinner, Text, VisuallyHidden } from "@radix-ui/themes";
 import {
 	IconDownload,
 	IconX,
@@ -17,6 +17,7 @@ interface Props {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onDownload?: () => void;
+	loading?: boolean;
 }
 
 function getExt(file: File) {
@@ -84,6 +85,7 @@ export default function FilePreviewDialog({
 	open,
 	onOpenChange,
 	onDownload,
+	loading,
 }: Props) {
 	const [scale, setScale] = useState(1.0);
 	const showZoom = file ? isZoomable(getExt(file)) : false;
@@ -148,8 +150,16 @@ export default function FilePreviewDialog({
 
 				{/* プレビューエリア */}
 				<div className={styles.body}>
-					{file && (
+					{loading && !file ? (
+						<div className={styles.loading}>
+							<Spinner size="3" />
+						</div>
+					) : file ? (
 						<Viewer key={file.name + file.size} file={file} scale={scale} />
+					) : (
+						<div className={styles.unsupported}>
+							<Text size="2">ファイルを表示できません</Text>
+						</div>
 					)}
 				</div>
 			</Dialog.Content>

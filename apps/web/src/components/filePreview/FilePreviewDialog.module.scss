@@ -56,6 +56,13 @@
 	flex-direction: column;
 }
 
+.loading {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex: 1;
+}
+
 .image {
 	display: block;
 	max-width: 100%;
