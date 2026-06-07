@@ -149,10 +149,11 @@ export function AddFormItemColumnsDialog({
 				}}
 			>
 				<RadixCheckbox
+					className={styles.itemCheckbox}
 					size="2"
 					checked={alreadyAdded || selected}
 					disabled={alreadyAdded}
-					onCheckedChange={() => !alreadyAdded && toggleItem(item.id)}
+					tabIndex={-1}
 					aria-hidden="true"
 				/>
 				<div className={styles.itemInfo}>
