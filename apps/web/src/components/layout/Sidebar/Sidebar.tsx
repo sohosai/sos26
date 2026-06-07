@@ -24,6 +24,7 @@ type SidebarProps = {
 	collapsed: boolean;
 	onToggle: () => void;
 	menuItems: MenuItem[];
+	logoTo?: string;
 	projectSelector?: ReactNode;
 	projectId?: string | null;
 };
@@ -202,6 +203,7 @@ export function Sidebar({
 	collapsed,
 	onToggle,
 	menuItems,
+	logoTo = "/",
 	projectSelector,
 }: SidebarProps) {
 	const { location } = useRouterState();
@@ -334,7 +336,7 @@ export function Sidebar({
 						<IconLayoutSidebar size={18} />
 					</IconButton>
 					{!sidebarCollapsed && (
-						<Link to="/" onClick={closeMobileSidebar}>
+						<Link to={logoTo} onClick={closeMobileSidebar}>
 							<img src="/sos.svg" alt="雙峰祭オンラインシステム" height={42} />
 						</Link>
 					)}
