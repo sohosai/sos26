@@ -7,7 +7,13 @@ import type {
 	TextConstraints,
 } from "@sos26/shared";
 import { allowedMimeTypes, mimeTypeLabels } from "@sos26/shared";
-import { IconPlus, IconX } from "@tabler/icons-react";
+import {
+	IconChevronDown,
+	IconChevronUp,
+	IconPlus,
+	IconX,
+} from "@tabler/icons-react";
+import { useState } from "react";
 import { Button, IconButton, Select, TextField } from "@/components/primitives";
 import { FileUploadField } from "../EachField/FileUploadField";
 import { NumberField } from "../EachField/NumberField";
@@ -73,6 +79,8 @@ function TextConstraintEditor({
 	onUpdate,
 }: TextConstraintEditorProps) {
 	const textConstraints = pickTextConstraints(constraints);
+	const [open, setOpen] = useState(() => textConstraints !== null);
+	const hasConstraints = textConstraints !== null;
 
 	const update = (partial: Partial<TextConstraints>) => {
 		const next = { ...(textConstraints ?? {}), ...partial };
@@ -93,51 +101,78 @@ function TextConstraintEditor({
 
 	return (
 		<div className={styles.constraints}>
-			<Text size="2" weight="medium">
-				入力制約
-			</Text>
-			<div className={styles.constraintRow}>
-				<NumberField
-					label="最小文字数"
-					value={textConstraints?.minLength ?? null}
-					onChange={n => update({ minLength: n ?? undefined })}
-					placeholder="例: 10"
-					error={minMaxError}
-				/>
-				<NumberField
-					label="最大文字数"
-					value={textConstraints?.maxLength ?? null}
-					onChange={n => update({ maxLength: n ?? undefined })}
-					placeholder="例: 200"
-				/>
-			</div>
-			<div>
-				<Text as="label" size="2" weight="medium">
-					文字種制限
+			<button
+				type="button"
+				className={styles.constraintHeader}
+				aria-expanded={open}
+				onClick={() => setOpen(v => !v)}
+			>
+				<Text size="2" weight="medium">
+					入力制限（文字数/文字種など）
 				</Text>
-				<div className={styles.patternRow}>
-					<Select
-						options={PATTERN_OPTIONS}
-						value={textConstraints?.pattern ?? "none"}
-						onValueChange={v => {
-							update({
-								pattern:
-									v === "none" ? undefined : (v as TextConstraints["pattern"]),
-								customPattern:
-									v !== "custom" ? undefined : textConstraints?.customPattern,
-							});
-						}}
-						aria-label="文字種制限"
-					/>
+				<div className={styles.constraintHeaderMeta}>
+					{hasConstraints && (
+						<Text size="1" color="gray">
+							設定済み
+						</Text>
+					)}
+					{open ? (
+						<IconChevronUp size={16} stroke={1.5} />
+					) : (
+						<IconChevronDown size={16} stroke={1.5} />
+					)}
 				</div>
-			</div>
-			{textConstraints?.pattern === "custom" && (
-				<TextField
-					label="正規表現パターン"
-					value={textConstraints.customPattern ?? ""}
-					onChange={v => update({ customPattern: v })}
-					placeholder="例: ^[ぁ-んー]+$"
-				/>
+			</button>
+			{open && (
+				<div className={styles.constraintBody}>
+					<div className={styles.constraintRow}>
+						<NumberField
+							label="最小文字数"
+							value={textConstraints?.minLength ?? null}
+							onChange={n => update({ minLength: n ?? undefined })}
+							placeholder="例: 10"
+							error={minMaxError}
+						/>
+						<NumberField
+							label="最大文字数"
+							value={textConstraints?.maxLength ?? null}
+							onChange={n => update({ maxLength: n ?? undefined })}
+							placeholder="例: 200"
+						/>
+					</div>
+					<div>
+						<Text as="label" size="2" weight="medium">
+							文字種制限
+						</Text>
+						<div className={styles.patternRow}>
+							<Select
+								options={PATTERN_OPTIONS}
+								value={textConstraints?.pattern ?? "none"}
+								onValueChange={v => {
+									update({
+										pattern:
+											v === "none"
+												? undefined
+												: (v as TextConstraints["pattern"]),
+										customPattern:
+											v !== "custom"
+												? undefined
+												: textConstraints?.customPattern,
+									});
+								}}
+								aria-label="文字種制限"
+							/>
+						</div>
+					</div>
+					{textConstraints?.pattern === "custom" && (
+						<TextField
+							label="正規表現パターン"
+							value={textConstraints.customPattern ?? ""}
+							onChange={v => update({ customPattern: v })}
+							placeholder="例: ^[ぁ-んー]+$"
+						/>
+					)}
+				</div>
 			)}
 		</div>
 	);
@@ -155,6 +190,8 @@ function FileConstraintEditor({
 	onUpdate,
 }: FileConstraintEditorProps) {
 	const fileConstraints = pickFileConstraints(constraints);
+	const [open, setOpen] = useState(() => fileConstraints !== null);
+	const hasConstraints = fileConstraints !== null;
 
 	const update = (partial: Partial<FileConstraints>) => {
 		const next = { ...(fileConstraints ?? {}), ...partial };
@@ -198,61 +235,84 @@ function FileConstraintEditor({
 
 	return (
 		<div className={styles.constraints}>
-			<Text size="2" weight="medium">
-				添付制約
-			</Text>
-			<div className={styles.constraintRow}>
-				<NumberField
-					label="最小ファイル数"
-					value={fileConstraints?.minFiles ?? null}
-					onChange={n => update({ minFiles: n ?? undefined })}
-					placeholder="例: 1"
-					error={minMaxError ?? requiredMinFilesError}
-				/>
-				<NumberField
-					label="最大ファイル数"
-					value={fileConstraints?.maxFiles ?? null}
-					onChange={n => update({ maxFiles: n ?? undefined })}
-					placeholder="例: 5"
-				/>
-				<div className={styles.constraintMimeTypesField}>
-					<Text as="label" size="2" weight="medium">
-						許可するファイル形式
-					</Text>
-					<Text size="1" color="gray" mx="1">
-						未選択の場合はすべての形式が許可されます
-					</Text>
+			<button
+				type="button"
+				className={styles.constraintHeader}
+				aria-expanded={open}
+				onClick={() => setOpen(v => !v)}
+			>
+				<Text size="2" weight="medium">
+					添付制限（ファイル数/形式など）
+				</Text>
+				<div className={styles.constraintHeaderMeta}>
+					{hasConstraints && (
+						<Text size="1" color="gray">
+							設定済み
+						</Text>
+					)}
+					{open ? (
+						<IconChevronUp size={16} stroke={1.5} />
+					) : (
+						<IconChevronDown size={16} stroke={1.5} />
+					)}
+				</div>
+			</button>
+			{open && (
+				<div className={styles.constraintBody}>
 					<div className={styles.constraintRow}>
-						{allowedMimeTypes.map(mimeType => (
-							<Text
-								as="span"
-								size="2"
-								key={mimeType}
-								style={{
-									display: "inline-flex",
-									alignItems: "center",
-									gap: "4px",
-									cursor: "pointer",
-								}}
-								onClick={() =>
-									handleMimeTypeToggle(
-										mimeType,
-										!selectedMimeTypes.has(mimeType)
-									)
-								}
-							>
-								<RadixCheckbox
-									checked={selectedMimeTypes.has(mimeType)}
-									onCheckedChange={checked =>
-										handleMimeTypeToggle(mimeType, checked === true)
-									}
-								/>
-								{mimeTypeLabels[mimeType]}
+						<NumberField
+							label="最小ファイル数"
+							value={fileConstraints?.minFiles ?? null}
+							onChange={n => update({ minFiles: n ?? undefined })}
+							placeholder="例: 1"
+							error={minMaxError ?? requiredMinFilesError}
+						/>
+						<NumberField
+							label="最大ファイル数"
+							value={fileConstraints?.maxFiles ?? null}
+							onChange={n => update({ maxFiles: n ?? undefined })}
+							placeholder="例: 5"
+						/>
+						<div className={styles.constraintMimeTypesField}>
+							<Text as="label" size="2" weight="medium">
+								許可するファイル形式
 							</Text>
-						))}
+							<Text size="1" color="gray" mx="1">
+								未選択の場合はすべての形式が許可されます
+							</Text>
+							<div className={styles.constraintRow}>
+								{allowedMimeTypes.map(mimeType => (
+									<Text
+										as="span"
+										size="2"
+										key={mimeType}
+										style={{
+											display: "inline-flex",
+											alignItems: "center",
+											gap: "4px",
+											cursor: "pointer",
+										}}
+										onClick={() =>
+											handleMimeTypeToggle(
+												mimeType,
+												!selectedMimeTypes.has(mimeType)
+											)
+										}
+									>
+										<RadixCheckbox
+											checked={selectedMimeTypes.has(mimeType)}
+											onCheckedChange={checked =>
+												handleMimeTypeToggle(mimeType, checked === true)
+											}
+										/>
+										{mimeTypeLabels[mimeType]}
+									</Text>
+								))}
+							</div>
+						</div>
 					</div>
 				</div>
-			</div>
+			)}
 		</div>
 	);
 }
