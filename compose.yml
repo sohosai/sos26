@@ -1,0 +1,70 @@
+services:
+  app:
+    image: oven/bun:alpine
+    working_dir: /repo
+    command: sh -c "bun install && bun run db:migrate:dev && bun run dev"
+    ports:
+      - "5173:5173"
+      - "3000:3000"
+    env_file:
+      - apps/api/.env
+      - apps/web/.env
+    environment:
+      S3_FORCE_PATH_STYLE: "true"
+    volumes:
+      - .:/repo
+      - bun-cache:/root/.bun
+      - node-modules:/repo/node_modules
+    depends_on:
+      - db
+      - object-storage
+  db:
+    image: postgres:18.4-alpine3.23
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: app
+    volumes:
+      - postgres-data:/var/lib/postgresql
+
+  object-storage:
+    image: rustfs/rustfs:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_REGION: jp-north-1
+      RUSTFS_ACCESS_KEY: dev_access_key
+      RUSTFS_SECRET_KEY: dev_secret_access_key
+    volumes:
+      - object-storage-data:/data
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:9000/health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  create-bucket:
+    image: amazon/aws-cli:latest
+    depends_on:
+      object-storage:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: dev_access_key
+      AWS_SECRET_ACCESS_KEY: dev_secret_access_key
+      AWS_DEFAULT_REGION: jp-north-1
+    entrypoint: >
+      /bin/sh -c " aws --endpoint-url http://object-storage:9000 s3 mb s3://local-bucket || true "
+    profiles:
+      - setup
+
+volumes:
+  postgres-data:
+  object-storage-data:
+  bun-cache:
+  node-modules:
