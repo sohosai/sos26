@@ -328,7 +328,7 @@ async function performMultipartUpload(params: {
 	const { file, partUrls, signal, onPartProgress } = params;
 
 	// 同時アップロード数を制限（メモリ・帯域の観点から）
-	const CONCURRENCY = 3;
+	const CONCURRENCY = 5;
 	let index = 0;
 
 	async function worker() {
