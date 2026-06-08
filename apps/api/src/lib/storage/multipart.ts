@@ -9,7 +9,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "../env";
 import { getStorageClient } from "./client";
 
-const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB – S3 multipart の最小パートサイズ
+const CHUNK_SIZE = 16 * 1024 * 1024; // 16MB – S3 multipart の最小パートサイズ
 
 /**
  * チャンクサイズ（bytes）を返す。
@@ -20,7 +20,7 @@ export function getChunkSize(): number {
 
 /**
  * マルチパートアップロードを使うべきか判定する。
- * 5MB 超のファイルのみマルチパートを使う。
+ * 16MB 超のファイルのみマルチパートを使う。
  */
 export function shouldUseMultipart(fileSize: number): boolean {
 	return fileSize > CHUNK_SIZE;
