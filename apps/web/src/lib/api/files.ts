@@ -20,6 +20,7 @@ import {
 	requestUploadUrlEndpoint,
 	shouldUseMultipart,
 } from "@sos26/shared";
+import { toast } from "sonner";
 import { env } from "../env";
 import { callBodyApi, callGetApi, callNoBodyApi } from "./core";
 
@@ -324,12 +325,24 @@ async function performMultipartUpload(params: {
 	partUrls: string[];
 	signal?: AbortSignal;
 	onPartProgress?: (partNumber: number, loaded: number, total: number) => void;
+	onUploadProgress?: (ratio: number) => void;
 }): Promise<void> {
-	const { file, partUrls, signal, onPartProgress } = params;
+	const { file, partUrls, signal, onPartProgress, onUploadProgress } = params;
 
 	// 同時アップロード数を制限（メモリ・帯域の観点から）
 	const CONCURRENCY = 5;
 	let index = 0;
+
+	// パートごとの送信済みバイト数で全体進捗を計算
+	const partProgresses = new Array<number>(partUrls.length).fill(0);
+
+	function reportProgress(partNumber: number, loaded: number) {
+		partProgresses[partNumber - 1] = loaded;
+		if (onUploadProgress) {
+			const totalLoaded = partProgresses.reduce((a, b) => a + b, 0);
+			onUploadProgress(totalLoaded / file.size);
+		}
+	}
 
 	async function worker() {
 		while (index < partUrls.length) {
@@ -342,7 +355,14 @@ async function performMultipartUpload(params: {
 
 			await uploadPart(url, chunk, file.type, i + 1, {
 				signal,
-				onPartProgress,
+				onPartProgress: onPartProgress
+					? (pn, loaded, total) => {
+							onPartProgress(pn, loaded, total);
+							reportProgress(pn, loaded);
+						}
+					: (pn, loaded) => {
+							reportProgress(pn, loaded);
+						},
 			});
 		}
 	}
@@ -388,74 +408,100 @@ export async function uploadFile(
 		);
 	}
 
-	// 1. ファイルサイズに応じてシングル / マルチパートを判定
-	if (shouldUseMultipart(file.size)) {
-		// マルチパート
-		const partCount = Math.ceil(file.size / MULTIPART_CHUNK_SIZE);
+	const toastId = toast.loading(`「${file.name}」をアップロード中…`, {
+		duration: Number.POSITIVE_INFINITY,
+	});
 
-		const { fileId, uploadId, partUrls } = await initiateMultipartUpload({
+	// 進捗をパーセント表示するヘルパー
+	function formatPercent(ratio: number): string {
+		return `${Math.min(100, Math.round(ratio * 100))}%`;
+	}
+
+	function updateToastPercent(ratio: number) {
+		toast.loading(`「${file.name}」をアップロード中… ${formatPercent(ratio)}`, {
+			id: toastId,
+			duration: Number.POSITIVE_INFINITY,
+		});
+	}
+
+	try {
+		// 1. ファイルサイズに応じてシングル / マルチパートを判定
+		if (shouldUseMultipart(file.size)) {
+			// マルチパート
+			const partCount = Math.ceil(file.size / MULTIPART_CHUNK_SIZE);
+
+			const { fileId, uploadId, partUrls } = await initiateMultipartUpload({
+				fileName: file.name,
+				mimeType: file.type,
+				size: file.size,
+				isPublic: options?.isPublic,
+				partCount,
+			});
+
+			try {
+				await performMultipartUpload({
+					file,
+					partUrls,
+					signal: options?.signal,
+					onPartProgress: options?.onPartProgress,
+					onUploadProgress: ratio => {
+						updateToastPercent(ratio);
+						options?.onUploadProgress?.(ratio);
+					},
+				});
+			} catch (error) {
+				// アップロード失敗時はマルチパートを中止
+				await abortMultipartUpload({ fileId, uploadId }).catch(() => {
+					// 中止も失敗しても無視
+				});
+				throw error;
+			}
+
+			// サーバー側で parts を自動収集して完了
+			const result = await completeMultipartUpload({ fileId, uploadId });
+			toast.success(`「${file.name}」のアップロードが完了しました`, {
+				id: toastId,
+				duration: 3000,
+			});
+			return result;
+		}
+
+		// シングルアップロード
+		const { fileId, uploadUrl } = await requestUploadUrl({
 			fileName: file.name,
 			mimeType: file.type,
 			size: file.size,
 			isPublic: options?.isPublic,
-			partCount,
 		});
 
-		// 全体進捗の集計
-		const partProgresses = new Array<number>(partCount).fill(0);
-		const onPartProgress = options?.onPartProgress;
-		const onUploadProgress = options?.onUploadProgress;
+		updateToastPercent(0.5); // 推定進捗（URL 取得まで完了）
 
-		const wrappedOnPartProgress = onPartProgress
-			? (partNumber: number, loaded: number, total: number) => {
-					partProgresses[partNumber - 1] = loaded;
-					onPartProgress(partNumber, loaded, total);
-					if (onUploadProgress) {
-						const totalLoaded = partProgresses.reduce((a, b) => a + b, 0);
-						onUploadProgress(totalLoaded / file.size);
-					}
-				}
-			: undefined;
+		const res = await fetch(uploadUrl, {
+			method: "PUT",
+			body: file,
+			headers: { "Content-Type": file.type },
+			signal: options?.signal,
+		});
 
-		try {
-			await performMultipartUpload({
-				file,
-				partUrls,
-				signal: options?.signal,
-				onPartProgress: wrappedOnPartProgress,
-			});
-		} catch (error) {
-			// アップロード失敗時はマルチパートを中止
-			await abortMultipartUpload({ fileId, uploadId }).catch(() => {
-				// 中止も失敗しても無視
-			});
-			throw error;
+		if (!res.ok) {
+			throw new Error(
+				`S3 アップロードに失敗しました: ${res.status} ${res.statusText}`
+			);
 		}
 
-		// サーバー側で parts を自動収集して完了
-		return completeMultipartUpload({ fileId, uploadId });
+		const result = await confirmUpload(fileId);
+		toast.success(`「${file.name}」のアップロードが完了しました`, {
+			id: toastId,
+			duration: 3000,
+		});
+		return result;
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : "アップロードに失敗しました";
+		toast.error(`「${file.name}」の${message}`, {
+			id: toastId,
+			duration: 5000,
+		});
+		throw error;
 	}
-
-	// シングルアップロード
-	const { fileId, uploadUrl } = await requestUploadUrl({
-		fileName: file.name,
-		mimeType: file.type,
-		size: file.size,
-		isPublic: options?.isPublic,
-	});
-
-	const res = await fetch(uploadUrl, {
-		method: "PUT",
-		body: file,
-		headers: { "Content-Type": file.type },
-		signal: options?.signal,
-	});
-
-	if (!res.ok) {
-		throw new Error(
-			`S3 アップロードに失敗しました: ${res.status} ${res.statusText}`
-		);
-	}
-
-	return confirmUpload(fileId);
 }
