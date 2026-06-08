@@ -1,15 +1,21 @@
 import { z } from "zod";
 import {
+	abortMultipartUploadRequestSchema,
+	abortMultipartUploadResponseSchema,
+	completeMultipartUploadRequestSchema,
+	completeMultipartUploadResponseSchema,
 	confirmUploadResponseSchema,
 	deleteFileResponseSchema,
 	fileTokenResponseSchema,
+	initiateMultipartUploadRequestSchema,
+	initiateMultipartUploadResponseSchema,
 	listFilesResponseSchema,
 	requestUploadUrlRequestSchema,
 	requestUploadUrlResponseSchema,
 } from "../schemas/file";
 import type { BodyEndpoint, GetEndpoint, NoBodyEndpoint } from "./types";
 
-/** パスパラメータ: ファイルID */
+/** ファイルIDパスパラメータ */
 export const fileIdPathParamsSchema = z.object({
 	id: z.string(),
 });
@@ -36,6 +42,66 @@ export const requestUploadUrlEndpoint: BodyEndpoint<
 	query: undefined,
 	request: requestUploadUrlRequestSchema,
 	response: requestUploadUrlResponseSchema,
+} as const;
+
+/**
+ * POST /files/multipart/initiate
+ * マルチパートアップロード開始
+ */
+export const initiateMultipartUploadEndpoint: BodyEndpoint<
+	"POST",
+	"/files/multipart/initiate",
+	undefined,
+	undefined,
+	typeof initiateMultipartUploadRequestSchema,
+	typeof initiateMultipartUploadResponseSchema
+> = {
+	method: "POST",
+	path: "/files/multipart/initiate",
+	pathParams: undefined,
+	query: undefined,
+	request: initiateMultipartUploadRequestSchema,
+	response: initiateMultipartUploadResponseSchema,
+} as const;
+
+/**
+ * POST /files/multipart/complete
+ * マルチパートアップロード完了
+ */
+export const completeMultipartUploadEndpoint: BodyEndpoint<
+	"POST",
+	"/files/multipart/complete",
+	undefined,
+	undefined,
+	typeof completeMultipartUploadRequestSchema,
+	typeof completeMultipartUploadResponseSchema
+> = {
+	method: "POST",
+	path: "/files/multipart/complete",
+	pathParams: undefined,
+	query: undefined,
+	request: completeMultipartUploadRequestSchema,
+	response: completeMultipartUploadResponseSchema,
+} as const;
+
+/**
+ * POST /files/multipart/abort
+ * マルチパートアップロード中止
+ */
+export const abortMultipartUploadEndpoint: BodyEndpoint<
+	"POST",
+	"/files/multipart/abort",
+	undefined,
+	undefined,
+	typeof abortMultipartUploadRequestSchema,
+	typeof abortMultipartUploadResponseSchema
+> = {
+	method: "POST",
+	path: "/files/multipart/abort",
+	pathParams: undefined,
+	query: undefined,
+	request: abortMultipartUploadRequestSchema,
+	response: abortMultipartUploadResponseSchema,
 } as const;
 
 /**

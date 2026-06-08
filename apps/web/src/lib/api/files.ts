@@ -5,19 +5,24 @@ import type {
 	ListFilesResponse,
 } from "@sos26/shared";
 import {
+	abortMultipartUploadEndpoint,
 	allowedFileExtensions,
 	allowedMimeTypes,
+	completeMultipartUploadEndpoint,
 	confirmUploadEndpoint,
 	deleteFileEndpoint,
 	getFileTokenEndpoint,
+	initiateMultipartUploadEndpoint,
 	listFilesEndpoint,
+	MULTIPART_CHUNK_SIZE,
 	requestUploadUrlEndpoint,
+	shouldUseMultipart,
 } from "@sos26/shared";
 import { env } from "../env";
 import { callBodyApi, callGetApi, callNoBodyApi } from "./core";
 
 /**
- * Presigned PUT URL を要求する
+ * Presigned PUT URL を要求する（シングルアップロード用）
  */
 export async function requestUploadUrl(params: {
 	fileName: string;
@@ -34,7 +39,52 @@ export async function requestUploadUrl(params: {
 }
 
 /**
- * アップロード完了を通知する
+ * マルチパートアップロードを開始する
+ */
+export async function initiateMultipartUpload(params: {
+	fileName: string;
+	mimeType: string;
+	size: number;
+	isPublic?: boolean;
+	partCount: number;
+}) {
+	return callBodyApi(initiateMultipartUploadEndpoint, {
+		fileName: params.fileName,
+		mimeType: params.mimeType as AllowedMimeType,
+		size: params.size,
+		isPublic: params.isPublic ?? false,
+		partCount: params.partCount,
+	});
+}
+
+/**
+ * マルチパートアップロードを完了する
+ */
+export async function completeMultipartUpload(params: {
+	fileId: string;
+	uploadId: string;
+}) {
+	return callBodyApi(completeMultipartUploadEndpoint, {
+		fileId: params.fileId,
+		uploadId: params.uploadId,
+	});
+}
+
+/**
+ * マルチパートアップロードを中止する
+ */
+export async function abortMultipartUpload(params: {
+	fileId: string;
+	uploadId: string;
+}) {
+	return callBodyApi(abortMultipartUploadEndpoint, {
+		fileId: params.fileId,
+		uploadId: params.uploadId,
+	});
+}
+
+/**
+ * アップロード完了を通知する（シングルアップロード用）
  */
 export async function confirmUpload(
 	fileId: string
@@ -128,15 +178,141 @@ export async function downloadFile(
 }
 
 /**
- * 3ステップのアップロードフローをまとめたヘルパー
+ * 1つのパートを S3 に PUT アップロードする（ETag は取得しない）。
+ */
+async function uploadPart(
+	url: string,
+	chunk: Blob,
+	mimeType: string,
+	partNumber: number,
+	options?: {
+		signal?: AbortSignal;
+		onPartProgress?: (
+			partNumber: number,
+			loaded: number,
+			total: number
+		) => void;
+	}
+): Promise<void> {
+	if (!options?.onPartProgress) {
+		const res = await fetch(url, {
+			method: "PUT",
+			body: chunk,
+			headers: { "Content-Type": mimeType },
+			signal: options?.signal,
+		});
+		if (!res.ok) {
+			throw new Error(`S3 part upload failed: ${res.status} ${res.statusText}`);
+		}
+		return;
+	}
+
+	// XMLHttpRequest で upload progress を取得
+	return new Promise((resolve, reject) => {
+		const xhr = new XMLHttpRequest();
+		xhr.open("PUT", url);
+		xhr.setRequestHeader("Content-Type", mimeType);
+
+		if (options?.signal) {
+			options.signal.addEventListener("abort", () => {
+				xhr.abort();
+				reject(new Error("Upload aborted"));
+			});
+		}
+
+		xhr.upload.addEventListener("progress", event => {
+			if (event.lengthComputable) {
+				options.onPartProgress?.(partNumber, event.loaded, event.total);
+			}
+		});
+
+		xhr.addEventListener("load", () => {
+			if (xhr.status >= 200 && xhr.status < 300) {
+				resolve();
+			} else {
+				reject(
+					new Error(`S3 part upload failed: ${xhr.status} ${xhr.statusText}`)
+				);
+			}
+		});
+
+		xhr.addEventListener("error", () => {
+			reject(new Error("S3 part upload failed: network error"));
+		});
+
+		xhr.addEventListener("abort", () => {
+			reject(new Error("Upload aborted"));
+		});
+
+		xhr.send(chunk);
+	});
+}
+
+/**
+ * マルチパート（分割）アップロードを実行する。
+ * ETag は一切取得せず、パートを S3 に送るだけ。
+ */
+async function performMultipartUpload(params: {
+	file: File;
+	partUrls: string[];
+	signal?: AbortSignal;
+	onPartProgress?: (partNumber: number, loaded: number, total: number) => void;
+}): Promise<void> {
+	const { file, partUrls, signal, onPartProgress } = params;
+
+	// 同時アップロード数を制限（メモリ・帯域の観点から）
+	const CONCURRENCY = 3;
+	let index = 0;
+
+	async function worker() {
+		while (index < partUrls.length) {
+			const i = index++;
+			const url = partUrls[i];
+			if (!url) continue;
+			const start = i * MULTIPART_CHUNK_SIZE;
+			const end = Math.min(start + MULTIPART_CHUNK_SIZE, file.size);
+			const chunk = file.slice(start, end);
+
+			await uploadPart(url, chunk, file.type, i + 1, {
+				signal,
+				onPartProgress,
+			});
+		}
+	}
+
+	const workers = Array.from(
+		{ length: Math.min(CONCURRENCY, partUrls.length) },
+		() => worker()
+	);
+	await Promise.all(workers);
+}
+
+/**
+ * アップロード進捗コールバックの型
+ */
+export interface UploadProgressHandlers {
+	/** アップロード進捗（0~1） */
+	onUploadProgress?: (ratio: number) => void;
+	/** 各パートの進捗（詳細） */
+	onPartProgress?: (partNumber: number, loaded: number, total: number) => void;
+}
+
+/**
+ * ファイルをアップロードする。
  *
- * 1. API に Presigned URL を要求
- * 2. S3 に直接 PUT（ky 不使用 - 認証ヘッダ不要のため）
- * 3. API にアップロード完了を通知
+ * ファイルサイズが 5MB を超える場合は S3 マルチパートアップロードを使用し、
+ * 複数のパートを並列で送信します。
+ *
+ * @param file     アップロードするファイル
+ * @param options  アップロードオプション
+ * @returns        アップロードされたファイル情報
  */
 export async function uploadFile(
 	file: File,
-	options?: { isPublic?: boolean }
+	options?: {
+		isPublic?: boolean;
+		signal?: AbortSignal;
+	} & UploadProgressHandlers
 ): Promise<ConfirmUploadResponse> {
 	// 0. クライアントサイドで MIME タイプをチェック
 	if (!allowedMimeTypes.includes(file.type as AllowedMimeType)) {
@@ -145,7 +321,55 @@ export async function uploadFile(
 		);
 	}
 
-	// 1. Presigned URL を要求
+	// 1. ファイルサイズに応じてシングル / マルチパートを判定
+	if (shouldUseMultipart(file.size)) {
+		// マルチパート
+		const partCount = Math.ceil(file.size / MULTIPART_CHUNK_SIZE);
+
+		const { fileId, uploadId, partUrls } = await initiateMultipartUpload({
+			fileName: file.name,
+			mimeType: file.type,
+			size: file.size,
+			isPublic: options?.isPublic,
+			partCount,
+		});
+
+		// 全体進捗の集計
+		const partProgresses = new Array<number>(partCount).fill(0);
+		const onPartProgress = options?.onPartProgress;
+		const onUploadProgress = options?.onUploadProgress;
+
+		const wrappedOnPartProgress = onPartProgress
+			? (partNumber: number, loaded: number, total: number) => {
+					partProgresses[partNumber - 1] = loaded;
+					onPartProgress(partNumber, loaded, total);
+					if (onUploadProgress) {
+						const totalLoaded = partProgresses.reduce((a, b) => a + b, 0);
+						onUploadProgress(totalLoaded / file.size);
+					}
+				}
+			: undefined;
+
+		try {
+			await performMultipartUpload({
+				file,
+				partUrls,
+				signal: options?.signal,
+				onPartProgress: wrappedOnPartProgress,
+			});
+		} catch (error) {
+			// アップロード失敗時はマルチパートを中止
+			await abortMultipartUpload({ fileId, uploadId }).catch(() => {
+				// 中止も失敗しても無視
+			});
+			throw error;
+		}
+
+		// サーバー側で parts を自動収集して完了
+		return completeMultipartUpload({ fileId, uploadId });
+	}
+
+	// シングルアップロード
 	const { fileId, uploadUrl } = await requestUploadUrl({
 		fileName: file.name,
 		mimeType: file.type,
@@ -153,21 +377,18 @@ export async function uploadFile(
 		isPublic: options?.isPublic,
 	});
 
-	// 2. S3 に直接 PUT
-	const uploadResponse = await fetch(uploadUrl, {
+	const res = await fetch(uploadUrl, {
 		method: "PUT",
 		body: file,
-		headers: {
-			"Content-Type": file.type,
-		},
+		headers: { "Content-Type": file.type },
+		signal: options?.signal,
 	});
 
-	if (!uploadResponse.ok) {
+	if (!res.ok) {
 		throw new Error(
-			`S3 アップロードに失敗しました: ${uploadResponse.status} ${uploadResponse.statusText}`
+			`S3 アップロードに失敗しました: ${res.status} ${res.statusText}`
 		);
 	}
 
-	// 3. アップロード完了を通知
 	return confirmUpload(fileId);
 }

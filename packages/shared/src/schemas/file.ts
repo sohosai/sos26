@@ -131,6 +131,74 @@ export const confirmUploadResponseSchema = z.object({
 export type ConfirmUploadResponse = z.infer<typeof confirmUploadResponseSchema>;
 
 /**
+ * マルチパートアップロード開始リクエスト
+ */
+export const initiateMultipartUploadRequestSchema = z.object({
+	fileName: z.string().min(1),
+	mimeType: mimeTypeSchema,
+	size: z.number().int().positive(),
+	isPublic: z.boolean().default(false),
+	partCount: z.number().int().positive(),
+});
+export type InitiateMultipartUploadRequest = z.infer<
+	typeof initiateMultipartUploadRequestSchema
+>;
+
+/**
+ * マルチパートアップロード開始レスポンス
+ */
+export const initiateMultipartUploadResponseSchema = z.object({
+	fileId: z.string(),
+	uploadId: z.string(),
+	partUrls: z.array(z.string()),
+	key: z.string(),
+});
+export type InitiateMultipartUploadResponse = z.infer<
+	typeof initiateMultipartUploadResponseSchema
+>;
+
+/**
+ * マルチパートアップロード完了リクエスト
+ */
+export const completeMultipartUploadRequestSchema = z.object({
+	fileId: z.string(),
+	uploadId: z.string(),
+});
+export type CompleteMultipartUploadRequest = z.infer<
+	typeof completeMultipartUploadRequestSchema
+>;
+
+/**
+ * マルチパートアップロード完了レスポンス
+ */
+export const completeMultipartUploadResponseSchema =
+	confirmUploadResponseSchema;
+export type CompleteMultipartUploadResponse = z.infer<
+	typeof completeMultipartUploadResponseSchema
+>;
+
+/**
+ * マルチパートアップロード中止リクエスト
+ */
+export const abortMultipartUploadRequestSchema = z.object({
+	fileId: z.string(),
+	uploadId: z.string(),
+});
+export type AbortMultipartUploadRequest = z.infer<
+	typeof abortMultipartUploadRequestSchema
+>;
+
+/**
+ * マルチパートアップロード中止レスポンス
+ */
+export const abortMultipartUploadResponseSchema = z.object({
+	success: z.literal(true),
+});
+export type AbortMultipartUploadResponse = z.infer<
+	typeof abortMultipartUploadResponseSchema
+>;
+
+/**
  * ファイル一覧応答
  */
 export const listFilesResponseSchema = z.object({
