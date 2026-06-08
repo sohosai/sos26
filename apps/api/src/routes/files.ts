@@ -20,6 +20,7 @@ import {
 	shouldUseMultipart,
 } from "../lib/storage/multipart";
 import {
+	generateDownloadUrl,
 	generateUploadUrl,
 	getObject,
 	objectExists,
@@ -284,6 +285,34 @@ fileRoute.get("/:id/token", requireAuth, async c => {
 	).toISOString();
 
 	return c.json({ token, expiresAt });
+});
+
+/**
+ * POST /files/:id/download-url
+ * S3 直ダウンロード用 Presigned GET URL を発行する。
+ */
+fileRoute.post("/:id/download-url", requireAuth, async c => {
+	const fileId = c.req.param("id");
+	const user = c.get("user");
+
+	const file = await prisma.file.findFirst({
+		where: { id: fileId, status: "CONFIRMED", deletedAt: null },
+	});
+
+	if (!file) {
+		throw Errors.notFound("ファイルが見つかりません");
+	}
+
+	// アクセス制御: アップローダー本人 or 登録済みチェッカーで許可
+	if (!file.isPublic && file.uploadedById !== user.id) {
+		const hasAccess = await canAccessFile(file.id, user);
+		if (!hasAccess) {
+			throw Errors.forbidden("このファイルにアクセスする権限がありません");
+		}
+	}
+
+	const downloadUrl = await generateDownloadUrl(file.key, file.fileName);
+	return c.json({ downloadUrl });
 });
 
 /**

@@ -3,6 +3,7 @@ import type {
 	ConfirmUploadResponse,
 	FileTokenResponse,
 	ListFilesResponse,
+	RequestDownloadUrlResponse,
 } from "@sos26/shared";
 import {
 	abortMultipartUploadEndpoint,
@@ -15,6 +16,7 @@ import {
 	initiateMultipartUploadEndpoint,
 	listFilesEndpoint,
 	MULTIPART_CHUNK_SIZE,
+	requestDownloadUrlEndpoint,
 	requestUploadUrlEndpoint,
 	shouldUseMultipart,
 } from "@sos26/shared";
@@ -109,6 +111,17 @@ export async function deleteFile(fileId: string) {
 }
 
 /**
+ * S3 直ダウンロード用 Presigned URL を要求する
+ */
+export async function requestDownloadUrl(
+	fileId: string
+): Promise<RequestDownloadUrlResponse> {
+	return callNoBodyApi(requestDownloadUrlEndpoint, {
+		pathParams: { id: fileId },
+	});
+}
+
+/**
  * ファイルコンテンツ URL を取得する
  */
 export function getFileContentUrl(fileId: string): string {
@@ -130,8 +143,56 @@ export async function getAuthenticatedFileUrl(fileId: string): Promise<string> {
 	return `${env.VITE_API_BASE_URL}/files/${fileId}/content?token=${encodeURIComponent(token)}`;
 }
 
+// ── プレビュー Blob URL キャッシュ ──────────────────────────
+
+/** ファイルID → { Blob, 参照カウント } のキャッシュ */
+const previewBlobCache = new Map<
+	string,
+	{ blob: Blob; fileName: string; mimeType: string; refCount: number }
+>();
+
+function getCachedBlob(key: {
+	fileId: string;
+	fileName: string;
+	mimeType: string;
+}) {
+	const entry = previewBlobCache.get(key.fileId);
+	if (
+		entry &&
+		entry.fileName === key.fileName &&
+		entry.mimeType === key.mimeType
+	) {
+		entry.refCount++;
+		return entry.blob;
+	}
+	return undefined;
+}
+
+function setCachedBlob(
+	key: { fileId: string; fileName: string; mimeType: string },
+	blob: Blob
+) {
+	previewBlobCache.set(key.fileId, {
+		blob,
+		fileName: key.fileName,
+		mimeType: key.mimeType,
+		refCount: 1,
+	});
+}
+
+function releaseCachedBlob(fileId: string) {
+	const entry = previewBlobCache.get(fileId);
+	if (entry) {
+		entry.refCount--;
+		if (entry.refCount <= 0) {
+			previewBlobCache.delete(fileId);
+		}
+	}
+}
+
 /**
- * ファイルを取得して File オブジェクトとして返す
+ * ファイルを取得して File オブジェクトとして返す。
+ * ダウンロードした Blob はキャッシュし、2 回目以降の取得を高速化する。
  */
 export async function fetchFile(
 	fileId: string,
@@ -139,6 +200,11 @@ export async function fetchFile(
 	mimeType: string,
 	isPublic: boolean
 ): Promise<File> {
+	const cached = getCachedBlob({ fileId, fileName, mimeType });
+	if (cached) {
+		return new File([cached], fileName, { type: mimeType });
+	}
+
 	const url = isPublic
 		? getFileContentUrl(fileId)
 		: await getAuthenticatedFileUrl(fileId);
@@ -147,34 +213,35 @@ export async function fetchFile(
 		throw new Error(`ファイルの取得に失敗しました (${res.status})`);
 	}
 	const blob = await res.blob();
+	setCachedBlob({ fileId, fileName, mimeType }, blob);
 	return new File([blob], fileName, { type: mimeType });
 }
 
 /**
- * ファイルをダウンロードする
+ * プレビュー用に取得したファイルをキャッシュから解放する。
+ * FilePreviewDialog の onOpenChange で open === false の際に呼ぶ。
+ */
+export function releasePreviewFile(fileId: string) {
+	releaseCachedBlob(fileId);
+}
+
+/**
+ * S3 直ダウンロード URL を使ってファイルをダウンロードする。
  */
 export async function downloadFile(
 	fileId: string,
 	fileName: string,
-	isPublic: boolean,
 	downloadFileName?: string
 ): Promise<void> {
-	const url = isPublic
-		? getFileContentUrl(fileId)
-		: await getAuthenticatedFileUrl(fileId);
-	const res = await fetch(url);
-	if (!res.ok) {
-		throw new Error(`ファイルの取得に失敗しました (${res.status})`);
-	}
-	const blob = await res.blob();
-	const objectUrl = URL.createObjectURL(blob);
+	const { downloadUrl } = await requestDownloadUrl(fileId);
+	// ブラウザを S3 の Presigned URL に誘導して直接ダウンロード
 	const a = document.createElement("a");
-	a.href = objectUrl;
+	a.href = downloadUrl;
 	a.download = downloadFileName ?? fileName;
+	a.style.display = "none";
 	document.body.appendChild(a);
 	a.click();
 	document.body.removeChild(a);
-	URL.revokeObjectURL(objectUrl);
 }
 
 /**

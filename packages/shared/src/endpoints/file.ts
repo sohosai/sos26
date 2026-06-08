@@ -10,10 +10,16 @@ import {
 	initiateMultipartUploadRequestSchema,
 	initiateMultipartUploadResponseSchema,
 	listFilesResponseSchema,
+	requestDownloadUrlResponseSchema,
 	requestUploadUrlRequestSchema,
 	requestUploadUrlResponseSchema,
 } from "../schemas/file";
-import type { BodyEndpoint, GetEndpoint, NoBodyEndpoint } from "./types";
+import type {
+	BodyEndpoint,
+	Endpoint,
+	GetEndpoint,
+	NoBodyEndpoint,
+} from "./types";
 
 /** ファイルIDパスパラメータ */
 export const fileIdPathParamsSchema = z.object({
@@ -159,6 +165,26 @@ export const deleteFileEndpoint: NoBodyEndpoint<
 	query: undefined,
 	request: undefined,
 	response: deleteFileResponseSchema,
+} as const;
+
+/**
+ * POST /files/:id/download-url
+ * S3直ダウンロード用のPresigned URL発行
+ */
+export const requestDownloadUrlEndpoint: Endpoint<
+	"POST",
+	"/files/:id/download-url",
+	typeof fileIdPathParamsSchema,
+	undefined,
+	undefined,
+	typeof requestDownloadUrlResponseSchema
+> = {
+	method: "POST",
+	path: "/files/:id/download-url",
+	pathParams: fileIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: requestDownloadUrlResponseSchema,
 } as const;
 
 /**

@@ -13,15 +13,20 @@ import PdfViewer from "./Pdfviewer";
 import WordViewer from "./Wordviewer";
 
 interface Props {
-	file: File | null;
+	/** PDF/Word/Excel 用（Blob オブジェクト） */
+	file?: File | null;
+	/** 動画/画像用（S3 Presigned URL などストリーミング URL） */
+	streamingUrl?: string | null;
+	/** ファイル名（UI 表示用） */
+	fileName?: string;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onDownload?: () => void;
 	loading?: boolean;
 }
 
-function getExt(file: File) {
-	return file.name.split(".").pop()?.toLowerCase() ?? "";
+function getExt(name: string) {
+	return name.split(".").pop()?.toLowerCase() ?? "";
 }
 
 const ZOOM_STEP = 0.25;
@@ -33,41 +38,38 @@ function isZoomable(ext: string) {
 	return ext === "pdf";
 }
 
-function Viewer({ file, scale }: { file: File; scale: number }) {
-	const ext = getExt(file);
-	const isImage = ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext);
-	const isPreviewableMedia = isImage || ext === "mp4";
-	const [mediaUrl, setMediaUrl] = useState<string | null>(null);
-	useEffect(() => {
-		if (!isPreviewableMedia) {
-			setMediaUrl(null);
-			return;
-		}
+function isStreamable(ext: string) {
+	return ["mp4", "png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext);
+}
 
-		const objectUrl = URL.createObjectURL(file);
-		setMediaUrl(objectUrl);
+function StreamViewer({
+	streamingUrl,
+	fileName,
+}: {
+	streamingUrl: string;
+	fileName: string;
+}) {
+	const ext = getExt(fileName);
+	if (ext === "mp4")
+		return (
+			// biome-ignore lint/a11y/useMediaCaption: ユーザーアップロード動画のプレビュー
+			<video
+				src={streamingUrl}
+				controls
+				className={styles.video}
+				preload="metadata"
+			/>
+		);
+	return <img src={streamingUrl} className={styles.image} alt={fileName} />;
+}
 
-		return () => {
-			URL.revokeObjectURL(objectUrl);
-		};
-	}, [file, isPreviewableMedia]);
+function BlobViewer({ file, scale }: { file: File; scale: number }) {
+	const ext = getExt(file.name);
 
 	if (ext === "pdf")
 		return <PdfViewer file={file} scale={scale * PDF_BASE_SCALE} />;
 	if (ext === "xlsx" || ext === "xls") return <ExcelViewer file={file} />;
-
 	if (ext === "docx") return <WordViewer file={file} />;
-	if (ext === "mp4" && mediaUrl)
-		// biome-ignore lint/a11y/useMediaCaption: ユーザーアップロード動画のプレビュー（キャプションファイルなし）
-		return <video src={mediaUrl} controls className={styles.video} />;
-	if (ext === "mov")
-		return (
-			<div className={styles.unsupported}>
-				<Text size="2">この形式（MOV）はプレビューできません</Text>
-			</div>
-		);
-	if (isImage && mediaUrl)
-		return <img src={mediaUrl} className={styles.image} alt={file.name} />;
 
 	return (
 		<div className={styles.unsupported}>
@@ -82,29 +84,34 @@ function Viewer({ file, scale }: { file: File; scale: number }) {
 
 export default function FilePreviewDialog({
 	file,
+	streamingUrl,
+	fileName,
 	open,
 	onOpenChange,
 	onDownload,
 	loading,
 }: Props) {
 	const [scale, setScale] = useState(1.0);
-	const showZoom = file ? isZoomable(getExt(file)) : false;
-	const fileKey = file ? `${file.name}-${file.size}` : "";
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: reset scale when file changes
+	const displayName = fileName ?? file?.name ?? "";
+	const ext = getExt(displayName);
+	const showZoom = isZoomable(ext);
+	const isStream = isStreamable(ext);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: reset zoom on file change
 	useEffect(() => {
 		setScale(1.0);
-	}, [fileKey]);
+	}, [displayName]);
 
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
 			<Dialog.Content className={styles.content}>
 				<VisuallyHidden>
-					<Dialog.Title>{file?.name ?? ""}</Dialog.Title>
+					<Dialog.Title>{displayName}</Dialog.Title>
 				</VisuallyHidden>
 				<div className={styles.header}>
 					<Text size="3" weight="medium" className={styles.title}>
-						{file?.name ?? ""}
+						{displayName}
 					</Text>
 					<div className={styles.headerActions}>
 						{showZoom && (
@@ -150,12 +157,14 @@ export default function FilePreviewDialog({
 
 				{/* プレビューエリア */}
 				<div className={styles.body}>
-					{loading && !file ? (
+					{loading && !file && !streamingUrl ? (
 						<div className={styles.loading}>
 							<Spinner size="3" />
 						</div>
+					) : isStream && streamingUrl ? (
+						<StreamViewer streamingUrl={streamingUrl} fileName={displayName} />
 					) : file ? (
-						<Viewer key={file.name + file.size} file={file} scale={scale} />
+						<BlobViewer file={file} scale={scale} />
 					) : (
 						<div className={styles.unsupported}>
 							<Text size="2">ファイルを表示できません</Text>

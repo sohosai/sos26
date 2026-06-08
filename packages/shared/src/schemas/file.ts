@@ -199,6 +199,16 @@ export type AbortMultipartUploadResponse = z.infer<
 >;
 
 /**
+ * ダウンロードURL応答
+ */
+export const requestDownloadUrlResponseSchema = z.object({
+	downloadUrl: z.string(),
+});
+export type RequestDownloadUrlResponse = z.infer<
+	typeof requestDownloadUrlResponseSchema
+>;
+
+/**
  * ファイル一覧応答
  */
 export const listFilesResponseSchema = z.object({

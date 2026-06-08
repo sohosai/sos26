@@ -3,7 +3,7 @@ import { IconFileSearch } from "@tabler/icons-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
-import { downloadFile, fetchFile } from "@/lib/api/files";
+import { downloadFile, fetchFile, requestDownloadUrl } from "@/lib/api/files";
 import { formatFileSize } from "@/lib/format";
 import FilePreviewDialog from "./FilePreviewDialog";
 
@@ -15,31 +15,47 @@ type Attachment = {
 	isPublic: boolean;
 };
 
+/** ストリーミング可能な拡張子 */
+function isStreamable(fileName: string): boolean {
+	const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+	return ["mp4", "png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext);
+}
+
 interface Props {
 	attachment: Attachment;
 }
 
 export function AttachmentPreviewButton({ attachment }: Props) {
 	const [file, setFile] = useState<File | null>(null);
+	const [streamingUrl, setStreamingUrl] = useState<string | null>(null);
 	const [open, setOpen] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 
 	const handleClick = async () => {
-		if (file) {
+		// キャッシュ済み（Blob または streamingUrl）
+		if (file || streamingUrl) {
 			setOpen(true);
 			return;
 		}
 
 		setOpen(true);
 		setIsLoading(true);
+
 		try {
-			const fetched = await fetchFile(
-				attachment.fileId,
-				attachment.fileName,
-				attachment.mimeType,
-				attachment.isPublic
-			);
-			setFile(fetched);
+			if (isStreamable(attachment.fileName)) {
+				// 動画・画像: S3 Presigned URL で即ストリーミング
+				const { downloadUrl } = await requestDownloadUrl(attachment.fileId);
+				setStreamingUrl(downloadUrl);
+			} else {
+				// PDF/Word/Excel: Blob にしてから表示
+				const fetched = await fetchFile(
+					attachment.fileId,
+					attachment.fileName,
+					attachment.mimeType,
+					attachment.isPublic
+				);
+				setFile(fetched);
+			}
 		} catch {
 			toast.error("ファイルの取得に失敗しました");
 			setOpen(false);
@@ -49,12 +65,10 @@ export function AttachmentPreviewButton({ attachment }: Props) {
 	};
 
 	const handleDownload = useCallback(() => {
-		downloadFile(
-			attachment.fileId,
-			attachment.fileName,
-			attachment.isPublic
-		).catch(() => toast.error("ファイルのダウンロードに失敗しました"));
-	}, [attachment.fileId, attachment.fileName, attachment.isPublic]);
+		downloadFile(attachment.fileId, attachment.fileName).catch(() =>
+			toast.error("ファイルのダウンロードに失敗しました")
+		);
+	}, [attachment.fileId, attachment.fileName]);
 
 	return (
 		<>
@@ -72,6 +86,8 @@ export function AttachmentPreviewButton({ attachment }: Props) {
 			</Button>
 			<FilePreviewDialog
 				file={file}
+				streamingUrl={streamingUrl}
+				fileName={attachment.fileName}
 				open={open}
 				onOpenChange={setOpen}
 				onDownload={handleDownload}
