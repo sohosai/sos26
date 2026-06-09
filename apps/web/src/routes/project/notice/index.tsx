@@ -303,7 +303,7 @@ function RouteComponent() {
 
 			<NoticeDetailDialog
 				noticeId={selectedNotice?.id ?? null}
-				projectId={selectedNotice?.projectId ?? ""}
+				projectId={selectedNotice?.projectId ?? null}
 				onClose={() => {
 					setSelectedNotice(null);
 					if (search.noticeId) {

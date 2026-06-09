@@ -20,7 +20,7 @@ const getBureauLabel = (bureau: string): string =>
 
 type Props = {
 	noticeId: string | null;
-	projectId: string;
+	projectId: string | null;
 	initialNotice?: GetProjectNoticeResponse["notice"] | null;
 	onClose: () => void;
 	onRead: (noticeId: string) => void;
