@@ -9,7 +9,11 @@ import {
 import { Hono } from "hono";
 import { Errors } from "../../lib/error";
 import { prisma } from "../../lib/prisma";
-import { requireAuth, requireCommitteeMember } from "../../middlewares/auth";
+import {
+	getCommitteeMember,
+	requireAuth,
+	requireCommitteeMember,
+} from "../../middlewares/auth";
 import type { AuthEnv } from "../../types/auth-env";
 import {
 	type ColumnFull,
@@ -252,7 +256,7 @@ async function createPrfItemColumn(
 
 columnsRoute.post("/columns", requireAuth, requireCommitteeMember, async c => {
 	const userId = c.get("user").id;
-	const committeeMember = c.get("committeeMember");
+	const committeeMember = getCommitteeMember(c);
 	const body = await c.req.json().catch(() => ({}));
 	const data = createMastersheetColumnRequestSchema.parse(body);
 
@@ -355,7 +359,7 @@ columnsRoute.patch(
 	requireCommitteeMember,
 	async c => {
 		const userId = c.get("user").id;
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 		const { columnId } = mastersheetColumnIdPathParamsSchema.parse(
 			c.req.param()
 		);
@@ -475,7 +479,7 @@ columnsRoute.get(
 	requireCommitteeMember,
 	async c => {
 		const userId = c.get("user").id;
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 
 		const columns = await prisma.mastersheetColumn.findMany({
 			where: {

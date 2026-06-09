@@ -415,8 +415,10 @@ describe("GET /auth/me", () => {
 		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 			uid: "firebase-uid-123",
 		} as any);
-		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
-		mockPrisma.committeeMember.findFirst.mockResolvedValue(null);
+		mockPrisma.user.findFirst.mockResolvedValue({
+			...mockUser,
+			committeeMember: null,
+		});
 
 		// Act
 		const res = await app.request("/auth/me", {
@@ -432,6 +434,7 @@ describe("GET /auth/me", () => {
 		expect(body.user).toBeDefined();
 		expect(body.user.email).toBe("s1234567@u.tsukuba.ac.jp");
 		expect(body.committeeMember).toBeNull();
+		expect(body.permissions).toEqual([]);
 	});
 
 	it("正常系: ユーザー取得（委員メンバーあり）", async () => {
@@ -448,8 +451,16 @@ describe("GET /auth/me", () => {
 		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 			uid: "firebase-uid-123",
 		} as any);
-		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
-		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
+		mockPrisma.user.findFirst.mockResolvedValue({
+			...mockUser,
+			committeeMember: {
+				...mockCommitteeMember,
+				permissions: [
+					{ permission: "MEMBER_EDIT" },
+					{ permission: "INQUIRY_ADMIN" },
+				],
+			},
+		});
 
 		// Act
 		const res = await app.request("/auth/me", {
@@ -465,6 +476,9 @@ describe("GET /auth/me", () => {
 		expect(body.user).toBeDefined();
 		expect(body.committeeMember).toBeDefined();
 		expect(body.committeeMember.Bureau).toBe("INFO_SYSTEM");
+		expect(body.permissions).toEqual(
+			expect.arrayContaining(["MEMBER_EDIT", "INQUIRY_ADMIN"])
+		);
 	});
 
 	it("認証ヘッダーなしでエラー", async () => {

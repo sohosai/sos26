@@ -9,7 +9,11 @@ import { Hono } from "hono";
 import { requirePermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
-import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
+import {
+	getCommitteeMember,
+	requireAuth,
+	requireCommitteeMember,
+} from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
 const committeeMemberRoute = new Hono<AuthEnv>();
@@ -214,7 +218,7 @@ committeeMemberRoute.get(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 
 		const permissions = await prisma.committeeMemberPermission.findMany({
 			where: { committeeMemberId: committeeMember.id },

@@ -24,7 +24,11 @@ import {
 	withAffiliation,
 	withAffiliationNullable,
 } from "../lib/user-affiliation";
-import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
+import {
+	getCommitteeMember,
+	requireAuth,
+	requireCommitteeMember,
+} from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
 const committeeInquiryRoute = new Hono<AuthEnv>();
@@ -385,7 +389,7 @@ committeeInquiryRoute.post(
 // ─────────────────────────────────────────────────────────────
 committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 	const user = c.get("user");
-	const committeeMember = c.get("committeeMember");
+	const committeeMember = getCommitteeMember(c);
 
 	const admin = await isInquiryAdmin(committeeMember.id);
 
@@ -546,7 +550,7 @@ committeeInquiryRoute.get(
 	requireCommitteeMember,
 	async c => {
 		const user = c.get("user");
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 		const { inquiryId } = inquiryIdPathParamsSchema.parse({
 			inquiryId: c.req.param("inquiryId"),
 		});
@@ -724,7 +728,7 @@ committeeInquiryRoute.post(
 	requireCommitteeMember,
 	async c => {
 		const user = c.get("user");
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 		const { inquiryId } = inquiryIdPathParamsSchema.parse({
 			inquiryId: c.req.param("inquiryId"),
 		});
@@ -1032,7 +1036,7 @@ committeeInquiryRoute.delete(
 	requireCommitteeMember,
 	async c => {
 		const user = c.get("user");
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 		const { inquiryId, commentId } = {
 			inquiryId: c.req.param("inquiryId"),
 			commentId: c.req.param("commentId"),
@@ -1086,7 +1090,7 @@ committeeInquiryRoute.patch(
 	requireCommitteeMember,
 	async c => {
 		const user = c.get("user");
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 		const { inquiryId } = inquiryIdPathParamsSchema.parse({
 			inquiryId: c.req.param("inquiryId"),
 		});
@@ -1134,7 +1138,7 @@ committeeInquiryRoute.patch(
 	requireCommitteeMember,
 	async c => {
 		const user = c.get("user");
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 		const { inquiryId } = inquiryIdPathParamsSchema.parse({
 			inquiryId: c.req.param("inquiryId"),
 		});
@@ -1189,7 +1193,7 @@ committeeInquiryRoute.post(
 	requireCommitteeMember,
 	async c => {
 		const user = c.get("user");
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 		const { inquiryId } = inquiryIdPathParamsSchema.parse({
 			inquiryId: c.req.param("inquiryId"),
 		});
@@ -1301,7 +1305,7 @@ committeeInquiryRoute.delete(
 	requireCommitteeMember,
 	async c => {
 		const user = c.get("user");
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 		const { inquiryId, assigneeId } =
 			committeeInquiryAssigneeIdPathParamsSchema.parse({
 				inquiryId: c.req.param("inquiryId"),
@@ -1374,7 +1378,7 @@ committeeInquiryRoute.put(
 	requireCommitteeMember,
 	async c => {
 		const user = c.get("user");
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 		const { inquiryId } = inquiryIdPathParamsSchema.parse({
 			inquiryId: c.req.param("inquiryId"),
 		});
