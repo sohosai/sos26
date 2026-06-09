@@ -60,6 +60,8 @@ export function ProjectFormAnswerDialog({
 		}
 
 		const ms = deadlineAt.getTime() - now.getTime();
+		// setTimeout は 32bit 符号付き整数で扱われるため、約24.85日を超えると即発火する
+		if (ms > 2_147_483_647) return;
 		const timer = setTimeout(() => setIsDeadlineExpired(true), ms);
 		return () => clearTimeout(timer);
 	}, [fetchState]);
