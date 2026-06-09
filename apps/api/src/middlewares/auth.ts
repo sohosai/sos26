@@ -13,6 +13,8 @@ import type { AuthEnv } from "../types/auth-env";
 /**
  * requireCommitteeMember 通過後の routes で committeeMember を非 null として取得するヘルパ。
  * 万一 null だった場合は forbidden を投げる（防御的）。
+ *
+ * 詳細は docs/apps/api/auth.md の getCommitteeMember セクションを参照。
  */
 export function getCommitteeMember(c: Context<AuthEnv>): CommitteeMember {
 	const cm = c.get("committeeMember");

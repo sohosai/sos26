@@ -343,19 +343,32 @@ Response:
 
 ### GET /auth/me
 
-ログイン後のユーザー取得。
+ログイン後のユーザー取得。委員メンバー情報と権限一覧も同時に返す。
 
 ```
 GET /auth/me
 Authorization: Bearer <Firebase ID Token>
 
 Response:
-  200: { user: User }
+  200: {
+    user: User,
+    committeeMember: CommitteeMember | null,
+    permissions: CommitteePermission[]
+  }
 ```
 
 **処理**
-1. ID Token検証（Firebase Admin SDK）
-2. `User` 取得（`firebaseUid` + `deletedAt: null` で検索）
+
+`requireAuth` ミドルウェアが ID Token を検証したうえで `User` を 1 クエリ（`include` で `committeeMember.permissions` まで一括取得）し、context に格納する。`/auth/me` ハンドラはそれを返すだけで追加 DB クエリは行わない。
+
+1. ID Token 検証（Firebase Admin SDK）
+2. `User` を `firebaseUid` + `deletedAt: null` + `include: { committeeMember: { include: { permissions } } }` で取得
+3. context に `user` / `committeeMember`（null 可） / `permissions`（Set）を格納
+4. レスポンス組み立て（`permissions` は配列で返す。非委員は空配列）
+
+**フロント側の利用**
+
+フロントは `useAuthStore.permissions: Set<CommitteePermission>` として保持し、サイドバー表示制御等で参照する。**旧 `GET /committee/members/me/permissions` をルート遷移ごとに叩く設計は廃止**された。
 
 **エラー**
 - `UNAUTHORIZED`: ID Token が不正

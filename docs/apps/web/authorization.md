@@ -61,6 +61,7 @@
 │  Zustand Store (useAuthStore)                           │
 │    - user, isLoggedIn, isLoading                        │
 │    - committeeMember, isCommitteeMember                 │
+│    - permissions: Set<CommitteePermission> | null       │
 │    - signOut(), refreshUser()                           │
 └───────────────┬─────────────────────┬───────────────────┘
                 │                     │
@@ -69,7 +70,7 @@
           useAuthStore()              await authReady()
 ```
 
-`GET /auth/me` のレスポンスに `committeeMember` が含まれるため、追加の API 呼び出しなしで認可判定が可能。
+`GET /auth/me` のレスポンスに `committeeMember` と `permissions`（保有権限の配列）が含まれるため、**追加の API 呼び出しなしで認可・権限判定が可能**。サイドバーのメニュー表示制御や個別の権限チェック（INQUIRY_ADMIN など）はすべて `useAuthStore.permissions` を参照する。
 
 ### コンポーネントでの使用
 
@@ -78,6 +79,16 @@ import { useAuthStore } from "@/lib/auth";
 
 function MyComponent() {
   const { user, isLoggedIn, signOut } = useAuthStore();
+  // ...
+}
+```
+
+権限ベースで表示制御したい場合は `permissions` Set を参照する:
+
+```tsx
+function SidebarMenu() {
+  const { permissions } = useAuthStore();
+  const hasMemberEdit = permissions?.has("MEMBER_EDIT") ?? false;
   // ...
 }
 ```
