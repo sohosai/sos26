@@ -1,4 +1,4 @@
-import type { CommitteeMember, User } from "@sos26/shared";
+import type { CommitteeMember, CommitteePermission, User } from "@sos26/shared";
 import { ErrorCode } from "@sos26/shared";
 import type { User as FirebaseUser } from "firebase/auth";
 import { signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
@@ -11,8 +11,7 @@ import { isClientError } from "../http/error";
 type AuthStore = {
 	user: User | null;
 	committeeMember: CommitteeMember | null;
-	hasMemberEditPermission: boolean | null;
-	hasProjectRegistrationPermission: boolean | null;
+	permissions: Set<CommitteePermission> | null;
 	activePortal: "project" | "committee" | null;
 	firebaseUser: FirebaseUser | null;
 	isLoading: boolean;
@@ -27,8 +26,7 @@ type AuthStore = {
 const UNAUTHENTICATED_STATE = {
 	user: null,
 	committeeMember: null,
-	hasMemberEditPermission: null,
-	hasProjectRegistrationPermission: null,
+	permissions: null,
 	activePortal: null,
 	isLoggedIn: false,
 	isCommitteeMember: false,
@@ -73,8 +71,7 @@ async function fetchAndSetUser(fbUser: FirebaseUser | null): Promise<void> {
 		useAuthStore.setState({
 			user: response.user,
 			committeeMember: response.committeeMember,
-			hasMemberEditPermission: null,
-			hasProjectRegistrationPermission: null,
+			permissions: new Set(response.permissions),
 			isLoggedIn: true,
 			isCommitteeMember: !!response.committeeMember,
 		});
