@@ -11,6 +11,7 @@ import {
 	initiateMultipartUploadResponseSchema,
 	listFilesResponseSchema,
 	requestDownloadUrlResponseSchema,
+	requestPreviewUrlResponseSchema,
 	requestUploadUrlRequestSchema,
 	requestUploadUrlResponseSchema,
 } from "../schemas/file";
@@ -185,6 +186,26 @@ export const requestDownloadUrlEndpoint: Endpoint<
 	query: undefined,
 	request: undefined,
 	response: requestDownloadUrlResponseSchema,
+} as const;
+
+/**
+ * POST /files/:id/preview-url
+ * S3直プレビュー用のPresigned URL発行（inline）
+ */
+export const requestPreviewUrlEndpoint: Endpoint<
+	"POST",
+	"/files/:id/preview-url",
+	typeof fileIdPathParamsSchema,
+	undefined,
+	undefined,
+	typeof requestPreviewUrlResponseSchema
+> = {
+	method: "POST",
+	path: "/files/:id/preview-url",
+	pathParams: fileIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: requestPreviewUrlResponseSchema,
 } as const;
 
 /**

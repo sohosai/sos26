@@ -3,7 +3,7 @@ import { IconFileSearch } from "@tabler/icons-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
-import { downloadFile, fetchFile, requestDownloadUrl } from "@/lib/api/files";
+import { downloadFile, fetchFile, requestPreviewUrl } from "@/lib/api/files";
 import { formatFileSize } from "@/lib/format";
 import FilePreviewDialog from "./FilePreviewDialog";
 
@@ -43,9 +43,9 @@ export function AttachmentPreviewButton({ attachment }: Props) {
 
 		try {
 			if (isStreamable(attachment.fileName)) {
-				// 動画・画像: S3 Presigned URL で即ストリーミング
-				const { downloadUrl } = await requestDownloadUrl(attachment.fileId);
-				setStreamingUrl(downloadUrl);
+				// 動画・画像: S3 Presigned URL で即ストリーミング（inline）
+				const { previewUrl } = await requestPreviewUrl(attachment.fileId);
+				setStreamingUrl(previewUrl);
 			} else {
 				// PDF/Word/Excel: Blob にしてから表示
 				const fetched = await fetchFile(

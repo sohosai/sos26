@@ -17,6 +17,7 @@ import {
 	listFilesEndpoint,
 	MULTIPART_CHUNK_SIZE,
 	requestDownloadUrlEndpoint,
+	requestPreviewUrlEndpoint,
 	requestUploadUrlEndpoint,
 	shouldUseMultipart,
 } from "@sos26/shared";
@@ -112,12 +113,23 @@ export async function deleteFile(fileId: string) {
 }
 
 /**
- * S3 直ダウンロード用 Presigned URL を要求する
+ * S3 直ダウンロード用 Presigned URL を要求する（attachment）
  */
 export async function requestDownloadUrl(
 	fileId: string
 ): Promise<RequestDownloadUrlResponse> {
 	return callNoBodyApi(requestDownloadUrlEndpoint, {
+		pathParams: { id: fileId },
+	});
+}
+
+/**
+ * S3 直プレビュー用 Presigned URL を要求する（inline）
+ */
+export async function requestPreviewUrl(
+	fileId: string
+): Promise<{ previewUrl: string }> {
+	return callNoBodyApi(requestPreviewUrlEndpoint, {
 		pathParams: { id: fileId },
 	});
 }
@@ -228,6 +240,9 @@ export function releasePreviewFile(fileId: string) {
 
 /**
  * S3 直ダウンロード URL を使ってファイルをダウンロードする。
+ *
+ * CORS / Content-Disposition に依存せず、確実にダウンロードするため
+n * fetch → Blob → URL.createObjectURL を経由する。
  */
 export async function downloadFile(
 	fileId: string,
@@ -235,14 +250,30 @@ export async function downloadFile(
 	downloadFileName?: string
 ): Promise<void> {
 	const { downloadUrl } = await requestDownloadUrl(fileId);
-	// ブラウザを S3 の Presigned URL に誘導して直接ダウンロード
-	const a = document.createElement("a");
-	a.href = downloadUrl;
-	a.download = downloadFileName ?? fileName;
-	a.style.display = "none";
-	document.body.appendChild(a);
-	a.click();
-	document.body.removeChild(a);
+
+	const res = await fetch(downloadUrl, {
+		method: "GET",
+		credentials: "omit",
+	});
+	if (!res.ok) {
+		throw new Error(
+			`ファイルのダウンロードに失敗しました: ${res.status} ${res.statusText}`
+		);
+	}
+
+	const blob = await res.blob();
+	const url = URL.createObjectURL(blob);
+	try {
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = downloadFileName ?? fileName;
+		a.style.display = "none";
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+	} finally {
+		URL.revokeObjectURL(url);
+	}
 }
 
 /**

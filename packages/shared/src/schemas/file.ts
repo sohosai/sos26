@@ -209,6 +209,16 @@ export type RequestDownloadUrlResponse = z.infer<
 >;
 
 /**
+ * プレビューURL応答
+ */
+export const requestPreviewUrlResponseSchema = z.object({
+	previewUrl: z.string(),
+});
+export type RequestPreviewUrlResponse = z.infer<
+	typeof requestPreviewUrlResponseSchema
+>;
+
+/**
  * ファイル一覧応答
  */
 export const listFilesResponseSchema = z.object({

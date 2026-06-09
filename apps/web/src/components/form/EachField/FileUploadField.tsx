@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import FilePreviewDialog from "@/components/filePreview/FilePreviewDialog";
 import type { UploadedFileValue } from "@/components/form/type";
 import { Button, IconButton } from "@/components/primitives";
-import { downloadFile, fetchFile, requestDownloadUrl } from "@/lib/api/files";
+import { downloadFile, fetchFile, requestPreviewUrl } from "@/lib/api/files";
 import styles from "./FileUploadField.module.scss";
 
 type FileUploadProps = {
@@ -181,8 +181,8 @@ export function FileUploadField({
 		setLoadingFileId(file.id);
 		try {
 			if (isStreamable(file.fileName)) {
-				const { downloadUrl } = await requestDownloadUrl(file.id);
-				setStreamingUrl(downloadUrl);
+				const { previewUrl } = await requestPreviewUrl(file.id);
+				setStreamingUrl(previewUrl);
 				setPreviewFile(null);
 			} else {
 				const fetchedFile = await fetchFile(

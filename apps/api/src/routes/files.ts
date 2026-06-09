@@ -21,6 +21,7 @@ import {
 } from "../lib/storage/multipart";
 import {
 	generateDownloadUrl,
+	generatePreviewUrl,
 	generateUploadUrl,
 	getObject,
 	objectExists,
@@ -313,6 +314,34 @@ fileRoute.post("/:id/download-url", requireAuth, async c => {
 
 	const downloadUrl = await generateDownloadUrl(file.key, file.fileName);
 	return c.json({ downloadUrl });
+});
+
+/**
+ * POST /files/:id/preview-url
+ * S3 直プレビュー用 Presigned GET URL を発行する（inline）。
+ */
+fileRoute.post("/:id/preview-url", requireAuth, async c => {
+	const fileId = c.req.param("id");
+	const user = c.get("user");
+
+	const file = await prisma.file.findFirst({
+		where: { id: fileId, status: "CONFIRMED", deletedAt: null },
+	});
+
+	if (!file) {
+		throw Errors.notFound("ファイルが見つかりません");
+	}
+
+	// アクセス制御: アップローダー本人 or 登録済みチェッカーで許可
+	if (!file.isPublic && file.uploadedById !== user.id) {
+		const hasAccess = await canAccessFile(file.id, user);
+		if (!hasAccess) {
+			throw Errors.forbidden("このファイルにアクセスする権限がありません");
+		}
+	}
+
+	const previewUrl = await generatePreviewUrl(file.key, file.fileName);
+	return c.json({ previewUrl });
 });
 
 /**
