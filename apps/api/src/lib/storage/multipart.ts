@@ -6,25 +6,11 @@ import {
 	UploadPartCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { shouldUseMultipart } from "@sos26/shared";
 import { env } from "../env";
 import { getStorageClient } from "./client";
 
-const CHUNK_SIZE = 16 * 1024 * 1024; // 16MB – S3 multipart の最小パートサイズ
-
-/**
- * チャンクサイズ（bytes）を返す。
- */
-export function getChunkSize(): number {
-	return CHUNK_SIZE;
-}
-
-/**
- * マルチパートアップロードを使うべきか判定する。
- * 16MB 超のファイルのみマルチパートを使う。
- */
-export function shouldUseMultipart(fileSize: number): boolean {
-	return fileSize > CHUNK_SIZE;
-}
+export { shouldUseMultipart };
 
 /**
  * マルチパートアップロードを新規作成し、UploadId を返す。
