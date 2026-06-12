@@ -135,7 +135,13 @@ function setupAuth() {
 	mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 		uid: "firebase-uid-123",
 	} as any);
-	mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+	mockPrisma.user.findFirst.mockResolvedValue({
+		...mockUser,
+		committeeMember: {
+			...mockCommitteeMember,
+			permissions: [],
+		},
+	} as any);
 	mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
 	mockPrisma.formDelivery.findMany.mockResolvedValue([] as any);
 	mockPrisma.formItemEditHistory.findMany.mockResolvedValue([] as any);
@@ -277,8 +283,10 @@ describe("GET /committee/projects", () => {
 		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 			uid: "firebase-uid-123",
 		} as any);
-		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
-		mockPrisma.committeeMember.findFirst.mockResolvedValue(null);
+		mockPrisma.user.findFirst.mockResolvedValue({
+			...mockUser,
+			committeeMember: null,
+		} as any);
 
 		const res = await app.request("/committee/projects", {
 			method: "GET",

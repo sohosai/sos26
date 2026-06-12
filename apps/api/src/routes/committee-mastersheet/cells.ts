@@ -12,7 +12,11 @@ import {
 	normalizeFileIds,
 } from "../../lib/form-answer-files";
 import { prisma } from "../../lib/prisma";
-import { requireAuth, requireCommitteeMember } from "../../middlewares/auth";
+import {
+	getCommitteeMember,
+	requireAuth,
+	requireCommitteeMember,
+} from "../../middlewares/auth";
 import type { AuthEnv } from "../../types/auth-env";
 import {
 	canEditColumn,
@@ -170,7 +174,7 @@ cellsRoute.put(
 	requireCommitteeMember,
 	async c => {
 		const userId = c.get("user").id;
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 		const { columnId, projectId } =
 			mastersheetColumnProjectPathParamsSchema.parse(c.req.param());
 
@@ -275,7 +279,7 @@ cellsRoute.put(
 	requireCommitteeMember,
 	async c => {
 		const userId = c.get("user").id;
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 		const { columnId, projectId } =
 			mastersheetColumnProjectPathParamsSchema.parse(c.req.param());
 
@@ -516,7 +520,7 @@ cellsRoute.put(
 
 cellsRoute.post("/history", requireAuth, requireCommitteeMember, async c => {
 	const userId = c.get("user").id;
-	const committeeMember = c.get("committeeMember");
+	const committeeMember = getCommitteeMember(c);
 
 	const body = await c.req.json().catch(() => {
 		throw Errors.invalidRequest("リクエストボディが不正です");

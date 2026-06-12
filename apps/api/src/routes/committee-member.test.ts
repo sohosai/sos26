@@ -88,6 +88,18 @@ const mockCommitteeMemberWithPermissions = {
 	],
 };
 
+/** requireAuth が include で返す形のユーザー（権限あり） */
+const mockUserWithPermissions = {
+	...mockUser,
+	committeeMember: mockCommitteeMemberWithPermissions,
+};
+
+/** requireAuth が include で返す形のユーザー（委員だが権限なし） */
+const mockUserAsCommitteeMember = {
+	...mockUser,
+	committeeMember: { ...mockCommitteeMember, permissions: [] },
+};
+
 function makeApp() {
 	const app = new Hono();
 	app.onError(errorHandler);
@@ -100,8 +112,12 @@ function setupAuthWithMemberEdit() {
 	mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 		uid: "firebase-uid-123",
 	} as any);
-	mockPrisma.user.findFirst.mockResolvedValue(mockUser);
-	// requireCommitteeMember 用 + requirePermission 用（権限付き）
+	// requireAuth: 委員メンバー + 権限まで include で取得
+	mockPrisma.user.findFirst.mockResolvedValue({
+		...mockUser,
+		committeeMember: mockCommitteeMemberWithPermissions,
+	} as any);
+	// requirePermission 用（routes 内から直接呼ばれる場合あり）
 	mockPrisma.committeeMember.findFirst.mockResolvedValue(
 		mockCommitteeMemberWithPermissions as any
 	);
@@ -112,8 +128,12 @@ function setupAuthWithoutMemberEdit() {
 	mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 		uid: "firebase-uid-123",
 	} as any);
-	mockPrisma.user.findFirst.mockResolvedValue(mockUser);
-	// requireCommitteeMember は通るが MEMBER_EDIT 権限なし
+	// requireAuth: 委員メンバー（権限なし）
+	mockPrisma.user.findFirst.mockResolvedValue({
+		...mockUser,
+		committeeMember: { ...mockCommitteeMember, permissions: [] },
+	} as any);
+	// requirePermission 用
 	mockPrisma.committeeMember.findFirst.mockResolvedValue({
 		...mockCommitteeMember,
 		permissions: [],
@@ -158,8 +178,10 @@ describe("GET /committee/members", () => {
 		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 			uid: "firebase-uid-123",
 		} as any);
-		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
-		mockPrisma.committeeMember.findFirst.mockResolvedValue(null);
+		mockPrisma.user.findFirst.mockResolvedValue({
+			...mockUser,
+			committeeMember: null,
+		} as any);
 
 		const res = await app.request("/committee/members", {
 			method: "GET",
@@ -192,8 +214,10 @@ describe("GET /committee/members/picker", () => {
 		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 			uid: "firebase-uid-123",
 		} as any);
-		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
-		// requireCommitteeMember 用（権限なし実委メンバー）
+		// 委員メンバーだが MEMBER_EDIT 権限なし
+		mockPrisma.user.findFirst.mockResolvedValue(
+			mockUserAsCommitteeMember as any
+		);
 		mockPrisma.committeeMember.findFirst.mockResolvedValue(mockCommitteeMember);
 		// picker 用の findMany は最小情報のみ
 		mockPrisma.committeeMember.findMany.mockResolvedValue([
@@ -240,8 +264,10 @@ describe("GET /committee/members/picker", () => {
 		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 			uid: "firebase-uid-123",
 		} as any);
-		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
-		mockPrisma.committeeMember.findFirst.mockResolvedValue(null);
+		mockPrisma.user.findFirst.mockResolvedValue({
+			...mockUser,
+			committeeMember: null,
+		} as any);
 
 		const res = await app.request("/committee/members/picker", {
 			method: "GET",
@@ -279,7 +305,7 @@ describe("POST /committee/members", () => {
 	it("正常系: 委員メンバーを作成", async () => {
 		const app = makeApp();
 		setupAuthWithMemberEdit();
-		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUserWithPermissions as any);
 		mockPrisma.committeeMember.findUnique.mockResolvedValue(null);
 		mockPrisma.committeeMember.create.mockResolvedValue(mockCommitteeMember);
 
@@ -304,7 +330,7 @@ describe("POST /committee/members", () => {
 	it("既存メンバーでエラー", async () => {
 		const app = makeApp();
 		setupAuthWithMemberEdit();
-		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUserWithPermissions as any);
 		mockPrisma.committeeMember.findUnique.mockResolvedValue(
 			mockCommitteeMember
 		);
@@ -333,7 +359,7 @@ describe("POST /committee/members", () => {
 			...mockCommitteeMember,
 			deletedAt: new Date(),
 		};
-		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUserWithPermissions as any);
 		mockPrisma.committeeMember.findUnique.mockResolvedValue(deletedMember);
 		mockPrisma.committeeMember.update.mockResolvedValue({
 			...mockCommitteeMember,
@@ -366,7 +392,9 @@ describe("POST /committee/members", () => {
 			uid: "firebase-uid-123",
 		} as any);
 		// requireAuth: user.findFirst
-		mockPrisma.user.findFirst.mockResolvedValueOnce(mockUser);
+		mockPrisma.user.findFirst.mockResolvedValueOnce(
+			mockUserWithPermissions as any
+		);
 		// requireCommitteeMember + requirePermission: committeeMember.findFirst
 		mockPrisma.committeeMember.findFirst.mockResolvedValue(
 			mockCommitteeMemberWithPermissions as any
@@ -450,13 +478,12 @@ describe("PATCH /committee/members/:id", () => {
 		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 			uid: "firebase-uid-123",
 		} as any);
-		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUserWithPermissions as any);
 		// requireCommitteeMember: findFirst 1回目
 		mockPrisma.committeeMember.findFirst
-			.mockResolvedValueOnce(mockCommitteeMember)
-			// requirePermission: findFirst 2回目
+			// requirePermission
 			.mockResolvedValueOnce(mockCommitteeMemberWithPermissions)
-			// ハンドラ内: findFirst 3回目
+			// ハンドラ内: メンバー存在確認
 			.mockResolvedValueOnce(null);
 
 		const res = await app.request("/committee/members/nonexistent-id", {
@@ -504,13 +531,12 @@ describe("DELETE /committee/members/:id", () => {
 		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 			uid: "firebase-uid-123",
 		} as any);
-		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUserWithPermissions as any);
 		// requireCommitteeMember: findFirst 1回目
 		mockPrisma.committeeMember.findFirst
-			.mockResolvedValueOnce(mockCommitteeMember)
-			// requirePermission: findFirst 2回目
+			// requirePermission
 			.mockResolvedValueOnce(mockCommitteeMemberWithPermissions)
-			// ハンドラ内: findFirst 3回目
+			// ハンドラ内: メンバー存在確認
 			.mockResolvedValueOnce(null);
 
 		const res = await app.request("/committee/members/nonexistent-id", {
@@ -564,9 +590,8 @@ describe("GET /committee/members/:id/permissions", () => {
 		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 			uid: "firebase-uid-123",
 		} as any);
-		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUserWithPermissions as any);
 		mockPrisma.committeeMember.findFirst
-			.mockResolvedValueOnce(mockCommitteeMember)
 			// requirePermission
 			.mockResolvedValueOnce(mockCommitteeMemberWithPermissions)
 			// ハンドラ内: メンバー存在確認
@@ -643,9 +668,8 @@ describe("POST /committee/members/:id/permissions", () => {
 		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 			uid: "firebase-uid-123",
 		} as any);
-		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUserWithPermissions as any);
 		mockPrisma.committeeMember.findFirst
-			.mockResolvedValueOnce(mockCommitteeMember)
 			// requirePermission
 			.mockResolvedValueOnce(mockCommitteeMemberWithPermissions)
 			// ハンドラ内: メンバー存在確認
@@ -719,9 +743,8 @@ describe("DELETE /committee/members/:id/permissions/:permission", () => {
 		mockFirebaseAuth.verifyIdToken.mockResolvedValue({
 			uid: "firebase-uid-123",
 		} as any);
-		mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+		mockPrisma.user.findFirst.mockResolvedValue(mockUserWithPermissions as any);
 		mockPrisma.committeeMember.findFirst
-			.mockResolvedValueOnce(mockCommitteeMember)
 			// requirePermission
 			.mockResolvedValueOnce(mockCommitteeMemberWithPermissions)
 			// ハンドラ内: メンバー存在確認

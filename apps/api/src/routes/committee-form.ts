@@ -44,7 +44,11 @@ import {
 } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
 import { getObject, objectExists } from "../lib/storage/presign";
-import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
+import {
+	getCommitteeMember,
+	requireAuth,
+	requireCommitteeMember,
+} from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
 const committeeFormRoute = new Hono<AuthEnv>();
@@ -396,7 +400,7 @@ committeeFormRoute.get(
 	requireCommitteeMember,
 	async c => {
 		const userId = c.get("user").id;
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 
 		const [forms, viewerEntries] = await Promise.all([
 			prisma.form.findMany({
@@ -1116,7 +1120,7 @@ committeeFormRoute.get(
 	async c => {
 		const { formId } = formIdPathParamsSchema.parse(c.req.param());
 		const userId = c.get("user").id;
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 
 		// owner, 共同編集者, または閲覧者のみ閲覧可
 		if (!(await canViewFormResponses(formId, userId, committeeMember))) {
@@ -1244,7 +1248,7 @@ committeeFormRoute.get(
 	async c => {
 		const { formId } = formIdPathParamsSchema.parse(c.req.param());
 		const userId = c.get("user").id;
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 
 		if (!(await canViewFormResponses(formId, userId, committeeMember))) {
 			throw Errors.forbidden("回答の閲覧権限がありません");
@@ -1385,7 +1389,7 @@ committeeFormRoute.get(
 			c.req.param()
 		);
 		const userId = c.get("user").id;
-		const committeeMember = c.get("committeeMember");
+		const committeeMember = getCommitteeMember(c);
 
 		// owner, 共同編集者, または閲覧者のみ閲覧可
 		if (!(await canViewFormResponses(formId, userId, committeeMember))) {

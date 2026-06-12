@@ -12,6 +12,8 @@
     - [requireRegTicket](#requireregticket)
     - [requireCommitteeMember](#requirecommitteemember)
     - [requireProjectMember](#requireprojectmember)
+  - [ヘルパー関数](#ヘルパー関数)
+    - [getCommitteeMember](#getcommitteemember)
   - [認証ルート](#認証ルート)
     - [POST /auth/email/start](#post-authemailstart)
     - [POST /auth/email/verify](#post-authemailverify)
@@ -41,15 +43,22 @@ API サーバーは Firebase Authentication と連携し、以下の機能を提
 
 ### requireAuth
 
-Firebase ID Token を検証し、ユーザー情報を Context に格納するミドルウェアです。
+Firebase ID Token を検証し、**User + 委員メンバー情報 + 権限を 1 クエリで一括取得**して Context に格納するミドルウェアです。
 
 **ファイル**: `src/middlewares/auth.ts`
 
 **処理フロー**:
 1. `Authorization: Bearer <token>` ヘッダーから ID Token を取得
 2. Firebase Admin SDK で検証
-3. `firebaseUid` + `deletedAt: null` で `User` テーブルを検索
-4. ユーザー情報を `c.set("user", user)` に格納
+3. `firebaseUid` + `deletedAt: null` で `User` を取得（`include` で `committeeMember.permissions` まで一括取得）
+4. Context に格納:
+   - `c.set("user", user)` — User 本体
+   - `c.set("committeeMember", committeeMember)` — `CommitteeMember | null`
+   - `c.set("permissions", new Set(permissions))` — `Set<CommitteePermission>`（非委員は空 Set）
+
+**設計のポイント**:
+- 認証付きエンドポイント全体で User 関連の DB クエリが**1 本に集約**される（`requireCommitteeMember` は context 参照のみで DB を叩かない）
+- 委員メンバーでないユーザーでも `committeeMember: null` / `permissions: 空 Set` が安全に格納される
 
 **使用例**:
 
@@ -58,7 +67,8 @@ import { requireAuth } from "../middlewares/auth";
 
 route.get("/protected", requireAuth, async c => {
   const user = c.get("user");
-  return c.json({ user });
+  const permissions = c.get("permissions"); // Set<CommitteePermission>
+  return c.json({ user, hasMemberEdit: permissions.has("MEMBER_EDIT") });
 });
 ```
 
@@ -98,24 +108,30 @@ route.post("/register", requireRegTicket, async c => {
 
 ### requireCommitteeMember
 
-実行委員メンバーであることを検証し、Context に格納するミドルウェアです。
+実行委員メンバーであることを検証するミドルウェアです。
 
 **ファイル**: `src/middlewares/auth.ts`
 
-**前提**: `requireAuth` が先に実行されていること（`c.get("user")` が利用可能）
+**前提**: `requireAuth` が先に実行されていること（`committeeMember` / `permissions` が context に格納済み）
 
 **処理フロー**:
-1. `c.get("user").id` で `CommitteeMember` を検索（`deletedAt: null`）
-2. 見つからなければ `FORBIDDEN` エラー
-3. `c.set("committeeMember", committeeMember)` でコンテキストに格納
+1. `c.get("committeeMember")` が null でないことを確認
+2. null なら `FORBIDDEN` エラー
+3. **DB クエリは行わない**（`requireAuth` で取得済み）
+
+**注意**: ルートハンドラ内で `c.get("committeeMember")` を直接呼ぶと型が `CommitteeMember | null` になります。非 null として扱いたい場合は [`getCommitteeMember`](#getcommitteemember) ヘルパを使用してください。
 
 **使用例**:
 
 ```ts
-import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
+import {
+  getCommitteeMember,
+  requireAuth,
+  requireCommitteeMember,
+} from "../middlewares/auth";
 
 route.get("/members", requireAuth, requireCommitteeMember, async c => {
-  const member = c.get("committeeMember");
+  const member = getCommitteeMember(c); // CommitteeMember（非 null 保証）
   return c.json({ member });
 });
 ```
@@ -163,6 +179,40 @@ route.get("/:projectId/detail", requireAuth, requireProjectMember, async c => {
 | `projectId` パラメータがない | `INVALID_REQUEST` |
 | 企画が存在しない（または削除済み） | `NOT_FOUND` |
 | 企画のメンバーではない | `FORBIDDEN` |
+
+---
+
+## ヘルパー関数
+
+### getCommitteeMember
+
+`requireCommitteeMember` 通過後のルートハンドラで `committeeMember` を**非 null 型として**取得するヘルパーです。
+
+**ファイル**: `src/middlewares/auth.ts`
+
+**前提**: `requireCommitteeMember` ミドルウェアが先に実行されていること
+
+**処理フロー**:
+1. `c.get("committeeMember")` を取得
+2. 万一 null だった場合は `FORBIDDEN` エラー（防御的）
+3. `CommitteeMember`（非 null）を返す
+
+**背景**: `requireAuth` で `committeeMember` を `CommitteeMember | null` 型で格納する設計のため、ルートハンドラで `c.get("committeeMember")` を呼ぶと型が nullable になる。`requireCommitteeMember` を通過していれば実行時には必ず非 null だが、TypeScript の型はそれを知らないため、Biome の `noNonNullAssertion` ルールに抵触せずに非 null を扱うためのヘルパー。
+
+**使用例**:
+
+```ts
+import {
+  getCommitteeMember,
+  requireAuth,
+  requireCommitteeMember,
+} from "../middlewares/auth";
+
+route.get("/foo", requireAuth, requireCommitteeMember, async c => {
+  const cm = getCommitteeMember(c); // CommitteeMember（非 null）
+  // cm.id をそのまま使える
+});
+```
 
 ---
 
@@ -287,7 +337,7 @@ Set-Cookie: reg_ticket=<opaque>; HttpOnly; Path=/auth; SameSite=Lax; Max-Age=900
 
 ### GET /auth/me
 
-現在のログインユーザーと委員メンバー情報を取得します。
+現在のログインユーザー・委員メンバー情報・**保有する権限一覧**を取得します。
 
 **リクエスト**:
 ```
@@ -315,11 +365,15 @@ Authorization: Bearer <Firebase ID Token>
     "Bureau": "INFO_SYSTEM",
     "joinedAt": "...",
     "deletedAt": null
-  }
+  },
+  "permissions": ["MEMBER_EDIT", "INQUIRY_ADMIN"]
 }
 ```
 
-`committeeMember` は委員メンバー未登録の場合 `null` を返します。
+- `committeeMember` は委員メンバー未登録の場合 `null` を返します。
+- `permissions` は委員メンバーが保有する権限の配列。非委員は空配列。
+
+**実装メモ**: ハンドラは `requireAuth` が context に格納した値をそのまま返すだけで、追加の DB クエリは行わない。フロントはレスポンスの `permissions` を `Set<CommitteePermission>` として store に保持する。
 
 **エラー**:
 | 条件 | エラーコード |
@@ -390,7 +444,7 @@ apps/api/src/
 ├── routes/
 │   └── auth.ts           # 認証ルート
 ├── middlewares/
-│   └── auth.ts           # requireAuth, requireRegTicket, requireCommitteeMember, requireProjectMember
+│   └── auth.ts           # requireAuth, requireRegTicket, requireCommitteeMember, requireProjectMember, getCommitteeMember
 ├── lib/
 │   ├── error.ts          # AppError, Errors ヘルパー
 │   ├── firebase.ts       # Firebase Admin SDK 初期化
@@ -400,5 +454,5 @@ apps/api/src/
 │           ├── sendVerificationEmail.ts    # 検証メール送信
 │           └── sendAlreadyRegisteredEmail.ts # 既存ユーザー案内メール
 └── types/
-    └── auth-env.ts       # AuthEnv 型定義
+    └── auth-env.ts       # AuthEnv 型定義（user / committeeMember / permissions ほか）
 ```

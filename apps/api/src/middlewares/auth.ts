@@ -1,11 +1,28 @@
+import type { CommitteeMember } from "@prisma/client";
 import * as Sentry from "@sentry/bun";
+import type { CommitteePermission } from "@sos26/shared";
 import { FirebaseAuthError } from "firebase-admin/auth";
+import type { Context } from "hono";
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import { AppError, Errors } from "../lib/error";
 import { auth } from "../lib/firebase";
 import { prisma } from "../lib/prisma";
 import type { AuthEnv } from "../types/auth-env";
+
+/**
+ * requireCommitteeMember 通過後の routes で committeeMember を非 null として取得するヘルパ。
+ * 万一 null だった場合は forbidden を投げる（防御的）。
+ *
+ * 詳細は docs/apps/api/auth.md の getCommitteeMember セクションを参照。
+ */
+export function getCommitteeMember(c: Context<AuthEnv>): CommitteeMember {
+	const cm = c.get("committeeMember");
+	if (!cm) {
+		throw Errors.forbidden("実委メンバーではありません");
+	}
+	return cm;
+}
 
 /**
  * Firebase ID Token を検証し、ユーザー情報を Context に格納するミドルウェア
@@ -31,11 +48,19 @@ export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
 	try {
 		const decodedToken = await auth.verifyIdToken(idToken);
 		firebaseUid = decodedToken.uid;
-		const user = await prisma.user.findFirst({
+		const userWithCommitteeMember = await prisma.user.findFirst({
 			where: { firebaseUid: decodedToken.uid, deletedAt: null },
+			include: {
+				committeeMember: {
+					where: { deletedAt: null },
+					include: {
+						permissions: { select: { permission: true } },
+					},
+				},
+			},
 		});
 
-		if (!user) {
+		if (!userWithCommitteeMember) {
 			console.warn(
 				"[Auth] Verified Firebase token but app user was not found",
 				{
@@ -47,7 +72,20 @@ export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
 			throw Errors.notFound("ユーザーが見つかりません");
 		}
 
+		const { committeeMember: cmWithPermissions, ...user } =
+			userWithCommitteeMember;
+
+		let committeeMember: CommitteeMember | null = null;
+		let permissions = new Set<CommitteePermission>();
+		if (cmWithPermissions) {
+			const { permissions: perms, ...cm } = cmWithPermissions;
+			committeeMember = cm;
+			permissions = new Set(perms.map(p => p.permission));
+		}
+
 		c.set("user", user);
+		c.set("committeeMember", committeeMember);
+		c.set("permissions", permissions);
 	} catch (e) {
 		if (e instanceof AppError) {
 			console.warn("[Auth] Authentication rejected with application error", {
@@ -101,24 +139,17 @@ export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
 });
 
 /**
- * 実行委員メンバーであることを検証し、Context に格納するミドルウェア
+ * 実行委員メンバーであることを検証するミドルウェア
  *
- * - requireAuth が先に実行されている前提（c.get("user") が利用可能）
- * - userId で CommitteeMember を検索（deletedAt が null のもの）
+ * - requireAuth が先に実行されている前提（committeeMember / permissions が context に格納済み）
+ * - committeeMember が null の場合は forbidden を投げる
+ * - DB クエリは行わない（requireAuth で include 取得済み）
  */
 export const requireCommitteeMember = createMiddleware<AuthEnv>(
 	async (c, next) => {
-		const user = c.get("user");
-
-		const committeeMember = await prisma.committeeMember.findFirst({
-			where: { userId: user.id, deletedAt: null },
-		});
-
-		if (!committeeMember) {
+		if (!c.get("committeeMember")) {
 			throw Errors.forbidden("実委メンバーではありません");
 		}
-
-		c.set("committeeMember", committeeMember);
 		await next();
 	}
 );
