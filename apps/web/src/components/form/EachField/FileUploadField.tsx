@@ -179,6 +179,8 @@ export function FileUploadField({
 	};
 
 	const handleUploadedFilePreview = async (file: UploadedFileValue) => {
+		setPreviewFile(null);
+		setStreamingUrl(null);
 		setOpen(true);
 		setLoadingFileId(file.id);
 		try {
