@@ -333,7 +333,10 @@ const url = await getAuthenticatedFileUrl(fileId);
 | 文書 | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` | docx |
 | 文書 | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` | xlsx |
 
-ファイルサイズ上限: `S3_MAX_FILE_SIZE`（デフォルト 10MB）
+| 動画 | `video/mp4` | mp4 |
+| 動画 | `video/quicktime` | mov |
+
+ファイルサイズ上限: `S3_MAX_FILE_SIZE`（デフォルト 1GB）
 
 ### CORS 設定（さくらのオブジェクトストレージ）
 

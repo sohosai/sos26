@@ -28,7 +28,48 @@ export async function generateUploadUrl(
 }
 
 /**
+ * Presigned GET URL を生成する（ダウンロード用、attachment）。
+ */
+export async function generateDownloadUrl(
+	key: string,
+	fileName?: string
+): Promise<string> {
+	const client = getStorageClient();
+	const command = new GetObjectCommand({
+		Bucket: env.S3_BUCKET,
+		Key: key,
+		ResponseContentDisposition: fileName
+			? `attachment; filename="${encodeURIComponent(fileName)}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
+			: undefined,
+	});
+	return getSignedUrl(client, command, {
+		expiresIn: env.S3_PRESIGNED_URL_EXPIRES,
+	});
+}
+
+/**
+ * Presigned GET URL を生成する（プレビュー用、inline）。
+ */
+export async function generatePreviewUrl(
+	key: string,
+	fileName?: string
+): Promise<string> {
+	const client = getStorageClient();
+	const command = new GetObjectCommand({
+		Bucket: env.S3_BUCKET,
+		Key: key,
+		ResponseContentDisposition: fileName
+			? `inline; filename="${encodeURIComponent(fileName)}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
+			: undefined,
+	});
+	return getSignedUrl(client, command, {
+		expiresIn: env.S3_PRESIGNED_URL_EXPIRES,
+	});
+}
+
+/**
  * S3からオブジェクトを取得する（APIプロキシ用）。
+ * @deprecated 302 Redirect 方式に移行予定
  */
 export async function getObject(key: string) {
 	const client = getStorageClient();

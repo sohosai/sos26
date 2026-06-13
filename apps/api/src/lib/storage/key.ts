@@ -14,6 +14,8 @@ export function getExtension(mimeType: string): string {
 		"application/vnd.openxmlformats-officedocument.wordprocessingml.document":
 			"docx",
 		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+		"video/mp4": "mp4",
+		"video/quicktime": "mov",
 	};
 	return map[mimeType] ?? "bin";
 }

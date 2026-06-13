@@ -4,6 +4,8 @@ import {
 	allowedMimeTypes,
 	buildFileAcceptAttribute,
 	buildFileExtensionsLabel,
+	isStreamable,
+	resolveFileMimeType,
 } from "@sos26/shared";
 import { IconFileSearch, IconX } from "@tabler/icons-react";
 import { useCallback, useId, useMemo, useRef, useState } from "react";
@@ -11,7 +13,12 @@ import { toast } from "sonner";
 import FilePreviewDialog from "@/components/filePreview/FilePreviewDialog";
 import type { UploadedFileValue } from "@/components/form/type";
 import { Button, IconButton } from "@/components/primitives";
-import { downloadFile, fetchFile } from "@/lib/api/files";
+import {
+	downloadFile,
+	fetchFile,
+	releasePreviewFile,
+	requestPreviewUrl,
+} from "@/lib/api/files";
 import styles from "./FileUploadField.module.scss";
 
 type FileUploadProps = {
@@ -78,7 +85,7 @@ function processFileSelection(
 	allowedTypes?: AllowedMimeType[]
 ): { filesToSet: File[] | null; error: string | null } {
 	const acceptedSet = new Set<string>(allowedTypes ?? allowedMimeTypes);
-	const valid = addedFiles.filter(f => acceptedSet.has(f.type));
+	const valid = addedFiles.filter(f => acceptedSet.has(resolveFileMimeType(f)));
 	const hasInvalid = valid.length < addedFiles.length;
 	const extensionsLabel = buildFileExtensionsLabel(allowedTypes);
 
@@ -127,6 +134,7 @@ export function FileUploadField({
 	const [previewFile, setPreviewFile] = useState<File | null>(null);
 	const [previewedUploadedFile, setPreviewedUploadedFile] =
 		useState<UploadedFileValue | null>(null);
+	const [streamingUrl, setStreamingUrl] = useState<string | null>(null);
 	const [open, setOpen] = useState(false);
 	const [loadingFileId, setLoadingFileId] = useState<string | null>(null);
 
@@ -166,23 +174,34 @@ export function FileUploadField({
 	const handlePendingFilePreview = (file: File) => {
 		setPreviewFile(file);
 		setPreviewedUploadedFile(null);
+		setStreamingUrl(null);
 		setOpen(true);
 	};
 
 	const handleUploadedFilePreview = async (file: UploadedFileValue) => {
+		setPreviewFile(null);
+		setStreamingUrl(null);
+		setOpen(true);
 		setLoadingFileId(file.id);
 		try {
-			const fetchedFile = await fetchFile(
-				file.id,
-				file.fileName,
-				file.mimeType,
-				file.isPublic
-			);
-			setPreviewFile(fetchedFile);
+			if (isStreamable(file.fileName)) {
+				const { previewUrl } = await requestPreviewUrl(file.id);
+				setStreamingUrl(previewUrl);
+				setPreviewFile(null);
+			} else {
+				const fetchedFile = await fetchFile(
+					file.id,
+					file.fileName,
+					file.mimeType,
+					file.isPublic
+				);
+				setPreviewFile(fetchedFile);
+				setStreamingUrl(null);
+			}
 			setPreviewedUploadedFile(file);
-			setOpen(true);
 		} catch {
 			toast.error("ファイルの取得に失敗しました");
+			setOpen(false);
 		} finally {
 			setLoadingFileId(current => (current === file.id ? null : current));
 		}
@@ -195,8 +214,7 @@ export function FileUploadField({
 
 		downloadFile(
 			previewedUploadedFile.id,
-			previewedUploadedFile.fileName,
-			previewedUploadedFile.isPublic
+			previewedUploadedFile.fileName
 		).catch(() => toast.error("ファイルのダウンロードに失敗しました"));
 	}, [previewedUploadedFile]);
 
@@ -308,9 +326,17 @@ export function FileUploadField({
 			{fileList}
 			<FilePreviewDialog
 				file={previewFile}
+				streamingUrl={streamingUrl}
+				fileName={previewedUploadedFile?.fileName ?? previewFile?.name}
 				open={open}
-				onOpenChange={setOpen}
+				onOpenChange={nextOpen => {
+					if (!nextOpen && previewedUploadedFile) {
+						releasePreviewFile(previewedUploadedFile.id);
+					}
+					setOpen(nextOpen);
+				}}
 				onDownload={previewedUploadedFile ? handleDownload : undefined}
+				loading={loadingFileId !== null && !previewFile && !streamingUrl}
 			/>
 		</div>
 	);

@@ -1,11 +1,12 @@
-import { Dialog, Text, VisuallyHidden } from "@radix-ui/themes";
+import { Dialog, Spinner, Text, VisuallyHidden } from "@radix-ui/themes";
+import { isStreamable } from "@sos26/shared";
 import {
 	IconDownload,
 	IconX,
 	IconZoomIn,
 	IconZoomOut,
 } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, IconButton } from "@/components/primitives";
 import ExcelViewer from "./ExcelViewer";
 import styles from "./FilePreviewDialog.module.scss";
@@ -13,14 +14,20 @@ import PdfViewer from "./Pdfviewer";
 import WordViewer from "./Wordviewer";
 
 interface Props {
-	file: File | null;
+	/** PDF/Word/Excel 用（Blob オブジェクト） */
+	file?: File | null;
+	/** 動画/画像用（S3 Presigned URL などストリーミング URL） */
+	streamingUrl?: string | null;
+	/** ファイル名（UI 表示用） */
+	fileName?: string;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onDownload?: () => void;
+	loading?: boolean;
 }
 
-function getExt(file: File) {
-	return file.name.split(".").pop()?.toLowerCase() ?? "";
+function getExt(name: string) {
+	return name.split(".").pop()?.toLowerCase() ?? "";
 }
 
 const ZOOM_STEP = 0.25;
@@ -32,36 +39,44 @@ function isZoomable(ext: string) {
 	return ext === "pdf";
 }
 
-function Viewer({ file, scale }: { file: File; scale: number }) {
-	const ext = getExt(file);
-	const isImage = ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext);
-	const [imageUrl, setImageUrl] = useState<string | null>(null);
-	useEffect(() => {
-		if (!isImage) {
-			setImageUrl(null);
-			return;
-		}
+function StreamViewer({
+	streamingUrl,
+	fileName,
+}: {
+	streamingUrl: string;
+	fileName: string;
+}) {
+	const ext = getExt(fileName);
+	if (ext === "mp4")
+		return (
+			// biome-ignore lint/a11y/useMediaCaption: ユーザーアップロード動画のプレビュー
+			<video
+				src={streamingUrl}
+				controls
+				className={styles.video}
+				preload="none"
+			/>
+		);
+	return <img src={streamingUrl} className={styles.image} alt={fileName} />;
+}
 
-		const objectUrl = URL.createObjectURL(file);
-		setImageUrl(objectUrl);
-
-		return () => {
-			URL.revokeObjectURL(objectUrl);
-		};
-	}, [file, isImage]);
+function BlobViewer({ file, scale }: { file: File; scale: number }) {
+	const ext = getExt(file.name);
 
 	if (ext === "pdf")
 		return <PdfViewer file={file} scale={scale * PDF_BASE_SCALE} />;
 	if (ext === "xlsx" || ext === "xls") return <ExcelViewer file={file} />;
-
 	if (ext === "docx") return <WordViewer file={file} />;
-	if (isImage && imageUrl)
-		return <img src={imageUrl} className={styles.image} alt={file.name} />;
+
+	// 未アップロードの画像・動画も即プレビュー可能に
+	if (isStreamable(ext)) {
+		return <StreamableBlobViewer file={file} />;
+	}
 
 	return (
 		<div className={styles.unsupported}>
 			{ext ? (
-				<Text size="2">非対応の形式です：.{ext}</Text>
+				<Text size="2">この形式はブラウザでプレビューできません：.{ext}</Text>
 			) : (
 				<Text size="2">ファイルを表示できません</Text>
 			)}
@@ -69,30 +84,88 @@ function Viewer({ file, scale }: { file: File; scale: number }) {
 	);
 }
 
+/** File オブジェクトを直接 media srcObject にセットして再生（URL.createObjectURL のセキュリティ問題を回避） */
+function StreamableBlobViewer({ file }: { file: File }) {
+	const ext = getExt(file.name);
+	if (ext === "mp4") {
+		return <VideoFilePlayer file={file} />;
+	}
+
+	// 画像は URL.createObjectURL を使う（img は srcObject 非対応）
+	return <ImageFilePlayer file={file} />;
+}
+
+function ImageFilePlayer({ file }: { file: File }) {
+	const [url, setUrl] = useState<string>("");
+
+	useEffect(() => {
+		const objectUrl = URL.createObjectURL(file);
+		setUrl(objectUrl);
+		return () => {
+			URL.revokeObjectURL(objectUrl);
+		};
+	}, [file]);
+
+	if (!url) return null;
+	return <img src={url} className={styles.image} alt={file.name} />;
+}
+
+function VideoFilePlayer({ file }: { file: File }) {
+	const videoRef = useRef<HTMLVideoElement>(null);
+	const urlRef = useRef<string>("");
+
+	useEffect(() => {
+		const el = videoRef.current;
+		if (!el) return;
+		const url = URL.createObjectURL(file);
+		urlRef.current = url;
+		el.src = url;
+		return () => {
+			el.pause();
+			el.src = "";
+			if (urlRef.current) {
+				URL.revokeObjectURL(urlRef.current);
+				urlRef.current = "";
+			}
+		};
+	}, [file]);
+
+	return (
+		// biome-ignore lint/a11y/useMediaCaption: ユーザーアップロード動画のプレビュー
+		<video ref={videoRef} controls className={styles.video} preload="none" />
+	);
+}
+
 export default function FilePreviewDialog({
 	file,
+	streamingUrl,
+	fileName,
 	open,
 	onOpenChange,
 	onDownload,
+	loading,
 }: Props) {
 	const [scale, setScale] = useState(1.0);
-	const showZoom = file ? isZoomable(getExt(file)) : false;
-	const fileKey = file ? `${file.name}-${file.size}` : "";
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: reset scale when file changes
+	const displayName = fileName ?? file?.name ?? "";
+	const ext = getExt(displayName);
+	const showZoom = isZoomable(ext);
+	const isStream = isStreamable(ext);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: reset zoom on file change
 	useEffect(() => {
 		setScale(1.0);
-	}, [fileKey]);
+	}, [displayName]);
 
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
 			<Dialog.Content className={styles.content}>
 				<VisuallyHidden>
-					<Dialog.Title>{file?.name ?? ""}</Dialog.Title>
+					<Dialog.Title>{displayName}</Dialog.Title>
 				</VisuallyHidden>
 				<div className={styles.header}>
 					<Text size="3" weight="medium" className={styles.title}>
-						{file?.name ?? ""}
+						{displayName}
 					</Text>
 					<div className={styles.headerActions}>
 						{showZoom && (
@@ -138,8 +211,18 @@ export default function FilePreviewDialog({
 
 				{/* プレビューエリア */}
 				<div className={styles.body}>
-					{file && (
-						<Viewer key={file.name + file.size} file={file} scale={scale} />
+					{loading && !file && !streamingUrl ? (
+						<div className={styles.loading}>
+							<Spinner size="3" />
+						</div>
+					) : isStream && streamingUrl ? (
+						<StreamViewer streamingUrl={streamingUrl} fileName={displayName} />
+					) : file ? (
+						<BlobViewer file={file} scale={scale} />
+					) : (
+						<div className={styles.unsupported}>
+							<Text size="2">ファイルを表示できません</Text>
+						</div>
 					)}
 				</div>
 			</Dialog.Content>

@@ -9,6 +9,7 @@ import {
 	allowedFileExtensions,
 	allowedMimeTypes,
 	type Bureau,
+	resolveFileMimeType,
 	type ViewerScope,
 } from "@sos26/shared";
 import { IconCheck, IconChevronDown, IconSearch } from "@tabler/icons-react";
@@ -299,7 +300,7 @@ const partitionFiles = (files: File[]) => {
 	const valid: File[] = [];
 	const invalid: File[] = [];
 	for (const f of files) {
-		if (allowedMimeTypes.includes(f.type as AllowedMimeType)) {
+		if (allowedMimeTypes.includes(resolveFileMimeType(f) as AllowedMimeType)) {
 			valid.push(f);
 		} else {
 			invalid.push(f);
