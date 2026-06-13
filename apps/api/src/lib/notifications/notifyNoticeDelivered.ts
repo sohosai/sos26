@@ -2,6 +2,7 @@ import { sendNoticeDeliveredEmail } from "../emails";
 import { env } from "../env";
 import { prisma } from "../prisma";
 import { sendNoticeDeliveredPush } from "../push";
+import { filterActiveProjectIds } from "./helpers/filterActiveProjects";
 
 export async function notifyNoticeDelivered(input: {
 	noticeTitle: string;
@@ -9,10 +10,13 @@ export async function notifyNoticeDelivered(input: {
 	projectIds: string[];
 }): Promise<boolean> {
 	try {
+		const activeProjectIds = await filterActiveProjectIds(input.projectIds);
+		if (activeProjectIds.length === 0) return true;
+
 		// 対象企画ごとにメンバーを取得し、企画ごとに通知を送る
 		// 複数企画に同じユーザーが所属する場合は複数通知が届く（各企画ごとに既読化が必要なため）
 		const projects = await prisma.project.findMany({
-			where: { id: { in: input.projectIds }, deletedAt: null },
+			where: { id: { in: activeProjectIds }, deletedAt: null },
 			select: {
 				id: true,
 				ownerId: true,
