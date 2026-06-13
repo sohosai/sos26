@@ -1,4 +1,5 @@
 import { Dialog, Spinner, Text, VisuallyHidden } from "@radix-ui/themes";
+import { isStreamable } from "@sos26/shared";
 import {
 	IconDownload,
 	IconX,
@@ -38,10 +39,6 @@ function isZoomable(ext: string) {
 	return ext === "pdf";
 }
 
-function isStreamable(ext: string) {
-	return ["mp4", "png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext);
-}
-
 function StreamViewer({
 	streamingUrl,
 	fileName,
@@ -57,7 +54,7 @@ function StreamViewer({
 				src={streamingUrl}
 				controls
 				className={styles.video}
-				preload="metadata"
+				preload="none"
 			/>
 		);
 	return <img src={streamingUrl} className={styles.image} alt={fileName} />;
@@ -95,13 +92,22 @@ function StreamableBlobViewer({ file }: { file: File }) {
 	}
 
 	// 画像は URL.createObjectURL を使う（img は srcObject 非対応）
-	return (
-		<img
-			src={URL.createObjectURL(file)}
-			className={styles.image}
-			alt={file.name}
-		/>
-	);
+	return <ImageFilePlayer file={file} />;
+}
+
+function ImageFilePlayer({ file }: { file: File }) {
+	const [url, setUrl] = useState<string>("");
+
+	useEffect(() => {
+		const objectUrl = URL.createObjectURL(file);
+		setUrl(objectUrl);
+		return () => {
+			URL.revokeObjectURL(objectUrl);
+		};
+	}, [file]);
+
+	if (!url) return null;
+	return <img src={url} className={styles.image} alt={file.name} />;
 }
 
 function VideoFilePlayer({ file }: { file: File }) {
@@ -126,12 +132,7 @@ function VideoFilePlayer({ file }: { file: File }) {
 
 	return (
 		// biome-ignore lint/a11y/useMediaCaption: ユーザーアップロード動画のプレビュー
-		<video
-			ref={videoRef}
-			controls
-			className={styles.video}
-			preload="metadata"
-		/>
+		<video ref={videoRef} controls className={styles.video} preload="none" />
 	);
 }
 

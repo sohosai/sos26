@@ -41,19 +41,20 @@ export async function generatePartUploadUrls(
 	partCount: number
 ): Promise<string[]> {
 	const client = getStorageClient();
-	const urls: string[] = [];
-	for (let partNumber = 1; partNumber <= partCount; partNumber++) {
-		const command = new UploadPartCommand({
-			Bucket: env.S3_BUCKET,
-			Key: key,
-			UploadId: uploadId,
-			PartNumber: partNumber,
-		});
-		const url = await getSignedUrl(client, command, {
-			expiresIn: env.S3_PRESIGNED_URL_EXPIRES,
-		});
-		urls.push(url);
-	}
+	const urls = await Promise.all(
+		Array.from({ length: partCount }, (_, i) => {
+			const partNumber = i + 1;
+			const command = new UploadPartCommand({
+				Bucket: env.S3_BUCKET,
+				Key: key,
+				UploadId: uploadId,
+				PartNumber: partNumber,
+			});
+			return getSignedUrl(client, command, {
+				expiresIn: env.S3_PRESIGNED_URL_EXPIRES,
+			});
+		})
+	);
 	return urls;
 }
 

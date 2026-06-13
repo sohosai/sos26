@@ -1,9 +1,15 @@
 import { Text } from "@radix-ui/themes";
+import { isStreamable } from "@sos26/shared";
 import { IconFileSearch } from "@tabler/icons-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
-import { downloadFile, fetchFile, requestPreviewUrl } from "@/lib/api/files";
+import {
+	downloadFile,
+	fetchFile,
+	releasePreviewFile,
+	requestPreviewUrl,
+} from "@/lib/api/files";
 import { formatFileSize } from "@/lib/format";
 import FilePreviewDialog from "./FilePreviewDialog";
 
@@ -14,12 +20,6 @@ type Attachment = {
 	size: number;
 	isPublic: boolean;
 };
-
-/** ストリーミング可能な拡張子 */
-function isStreamable(fileName: string): boolean {
-	const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
-	return ["mp4", "png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext);
-}
 
 interface Props {
 	attachment: Attachment;
@@ -89,7 +89,12 @@ export function AttachmentPreviewButton({ attachment }: Props) {
 				streamingUrl={streamingUrl}
 				fileName={attachment.fileName}
 				open={open}
-				onOpenChange={setOpen}
+				onOpenChange={nextOpen => {
+					if (!nextOpen) {
+						releasePreviewFile(attachment.fileId);
+					}
+					setOpen(nextOpen);
+				}}
 				onDownload={handleDownload}
 				loading={isLoading}
 			/>
