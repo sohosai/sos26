@@ -240,10 +240,10 @@ export function releasePreviewFile(fileId: string) {
 }
 
 /**
- * S3 直ダウンロード URL を使ってファイルをダウンロードする。
+ * S3 直ダウンロード URL を使ってファイルをストリーミングダウンロードする。
  *
- * CORS / Content-Disposition に依存せず、確実にダウンロードするため
-n * fetch → Blob → URL.createObjectURL を経由する。
+ * StreamSaver を使い、fetch の ReadableStream をそのままファイルに書き込む。
+ * 大容量ファイルでもメモリに展開せずにダウンロードできる。
  */
 export async function downloadFile(
 	fileId: string,
@@ -262,18 +262,32 @@ export async function downloadFile(
 		);
 	}
 
-	const blob = await res.blob();
-	const url = URL.createObjectURL(blob);
+	const streamBody = res.body;
+	if (!streamBody) {
+		throw new Error("レスポンスボディが空です");
+	}
+
+	const StreamSaver = await import("streamsaver");
+	const streamSaver = StreamSaver.default;
+
+	const fileStream = streamSaver.createWriteStream(
+		downloadFileName ?? fileName
+	);
+	const writer = fileStream.getWriter();
+
 	try {
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = downloadFileName ?? fileName;
-		a.style.display = "none";
-		document.body.appendChild(a);
-		a.click();
-		document.body.removeChild(a);
+		const reader = streamBody.getReader();
+		let done = false;
+
+		while (!done) {
+			const { done: streamDone, value } = await reader.read();
+			done = streamDone;
+			if (value) {
+				await writer.write(value);
+			}
+		}
 	} finally {
-		URL.revokeObjectURL(url);
+		writer.close();
 	}
 }
 
