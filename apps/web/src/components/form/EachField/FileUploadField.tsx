@@ -4,6 +4,7 @@ import {
 	allowedMimeTypes,
 	buildFileAcceptAttribute,
 	buildFileExtensionsLabel,
+	resolveFileMimeType,
 } from "@sos26/shared";
 import { IconFileSearch, IconX } from "@tabler/icons-react";
 import { useCallback, useId, useMemo, useRef, useState } from "react";
@@ -78,7 +79,7 @@ function processFileSelection(
 	allowedTypes?: AllowedMimeType[]
 ): { filesToSet: File[] | null; error: string | null } {
 	const acceptedSet = new Set<string>(allowedTypes ?? allowedMimeTypes);
-	const valid = addedFiles.filter(f => acceptedSet.has(f.type));
+	const valid = addedFiles.filter(f => acceptedSet.has(resolveFileMimeType(f)));
 	const hasInvalid = valid.length < addedFiles.length;
 	const extensionsLabel = buildFileExtensionsLabel(allowedTypes);
 

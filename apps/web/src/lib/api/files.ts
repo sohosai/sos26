@@ -8,17 +8,18 @@ import type {
 import {
 	abortMultipartUploadEndpoint,
 	allowedFileExtensions,
-	allowedMimeTypes,
 	completeMultipartUploadEndpoint,
 	confirmUploadEndpoint,
 	deleteFileEndpoint,
 	getFileTokenEndpoint,
 	initiateMultipartUploadEndpoint,
+	isAllowedFileType,
 	listFilesEndpoint,
 	MULTIPART_CHUNK_SIZE,
 	requestDownloadUrlEndpoint,
 	requestPreviewUrlEndpoint,
 	requestUploadUrlEndpoint,
+	resolveFileMimeType,
 	shouldUseMultipart,
 } from "@sos26/shared";
 import { toast } from "sonner";
@@ -433,11 +434,12 @@ export async function uploadFile(
 	} & UploadProgressHandlers
 ): Promise<ConfirmUploadResponse> {
 	// 0. クライアントサイドで MIME タイプをチェック
-	if (!allowedMimeTypes.includes(file.type as AllowedMimeType)) {
+	if (!isAllowedFileType(file)) {
 		throw new Error(
 			`対応していないファイル形式です。アップロードできるファイル形式: ${allowedFileExtensions}`
 		);
 	}
+	const fileMimeType = resolveFileMimeType(file);
 
 	const toastId = toast.loading(`「${file.name}」をアップロード中…`, {
 		duration: Number.POSITIVE_INFINITY,
@@ -463,7 +465,7 @@ export async function uploadFile(
 
 			const { fileId, uploadId, partUrls } = await initiateMultipartUpload({
 				fileName: file.name,
-				mimeType: file.type,
+				mimeType: fileMimeType,
 				size: file.size,
 				isPublic: options?.isPublic,
 				partCount,

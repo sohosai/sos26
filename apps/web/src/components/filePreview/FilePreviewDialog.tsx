@@ -5,7 +5,7 @@ import {
 	IconZoomIn,
 	IconZoomOut,
 } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, IconButton } from "@/components/primitives";
 import ExcelViewer from "./ExcelViewer";
 import styles from "./FilePreviewDialog.module.scss";
@@ -71,6 +71,11 @@ function BlobViewer({ file, scale }: { file: File; scale: number }) {
 	if (ext === "xlsx" || ext === "xls") return <ExcelViewer file={file} />;
 	if (ext === "docx") return <WordViewer file={file} />;
 
+	// 未アップロードの画像・動画も即プレビュー可能に
+	if (isStreamable(ext)) {
+		return <StreamableBlobViewer file={file} />;
+	}
+
 	return (
 		<div className={styles.unsupported}>
 			{ext ? (
@@ -79,6 +84,54 @@ function BlobViewer({ file, scale }: { file: File; scale: number }) {
 				<Text size="2">ファイルを表示できません</Text>
 			)}
 		</div>
+	);
+}
+
+/** File オブジェクトを直接 media srcObject にセットして再生（URL.createObjectURL のセキュリティ問題を回避） */
+function StreamableBlobViewer({ file }: { file: File }) {
+	const ext = getExt(file.name);
+	if (ext === "mp4") {
+		return <VideoFilePlayer file={file} />;
+	}
+
+	// 画像は URL.createObjectURL を使う（img は srcObject 非対応）
+	return (
+		<img
+			src={URL.createObjectURL(file)}
+			className={styles.image}
+			alt={file.name}
+		/>
+	);
+}
+
+function VideoFilePlayer({ file }: { file: File }) {
+	const videoRef = useRef<HTMLVideoElement>(null);
+	const urlRef = useRef<string>("");
+
+	useEffect(() => {
+		const el = videoRef.current;
+		if (!el) return;
+		const url = URL.createObjectURL(file);
+		urlRef.current = url;
+		el.src = url;
+		return () => {
+			el.pause();
+			el.src = "";
+			if (urlRef.current) {
+				URL.revokeObjectURL(urlRef.current);
+				urlRef.current = "";
+			}
+		};
+	}, [file]);
+
+	return (
+		// biome-ignore lint/a11y/useMediaCaption: ユーザーアップロード動画のプレビュー
+		<video
+			ref={videoRef}
+			controls
+			className={styles.video}
+			preload="metadata"
+		/>
 	);
 }
 

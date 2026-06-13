@@ -48,6 +48,54 @@ export const fileAcceptAttribute = allowedMimeTypes.join(",");
 export const allowedFileExtensions =
 	"JPEG, PNG, GIF, WebP, PDF, DOCX, XLSX, MP4, MOV";
 
+/** 拡張子から許可された MIME タイプを推定するフォールバック */
+export function inferMimeTypeFromFileName(
+	fileName: string
+): AllowedMimeType | null {
+	const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+	switch (ext) {
+		case "jpg":
+		case "jpeg":
+			return "image/jpeg";
+		case "png":
+			return "image/png";
+		case "gif":
+			return "image/gif";
+		case "webp":
+			return "image/webp";
+		case "pdf":
+			return "application/pdf";
+		case "docx":
+			return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+		case "xlsx":
+			return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+		case "mp4":
+			return "video/mp4";
+		case "mov":
+			return "video/quicktime";
+		default:
+			return null;
+	}
+}
+
+/** ファイルの実効 MIME タイプを取得（ブラウザ type 空文字時は拡張子でフォールバック） */
+export function resolveFileMimeType(file: {
+	name: string;
+	type: string;
+}): string {
+	if (file.type && file.type !== "") return file.type;
+	return inferMimeTypeFromFileName(file.name) ?? file.type;
+}
+
+/** ファイルが許可された MIME タイプか判定 */
+export function isAllowedFileType(file: {
+	name: string;
+	type: string;
+}): boolean {
+	const effectiveType = resolveFileMimeType(file);
+	return allowedMimeTypes.includes(effectiveType as AllowedMimeType);
+}
+
 /** 指定MIMEタイプ配列から accept 属性文字列を生成（未指定時は全許可） */
 export function buildFileAcceptAttribute(
 	mimeTypes?: AllowedMimeType[]
