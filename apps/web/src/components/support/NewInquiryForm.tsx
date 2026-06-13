@@ -5,9 +5,11 @@ import {
 	Text,
 } from "@radix-ui/themes";
 import {
+	type AllowedMimeType,
 	allowedFileExtensions,
+	allowedMimeTypes,
 	type Bureau,
-	isAllowedFileType,
+	resolveFileMimeType,
 	type ViewerScope,
 } from "@sos26/shared";
 import { IconCheck, IconChevronDown, IconSearch } from "@tabler/icons-react";
@@ -298,7 +300,7 @@ const partitionFiles = (files: File[]) => {
 	const valid: File[] = [];
 	const invalid: File[] = [];
 	for (const f of files) {
-		if (isAllowedFileType(f)) {
+		if (allowedMimeTypes.includes(resolveFileMimeType(f) as AllowedMimeType)) {
 			valid.push(f);
 		} else {
 			invalid.push(f);

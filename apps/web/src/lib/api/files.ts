@@ -8,12 +8,12 @@ import type {
 import {
 	abortMultipartUploadEndpoint,
 	allowedFileExtensions,
+	allowedMimeTypes,
 	completeMultipartUploadEndpoint,
 	confirmUploadEndpoint,
 	deleteFileEndpoint,
 	getFileTokenEndpoint,
 	initiateMultipartUploadEndpoint,
-	isAllowedFileType,
 	listFilesEndpoint,
 	MULTIPART_CHUNK_SIZE,
 	requestDownloadUrlEndpoint,
@@ -368,12 +368,14 @@ async function uploadPart(
  */
 async function performMultipartUpload(params: {
 	file: File;
+	mimeType: string;
 	partUrls: string[];
 	signal?: AbortSignal;
 	onPartProgress?: (partNumber: number, loaded: number, total: number) => void;
 	onUploadProgress?: (ratio: number) => void;
 }): Promise<void> {
-	const { file, partUrls, signal, onPartProgress, onUploadProgress } = params;
+	const { file, mimeType, partUrls, signal, onPartProgress, onUploadProgress } =
+		params;
 
 	// 同時アップロード数を制限（メモリ・帯域の観点から）
 	const CONCURRENCY = 5;
@@ -399,7 +401,7 @@ async function performMultipartUpload(params: {
 			const end = Math.min(start + MULTIPART_CHUNK_SIZE, file.size);
 			const chunk = file.slice(start, end);
 
-			await uploadPart(url, chunk, file.type, i + 1, {
+			await uploadPart(url, chunk, mimeType, i + 1, {
 				signal,
 				onPartProgress: onPartProgress
 					? (pn, loaded, total) => {
@@ -448,12 +450,12 @@ export async function uploadFile(
 	} & UploadProgressHandlers
 ): Promise<ConfirmUploadResponse> {
 	// 0. クライアントサイドで MIME タイプをチェック
-	if (!isAllowedFileType(file)) {
+	const fileMimeType = resolveFileMimeType(file);
+	if (!allowedMimeTypes.includes(fileMimeType as AllowedMimeType)) {
 		throw new Error(
 			`対応していないファイル形式です。アップロードできるファイル形式: ${allowedFileExtensions}`
 		);
 	}
-	const fileMimeType = resolveFileMimeType(file);
 
 	const toastId = toast.loading(`「${file.name}」をアップロード中…`, {
 		duration: Number.POSITIVE_INFINITY,
@@ -488,6 +490,7 @@ export async function uploadFile(
 			try {
 				await performMultipartUpload({
 					file,
+					mimeType: fileMimeType,
 					partUrls,
 					signal: options?.signal,
 					onPartProgress: options?.onPartProgress,
@@ -516,7 +519,7 @@ export async function uploadFile(
 		// シングルアップロード
 		const { fileId, uploadUrl } = await requestUploadUrl({
 			fileName: file.name,
-			mimeType: file.type,
+			mimeType: fileMimeType,
 			size: file.size,
 			isPublic: options?.isPublic,
 		});
@@ -526,7 +529,7 @@ export async function uploadFile(
 		const res = await fetch(uploadUrl, {
 			method: "PUT",
 			body: file,
-			headers: { "Content-Type": file.type },
+			headers: { "Content-Type": fileMimeType },
 			signal: options?.signal,
 		});
 

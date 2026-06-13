@@ -4,6 +4,7 @@ import {
 	allowedMimeTypes,
 	buildFileAcceptAttribute,
 	buildFileExtensionsLabel,
+	isStreamable,
 	resolveFileMimeType,
 } from "@sos26/shared";
 import { IconFileSearch, IconX } from "@tabler/icons-react";
@@ -12,7 +13,12 @@ import { toast } from "sonner";
 import FilePreviewDialog from "@/components/filePreview/FilePreviewDialog";
 import type { UploadedFileValue } from "@/components/form/type";
 import { Button, IconButton } from "@/components/primitives";
-import { downloadFile, fetchFile, requestPreviewUrl } from "@/lib/api/files";
+import {
+	downloadFile,
+	fetchFile,
+	releasePreviewFile,
+	requestPreviewUrl,
+} from "@/lib/api/files";
 import styles from "./FileUploadField.module.scss";
 
 type FileUploadProps = {
@@ -172,11 +178,6 @@ export function FileUploadField({
 		setOpen(true);
 	};
 
-	const isStreamable = (fileName: string): boolean => {
-		const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
-		return ["mp4", "png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext);
-	};
-
 	const handleUploadedFilePreview = async (file: UploadedFileValue) => {
 		setOpen(true);
 		setLoadingFileId(file.id);
@@ -326,7 +327,12 @@ export function FileUploadField({
 				streamingUrl={streamingUrl}
 				fileName={previewedUploadedFile?.fileName ?? previewFile?.name}
 				open={open}
-				onOpenChange={setOpen}
+				onOpenChange={nextOpen => {
+					if (!nextOpen && previewedUploadedFile) {
+						releasePreviewFile(previewedUploadedFile.id);
+					}
+					setOpen(nextOpen);
+				}}
 				onDownload={previewedUploadedFile ? handleDownload : undefined}
 				loading={loadingFileId !== null && !previewFile && !streamingUrl}
 			/>

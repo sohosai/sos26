@@ -1,8 +1,10 @@
 import { Heading, Text } from "@radix-ui/themes";
 import {
+	type AllowedMimeType,
 	allowedFileExtensions,
+	allowedMimeTypes,
 	fileAcceptAttribute,
-	isAllowedFileType,
+	resolveFileMimeType,
 } from "@sos26/shared";
 import { IconPaperclip, IconX } from "@tabler/icons-react";
 import { useRef, useState } from "react";
@@ -184,8 +186,13 @@ export function ReplySection({
 		const { files } = e.target;
 		if (files) {
 			const added = Array.from(files);
-			const invalid = added.filter(f => !isAllowedFileType(f));
-			const valid = added.filter(f => isAllowedFileType(f));
+			const invalid = added.filter(
+				f =>
+					!allowedMimeTypes.includes(resolveFileMimeType(f) as AllowedMimeType)
+			);
+			const valid = added.filter(f =>
+				allowedMimeTypes.includes(resolveFileMimeType(f) as AllowedMimeType)
+			);
 			if (invalid.length > 0) {
 				setReplyFileError(
 					`対応していないファイル形式です（${allowedFileExtensions}）`

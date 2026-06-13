@@ -96,6 +96,13 @@ export function isAllowedFileType(file: {
 	return allowedMimeTypes.includes(effectiveType as AllowedMimeType);
 }
 
+/** 拡張子がブラウザストリーミング対応か判定（プレビュー用） */
+export function isStreamable(ext: string): boolean {
+	return ["mp4", "png", "jpg", "jpeg", "gif", "webp", "svg"].includes(
+		ext.toLowerCase()
+	);
+}
+
 /** 指定MIMEタイプ配列から accept 属性文字列を生成（未指定時は全許可） */
 export function buildFileAcceptAttribute(
 	mimeTypes?: AllowedMimeType[]
