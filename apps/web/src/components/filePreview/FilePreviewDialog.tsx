@@ -79,7 +79,7 @@ function BlobViewer({ file, scale }: { file: File; scale: number }) {
 	return (
 		<div className={styles.unsupported}>
 			{ext ? (
-				<Text size="2">非対応の形式です：.{ext}</Text>
+				<Text size="2">この形式はブラウザでプレビューできません：.{ext}</Text>
 			) : (
 				<Text size="2">ファイルを表示できません</Text>
 			)}
