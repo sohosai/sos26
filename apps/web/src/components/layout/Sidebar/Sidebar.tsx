@@ -56,7 +56,6 @@ function getRoleSwitchItem(
 	const hasCommitteeMenu = menuItems.some(item =>
 		item.to.startsWith("/committee")
 	);
-
 	if (
 		pathname.startsWith("/project") ||
 		(!pathname.startsWith("/committee") && hasProjectMenu)
