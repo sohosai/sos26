@@ -11,13 +11,13 @@
 
 ```bash
 # プロジェクトルートから実行
-bun run make-committee-member --email user@example.com
+docker compose exec app bun run make-committee-member --email user@example.com
 
 # 局を指定する場合（デフォルト: INFO_SYSTEM）
-bun run make-committee-member --email user@example.com --bureau FINANCE
+docker compose exec app bun run make-committee-member --email user@example.com --bureau FINANCE
 
 # 権限も同時に付与する場合（カンマ区切り）
-bun run make-committee-member --email user@example.com --permissions NOTICE_DELIVER,FORM_DELIVER
+docker compose exec app bun run make-committee-member --email user@example.com --permissions NOTICE_DELIVER,FORM_DELIVER
 ```
 
 ### 指定可能な局

@@ -321,6 +321,18 @@ const url = await getAuthenticatedFileUrl(fileId);
 `S3_*` および `FILE_TOKEN_SECRET` を `apps/api/.env` に設定する必要がある。
 詳細は [docs/apps/api/environment-variables.md](./apps/api/environment-variables.md) を参照。
 
+Docker Compose の開発環境では RustFS を S3 互換ストレージとして起動する。`apps/api/.env` には次の値を設定する。
+
+```bash
+S3_ENDPOINT=http://object-storage:9000
+S3_REGION=jp-north-1
+S3_BUCKET=local-bucket
+S3_ACCESS_KEY_ID=dev_access_key
+S3_SECRET_ACCESS_KEY=dev_secret_access_key
+```
+
+ホスト PC から RustFS にアクセスする場合は API が http://localhost:9000、コンソールが http://localhost:9001 で公開される。
+
 ### 許可されたファイル形式
 
 | カテゴリ | MIME タイプ | 拡張子 |
