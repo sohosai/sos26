@@ -55,6 +55,7 @@ function SetupPage() {
 			return;
 		}
 
+		setTermsDialogOpen(true);
 		setTermsLoading(true);
 		try {
 			const response = await fetch(termsFilePath);
@@ -64,9 +65,9 @@ function SetupPage() {
 				type: blob.type || "application/pdf",
 			});
 			setTermsFile(file);
-			setTermsDialogOpen(true);
 		} catch {
 			toast.error("利用規約の読み込みに失敗しました");
+			setTermsDialogOpen(false);
 		} finally {
 			setTermsLoading(false);
 		}
@@ -248,6 +249,7 @@ function SetupPage() {
 					open={termsDialogOpen}
 					onOpenChange={setTermsDialogOpen}
 					onDownload={handleDownloadTerms}
+					loading={termsLoading}
 				/>
 				<Checkbox
 					label="利用規約に同意する"

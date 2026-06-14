@@ -1,15 +1,28 @@
 import { z } from "zod";
 import {
+	abortMultipartUploadRequestSchema,
+	abortMultipartUploadResponseSchema,
+	completeMultipartUploadRequestSchema,
+	completeMultipartUploadResponseSchema,
 	confirmUploadResponseSchema,
 	deleteFileResponseSchema,
 	fileTokenResponseSchema,
+	initiateMultipartUploadRequestSchema,
+	initiateMultipartUploadResponseSchema,
 	listFilesResponseSchema,
+	requestDownloadUrlResponseSchema,
+	requestPreviewUrlResponseSchema,
 	requestUploadUrlRequestSchema,
 	requestUploadUrlResponseSchema,
 } from "../schemas/file";
-import type { BodyEndpoint, GetEndpoint, NoBodyEndpoint } from "./types";
+import type {
+	BodyEndpoint,
+	Endpoint,
+	GetEndpoint,
+	NoBodyEndpoint,
+} from "./types";
 
-/** パスパラメータ: ファイルID */
+/** ファイルIDパスパラメータ */
 export const fileIdPathParamsSchema = z.object({
 	id: z.string(),
 });
@@ -36,6 +49,66 @@ export const requestUploadUrlEndpoint: BodyEndpoint<
 	query: undefined,
 	request: requestUploadUrlRequestSchema,
 	response: requestUploadUrlResponseSchema,
+} as const;
+
+/**
+ * POST /files/multipart/initiate
+ * マルチパートアップロード開始
+ */
+export const initiateMultipartUploadEndpoint: BodyEndpoint<
+	"POST",
+	"/files/multipart/initiate",
+	undefined,
+	undefined,
+	typeof initiateMultipartUploadRequestSchema,
+	typeof initiateMultipartUploadResponseSchema
+> = {
+	method: "POST",
+	path: "/files/multipart/initiate",
+	pathParams: undefined,
+	query: undefined,
+	request: initiateMultipartUploadRequestSchema,
+	response: initiateMultipartUploadResponseSchema,
+} as const;
+
+/**
+ * POST /files/multipart/complete
+ * マルチパートアップロード完了
+ */
+export const completeMultipartUploadEndpoint: BodyEndpoint<
+	"POST",
+	"/files/multipart/complete",
+	undefined,
+	undefined,
+	typeof completeMultipartUploadRequestSchema,
+	typeof completeMultipartUploadResponseSchema
+> = {
+	method: "POST",
+	path: "/files/multipart/complete",
+	pathParams: undefined,
+	query: undefined,
+	request: completeMultipartUploadRequestSchema,
+	response: completeMultipartUploadResponseSchema,
+} as const;
+
+/**
+ * POST /files/multipart/abort
+ * マルチパートアップロード中止
+ */
+export const abortMultipartUploadEndpoint: BodyEndpoint<
+	"POST",
+	"/files/multipart/abort",
+	undefined,
+	undefined,
+	typeof abortMultipartUploadRequestSchema,
+	typeof abortMultipartUploadResponseSchema
+> = {
+	method: "POST",
+	path: "/files/multipart/abort",
+	pathParams: undefined,
+	query: undefined,
+	request: abortMultipartUploadRequestSchema,
+	response: abortMultipartUploadResponseSchema,
 } as const;
 
 /**
@@ -93,6 +166,46 @@ export const deleteFileEndpoint: NoBodyEndpoint<
 	query: undefined,
 	request: undefined,
 	response: deleteFileResponseSchema,
+} as const;
+
+/**
+ * POST /files/:id/download-url
+ * S3直ダウンロード用のPresigned URL発行
+ */
+export const requestDownloadUrlEndpoint: Endpoint<
+	"POST",
+	"/files/:id/download-url",
+	typeof fileIdPathParamsSchema,
+	undefined,
+	undefined,
+	typeof requestDownloadUrlResponseSchema
+> = {
+	method: "POST",
+	path: "/files/:id/download-url",
+	pathParams: fileIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: requestDownloadUrlResponseSchema,
+} as const;
+
+/**
+ * POST /files/:id/preview-url
+ * S3直プレビュー用のPresigned URL発行（inline）
+ */
+export const requestPreviewUrlEndpoint: Endpoint<
+	"POST",
+	"/files/:id/preview-url",
+	typeof fileIdPathParamsSchema,
+	undefined,
+	undefined,
+	typeof requestPreviewUrlResponseSchema
+> = {
+	method: "POST",
+	path: "/files/:id/preview-url",
+	pathParams: fileIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: requestPreviewUrlResponseSchema,
 } as const;
 
 /**

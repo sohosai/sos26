@@ -52,7 +52,7 @@ const envSchema = z.object({
 	S3_ACCESS_KEY_ID: z.string().min(1),
 	S3_SECRET_ACCESS_KEY: z.string().min(1),
 	S3_PRESIGNED_URL_EXPIRES: z.coerce.number().min(1).default(3600),
-	S3_MAX_FILE_SIZE: z.coerce.number().min(1).default(10_485_760), // 10MB
+	S3_MAX_FILE_SIZE: z.coerce.number().min(1).default(1_000_000_000), // 1GB
 
 	// ファイルトークン署名用秘密鍵
 	FILE_TOKEN_SECRET: z.string().min(32),

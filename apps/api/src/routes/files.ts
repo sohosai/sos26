@@ -1,4 +1,9 @@
-import { requestUploadUrlRequestSchema } from "@sos26/shared";
+import {
+	abortMultipartUploadRequestSchema,
+	completeMultipartUploadRequestSchema,
+	initiateMultipartUploadRequestSchema,
+	requestUploadUrlRequestSchema,
+} from "@sos26/shared";
 import { Hono } from "hono";
 import { stream } from "hono/streaming";
 import { env } from "../lib/env";
@@ -8,6 +13,15 @@ import { canAccessFile } from "../lib/storage/access";
 import { generateFileToken, verifyFileToken } from "../lib/storage/file-token";
 import { generateObjectKey } from "../lib/storage/key";
 import {
+	abortMultipartUpload,
+	completeMultipartUploadServer,
+	createMultipartUpload,
+	generatePartUploadUrls,
+	shouldUseMultipart,
+} from "../lib/storage/multipart";
+import {
+	generateDownloadUrl,
+	generatePreviewUrl,
 	generateUploadUrl,
 	getObject,
 	objectExists,
@@ -79,6 +93,124 @@ fileRoute.post("/upload-url", requireAuth, async c => {
 		uploadUrl,
 		key,
 	});
+});
+
+/**
+ * POST /files/multipart/initiate
+ * マルチパートアップロードを開始し、各パート用の Presigned URL を発行する。
+ */
+fileRoute.post("/multipart/initiate", requireAuth, async c => {
+	const body = await c.req.json().catch(() => ({}));
+	const parsed = initiateMultipartUploadRequestSchema.parse(body);
+	const userId = c.get("user").id;
+
+	// ファイルサイズ上限チェック
+	if (parsed.size > env.S3_MAX_FILE_SIZE) {
+		throw Errors.validationError(
+			`ファイルサイズが上限（${env.S3_MAX_FILE_SIZE} バイト）を超えています`
+		);
+	}
+
+	// マルチパートでないファイルは /upload-url を使うべき
+	if (!shouldUseMultipart(parsed.size)) {
+		throw Errors.validationError(
+			"このファイルサイズではマルチパートアップロードは不要です。/files/upload-url を使用してください。"
+		);
+	}
+
+	const key = generateObjectKey(userId, parsed.mimeType);
+	const uploadId = await createMultipartUpload(key, parsed.mimeType);
+	const partUrls = await generatePartUploadUrls(
+		key,
+		uploadId,
+		parsed.partCount
+	);
+
+	const file = await prisma.file.create({
+		data: {
+			key,
+			fileName: parsed.fileName,
+			mimeType: parsed.mimeType,
+			size: parsed.size,
+			isPublic: parsed.isPublic,
+			uploadedById: userId,
+		},
+	});
+
+	return c.json({
+		fileId: file.id,
+		uploadId,
+		partUrls,
+		key,
+	});
+});
+
+/**
+ * POST /files/multipart/complete
+ * マルチパートアップロードを完了し、S3上のオブジェクトを統合する。
+ * （parts はサーバー側で自動収集するため、クライアントから不要）
+ */
+fileRoute.post("/multipart/complete", requireAuth, async c => {
+	const body = await c.req.json().catch(() => ({}));
+	const parsed = completeMultipartUploadRequestSchema.parse(body);
+	const userId = c.get("user").id;
+
+	const file = await prisma.file.findFirst({
+		where: { id: parsed.fileId, deletedAt: null },
+	});
+
+	if (!file) {
+		throw Errors.notFound("ファイルが見つかりません");
+	}
+
+	if (file.uploadedById !== userId) {
+		throw Errors.forbidden("このファイルを確認する権限がありません");
+	}
+
+	// 冪等: 既に CONFIRMED ならそのまま返す
+	if (file.status === "CONFIRMED") {
+		return c.json({ file: toFileResponse(file) });
+	}
+
+	await completeMultipartUploadServer(file.key, parsed.uploadId);
+
+	const updated = await prisma.file.update({
+		where: { id: parsed.fileId },
+		data: { status: "CONFIRMED" },
+	});
+
+	return c.json({ file: toFileResponse(updated) });
+});
+
+/**
+ * POST /files/multipart/abort
+ * マルチパートアップロードを中止し、S3上の部分的なパートを削除する。
+ */
+fileRoute.post("/multipart/abort", requireAuth, async c => {
+	const body = await c.req.json().catch(() => ({}));
+	const parsed = abortMultipartUploadRequestSchema.parse(body);
+	const userId = c.get("user").id;
+
+	const file = await prisma.file.findFirst({
+		where: { id: parsed.fileId, deletedAt: null },
+	});
+
+	if (!file) {
+		throw Errors.notFound("ファイルが見つかりません");
+	}
+
+	if (file.uploadedById !== userId) {
+		throw Errors.forbidden("このファイルを中止する権限がありません");
+	}
+
+	await abortMultipartUpload(file.key, parsed.uploadId);
+
+	await prisma.file.update({
+		where: { id: parsed.fileId },
+		data: { deletedAt: new Date() },
+	});
+
+	return c.json({ success: true as const });
 });
 
 /**
@@ -154,6 +286,62 @@ fileRoute.get("/:id/token", requireAuth, async c => {
 	).toISOString();
 
 	return c.json({ token, expiresAt });
+});
+
+/**
+ * POST /files/:id/download-url
+ * S3 直ダウンロード用 Presigned GET URL を発行する。
+ */
+fileRoute.post("/:id/download-url", requireAuth, async c => {
+	const fileId = c.req.param("id");
+	const user = c.get("user");
+
+	const file = await prisma.file.findFirst({
+		where: { id: fileId, status: "CONFIRMED", deletedAt: null },
+	});
+
+	if (!file) {
+		throw Errors.notFound("ファイルが見つかりません");
+	}
+
+	// アクセス制御: アップローダー本人 or 登録済みチェッカーで許可
+	if (!file.isPublic && file.uploadedById !== user.id) {
+		const hasAccess = await canAccessFile(file.id, user);
+		if (!hasAccess) {
+			throw Errors.forbidden("このファイルにアクセスする権限がありません");
+		}
+	}
+
+	const downloadUrl = await generateDownloadUrl(file.key, file.fileName);
+	return c.json({ downloadUrl });
+});
+
+/**
+ * POST /files/:id/preview-url
+ * S3 直プレビュー用 Presigned GET URL を発行する（inline）。
+ */
+fileRoute.post("/:id/preview-url", requireAuth, async c => {
+	const fileId = c.req.param("id");
+	const user = c.get("user");
+
+	const file = await prisma.file.findFirst({
+		where: { id: fileId, status: "CONFIRMED", deletedAt: null },
+	});
+
+	if (!file) {
+		throw Errors.notFound("ファイルが見つかりません");
+	}
+
+	// アクセス制御: アップローダー本人 or 登録済みチェッカーで許可
+	if (!file.isPublic && file.uploadedById !== user.id) {
+		const hasAccess = await canAccessFile(file.id, user);
+		if (!hasAccess) {
+			throw Errors.forbidden("このファイルにアクセスする権限がありません");
+		}
+	}
+
+	const previewUrl = await generatePreviewUrl(file.key, file.fileName);
+	return c.json({ previewUrl });
 });
 
 /**

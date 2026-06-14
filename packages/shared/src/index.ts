@@ -21,6 +21,7 @@ export * from "./lib/phonetic";
 export * from "./lib/project-display-name";
 export * from "./lib/sanitize-config";
 export * from "./lib/token";
+export * from "./lib/upload";
 export * from "./schemas/auth";
 export * from "./schemas/committee-member";
 export * from "./schemas/committee-project";

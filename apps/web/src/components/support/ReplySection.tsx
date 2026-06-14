@@ -4,6 +4,7 @@ import {
 	allowedFileExtensions,
 	allowedMimeTypes,
 	fileAcceptAttribute,
+	resolveFileMimeType,
 } from "@sos26/shared";
 import { IconPaperclip, IconX } from "@tabler/icons-react";
 import { useRef, useState } from "react";
@@ -186,10 +187,11 @@ export function ReplySection({
 		if (files) {
 			const added = Array.from(files);
 			const invalid = added.filter(
-				f => !allowedMimeTypes.includes(f.type as AllowedMimeType)
+				f =>
+					!allowedMimeTypes.includes(resolveFileMimeType(f) as AllowedMimeType)
 			);
 			const valid = added.filter(f =>
-				allowedMimeTypes.includes(f.type as AllowedMimeType)
+				allowedMimeTypes.includes(resolveFileMimeType(f) as AllowedMimeType)
 			);
 			if (invalid.length > 0) {
 				setReplyFileError(
