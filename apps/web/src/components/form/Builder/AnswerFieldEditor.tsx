@@ -13,7 +13,7 @@ import {
 	IconPlus,
 	IconX,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, IconButton, Select, TextField } from "@/components/primitives";
 import { FileUploadField } from "../EachField/FileUploadField";
 import { NumberField } from "../EachField/NumberField";
@@ -323,6 +323,12 @@ type Props = {
 };
 
 export function AnswerFieldEditor({ item, onUpdate }: Props) {
+	var lastselectedref = useRef<HTMLInputElement>(null);
+	// biome-ignore lint:item.optionsによるエラーを止める
+	useEffect(() => {
+		lastselectedref.current?.focus();
+	}, [item.options]);
+
 	switch (item.type) {
 		case "TEXT":
 			return (
@@ -416,6 +422,11 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 								}}
 								label={""}
 								aria-label={`選択肢 ${index + 1}`}
+								ref={(el: HTMLInputElement | null) => {
+									if (el && index === (item.options?.length || 0) - 1) {
+										lastselectedref.current = el;
+									}
+								}}
 							/>
 
 							<IconButton
