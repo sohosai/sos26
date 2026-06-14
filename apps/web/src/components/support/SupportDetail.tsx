@@ -17,7 +17,9 @@ import {
 	IconUsers,
 } from "@tabler/icons-react";
 import { Link, useCanGoBack, useRouter } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/primitives";
 import { formatDate, formatProjectNumber } from "@/lib/format";
 import { AssigneeList, AssigneePopover } from "./AssigneeSection";
@@ -441,6 +443,39 @@ function RelatedFormContent({
 	);
 }
 
+function CopyableProjectMetaItem({
+	label,
+	value,
+	icon,
+}: {
+	label: string;
+	value: string;
+	icon: ReactNode;
+}) {
+	const handleCopy = async () => {
+		try {
+			await navigator.clipboard.writeText(value);
+			toast.success(`${label}をコピーしました`);
+		} catch {
+			toast.error(`${label}のコピーに失敗しました`);
+		}
+	};
+
+	return (
+		<Tooltip content={`${label}をコピー`}>
+			<button
+				type="button"
+				className={styles.projectMetaItem}
+				onClick={handleCopy}
+				aria-label={`${label}をコピー`}
+			>
+				{icon}
+				<Text size="2">{value}</Text>
+			</button>
+		</Tooltip>
+	);
+}
+
 function SupportSidebar({
 	inquiry,
 	viewerRole,
@@ -706,6 +741,7 @@ export function SupportDetail({
 		? { label: "下書き", color: "orange" as const, icon: IconFileDescription }
 		: statusConfig[inquiry.status];
 	const StatusIcon = config.icon;
+	const formattedProjectNumber = formatProjectNumber(inquiry.project.number);
 
 	// 権限チェック: 全管理 or 担当者のみ編集 UI を表示
 	const canEditCommittee = viewerRole === "committee" && isAssigneeOrAdmin;
@@ -853,26 +889,21 @@ export function SupportDetail({
 						<Heading size="5">{inquiry.title}</Heading>
 					</div>
 					<div className={styles.projectMeta}>
-						<Tooltip content="企画番号">
-							<span className={styles.projectMetaItem}>
-								<IconHash size={14} />
-								<Text size="2">
-									{formatProjectNumber(inquiry.project.number)}
-								</Text>
-							</span>
-						</Tooltip>
-						<Tooltip content="企画名">
-							<span className={styles.projectMetaItem}>
-								<IconFolder size={14} />
-								<Text size="2">{inquiry.project.name}</Text>
-							</span>
-						</Tooltip>
-						<Tooltip content="団体名">
-							<span className={styles.projectMetaItem}>
-								<IconUsers size={14} />
-								<Text size="2">{inquiry.project.organizationName}</Text>
-							</span>
-						</Tooltip>
+						<CopyableProjectMetaItem
+							label="企画番号"
+							value={formattedProjectNumber}
+							icon={<IconHash size={14} />}
+						/>
+						<CopyableProjectMetaItem
+							label="企画名"
+							value={inquiry.project.name}
+							icon={<IconFolder size={14} />}
+						/>
+						<CopyableProjectMetaItem
+							label="団体名"
+							value={inquiry.project.organizationName}
+							icon={<IconUsers size={14} />}
+						/>
 					</div>
 					<Text size="2" color="gray">
 						{inquiry.createdBy.name} が{" "}
