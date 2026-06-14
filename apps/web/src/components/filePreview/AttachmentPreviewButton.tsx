@@ -32,8 +32,8 @@ export function AttachmentPreviewButton({ attachment }: Props) {
 	const [isLoading, setIsLoading] = useState(false);
 
 	const handleClick = async () => {
-		// キャッシュ済み（Blob または streamingUrl）
-		if (file || streamingUrl) {
+		// Blob は期限切れしないのでキャッシュ再利用
+		if (file) {
 			setOpen(true);
 			return;
 		}
@@ -44,7 +44,7 @@ export function AttachmentPreviewButton({ attachment }: Props) {
 		try {
 			const ext = attachment.fileName.split(".").pop()?.toLowerCase() ?? "";
 			if (isStreamable(ext)) {
-				// 動画・画像: S3 Presigned URL で即ストリーミング（inline）
+				// Presigned URL は期限切れするため毎回取得
 				const { previewUrl } = await requestPreviewUrl(attachment.fileId);
 				setStreamingUrl(previewUrl);
 			} else {
