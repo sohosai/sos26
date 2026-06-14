@@ -8,7 +8,7 @@ const committeeUserRoute = new Hono<AuthEnv>();
 
 // ─────────────────────────────────────────────────────────────
 // GET /committee/users/search
-// ユーザーを名前・メールアドレス・読み仮名で曖昧検索
+// 実委人でないユーザーを名前・メールアドレス・読み仮名で曖昧検索
 // ─────────────────────────────────────────────────────────────
 committeeUserRoute.get(
 	"/search",
@@ -26,6 +26,9 @@ committeeUserRoute.get(
 					{ namePhonetic: { contains: search, mode: "insensitive" } },
 					{ email: { contains: search, mode: "insensitive" } },
 				],
+				committeeMember: {
+					is: null,
+				},
 			},
 			select: {
 				id: true,
