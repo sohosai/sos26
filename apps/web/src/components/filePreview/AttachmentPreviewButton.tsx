@@ -42,7 +42,8 @@ export function AttachmentPreviewButton({ attachment }: Props) {
 		setIsLoading(true);
 
 		try {
-			if (isStreamable(attachment.fileName)) {
+			const ext = attachment.fileName.split(".").pop()?.toLowerCase() ?? "";
+			if (isStreamable(ext)) {
 				// 動画・画像: S3 Presigned URL で即ストリーミング（inline）
 				const { previewUrl } = await requestPreviewUrl(attachment.fileId);
 				setStreamingUrl(previewUrl);

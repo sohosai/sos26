@@ -54,7 +54,7 @@ function StreamViewer({
 				src={streamingUrl}
 				controls
 				className={styles.video}
-				preload="none"
+				preload="metadata"
 			/>
 		);
 	return <img src={streamingUrl} className={styles.image} alt={fileName} />;
@@ -132,7 +132,12 @@ function VideoFilePlayer({ file }: { file: File }) {
 
 	return (
 		// biome-ignore lint/a11y/useMediaCaption: ユーザーアップロード動画のプレビュー
-		<video ref={videoRef} controls className={styles.video} preload="none" />
+		<video
+			ref={videoRef}
+			controls
+			className={styles.video}
+			preload="metadata"
+		/>
 	);
 }
 

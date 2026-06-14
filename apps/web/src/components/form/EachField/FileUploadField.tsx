@@ -184,7 +184,8 @@ export function FileUploadField({
 		setOpen(true);
 		setLoadingFileId(file.id);
 		try {
-			if (isStreamable(file.fileName)) {
+			const ext = file.fileName.split(".").pop()?.toLowerCase() ?? "";
+			if (isStreamable(ext)) {
 				const { previewUrl } = await requestPreviewUrl(file.id);
 				setStreamingUrl(previewUrl);
 				setPreviewFile(null);
