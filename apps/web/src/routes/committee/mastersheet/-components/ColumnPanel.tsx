@@ -978,7 +978,7 @@ export function ColumnPanel({
 	return (
 		<>
 			<Dialog.Root open={open} onOpenChange={onOpenChange}>
-				<Dialog.Content maxWidth="800px" minHeight="560px">
+				<Dialog.Content maxWidth="800px" minHeight="560px" width="90vw">
 					<div className={styles.header}>
 						<Dialog.Title mb="0">カラム</Dialog.Title>
 						<div className={styles.headerActions}>
@@ -999,6 +999,7 @@ export function ColumnPanel({
 							<IconButton
 								aria-label="閉じる"
 								onClick={() => onOpenChange(false)}
+								className={styles.columnCloseButton}
 							>
 								<IconX size={16} />
 							</IconButton>

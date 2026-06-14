@@ -209,6 +209,27 @@
 	.ownerActions {
 		opacity: 1;
 	}
+	.cardName {
+		width:45%;
+	}
+	.cardRight {
+		width: 55%;
+	}
+	.visibilityRow {
+		min-width: 10rem;
+	}
+	.header {
+    align-items: flex-start;
+    flex-direction: column;
+	}
+	.headerActions{
+		margin-top: var(--space-2);
+		width: 100%
+	}
+	.columnCloseButton{
+		margin-left: auto;
+		margin-top: -75px;
+	}
 }
 
 .editForm {
