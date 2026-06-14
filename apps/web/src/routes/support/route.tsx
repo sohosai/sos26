@@ -133,7 +133,7 @@ function SupportLayout() {
 
 	const handleSelectProject = (projectId: string) => {
 		setSelectedProjectId(projectId);
-		navigate({ to: "/settings" });
+		navigate({ to: "/support" });
 	};
 
 	const handleJoinProject = async (inviteCode: string) => {
