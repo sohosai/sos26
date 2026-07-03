@@ -323,11 +323,11 @@ type Props = {
 };
 
 export function AnswerFieldEditor({ item, onUpdate }: Props) {
-	var lastselectedref = useRef<HTMLInputElement>(null);
-	// biome-ignore lint:item.optionsによるエラーを止める
+	const lastSelectedRef = useRef<HTMLInputElement>(null);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: optionの長さの変化で発火させたいため
 	useEffect(() => {
-		lastselectedref.current?.focus();
-	}, [item.options]);
+		lastSelectedRef.current?.focus();
+	}, [item.options?.length]);
 
 	switch (item.type) {
 		case "TEXT":
@@ -423,8 +423,8 @@ export function AnswerFieldEditor({ item, onUpdate }: Props) {
 								label={""}
 								aria-label={`選択肢 ${index + 1}`}
 								ref={(el: HTMLInputElement | null) => {
-									if (el && index === (item.options?.length || 0) - 1) {
-										lastselectedref.current = el;
+									if (index === (item.options?.length || 0) - 1) {
+										lastSelectedRef.current = el;
 									}
 								}}
 							/>
