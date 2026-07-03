@@ -29,7 +29,7 @@ export async function updateUserSettings(
 }
 
 /**
- * ユーザーを曖昧検索する
+ * 実委人でないユーザーを曖昧検索する
  */
 export async function searchUsers(
 	query: SearchUsersQuery
