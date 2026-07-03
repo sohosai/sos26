@@ -141,7 +141,7 @@ const buildSubmitParams = (
 
 const getSuccessMessage = (mode: "create" | "edit", isDraft: boolean) => {
 	if (mode === "edit") return "お問い合わせを更新しました";
-	return isDraft ? "下書きとして保存しました" : "お問い合わせを作成しました";
+	return isDraft ? "下書きとして保存しました" : "お問い合わせを送信しました";
 };
 
 const getErrorMessage = (mode: "create" | "edit", isDraft: boolean) => {
@@ -547,7 +547,7 @@ function FormActions({
 				disabled={!canSubmit || isSubmitting}
 				loading={isSubmitting}
 			>
-				{isSubmitting ? "送信中..." : "お問い合わせを作成"}
+				{isSubmitting ? "送信中..." : "お問い合わせを送信"}
 			</Button>
 		</div>
 	);
