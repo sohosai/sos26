@@ -43,6 +43,7 @@ type TextFieldProps = {
 	disabled?: boolean;
 	name?: string;
 	autoComplete?: string;
+	ref?: React.Ref<HTMLInputElement>;
 };
 
 export function TextField({
@@ -57,6 +58,7 @@ export function TextField({
 	disabled,
 	name,
 	autoComplete,
+	ref,
 }: TextFieldProps) {
 	const id = useId();
 	const errorId = `${id}-error`;
@@ -69,6 +71,7 @@ export function TextField({
 			</Text>
 
 			<RadixTextField.Root
+				ref={ref}
 				id={id}
 				size="2"
 				variant="surface"
