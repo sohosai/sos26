@@ -27,10 +27,11 @@ import styles from "./route.module.scss";
 export const Route = createFileRoute("/support")({
 	beforeLoad: async () => {
 		const { isLoggedIn } = useAuthStore.getState();
-		if (isLoggedIn) {
-			await preloadMemberEditPermission();
-		}
-		const res = await listMyProjects();
+        if (isLoggedIn) {
+            await preloadMemberEditPermission();
+            const res = await listMyProjects();
+        }
+		
 		const store = useProjectStore.getState();
 		const currentId = store.selectedProjectId;
 		const isValid =
