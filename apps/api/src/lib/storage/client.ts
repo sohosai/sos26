@@ -10,8 +10,12 @@ let client: S3Client | null = null;
 export function initStorage() {
 	if (client) return;
 
+	const endpoint = env.S3_ENDPOINT.startsWith("http")
+		? env.S3_ENDPOINT
+		: `https://${env.S3_ENDPOINT}`;
+
 	client = new S3Client({
-		endpoint: env.S3_ENDPOINT,
+		endpoint,
 		region: env.S3_REGION,
 		credentials: {
 			accessKeyId: env.S3_ACCESS_KEY_ID,

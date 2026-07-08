@@ -1,0 +1,310 @@
+.page {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-5);
+	max-width: 900px;
+}
+
+.header {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.card {
+	max-width: 720px;
+}
+
+.settingRow {
+	flex-wrap: wrap;
+}
+
+/* ─── Map掲載画像グリッド ─── */
+
+.mapImageGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+	gap: var(--space-3);
+}
+
+/* 個々の画像カード */
+.mapImageCard {
+	position: relative;
+	border-radius: var(--radius-3);
+	overflow: hidden;
+	aspect-ratio: 1;
+	background: var(--gray-3);
+	box-shadow: var(--shadow-1);
+	transition: box-shadow 0.2s;
+}
+
+.mapImageCard:hover {
+	box-shadow: var(--shadow-3);
+}
+
+.mapImageCardDragging {
+	box-shadow: var(--shadow-5) !important;
+}
+
+/* サムネイルボタン */
+.mapImageThumb {
+	display: block;
+	width: 100%;
+	height: 100%;
+	padding: 0;
+	margin: 0;
+	border: none;
+	background: none;
+	cursor: pointer;
+}
+
+.mapImageImg {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+/* ズームオーバーレイ */
+.mapImageOverlay {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.4);
+	opacity: 0;
+	transition: opacity 0.15s;
+	pointer-events: none;
+}
+
+.mapImageThumb:hover .mapImageOverlay,
+.mapImageThumb:focus-visible .mapImageOverlay {
+	opacity: 1;
+}
+
+/* ドラッグハンドル（左下） */
+.mapImageDragHandle {
+	position: absolute;
+	bottom: 6px;
+	left: 6px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: var(--radius-2);
+	background: rgba(0, 0, 0, 0.5);
+	color: white;
+	cursor: grab;
+	opacity: 0;
+	transition: opacity 0.15s;
+}
+
+.mapImageCard:hover .mapImageDragHandle {
+	opacity: 1;
+}
+
+.mapImageDragHandle:active {
+	cursor: grabbing;
+}
+
+/* 削除ボタン（右上） */
+.mapImageDeleteBtn {
+	position: absolute;
+	top: 6px;
+	right: 6px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: var(--radius-round);
+	background: var(--red-9);
+	color: white;
+	border: none;
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.15s, background 0.15s;
+	padding: 0;
+}
+
+.mapImageCard:hover .mapImageDeleteBtn {
+	opacity: 1;
+}
+
+.mapImageDeleteBtn:hover {
+	background: var(--red-11);
+}
+
+/* 順番バッジ（左上） */
+.mapImageBadge {
+	position: absolute;
+	top: 6px;
+	left: 6px;
+	min-width: 22px;
+	height: 22px;
+	padding: 0 6px;
+	border-radius: var(--radius-round);
+	background: rgba(0, 0, 0, 0.55);
+	color: white;
+	font-size: 11px;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.15s;
+}
+
+.mapImageCard:hover .mapImageBadge {
+	opacity: 1;
+}
+
+/* 追加ボタンカード */
+.mapImageAddCard {
+	aspect-ratio: 1;
+	border-radius: var(--radius-3);
+	border: 2px dashed var(--gray-6);
+	background: var(--gray-2);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-1);
+	cursor: pointer;
+	color: var(--gray-11);
+	font-size: var(--font-size-2);
+	transition: border-color 0.15s, background 0.15s, color 0.15s;
+	padding: var(--space-3);
+}
+
+.mapImageAddCard:hover:not(:disabled) {
+	border-color: var(--accent-8);
+	background: var(--accent-2);
+	color: var(--accent-11);
+}
+
+.mapImageAddCard:disabled {
+	cursor: default;
+	opacity: 0.5;
+}
+
+.mapImageAddHint {
+	font-size: var(--font-size-1);
+	color: var(--gray-9);
+}
+
+/* アップロード中スケルトン */
+.mapImageSkeleton {
+	aspect-ratio: 1;
+	border-radius: var(--radius-3);
+	background: linear-gradient(
+		90deg,
+		var(--gray-3) 25%,
+		var(--gray-4) 50%,
+		var(--gray-3) 75%
+	);
+	background-size: 200% 100%;
+	animation: skeletonShimmer 1.4s ease-in-out infinite;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.skeletonIcon {
+	color: var(--gray-7);
+	animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+	0% { background-position: 200% 0; }
+	100% { background-position: -200% 0; }
+}
+
+@keyframes skeletonPulse {
+	0%, 100% { opacity: 0.5; }
+	50% { opacity: 1; }
+}
+
+/* ─── 画像プレビューモーダル ─── */
+
+.previewModalContent {
+	max-width: min(90vw, 900px) !important;
+	padding: var(--space-4) !important;
+}
+
+.previewImageWrap {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 200px;
+	margin-bottom: var(--space-4);
+}
+
+.previewImage {
+	max-width: 100%;
+	max-height: 70vh;
+	object-fit: contain;
+	border-radius: var(--radius-3);
+	animation: previewFadeIn 0.2s ease;
+}
+
+@keyframes previewFadeIn {
+	from { opacity: 0; transform: scale(0.97); }
+	to   { opacity: 1; transform: scale(1); }
+}
+
+.previewCloseBtn {
+	position: absolute;
+	top: var(--space-3);
+	right: var(--space-3);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: var(--radius-round);
+	background: var(--gray-4);
+	border: none;
+	cursor: pointer;
+	color: var(--gray-11);
+	transition: background 0.15s;
+	z-index: 1;
+}
+
+.previewCloseBtn:hover {
+	background: var(--gray-6);
+}
+
+.previewNav {
+	width: 100%;
+}
+
+.previewCounter {
+	font-size: var(--font-size-2);
+	color: var(--gray-11);
+	font-variant-numeric: tabular-nums;
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 900px) {
+	.page {
+		gap: var(--space-4);
+	}
+
+	.card {
+		max-width: 100%;
+	}
+
+	.settingRow {
+		align-items: flex-start;
+	}
+
+	.mapImageGrid {
+		grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+	}
+}

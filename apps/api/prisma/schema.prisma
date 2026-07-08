@@ -201,6 +201,8 @@ model Project {
   formItemEditHistory                    FormItemEditHistory[]
   projectRegistrationFormItemEditHistory ProjectRegistrationFormItemEditHistory[]
 
+  publicInfo ProjectPublicInfo?
+
   @@index([ownerId])
   @@index([subOwnerId])
   @@index([deletedAt])
@@ -385,6 +387,9 @@ model File {
   formItemEditHistoryFiles                    FormItemEditHistoryFile[]
   projectRegistrationFormItemEditHistoryFiles ProjectRegistrationFormItemEditHistoryFile[]
   projectRegistrationFormAnswerFiles          ProjectRegistrationFormAnswerFile[]
+
+  projectPublicInfoIcons ProjectPublicInfo[]     @relation("ProjectPublicInfoIcon")
+  projectPublicMapImages ProjectPublicMapImage[]
 
   @@index([uploadedById])
   @@index([status])
@@ -1643,4 +1648,68 @@ model ProjectRegistrationFormAnswerSelectedOption {
   createdAt DateTime @default(now())
 
   @@unique([answerId, formItemOptionId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// オンラインマップ・企画公開情報
+// ─────────────────────────────────────────────────────────────
+
+enum OpenStatus {
+  OPEN
+  CLOSED
+  NOT_APPLICABLE
+}
+
+enum StockStatus {
+  IN_STOCK
+  OUT_OF_STOCK
+  NOT_APPLICABLE
+}
+
+model ProjectPublicInfo {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  description String? @db.VarChar(400)
+
+  iconFileId String?
+  iconFile   File?   @relation("ProjectPublicInfoIcon", fields: [iconFileId], references: [id])
+
+  openStatus  OpenStatus  @default(NOT_APPLICABLE)
+  stockStatus StockStatus @default(NOT_APPLICABLE)
+
+  mapImages ProjectPublicMapImage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProjectPublicMapImage {
+  id                  String            @id @default(cuid())
+  projectPublicInfoId String
+  projectPublicInfo   ProjectPublicInfo @relation(fields: [projectPublicInfoId], references: [id], onDelete: Cascade)
+
+  fileId String
+  file   File   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  sortOrder Int
+
+  createdAt DateTime @default(now())
+
+  @@unique([projectPublicInfoId, fileId])
+  @@unique([projectPublicInfoId, sortOrder])
+  @@index([fileId])
+}
+
+model MapAppSetting {
+  id String @id @default("GLOBAL")
+
+  isDescriptionEditable Boolean @default(true)
+  isIconEditable        Boolean @default(true)
+  isMapImagesEditable   Boolean @default(true)
+  isOpenStatusEditable  Boolean @default(true)
+  isStockStatusEditable Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
 }

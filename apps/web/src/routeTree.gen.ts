@@ -24,6 +24,8 @@ import { Route as ForbiddenIndexRouteImport } from './routes/forbidden/index'
 import { Route as DocsIndexRouteImport } from './routes/docs/index'
 import { Route as CommitteeIndexRouteImport } from './routes/committee/index'
 import { Route as DocsSlugRouteImport } from './routes/docs/$slug'
+import { Route as ProjectPublicInfoRouteRouteImport } from './routes/project/public-info/route'
+import { Route as CommitteeMapSettingsRouteRouteImport } from './routes/committee/map-settings/route'
 import { Route as ProjectSupportIndexRouteImport } from './routes/project/support/index'
 import { Route as ProjectNoticeIndexRouteImport } from './routes/project/notice/index'
 import { Route as ProjectMembersIndexRouteImport } from './routes/project/members/index'
@@ -127,6 +129,17 @@ const DocsSlugRoute = DocsSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => DocsRouteRoute,
 } as any)
+const ProjectPublicInfoRouteRoute = ProjectPublicInfoRouteRouteImport.update({
+  id: '/public-info',
+  path: '/public-info',
+  getParentRoute: () => ProjectRouteRoute,
+} as any)
+const CommitteeMapSettingsRouteRoute =
+  CommitteeMapSettingsRouteRouteImport.update({
+    id: '/map-settings',
+    path: '/map-settings',
+    getParentRoute: () => CommitteeRouteRoute,
+  } as any)
 const ProjectSupportIndexRoute = ProjectSupportIndexRouteImport.update({
   id: '/support/',
   path: '/support/',
@@ -278,6 +291,8 @@ export interface FileRoutesByFullPath {
   '/project': typeof ProjectRouteRouteWithChildren
   '/settings': typeof SettingsRouteRouteWithChildren
   '/support': typeof SupportRouteRouteWithChildren
+  '/committee/map-settings': typeof CommitteeMapSettingsRouteRoute
+  '/project/public-info': typeof ProjectPublicInfoRouteRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/committee/': typeof CommitteeIndexRoute
   '/docs/': typeof DocsIndexRoute
@@ -317,6 +332,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteRouteWithChildren
   '/dev': typeof DevRouteRouteWithChildren
+  '/committee/map-settings': typeof CommitteeMapSettingsRouteRoute
+  '/project/public-info': typeof ProjectPublicInfoRouteRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/committee': typeof CommitteeIndexRoute
   '/docs': typeof DocsIndexRoute
@@ -362,6 +379,8 @@ export interface FileRoutesById {
   '/project': typeof ProjectRouteRouteWithChildren
   '/settings': typeof SettingsRouteRouteWithChildren
   '/support': typeof SupportRouteRouteWithChildren
+  '/committee/map-settings': typeof CommitteeMapSettingsRouteRoute
+  '/project/public-info': typeof ProjectPublicInfoRouteRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/committee/': typeof CommitteeIndexRoute
   '/docs/': typeof DocsIndexRoute
@@ -408,6 +427,8 @@ export interface FileRouteTypes {
     | '/project'
     | '/settings'
     | '/support'
+    | '/committee/map-settings'
+    | '/project/public-info'
     | '/docs/$slug'
     | '/committee/'
     | '/docs/'
@@ -447,6 +468,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dev'
+    | '/committee/map-settings'
+    | '/project/public-info'
     | '/docs/$slug'
     | '/committee'
     | '/docs'
@@ -491,6 +514,8 @@ export interface FileRouteTypes {
     | '/project'
     | '/settings'
     | '/support'
+    | '/committee/map-settings'
+    | '/project/public-info'
     | '/docs/$slug'
     | '/committee/'
     | '/docs/'
@@ -645,6 +670,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/docs/$slug'
       preLoaderRoute: typeof DocsSlugRouteImport
       parentRoute: typeof DocsRouteRoute
+    }
+    '/project/public-info': {
+      id: '/project/public-info'
+      path: '/public-info'
+      fullPath: '/project/public-info'
+      preLoaderRoute: typeof ProjectPublicInfoRouteRouteImport
+      parentRoute: typeof ProjectRouteRoute
+    }
+    '/committee/map-settings': {
+      id: '/committee/map-settings'
+      path: '/map-settings'
+      fullPath: '/committee/map-settings'
+      preLoaderRoute: typeof CommitteeMapSettingsRouteRouteImport
+      parentRoute: typeof CommitteeRouteRoute
     }
     '/project/support/': {
       id: '/project/support/'
@@ -859,6 +898,7 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
 )
 
 interface CommitteeRouteRouteChildren {
+  CommitteeMapSettingsRouteRoute: typeof CommitteeMapSettingsRouteRoute
   CommitteeIndexRoute: typeof CommitteeIndexRoute
   CommitteeInfoProjectIdRoute: typeof CommitteeInfoProjectIdRoute
   CommitteeSupportInquiryIdRoute: typeof CommitteeSupportInquiryIdRoute
@@ -874,6 +914,7 @@ interface CommitteeRouteRouteChildren {
 }
 
 const CommitteeRouteRouteChildren: CommitteeRouteRouteChildren = {
+  CommitteeMapSettingsRouteRoute: CommitteeMapSettingsRouteRoute,
   CommitteeIndexRoute: CommitteeIndexRoute,
   CommitteeInfoProjectIdRoute: CommitteeInfoProjectIdRoute,
   CommitteeSupportInquiryIdRoute: CommitteeSupportInquiryIdRoute,
@@ -931,6 +972,7 @@ const DocsRouteRouteWithChildren = DocsRouteRoute._addFileChildren(
 )
 
 interface ProjectRouteRouteChildren {
+  ProjectPublicInfoRouteRoute: typeof ProjectPublicInfoRouteRoute
   ProjectIndexRoute: typeof ProjectIndexRoute
   ProjectSupportInquiryIdRoute: typeof ProjectSupportInquiryIdRoute
   ProjectFormsIndexRoute: typeof ProjectFormsIndexRoute
@@ -940,6 +982,7 @@ interface ProjectRouteRouteChildren {
 }
 
 const ProjectRouteRouteChildren: ProjectRouteRouteChildren = {
+  ProjectPublicInfoRouteRoute: ProjectPublicInfoRouteRoute,
   ProjectIndexRoute: ProjectIndexRoute,
   ProjectSupportInquiryIdRoute: ProjectSupportInquiryIdRoute,
   ProjectFormsIndexRoute: ProjectFormsIndexRoute,

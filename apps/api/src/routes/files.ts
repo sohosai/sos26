@@ -5,7 +5,7 @@ import {
 	requestUploadUrlRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
-import { stream } from "hono/streaming";
+
 import { env } from "../lib/env";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
@@ -382,30 +382,18 @@ fileRoute.get("/:id/content", async c => {
 		throw Errors.internal("ファイルの取得に失敗しました");
 	}
 
-	c.header("Content-Type", file.mimeType);
-	c.header("Content-Length", String(file.size));
-	c.header(
-		"Cache-Control",
-		file.isPublic ? "public, max-age=86400" : "private, max-age=3600"
-	);
 	const encodedFileName = encodeURIComponent(file.fileName);
-	c.header(
-		"Content-Disposition",
-		`inline; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`
-	);
 
-	return stream(c, async s => {
-		const readable = s3Body.transformToWebStream();
-		const reader = readable.getReader();
-		try {
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-				await s.write(value);
-			}
-		} finally {
-			reader.releaseLock();
-		}
+	// biome-ignore lint/suspicious/noExplicitAny: response body stream type is not fully compatible without DOM types
+	return new Response(s3Body.transformToWebStream() as any, {
+		headers: {
+			"Content-Type": file.mimeType,
+			"Content-Length": String(file.size),
+			"Cache-Control": file.isPublic
+				? "public, max-age=86400"
+				: "private, max-age=3600",
+			"Content-Disposition": `inline; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`,
+		},
 	});
 });
 

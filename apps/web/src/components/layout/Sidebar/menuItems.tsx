@@ -22,6 +22,11 @@ export const projectMenuItems: MenuItem[] = [
 		to: "/project/forms",
 	},
 	{
+		label: "企画情報",
+		icon: <IconClipboardList size={18} />,
+		to: "/project/public-info",
+	},
+	{
 		label: "お知らせ",
 		icon: <IconBell size={18} />,
 		to: "/project/notice",
@@ -64,5 +69,10 @@ export const committeeMenuItems: MenuItem[] = [
 		label: "企画登録管理",
 		icon: <IconClipboardList size={18} />,
 		to: "/committee/project-registration",
+	},
+	{
+		label: "マップ設定",
+		icon: <IconLayoutDashboard size={18} />,
+		to: "/committee/map-settings",
 	},
 ];
