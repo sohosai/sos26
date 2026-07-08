@@ -2,9 +2,10 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 async function main() {
-	await prisma.$executeRaw`UPDATE "ProjectPublicInfo" SET "storeName" = NULL;`;
+	// storeName カラムは既に削除されているため、このスクリプトは不要です。
+	// 必要ならこのファイル自体を削除してください。
 	// biome-ignore lint/suspicious/noConsole: script
-	console.log("Cleared storeName");
+	console.log("No-op: storeName column has been removed.");
 }
 main()
 	.then(() => process.exit(0))
