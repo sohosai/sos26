@@ -181,9 +181,13 @@ function ProjectPublicInfoPage() {
 				new File([blob], "icon.png", { type: "image/png" }),
 				{ isPublic: true }
 			);
-			setIconFileId(res.file.id);
 		} catch (error) {
-			console.error(error);
+			reportHandledError({
+				error,
+				operation: "save",
+				userMessage: "アイコンのアップロードに失敗しました。",
+				ui: { type: "toast" },
+			});
 		}
 	};
 
