@@ -22,7 +22,7 @@
     "check": "biome check --write .",
     "ci": "biome ci .",
     "clean": "turbo clean",
-    "clean:all": "bun run clean && rm -rf node_modules apps/web/node_modules apps/api/node_modules packages/shared/node_modules .turbo",
+    "clean:all": "bun run clean && rimraf node_modules apps/web/node_modules apps/api/node_modules packages/shared/node_modules .turbo",
     "db:generate": "bun run --cwd apps/api db:generate",
     "db:migrate:dev": "bun run --cwd apps/api db:migrate:dev",
     "db:migrate:deploy": "bun run --cwd apps/api db:migrate:deploy",
