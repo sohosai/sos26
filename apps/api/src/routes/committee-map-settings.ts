@@ -13,8 +13,8 @@ const DEFAULT_MAP_APP_SETTING = {
 	isDescriptionEditable: true,
 	isIconEditable: true,
 	isMapImagesEditable: true,
-	isOpenStatusEditable: true,
-	isStockStatusEditable: true,
+	isOpenStatusEditable: false,
+	isStockStatusEditable: false,
 };
 
 committeeMapSettingsRoute.get("/", async c => {
