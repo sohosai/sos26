@@ -7,7 +7,7 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b",
     "preview": "vite preview",
-    "clean": "rm -rf dist .turbo",
+    "clean": "rimraf dist .turbo",
     "test:run": "vitest run",
     "test:watch": "vitest"
   },
