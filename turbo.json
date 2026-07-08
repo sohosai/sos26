@@ -4,55 +4,27 @@
   "tasks": {
     "db:generate": {
       "cache": true,
-      "inputs": [
-        "prisma/schema.prisma"
-      ],
-      "outputs": [
-        "node_modules/.prisma/client/**"
-      ]
+      "inputs": ["prisma/schema.prisma"],
+      "outputs": ["node_modules/.prisma/client/**"]
     },
     "build": {
-      "dependsOn": [
-        "^build",
-        "db:generate"
-      ],
-      "inputs": [
-        "src/**",
-        "package.json",
-        "tsconfig.json"
-      ],
-      "outputs": [
-        "dist/**",
-        ".next/**"
-      ],
+      "dependsOn": ["^build", "db:generate"],
+      "inputs": ["src/**", "package.json", "tsconfig.json"],
+      "outputs": ["dist/**", ".next/**"],
       "outputLogs": "new-only"
     },
     "typecheck": {
-      "dependsOn": [
-        "db:generate"
-      ],
-      "inputs": [
-        "src/**",
-        "tsconfig.json",
-        "tsconfig.*.json"
-      ],
+      "dependsOn": ["db:generate"],
+      "inputs": ["src/**", "tsconfig.json", "tsconfig.*.json"],
       "outputs": []
     },
     "lint": {
-      "inputs": [
-        "src/**",
-        "biome.json"
-      ],
+      "inputs": ["src/**", "biome.json"],
       "outputs": []
     },
     "test:run": {
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "src/**",
-        "vitest.config.ts"
-      ]
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "vitest.config.ts"]
     },
     "dev": {
       "cache": false,
