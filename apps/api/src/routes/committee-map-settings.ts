@@ -2,12 +2,12 @@ import { updateMapAppSettingEndpoint } from "@sos26/shared";
 import { Hono } from "hono";
 import { requirePermission } from "../lib/committee-permission";
 import { prisma } from "../lib/prisma";
-import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
+import { requireAuth } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
 export const committeeMapSettingsRoute = new Hono<AuthEnv>();
 
-committeeMapSettingsRoute.use("*", requireAuth, requireCommitteeMember);
+committeeMapSettingsRoute.use("*", requireAuth);
 
 const DEFAULT_MAP_APP_SETTING = {
 	isDescriptionEditable: true,
