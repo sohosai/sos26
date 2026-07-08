@@ -56,26 +56,33 @@ export function ImageCropperModal({
 
 		const image = imgRef.current;
 		const canvas = document.createElement("canvas");
-		const scaleX = image.naturalWidth / image.width;
-		const scaleY = image.naturalHeight / image.height;
 
-		const cropWidth = crop.width * scaleX;
-		const cropHeight = crop.height * scaleY;
-		const cropX = crop.x * scaleX;
-		const cropY = crop.y * scaleY;
+		// crop は % 単位（0〜100）なので、表示ピクセルに変換してから自然サイズへスケール
+		const displayWidth = image.width;
+		const displayHeight = image.height;
+		const scaleX = image.naturalWidth / displayWidth;
+		const scaleY = image.naturalHeight / displayHeight;
 
-		canvas.width = cropWidth;
-		canvas.height = cropHeight;
+		const cropXPx = (crop.x / 100) * displayWidth;
+		const cropYPx = (crop.y / 100) * displayHeight;
+		const cropWidthPx = (crop.width / 100) * displayWidth;
+		const cropHeightPx = (crop.height / 100) * displayHeight;
+
+		// canvas は自然解像度で出力
+		const outputWidth = cropWidthPx * scaleX;
+		const outputHeight = cropHeightPx * scaleY;
+		canvas.width = outputWidth;
+		canvas.height = outputHeight;
 
 		const ctx = canvas.getContext("2d");
 		if (!ctx) return;
 
-		// Create circular clipping path
+		// 円形クリッピング
 		ctx.beginPath();
 		ctx.arc(
-			cropWidth / 2,
-			cropHeight / 2,
-			Math.min(cropWidth, cropHeight) / 2,
+			outputWidth / 2,
+			outputHeight / 2,
+			Math.min(outputWidth, outputHeight) / 2,
 			0,
 			Math.PI * 2
 		);
@@ -84,14 +91,14 @@ export function ImageCropperModal({
 
 		ctx.drawImage(
 			image,
-			cropX,
-			cropY,
-			cropWidth,
-			cropHeight,
+			cropXPx * scaleX,
+			cropYPx * scaleY,
+			outputWidth,
+			outputHeight,
 			0,
 			0,
-			cropWidth,
-			cropHeight
+			outputWidth,
+			outputHeight
 		);
 
 		canvas.toBlob(blob => {
