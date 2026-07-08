@@ -75,8 +75,10 @@ export function ImageCropperModal({
 		canvas.height = outputHeight;
 
 		const ctx = canvas.getContext("2d");
-		if (!ctx) return;
-
+		if (!ctx) {
+			onOpenChange(false);
+			return;
+		}
 		// 円形クリッピング
 		ctx.beginPath();
 		ctx.arc(
