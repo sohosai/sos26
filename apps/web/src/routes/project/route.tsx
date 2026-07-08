@@ -138,12 +138,10 @@ export const Route = createFileRoute("/project")({
 				getProjectPublicInfo(selectedProjectId),
 			]);
 
-		// アイコン画像IDをストアに保存（設定されている場合のみ）
+		// アイコン画像IDをストアに保存（未設定の場合はクリア）
 		if (publicInfoResult.status === "fulfilled") {
-			const iconFileId = publicInfoResult.value.publicInfo?.iconFileId;
-			if (iconFileId) {
-				store.setIconFileId(selectedProjectId, iconFileId);
-			}
+			const iconFileId = publicInfoResult.value.publicInfo?.iconFileId ?? "";
+			store.setIconFileId(selectedProjectId, iconFileId);
 		}
 
 		const forms =
