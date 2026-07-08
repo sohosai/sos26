@@ -4,11 +4,14 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["vite/client"],
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "references": [{ "path": "../../packages/shared" }],
+  "references": [
+    {
+      "path": "../../packages/shared"
+    }
+  ],
   "include": ["src/**/*"]
 }
