@@ -1,5 +1,6 @@
 import { updateMapAppSettingEndpoint } from "@sos26/shared";
 import { Hono } from "hono";
+import { requirePermission } from "../lib/committee-permission";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -37,6 +38,14 @@ committeeMapSettingsRoute.get("/", async c => {
 });
 
 committeeMapSettingsRoute.put("/", async c => {
+	const user = c.get("user");
+	await requirePermission(
+		prisma,
+		user.id,
+		"MAP_APP_SETTING_EDIT",
+		"マップアプリ設定変更権限がありません"
+	);
+
 	const body = await c.req.json().catch(() => ({}));
 	const data = updateMapAppSettingEndpoint.request.parse(body);
 

@@ -24,9 +24,9 @@ import {
 	TextArea,
 } from "@radix-ui/themes";
 import { IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import BoringAvatar from "boring-avatars";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { getFileContentUrl, uploadFile } from "@/lib/api/files";
@@ -61,6 +61,7 @@ export const Route = createFileRoute("/project/public-info")({
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy code
 function ProjectPublicInfoPage() {
+	const router = useRouter();
 	const { user } = useAuthStore();
 	const { projects, selectedProjectId } = useProjectStore();
 	const { setIconFileId: saveProjectIconFileId } = useProjectStore.getState();
@@ -92,6 +93,16 @@ function ProjectPublicInfoPage() {
 
 	const [cropImageSrc, setCropImageSrc] = useState("");
 	const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+
+	useEffect(() => {
+		if (publicInfo) {
+			setDescription(publicInfo.description ?? "");
+			setIconFileId(publicInfo.iconFileId ?? "");
+			setMapImageFileIds(publicInfo.mapImageFileIds ?? []);
+			setOpenStatus(publicInfo.openStatus ?? "NOT_APPLICABLE");
+			setStockStatus(publicInfo.stockStatus ?? "NOT_APPLICABLE");
+		}
+	}, [publicInfo]);
 
 	// プレビューモーダル
 	const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -138,6 +149,7 @@ function ProjectPublicInfoPage() {
 					saveProjectIconFileId(project.id, "");
 				}
 			}
+			await router.invalidate();
 		} catch (error) {
 			reportHandledError({
 				error,
@@ -497,7 +509,7 @@ function ProjectPublicInfoPage() {
 				<div style={{ maxWidth: 720 }}>
 					<Flex justify="end" align="center" gap="3">
 						{isUnsaved && (
-							<Text size="2" color="amber" weight="bold">
+							<Text size="2" color="blue" weight="bold">
 								未保存の変更があります
 							</Text>
 						)}
@@ -505,7 +517,7 @@ function ProjectPublicInfoPage() {
 							size="3"
 							onClick={handleSave}
 							disabled={isSaving || !isUnsaved}
-							color={isUnsaved ? "amber" : "gray"}
+							color={isUnsaved ? "blue" : "gray"}
 						>
 							保存する
 						</Button>

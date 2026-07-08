@@ -69,6 +69,7 @@ const permissionLabelMap: Record<CommitteePermission, string> = {
 	PROJECT_VIEW: "企画閲覧",
 	PROJECT_REGISTRATION_FORM_CREATE: "企画登録フォーム作成",
 	PROJECT_REGISTRATION_FORM_DELIVER: "企画登録フォーム配信",
+	MAP_APP_SETTING_EDIT: "マップ設定変更",
 };
 
 const bureauColorMap: Partial<Record<Bureau, BadgeProps["color"]>> = {

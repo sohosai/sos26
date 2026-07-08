@@ -1,8 +1,9 @@
 import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Switch } from "@/components/primitives";
+import { getMyPermissions } from "@/lib/api/committee-member";
 import {
 	getMapAppSetting,
 	updateMapAppSetting,
@@ -12,17 +13,29 @@ import styles from "./route.module.scss";
 
 export const Route = createFileRoute("/committee/map-settings")({
 	loader: async () => {
-		const res = await getMapAppSetting();
-		return res.setting;
+		const [settingRes, permsRes] = await Promise.all([
+			getMapAppSetting(),
+			getMyPermissions(),
+		]);
+		return {
+			setting: settingRes.setting,
+			canEdit: permsRes.permissions.some(
+				p => p.permission === "MAP_APP_SETTING_EDIT"
+			),
+		};
 	},
 	component: MapSettingsPage,
 });
 
 function MapSettingsPage() {
 	const router = useRouter();
-	const initialSetting = Route.useLoaderData();
+	const { setting: initialSetting, canEdit } = Route.useLoaderData();
 	const [setting, setSetting] = useState(initialSetting);
 	const [isSaving, setIsSaving] = useState(false);
+
+	useEffect(() => {
+		setSetting(initialSetting);
+	}, [initialSetting]);
 
 	const isUnsaved = Object.keys(initialSetting).some(
 		key =>
@@ -47,7 +60,7 @@ function MapSettingsPage() {
 			toast.success("設定を保存しました", {
 				description: "マップアプリの設定が更新されました。",
 			});
-			router.invalidate();
+			await router.invalidate();
 		} catch (error) {
 			reportHandledError({
 				error,
@@ -90,12 +103,19 @@ function MapSettingsPage() {
 
 	return (
 		<div className={styles.page}>
-			<div className={styles.header}>
-				<Heading size="6">雙峰祭オンラインマップ</Heading>
-				<Text size="2" color="gray">
-					雙峰祭オンラインマップに公開する企画情報の編集可否を設定します。編集を無効にすると、企画側の画面で該当項目が「未設定」となり編集できなくなります。
-				</Text>
-			</div>
+			<header className={styles.header}>
+				<div>
+					<Heading size="6">雙峰祭オンラインマップ設定</Heading>
+					<Text size="2" color="gray">
+						マップアプリから企画情報の編集を許可するかどうかを一括で設定できます。
+					</Text>
+				</div>
+				{!canEdit && (
+					<Text size="2" color="amber" weight="bold">
+						※ マップ設定変更権限がありません
+					</Text>
+				)}
+			</header>
 
 			<Card className={styles.card}>
 				<Flex direction="column" gap="5">
@@ -119,6 +139,7 @@ function MapSettingsPage() {
 									label={label}
 									checked={setting[key] as boolean}
 									onCheckedChange={checked => handleToggle(key, checked)}
+									disabled={!canEdit}
 								/>
 							</div>
 						</Flex>
@@ -127,20 +148,22 @@ function MapSettingsPage() {
 			</Card>
 
 			<div style={{ maxWidth: 720, marginTop: "24px" }}>
-				<Flex justify="end" align="center" gap="4">
-					{isUnsaved && (
-						<Text size="2" color="amber" weight="bold">
-							未保存の変更があります
-						</Text>
-					)}
-					<Button
-						size="3"
-						onClick={handleSave}
-						disabled={isSaving || !isUnsaved}
-					>
-						保存する
-					</Button>
-				</Flex>
+				{canEdit && (
+					<Flex justify="end" align="center" gap="4">
+						{isUnsaved && (
+							<Text size="2" color="amber" weight="bold">
+								未保存の変更があります
+							</Text>
+						)}
+						<Button
+							size="3"
+							onClick={handleSave}
+							disabled={isSaving || !isUnsaved}
+						>
+							保存する
+						</Button>
+					</Flex>
+				)}
 			</div>
 		</div>
 	);

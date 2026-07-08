@@ -306,6 +306,7 @@ enum CommitteePermission {
   PROJECT_VIEW // 企画詳細閲覧（企画責任者・副企画責任者連絡先を含む）
   PROJECT_REGISTRATION_FORM_CREATE // 企画登録フォーム作成・編集・公開申請
   PROJECT_REGISTRATION_FORM_DELIVER // 企画登録フォーム承認
+  MAP_APP_SETTING_EDIT // マップアプリ設定変更
 }
 
 //実委人の権限管理Table
