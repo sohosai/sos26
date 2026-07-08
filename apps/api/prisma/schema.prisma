@@ -1708,8 +1708,8 @@ model MapAppSetting {
   isDescriptionEditable Boolean @default(true)
   isIconEditable        Boolean @default(true)
   isMapImagesEditable   Boolean @default(true)
-  isOpenStatusEditable  Boolean @default(true)
-  isStockStatusEditable Boolean @default(true)
+  isOpenStatusEditable  Boolean @default(false)
+  isStockStatusEditable Boolean @default(false)
 
   updatedAt DateTime @updatedAt
 }

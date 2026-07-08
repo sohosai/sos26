@@ -23,7 +23,7 @@ import {
 	Text,
 	TextArea,
 } from "@radix-ui/themes";
-import { IconPhoto, IconUpload } from "@tabler/icons-react";
+import { IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import BoringAvatar from "boring-avatars";
 import { useRef, useState } from "react";
@@ -63,6 +63,7 @@ export const Route = createFileRoute("/project/public-info")({
 function ProjectPublicInfoPage() {
 	const { user } = useAuthStore();
 	const { projects, selectedProjectId } = useProjectStore();
+	const { setIconFileId: saveProjectIconFileId } = useProjectStore.getState();
 	const project = projects.find(p => p.id === selectedProjectId);
 	const projectRole =
 		project?.ownerId === user?.id
@@ -109,6 +110,7 @@ function ProjectPublicInfoPage() {
 		JSON.stringify(mapImageFileIds) !==
 			JSON.stringify(publicInfo?.mapImageFileIds ?? []);
 
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: handleSave needs to perform several checks
 	const handleSave = async () => {
 		if (!project?.id) return;
 		try {
@@ -127,6 +129,15 @@ function ProjectPublicInfoPage() {
 					: undefined,
 			});
 			toast.success("企画情報が更新されました。");
+			// ストアのアイコンも即時更新してサイドバーに反映
+			if (setting.isIconEditable) {
+				if (iconFileId) {
+					saveProjectIconFileId(project.id, iconFileId);
+				} else {
+					// 空文字 = アイコン削除 → ストアからも消す
+					saveProjectIconFileId(project.id, "");
+				}
+			}
 		} catch (error) {
 			reportHandledError({
 				error,
@@ -273,32 +284,62 @@ function ProjectPublicInfoPage() {
 						accept="image/*"
 						onChange={handleIconUpload}
 					/>
-					<Flex gap="3" align="center">
-						{iconFileId ? (
-							<img
-								src={getFileContentUrl(iconFileId)}
-								alt="Icon"
-								style={{
-									width: 80,
-									height: 80,
-									objectFit: "cover",
-									borderRadius: "50%",
-								}}
-							/>
-						) : (
-							<BoringAvatar
-								size={80}
-								name={project?.id ?? "unknown"}
-								variant="beam"
-							/>
-						)}
-						<Button
-							variant="outline"
-							onClick={() => iconInputRef.current?.click()}
-							disabled={!isEditable || !setting.isIconEditable}
-						>
-							<IconUpload size={16} style={{ marginRight: 8 }} /> アップロード
-						</Button>
+					<Flex gap="4" align="center">
+						{/* クリックで変更できるアバター */}
+						<div className={styles.iconWrapper}>
+							<button
+								type="button"
+								className={styles.iconButton}
+								onClick={() =>
+									isEditable &&
+									setting.isIconEditable &&
+									iconInputRef.current?.click()
+								}
+								disabled={!isEditable || !setting.isIconEditable}
+								aria-label="アイコン画像を変更"
+							>
+								{iconFileId ? (
+									<img
+										src={getFileContentUrl(iconFileId)}
+										alt="アイコン"
+										className={styles.iconImg}
+									/>
+								) : (
+									<BoringAvatar
+										size={96}
+										name={project?.id ?? "unknown"}
+										variant="beam"
+									/>
+								)}
+								{isEditable && setting.isIconEditable && (
+									<span className={styles.iconOverlay}>
+										<IconUpload size={20} color="white" />
+										<span className={styles.iconOverlayLabel}>変更</span>
+									</span>
+								)}
+							</button>
+							{/* 削除バッジ */}
+							{iconFileId && isEditable && setting.isIconEditable && (
+								<button
+									type="button"
+									className={styles.iconDeleteBtn}
+									onClick={() => setIconFileId("")}
+									aria-label="アイコンをデフォルトに戻す"
+								>
+									<IconX size={12} />
+								</button>
+							)}
+						</div>
+						<Flex direction="column" gap="1">
+							<Text size="2" weight="medium">
+								{iconFileId ? "アイコンを変更する" : "アイコンを設定する"}
+							</Text>
+							<Text size="1" color="gray">
+								{iconFileId
+									? "画像をクリックするか、右上の × でデフォルトに戻せます"
+									: "クリックして画像をアップロードしてください"}
+							</Text>
+						</Flex>
 					</Flex>
 				</Flex>
 			</Card>
@@ -396,7 +437,11 @@ function ProjectPublicInfoPage() {
 							</div>
 							<div className={styles.fieldWithHelp}>
 								<Select.Root
-									value={openStatus}
+									value={
+										!setting.isOpenStatusEditable
+											? "NOT_APPLICABLE"
+											: openStatus
+									}
 									onValueChange={(val: "OPEN" | "CLOSED" | "NOT_APPLICABLE") =>
 										setOpenStatus(val)
 									}
@@ -409,11 +454,6 @@ function ProjectPublicInfoPage() {
 										<Select.Item value="NOT_APPLICABLE">設定なし</Select.Item>
 									</Select.Content>
 								</Select.Root>
-								{!setting.isOpenStatusEditable && (
-									<Text size="1" color="gray">
-										※現在、開店状態は変更できません
-									</Text>
-								)}
 							</div>
 						</Flex>
 					</Card>
@@ -428,7 +468,11 @@ function ProjectPublicInfoPage() {
 							</div>
 							<div className={styles.fieldWithHelp}>
 								<Select.Root
-									value={stockStatus}
+									value={
+										!setting.isStockStatusEditable
+											? "NOT_APPLICABLE"
+											: stockStatus
+									}
 									onValueChange={(
 										val: "IN_STOCK" | "OUT_OF_STOCK" | "NOT_APPLICABLE"
 									) => setStockStatus(val)}
@@ -443,11 +487,6 @@ function ProjectPublicInfoPage() {
 										<Select.Item value="NOT_APPLICABLE">設定なし</Select.Item>
 									</Select.Content>
 								</Select.Root>
-								{!setting.isStockStatusEditable && (
-									<Text size="1" color="gray">
-										※現在、在庫状態は変更できません
-									</Text>
-								)}
 							</div>
 						</Flex>
 					</Card>

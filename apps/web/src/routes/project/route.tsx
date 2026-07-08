@@ -20,6 +20,7 @@ import {
 import { listProjectForms } from "@/lib/api/project-form";
 import { listProjectInquiries } from "@/lib/api/project-inquiry";
 import { listProjectNotices } from "@/lib/api/project-notice";
+import { getProjectPublicInfo } from "@/lib/api/project-public-info";
 import {
 	preloadMemberEditPermission,
 	requireAuth,
@@ -118,7 +119,8 @@ export const Route = createFileRoute("/project")({
 		}
 	},
 	loader: async () => {
-		const { selectedProjectId } = useProjectStore.getState();
+		const store = useProjectStore.getState();
+		const { selectedProjectId } = store;
 
 		if (!selectedProjectId) {
 			return {
@@ -128,12 +130,21 @@ export const Route = createFileRoute("/project")({
 			};
 		}
 
-		const [formsResult, noticesResult, inquiriesResult] =
+		const [formsResult, noticesResult, inquiriesResult, publicInfoResult] =
 			await Promise.allSettled([
 				listProjectForms(selectedProjectId),
 				listProjectNotices(selectedProjectId),
 				listProjectInquiries(selectedProjectId),
+				getProjectPublicInfo(selectedProjectId),
 			]);
+
+		// アイコン画像IDをストアに保存（設定されている場合のみ）
+		if (publicInfoResult.status === "fulfilled") {
+			const iconFileId = publicInfoResult.value.publicInfo?.iconFileId;
+			if (iconFileId) {
+				store.setIconFileId(selectedProjectId, iconFileId);
+			}
+		}
 
 		const forms =
 			formsResult.status === "fulfilled" ? formsResult.value.forms : [];
@@ -176,8 +187,13 @@ function ProjectLayout() {
 		Route.useLoaderData();
 	const navigate = useNavigate();
 	const router = useRouter();
-	const { projects, selectedProjectId, setSelectedProjectId, setProjects } =
-		useProjectStore();
+	const {
+		projects,
+		selectedProjectId,
+		setSelectedProjectId,
+		setProjects,
+		iconFileIds,
+	} = useProjectStore();
 	const selectedProject =
 		projects.find(p => p.id === selectedProjectId) ?? null;
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -271,12 +287,11 @@ function ProjectLayout() {
 				projectId={selectedProjectId}
 				projectSelector={
 					<ProjectSelector
-						projects={projects.map((project: Project) => {
-							return {
-								id: project.id,
-								name: project.name,
-							};
-						})}
+						projects={projects.map((project: Project) => ({
+							id: project.id,
+							name: project.name,
+							iconFileId: iconFileIds[project.id] ?? null,
+						}))}
 						selectedProjectId={selectedProjectId}
 						collapsed={sidebarCollapsed}
 						onSelectProject={handleSelectProject}

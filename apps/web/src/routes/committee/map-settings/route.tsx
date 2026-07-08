@@ -1,5 +1,5 @@
-import { Card, Flex, Heading, Text } from "@radix-ui/themes";
-import { createFileRoute } from "@tanstack/react-router";
+import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Switch } from "@/components/primitives";
@@ -19,48 +19,87 @@ export const Route = createFileRoute("/committee/map-settings")({
 });
 
 function MapSettingsPage() {
+	const router = useRouter();
 	const initialSetting = Route.useLoaderData();
 	const [setting, setSetting] = useState(initialSetting);
+	const [isSaving, setIsSaving] = useState(false);
 
-	const handleToggle = async (key: keyof typeof setting, checked: boolean) => {
-		const originalValue = setting[key];
+	const isUnsaved = Object.keys(initialSetting).some(
+		key =>
+			setting[key as keyof typeof setting] !==
+			initialSetting[key as keyof typeof initialSetting]
+	);
+
+	const handleToggle = (key: keyof typeof setting, checked: boolean) => {
+		setSetting(prev => ({ ...prev, [key]: checked }));
+	};
+
+	const handleSave = async () => {
+		setIsSaving(true);
 		try {
-			setSetting(prev => ({ ...prev, [key]: checked }));
-			await updateMapAppSetting({ [key]: checked });
+			await updateMapAppSetting({
+				isDescriptionEditable: setting.isDescriptionEditable,
+				isIconEditable: setting.isIconEditable,
+				isMapImagesEditable: setting.isMapImagesEditable,
+				isOpenStatusEditable: setting.isOpenStatusEditable,
+				isStockStatusEditable: setting.isStockStatusEditable,
+			});
 			toast.success("設定を保存しました", {
 				description: "マップアプリの設定が更新されました。",
 			});
+			router.invalidate();
 		} catch (error) {
-			setSetting(prev => ({ ...prev, [key]: originalValue }));
 			reportHandledError({
 				error,
 				operation: "update_map_setting",
 				userMessage: "設定の保存に失敗しました。",
 				ui: { type: "toast" },
 			});
+		} finally {
+			setIsSaving(false);
 		}
 	};
 
 	const switches = [
-		{ key: "isDescriptionEditable", label: "紹介文の編集" },
-		{ key: "isIconEditable", label: "アイコン画像の編集" },
-		{ key: "isMapImagesEditable", label: "Map掲載画像の編集" },
-		{ key: "isOpenStatusEditable", label: "開店・閉店状態の編集" },
-		{ key: "isStockStatusEditable", label: "在庫状態の編集" },
+		{
+			key: "isDescriptionEditable",
+			label: "紹介文の編集",
+			desc: "企画紹介文の編集を許可します",
+		},
+		{
+			key: "isIconEditable",
+			label: "アイコン画像の編集",
+			desc: "アイコン画像の変更を許可します",
+		},
+		{
+			key: "isMapImagesEditable",
+			label: "Map掲載画像の編集",
+			desc: "Map掲載用画像の追加・削除を許可します",
+		},
+		{
+			key: "isOpenStatusEditable",
+			label: "開店・閉店状態の編集",
+			desc: "当日の営業状態の変更を許可します",
+		},
+		{
+			key: "isStockStatusEditable",
+			label: "在庫状態の編集",
+			desc: "商品の在庫状態の変更を許可します",
+		},
 	] as const;
 
 	return (
 		<div className={styles.page}>
 			<div className={styles.header}>
-				<Heading size="6">マップ設定</Heading>
+				<Heading size="6">雙峰祭オンラインマップ</Heading>
 				<Text size="2" color="gray">
-					雙峰祭オンラインマップに公開する企画情報の編集可否を設定します。編集を無効にすると、企画側の画面で該当項目が編集できなくなります。
+					雙峰祭オンラインマップに公開する企画情報の編集可否を設定します。編集を無効にすると、企画側の画面で該当項目が「未設定」となり編集できなくなります。
 				</Text>
 			</div>
 
 			<Card className={styles.card}>
-				<Flex direction="column" gap="4">
-					{switches.map(({ key, label }) => (
+				<Flex direction="column" gap="5">
+					{switches.map(({ key, label, desc }) => (
 						<Flex
 							key={key}
 							justify="between"
@@ -68,12 +107,17 @@ function MapSettingsPage() {
 							className={styles.settingRow}
 						>
 							<div className={styles.settingLabel}>
-								<Heading size="4">{label}</Heading>
+								<Heading size="4" mb="1">
+									{label}
+								</Heading>
+								<Text size="2" color="gray">
+									{desc}
+								</Text>
 							</div>
 							<div className={styles.settingControl}>
 								<Switch
 									label={label}
-									checked={setting[key]}
+									checked={setting[key] as boolean}
 									onCheckedChange={checked => handleToggle(key, checked)}
 								/>
 							</div>
@@ -81,6 +125,23 @@ function MapSettingsPage() {
 					))}
 				</Flex>
 			</Card>
+
+			<div style={{ maxWidth: 720, marginTop: "24px" }}>
+				<Flex justify="end" align="center" gap="4">
+					{isUnsaved && (
+						<Text size="2" color="amber" weight="bold">
+							未保存の変更があります
+						</Text>
+					)}
+					<Button
+						size="3"
+						onClick={handleSave}
+						disabled={isSaving || !isUnsaved}
+					>
+						保存する
+					</Button>
+				</Flex>
+			</div>
 		</div>
 	);
 }

@@ -13,6 +13,7 @@ import styles from "./ProjectSelector.module.scss";
 export type Project = {
 	id: string;
 	name: string;
+	iconFileId?: string | null;
 };
 
 type ProjectSelectorProps = {
@@ -98,7 +99,11 @@ export function ProjectSelector({
 		>
 			<span className={styles.icon}>
 				{selectedProject ? (
-					<UserAvatar size={26} name={selectedProject.name} />
+					<UserAvatar
+						size={26}
+						name={selectedProject.name}
+						avatarFileId={selectedProject.iconFileId}
+					/>
 				) : (
 					<IconFolder size={26} />
 				)}
@@ -135,7 +140,11 @@ export function ProjectSelector({
 									className={`${styles.projectItem} ${project.id === selectedProjectId ? styles.selected : ""}`}
 									onClick={() => handleSelectProject(project.id)}
 								>
-									<UserAvatar size={28} name={project.name} />
+									<UserAvatar
+										size={28}
+										name={project.name}
+										avatarFileId={project.iconFileId}
+									/>
 									<Text size="2" truncate>
 										{project.name}
 									</Text>
