@@ -194,6 +194,7 @@ function ProjectPublicInfoPage() {
 		if (!files.length) return;
 		if (mapImageFileIds.length + files.length > 10) {
 			toast.error("Map掲載画像は最大10枚までです");
+			e.target.value = "";
 			return;
 		}
 
