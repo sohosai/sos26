@@ -63,6 +63,8 @@ projectPublicInfoRoute.put(
 
 		const body = await c.req.json().catch(() => ({}));
 		const data = updateProjectPublicInfoEndpoint.request.parse(body);
+		// 空文字は「アイコン削除」を意味するため、DB上はnullとして扱う（FK制約違反を防ぐ）
+		const iconFileId = data.iconFileId === "" ? null : data.iconFileId;
 
 		const setting =
 			(await prisma.mapAppSetting.findUnique({
@@ -108,7 +110,7 @@ projectPublicInfoRoute.put(
 				where: { projectId: project.id },
 				data: {
 					description: data.description,
-					iconFileId: data.iconFileId,
+					iconFileId,
 					openStatus:
 						project.type === "STAGE" ? "NOT_APPLICABLE" : data.openStatus,
 					stockStatus:
@@ -124,7 +126,7 @@ projectPublicInfoRoute.put(
 				data: {
 					projectId: project.id,
 					description: data.description ?? null,
-					iconFileId: data.iconFileId ?? null,
+					iconFileId: iconFileId ?? null,
 					openStatus:
 						project.type === "STAGE"
 							? "NOT_APPLICABLE"
