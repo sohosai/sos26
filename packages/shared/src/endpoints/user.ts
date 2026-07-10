@@ -52,7 +52,7 @@ export const updateUserSettingsEndpoint: BodyEndpoint<
 
 /**
  * GET /committee/users/search
- * ユーザーを名前・メールアドレス・読み仮名で曖昧検索
+ * 実委人**でない**ユーザーを名前・メールアドレス・読み仮名で曖昧検索
  *
  * - 認証 + 実委メンバー必須
  * - search パラメータで部分一致検索（大文字小文字無視）
