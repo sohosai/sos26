@@ -177,9 +177,11 @@ function ProjectPublicInfoPage() {
 
 	const handleCropComplete = async (blob: Blob) => {
 		try {
-			await uploadFile(new File([blob], "icon.png", { type: "image/png" }), {
-				isPublic: true,
-			});
+			const res = await uploadFile(
+				new File([blob], "icon.png", { type: "image/png" }),
+				{ isPublic: true }
+			);
+			setIconFileId(res.file.id);
 		} catch (error) {
 			reportHandledError({
 				error,
