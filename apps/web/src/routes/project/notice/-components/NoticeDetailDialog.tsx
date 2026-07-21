@@ -1,5 +1,9 @@
 import { Dialog, Text } from "@radix-ui/themes";
-import type { Bureau, NoticeAttachment } from "@sos26/shared";
+import type {
+	Bureau,
+	GetProjectNoticeResponse,
+	NoticeAttachment,
+} from "@sos26/shared";
 import { bureauLabelMap } from "@sos26/shared";
 import { IconPaperclip } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
@@ -16,7 +20,8 @@ const getBureauLabel = (bureau: string): string =>
 
 type Props = {
 	noticeId: string | null;
-	projectId: string;
+	projectId: string | null;
+	initialNotice?: GetProjectNoticeResponse["notice"] | null;
 	onClose: () => void;
 	onRead: (noticeId: string) => void;
 };
@@ -24,6 +29,7 @@ type Props = {
 export function NoticeDetailDialog({
 	noticeId,
 	projectId,
+	initialNotice,
 	onClose,
 	onRead,
 }: Props) {
@@ -34,25 +40,38 @@ export function NoticeDetailDialog({
 	const [isLoading, setIsLoading] = useState(false);
 
 	useEffect(() => {
-		if (!noticeId) return;
+		if (!noticeId || !projectId) return;
 		let cancelled = false;
+
+		const applyNotice = (notice: GetProjectNoticeResponse["notice"]) => {
+			setTitle(notice.title);
+			setBody(notice.body);
+			setMeta(
+				`${formatDate(new Date(notice.deliveredAt), "datetime")} ${getBureauLabel(notice.ownerBureau)}`
+			);
+			setAttachments(notice.attachments);
+
+			if (!notice.isRead) {
+				readProjectNotice(projectId, notice.id).then(() => {
+					if (!cancelled) onRead(notice.id);
+				});
+			}
+		};
+
+		if (initialNotice?.id === noticeId) {
+			applyNotice(initialNotice);
+			setIsLoading(false);
+			return () => {
+				cancelled = true;
+			};
+		}
+
 		setIsLoading(true);
 
 		getProjectNotice(projectId, noticeId)
 			.then(res => {
 				if (cancelled) return;
-				setTitle(res.notice.title);
-				setBody(res.notice.body);
-				setMeta(
-					`${formatDate(new Date(res.notice.deliveredAt), "datetime")}　${getBureauLabel(res.notice.ownerBureau)}`
-				);
-				setAttachments(res.notice.attachments);
-
-				if (!res.notice.isRead) {
-					readProjectNotice(projectId, noticeId).then(() => {
-						if (!cancelled) onRead(noticeId);
-					});
-				}
+				applyNotice(res.notice);
 			})
 			.catch(() => {
 				if (!cancelled) toast.error("お知らせの取得に失敗しました");
@@ -64,7 +83,7 @@ export function NoticeDetailDialog({
 		return () => {
 			cancelled = true;
 		};
-	}, [noticeId, projectId, onRead]);
+	}, [noticeId, projectId, initialNotice, onRead]);
 
 	const sanitizedBody = useMemo(
 		() => (body ? sanitizeHtml(body) : null),

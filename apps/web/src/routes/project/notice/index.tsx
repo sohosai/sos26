@@ -1,14 +1,20 @@
 import { Badge, Heading, Text } from "@radix-ui/themes";
-import type { Bureau } from "@sos26/shared";
-import { bureauLabelMap } from "@sos26/shared";
+import type { Bureau, GetProjectNoticeResponse } from "@sos26/shared";
+import { bureauLabelMap, ErrorCode } from "@sos26/shared";
 import { IconEye } from "@tabler/icons-react";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	useNavigate,
+	useRouter,
+} from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { DataTable, DateCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
-import { listProjectNotices } from "@/lib/api/project-notice";
+import { getProjectNotice, listProjectNotices } from "@/lib/api/project-notice";
+import { isClientError } from "@/lib/http/error";
 import { useProjectStore } from "@/lib/project/store";
 import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 import { NoticeDetailDialog } from "./-components/NoticeDetailDialog";
@@ -16,6 +22,7 @@ import styles from "./index.module.scss";
 
 const searchSchema = z.object({
 	projectId: z.string().optional(),
+	noticeId: z.string().optional(),
 });
 
 const getBureauLabel = (bureau: string): string =>
@@ -29,8 +36,88 @@ type NoticeRow = {
 	deliveredAt: Date;
 	isRead: boolean;
 };
+type NoticeDetail = GetProjectNoticeResponse["notice"];
+type ResolvedNotice = { projectId: string; notice: NoticeDetail };
+type SelectedNotice = {
+	id: string;
+	projectId: string;
+	initialNotice: NoticeDetail | null;
+};
 
 const noticeColumnHelper = createColumnHelper<NoticeRow>();
+const resolvedNoticeCache = new Map<string, ResolvedNotice>();
+
+function getResolvedNoticeCacheKey(
+	projectId: string,
+	noticeId: string
+): string {
+	return `${projectId}:${noticeId}`;
+}
+
+function markCachedNoticeRead(noticeId: string) {
+	for (const [key, resolved] of resolvedNoticeCache) {
+		if (resolved.notice.id !== noticeId || resolved.notice.isRead) continue;
+		resolvedNoticeCache.set(key, {
+			...resolved,
+			notice: { ...resolved.notice, isRead: true },
+		});
+	}
+}
+
+function isNoticeUnavailableError(error: unknown): boolean {
+	return (
+		isClientError(error) &&
+		(error.code === ErrorCode.NOT_FOUND || error.code === ErrorCode.FORBIDDEN)
+	);
+}
+
+async function getNoticeDetailInProject(
+	projectId: string,
+	noticeId: string,
+	signal: AbortSignal
+): Promise<ResolvedNotice | null> {
+	if (signal.aborted) return null;
+	const cached = resolvedNoticeCache.get(
+		getResolvedNoticeCacheKey(projectId, noticeId)
+	);
+	if (cached) return cached;
+
+	try {
+		const { notice } = await getProjectNotice(projectId, noticeId);
+		const resolved = { projectId, notice };
+		resolvedNoticeCache.set(
+			getResolvedNoticeCacheKey(projectId, noticeId),
+			resolved
+		);
+		return resolved;
+	} catch (error) {
+		if (!isNoticeUnavailableError(error)) {
+			throw error;
+		}
+		return null;
+	}
+}
+
+async function resolveNoticeProject(
+	noticeId: string,
+	preferredProjectId: string | undefined,
+	preferredNotices: NoticeRow[],
+	signal: AbortSignal
+): Promise<ResolvedNotice | null> {
+	if (preferredProjectId && preferredNotices.some(n => n.id === noticeId)) {
+		return getNoticeDetailInProject(preferredProjectId, noticeId, signal);
+	}
+
+	const { projects } = useProjectStore.getState();
+	for (const project of projects) {
+		if (project.id === preferredProjectId) continue;
+		if (signal.aborted) return null;
+		const { notices } = await listProjectNotices(project.id);
+		if (!notices.some(n => n.id === noticeId)) continue;
+		return getNoticeDetailInProject(project.id, noticeId, signal);
+	}
+	return null;
+}
 
 export const Route = createFileRoute("/project/notice/")({
 	component: RouteComponent,
@@ -60,7 +147,9 @@ export const Route = createFileRoute("/project/notice/")({
 
 function RouteComponent() {
 	const { notices: initialNotices } = Route.useLoaderData();
+	const search = Route.useSearch();
 	const router = useRouter();
+	const navigate = useNavigate();
 	const [notices, setNotices] = useState<NoticeRow[]>(initialNotices);
 	const { selectedProjectId } = useProjectStore();
 
@@ -68,13 +157,65 @@ function RouteComponent() {
 		setNotices(initialNotices);
 	}, [initialNotices]);
 
-	const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
+	const [selectedNotice, setSelectedNotice] = useState<SelectedNotice | null>(
+		null
+	);
+
+	// /committee/notice/{noticeId}/ から振り替えられた場合、所属企画を順に探して
+	// 該当のお知らせを自動でダイアログ表示する。
+	useEffect(() => {
+		const targetNoticeId = search.noticeId;
+		if (!targetNoticeId) {
+			setSelectedNotice(null);
+			return;
+		}
+
+		const controller = new AbortController();
+		const preferredProjectId = selectedProjectId ?? undefined;
+		void resolveNoticeProject(
+			targetNoticeId,
+			preferredProjectId,
+			initialNotices,
+			controller.signal
+		)
+			.then(result => {
+				if (controller.signal.aborted) return;
+				if (result) {
+					if (selectedProjectId !== result.projectId) {
+						useProjectStore.getState().setSelectedProjectId(result.projectId);
+						navigate({
+							to: "/project/notice",
+							search: { noticeId: targetNoticeId },
+							replace: true,
+						});
+						return;
+					}
+
+					setSelectedNotice({
+						id: targetNoticeId,
+						projectId: result.projectId,
+						initialNotice: result.notice,
+					});
+				} else {
+					toast.error("このお知らせを表示する権限がありません");
+					navigate({ to: "/project/notice", search: {}, replace: true });
+				}
+			})
+			.catch(() => {
+				if (controller.signal.aborted) return;
+				toast.error("お知らせの取得に失敗しました");
+				navigate({ to: "/project/notice", search: {}, replace: true });
+			});
+
+		return () => controller.abort();
+	}, [search.noticeId, selectedProjectId, navigate, initialNotices]);
 
 	const handleRead = useCallback(
 		(noticeId: string) => {
 			setNotices(prev =>
 				prev.map(n => (n.id === noticeId ? { ...n, isRead: true } : n))
 			);
+			markCachedNoticeRead(noticeId);
 			void router.invalidate();
 		},
 		[router]
@@ -115,7 +256,14 @@ function RouteComponent() {
 				<Button
 					intent="secondary"
 					size="1"
-					onClick={() => setSelectedNoticeId(row.original.id)}
+					onClick={() => {
+						if (!selectedProjectId) return;
+						setSelectedNotice({
+							id: row.original.id,
+							projectId: selectedProjectId,
+							initialNotice: null,
+						});
+					}}
 				>
 					<IconEye size={16} />
 					お知らせを見る
@@ -154,9 +302,19 @@ function RouteComponent() {
 			/>
 
 			<NoticeDetailDialog
-				noticeId={selectedNoticeId}
-				projectId={selectedProjectId ?? ""}
-				onClose={() => setSelectedNoticeId(null)}
+				noticeId={selectedNotice?.id ?? null}
+				projectId={selectedNotice?.projectId ?? null}
+				onClose={() => {
+					setSelectedNotice(null);
+					if (search.noticeId) {
+						navigate({
+							to: "/project/notice",
+							search: { projectId: search.projectId },
+							replace: true,
+						});
+					}
+				}}
+				initialNotice={selectedNotice?.initialNotice ?? null}
 				onRead={handleRead}
 			/>
 		</div>
