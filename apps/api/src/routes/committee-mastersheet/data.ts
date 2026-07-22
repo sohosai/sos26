@@ -1,7 +1,11 @@
 import { Hono } from "hono";
 import { formAnswerFileSelect } from "../../lib/form-answer-files";
 import { prisma } from "../../lib/prisma";
-import { requireAuth, requireCommitteeMember } from "../../middlewares/auth";
+import {
+	getCommitteeMember,
+	requireAuth,
+	requireCommitteeMember,
+} from "../../middlewares/auth";
 import type { AuthEnv } from "../../types/auth-env";
 import {
 	buildFormItemCell,
@@ -25,7 +29,7 @@ export const dataRoute = new Hono<AuthEnv>();
 
 dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 	const userId = c.get("user").id;
-	const committeeMember = c.get("committeeMember");
+	const committeeMember = getCommitteeMember(c);
 
 	// 企画責任者・副企画責任者の連絡先（メール・電話）は PROJECT_VIEW 権限を持つ実委人にのみ含めて返す
 	const memberPermissions = await prisma.committeeMemberPermission.findMany({

@@ -28,7 +28,11 @@ import {
 	notifyProjectRegistrationFormAuthorizationRequested,
 } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
-import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
+import {
+	getCommitteeMember,
+	requireAuth,
+	requireCommitteeMember,
+} from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
 const committeeProjectRegistrationFormRoute = new Hono<AuthEnv>();
@@ -138,7 +142,7 @@ committeeProjectRegistrationFormRoute.post(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const cm = c.get("committeeMember");
+		const cm = getCommitteeMember(c);
 		await requireCreatePermission(cm.id);
 
 		const body = await c.req.json().catch(() => ({}));
@@ -258,7 +262,7 @@ committeeProjectRegistrationFormRoute.patch(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const cm = c.get("committeeMember");
+		const cm = getCommitteeMember(c);
 		await requireCreatePermission(cm.id);
 
 		const { formId } = projectRegistrationFormIdPathParamsSchema.parse(
@@ -432,7 +436,7 @@ committeeProjectRegistrationFormRoute.delete(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const cm = c.get("committeeMember");
+		const cm = getCommitteeMember(c);
 		await requireCreatePermission(cm.id);
 
 		const { formId } = projectRegistrationFormIdPathParamsSchema.parse(
@@ -483,7 +487,7 @@ committeeProjectRegistrationFormRoute.post(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const cm = c.get("committeeMember");
+		const cm = getCommitteeMember(c);
 		await requireCreatePermission(cm.id);
 
 		const { formId } = projectRegistrationFormIdPathParamsSchema.parse(
@@ -635,7 +639,7 @@ committeeProjectRegistrationFormRoute.post(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const cm = c.get("committeeMember");
+		const cm = getCommitteeMember(c);
 		await requireCreatePermission(cm.id);
 
 		const { formId, userId: targetUserId } =
@@ -707,7 +711,7 @@ committeeProjectRegistrationFormRoute.delete(
 	requireAuth,
 	requireCommitteeMember,
 	async c => {
-		const cm = c.get("committeeMember");
+		const cm = getCommitteeMember(c);
 		await requireCreatePermission(cm.id);
 
 		const { formId, userId: targetUserId } =

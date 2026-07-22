@@ -12,10 +12,7 @@ import {
 	createCommitteeInquiry,
 	listCommitteeInquiries,
 } from "@/lib/api/committee-inquiry";
-import {
-	getMyPermissions,
-	listCommitteeMembersPicker,
-} from "@/lib/api/committee-member";
+import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import {
 	listCommitteeProjectMembers,
 	listCommitteeProjects,
@@ -36,7 +33,7 @@ export const Route = createFileRoute("/committee/support/")({
 		],
 	}),
 	loader: async () => {
-		const { committeeMember } = useAuthStore.getState();
+		const { committeeMember, permissions } = useAuthStore.getState();
 
 		const [inquiriesRes, projectsRes, membersRes, formsRes] = await Promise.all(
 			[
@@ -47,18 +44,8 @@ export const Route = createFileRoute("/committee/support/")({
 			]
 		);
 
-		// INQUIRY_ADMIN 権限チェック
-		let isAdmin = false;
-		if (committeeMember) {
-			try {
-				const permRes = await getMyPermissions();
-				isAdmin = permRes.permissions.some(
-					p => p.permission === "INQUIRY_ADMIN"
-				);
-			} catch {
-				// 権限取得失敗時は管理者でない扱い
-			}
-		}
+		// INQUIRY_ADMIN 権限チェック（store から参照）
+		const isAdmin = permissions?.has("INQUIRY_ADMIN") ?? false;
 
 		return {
 			inquiries: inquiriesRes.inquiries,

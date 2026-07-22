@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { tsukubaEmailSchema } from "../lib/email";
 import { verificationTokenSchema } from "../lib/token";
-import { committeeMemberSchema } from "./committee-member";
+import {
+	committeeMemberSchema,
+	committeePermissionSchema,
+} from "./committee-member";
 import {
 	namePhoneticSchema,
 	nameSchema,
@@ -93,9 +96,12 @@ export type RegisterResponse = z.infer<typeof registerResponseSchema>;
 
 /**
  * 現在のユーザー取得レスポンス
+ *
+ * - permissions: ログインユーザーが持つ実委人権限の配列。非委員は空配列
  */
 export const getMeResponseSchema = z.object({
 	user: userSchema,
 	committeeMember: committeeMemberSchema.nullable(),
+	permissions: z.array(committeePermissionSchema),
 });
 export type GetMeResponse = z.infer<typeof getMeResponseSchema>;

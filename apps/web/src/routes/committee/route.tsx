@@ -2,13 +2,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { ForbiddenErrorBoundary } from "@/components/layout/ForbiddenContent";
 import { committeeMenuItems, Sidebar } from "@/components/layout/Sidebar";
-import {
-	preloadMemberEditPermission,
-	preloadProjectRegistrationPermission,
-	requireAuth,
-	requireCommitteeMember,
-	useAuthStore,
-} from "@/lib/auth";
+import { requireAuth, requireCommitteeMember, useAuthStore } from "@/lib/auth";
 import styles from "./route.module.scss";
 
 // /committee/notice/{noticeId}/ から noticeId を抽出する
@@ -41,8 +35,6 @@ export const Route = createFileRoute("/committee")({
 
 		await requireCommitteeMember();
 		useAuthStore.getState().setActivePortal("committee");
-		await preloadMemberEditPermission();
-		await preloadProjectRegistrationPermission();
 	},
 	errorComponent: ForbiddenErrorBoundary,
 	component: CommitteeLayout,

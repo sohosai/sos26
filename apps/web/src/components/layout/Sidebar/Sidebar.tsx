@@ -214,12 +214,11 @@ export function Sidebar({
 		return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches;
 	});
 	const [mobileOpen, setMobileOpen] = useState(false);
-	const {
-		isCommitteeMember,
-		hasMemberEditPermission,
-		hasProjectRegistrationPermission,
-		signOut,
-	} = useAuthStore();
+	const { isCommitteeMember, permissions, signOut } = useAuthStore();
+	const hasMemberEditPermission = permissions?.has("MEMBER_EDIT") ?? false;
+	const hasProjectRegistrationPermission =
+		permissions?.has("PROJECT_REGISTRATION_FORM_CREATE") === true ||
+		permissions?.has("PROJECT_REGISTRATION_FORM_DELIVER") === true;
 	const shouldCheckMemberEdit = menuItems.some(
 		item => item.to === "/committee/members"
 	);

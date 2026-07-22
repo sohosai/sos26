@@ -6,16 +6,10 @@ import {
 	projectMenuItems,
 	Sidebar,
 } from "@/components/layout/Sidebar";
-import { preloadMemberEditPermission, useAuthStore } from "@/lib/auth";
+import { useAuthStore } from "@/lib/auth";
 import styles from "./route.module.scss";
 
 export const Route = createFileRoute("/support")({
-	beforeLoad: async () => {
-		const { isLoggedIn } = useAuthStore.getState();
-		if (isLoggedIn) {
-			await preloadMemberEditPermission();
-		}
-	},
 	component: SupportLayout,
 });
 

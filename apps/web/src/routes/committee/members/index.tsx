@@ -320,7 +320,7 @@ export const Route = createFileRoute("/committee/members/")({
 function RouteComponent() {
 	const { members: initialMembers } = Route.useLoaderData();
 	const [members, setMembers] = useState<CommitteeMemberRow[]>(initialMembers);
-	const { user } = useAuthStore();
+	const { user, committeeMember, refreshUser } = useAuthStore();
 	const [selfRevokeConfirmOpen, setSelfRevokeConfirmOpen] = useState(false);
 	const [pendingRevoke, setPendingRevoke] = useState<{
 		memberId: string;
@@ -372,6 +372,10 @@ function RouteComponent() {
 					};
 				})
 			);
+
+			if (memberId === committeeMember?.id) {
+				await refreshUser();
+			}
 		} catch (error) {
 			toast.error(
 				isClientError(error)
