@@ -191,7 +191,8 @@ function RouteComponent() {
 				} = row.original;
 				const isExpired =
 					deadlineAt && !allowLateResponse && new Date() > deadlineAt;
-				const isDisabled = !!isExpired || restricted;
+				const canViewExpiredResponse = isExpired && responseId;
+				const isDisabled = restricted || (isExpired && !responseId);
 
 				return (
 					<Button
@@ -204,6 +205,11 @@ function RouteComponent() {
 							<>
 								<IconLock size={16} />
 								閲覧制限
+							</>
+						) : canViewExpiredResponse ? (
+							<>
+								<IconEdit size={16} />
+								回答を確認
 							</>
 						) : (
 							<>
