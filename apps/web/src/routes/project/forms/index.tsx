@@ -189,8 +189,11 @@ function RouteComponent() {
 					responseId,
 					restricted,
 				} = row.original;
-				const isExpired =
-					deadlineAt && !allowLateResponse && new Date() > deadlineAt;
+				const isExpired = !!(
+					deadlineAt &&
+					!allowLateResponse &&
+					new Date() > deadlineAt
+				);
 				const canViewExpiredResponse = isExpired && responseId;
 				const isDisabled = restricted || (isExpired && !responseId);
 
