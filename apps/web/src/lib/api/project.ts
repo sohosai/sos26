@@ -12,9 +12,11 @@ import {
 	type DecideSubOwnerRequestResponse,
 	type GetApplicationPeriodResponse,
 	type GetProjectDetailResponse,
+	type GetProjectNotificationStatusResponse,
 	type GetProjectRegistrationFormResponsesResponse,
 	getApplicationPeriodEndpoint,
 	getProjectDetailEndpoint,
+	getProjectNotificationStatusEndpoint,
 	getProjectRegistrationFormResponsesEndpoint,
 	type JoinProjectRequest,
 	type JoinProjectResponse,
@@ -85,6 +87,18 @@ export async function getProjectDetail(
 	projectId: string
 ): Promise<GetProjectDetailResponse> {
 	return callGetApi(getProjectDetailEndpoint, {
+		pathParams: { projectId },
+	});
+}
+
+/**
+ * GET /project/:projectId/notification-status
+ * 企画側でユーザーに通知すべき未処理状態を取得
+ */
+export async function getProjectNotificationStatus(
+	projectId: string
+): Promise<GetProjectNotificationStatusResponse> {
+	return callGetApi(getProjectNotificationStatusEndpoint, {
 		pathParams: { projectId },
 	});
 }
