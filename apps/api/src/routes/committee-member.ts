@@ -9,11 +9,7 @@ import { Hono } from "hono";
 import { requirePermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
-import {
-	getCommitteeMember,
-	requireAuth,
-	requireCommitteeMember,
-} from "../middlewares/auth";
+import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
 const committeeMemberRoute = new Hono<AuthEnv>();
@@ -206,25 +202,6 @@ committeeMemberRoute.delete(
 		});
 
 		return c.json({ success: true });
-	}
-);
-
-// ─────────────────────────────────────────────────────────────
-// GET /committee/members/me/permissions
-// 自分自身の権限一覧を取得（MEMBER_EDIT 不要）
-// ─────────────────────────────────────────────────────────────
-committeeMemberRoute.get(
-	"/me/permissions",
-	requireAuth,
-	requireCommitteeMember,
-	async c => {
-		const committeeMember = getCommitteeMember(c);
-
-		const permissions = await prisma.committeeMemberPermission.findMany({
-			where: { committeeMemberId: committeeMember.id },
-		});
-
-		return c.json({ permissions });
 	}
 );
 

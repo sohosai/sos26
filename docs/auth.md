@@ -368,7 +368,7 @@ Response:
 
 **フロント側の利用**
 
-フロントは `useAuthStore.permissions: Set<CommitteePermission>` として保持し、サイドバー表示制御等で参照する。**旧 `GET /committee/members/me/permissions` をルート遷移ごとに叩く設計は廃止**された。
+フロントは `useAuthStore.permissions: Set<CommitteePermission>` として保持し、サイドバー表示制御等で参照する。自分自身の権限一覧は `/auth/me` で取得できるため、旧 `GET /committee/members/me/permissions` は廃止済み。
 
 **エラー**
 - `UNAUTHORIZED`: ID Token が不正
