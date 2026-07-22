@@ -812,6 +812,7 @@ model FormDelivery {
   createdAt DateTime @default(now())
 
   @@unique([formAuthorizationId, projectId])
+  @@index([projectId])
 }
 
 //申請への回答（1配信につき最大1件）
