@@ -803,6 +803,7 @@ committeeNoticeRoute.patch(
 					status === "APPROVED" &&
 					authorization.deliveryMode === "CATEGORY"
 				) {
+					// 読み取りAPIで補完していたカテゴリ指定 delivery を承認時に確定する。
 					await ensureNoticeDeliveriesForAuthorization(tx, authorization.id);
 				}
 

@@ -9,6 +9,7 @@ type CategoryTargetFilters = {
 	filterLocations: ProjectLocation[];
 };
 
+// カテゴリ指定配信では、空配列は「全種別/全場所」を表す。
 export async function findCategoryDeliveryTargetProjects(
 	tx: Prisma.TransactionClient,
 	{ filterTypes, filterLocations }: CategoryTargetFilters
@@ -25,6 +26,8 @@ export async function findCategoryDeliveryTargetProjects(
 	});
 }
 
+// 承認時点で存在する対象企画に delivery を作成する。
+// ここで作っておくことで、フォーム一覧取得時に delivery を補完する副作用を持たせない。
 export async function ensureFormDeliveriesForAuthorization(
 	tx: Prisma.TransactionClient,
 	formAuthorizationId: string
@@ -59,6 +62,8 @@ export async function ensureFormDeliveriesForAuthorization(
 	});
 }
 
+// 承認時点で存在する対象企画に delivery を作成する。
+// ここで作っておくことで、お知らせ一覧取得時に delivery を補完する副作用を持たせない。
 export async function ensureNoticeDeliveriesForAuthorization(
 	tx: Prisma.TransactionClient,
 	noticeAuthorizationId: string
@@ -93,6 +98,9 @@ export async function ensureNoticeDeliveriesForAuthorization(
 	});
 }
 
+// 承認後に作成された企画、または種別/場所が変更された企画を対象に、
+// 現在の企画属性に一致するカテゴリ指定配信の delivery を補完する。
+// 一度作成された delivery は、後から対象外になっても削除しない。
 export async function ensureDeliveriesForProject(
 	tx: Prisma.TransactionClient,
 	projectId: string
