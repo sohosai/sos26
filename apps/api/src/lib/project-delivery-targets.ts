@@ -51,7 +51,8 @@ function uniqueNoticeDeliveryProjects(
 	});
 }
 
-// カテゴリ指定配信では、空配列は「全種別/全場所」を表す。
+// カテゴリ指定配信の対象企画を解決する。
+// filterTypes/filterLocations の空配列は「全種別/全場所」を表す。
 export async function findCategoryDeliveryTargetProjects(
 	db: ProjectDeliveryDb,
 	{ filterTypes, filterLocations }: CategoryTargetFilters
@@ -68,6 +69,8 @@ export async function findCategoryDeliveryTargetProjects(
 	});
 }
 
+// 配信モードごとの対象企画IDを解決する。
+// 個別指定は既に保持している delivery の projectId を使い、カテゴリ指定は現在の企画属性から引き直す。
 export async function resolveDeliveryTargetProjectIds(
 	db: ProjectDeliveryDb,
 	input: {
@@ -89,6 +92,8 @@ export async function resolveDeliveryTargetProjectIds(
 	return projects.map(project => project.id);
 }
 
+// authorization と project の組み合わせを一括作成する低水準 helper。
+// 呼び出し元が複数 authorization 分をまとめて渡せるよう、重複排除はペア単位で行う。
 export async function createFormDeliveryProjects(
 	db: ProjectDeliveryDb,
 	deliveries: FormDeliveryProject[]
@@ -102,6 +107,8 @@ export async function createFormDeliveryProjects(
 	});
 }
 
+// authorization と project の組み合わせを一括作成する低水準 helper。
+// 呼び出し元が複数 authorization 分をまとめて渡せるよう、重複排除はペア単位で行う。
 export async function createNoticeDeliveryProjects(
 	db: ProjectDeliveryDb,
 	deliveries: NoticeDeliveryProject[]
@@ -115,6 +122,8 @@ export async function createNoticeDeliveryProjects(
 	});
 }
 
+// 1つの authorization に対して複数 project の delivery を作成し、
+// 通知同期側が同じ projectIds を通知送信に使えるように返す。
 export async function createFormDeliveriesForProjects(
 	db: ProjectDeliveryDb,
 	formAuthorizationId: string,
@@ -135,6 +144,8 @@ export async function createFormDeliveriesForProjects(
 	return uniqueProjectIds;
 }
 
+// 1つの authorization に対して複数 project の delivery を作成し、
+// 通知同期側が同じ projectIds を通知送信に使えるように返す。
 export async function createNoticeDeliveriesForProjects(
 	db: ProjectDeliveryDb,
 	noticeAuthorizationId: string,
