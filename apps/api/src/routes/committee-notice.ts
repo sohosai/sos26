@@ -18,7 +18,7 @@ import {
 	notifyNoticeAuthorizationRequested,
 } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
-import { findCategoryDeliveryTargetProjects } from "../lib/project-delivery-targets";
+import { ensureNoticeDeliveriesForAuthorization } from "../lib/project-delivery-targets";
 import { sanitizeHtml } from "../lib/sanitize";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -803,19 +803,7 @@ committeeNoticeRoute.patch(
 					status === "APPROVED" &&
 					authorization.deliveryMode === "CATEGORY"
 				) {
-					const targetProjects = await findCategoryDeliveryTargetProjects(tx, {
-						filterTypes: authorization.filterTypes,
-						filterLocations: authorization.filterLocations,
-					});
-					if (targetProjects.length > 0) {
-						await tx.noticeDelivery.createMany({
-							data: targetProjects.map(project => ({
-								noticeAuthorizationId: authorization.id,
-								projectId: project.id,
-							})),
-							skipDuplicates: true,
-						});
-					}
+					await ensureNoticeDeliveriesForAuthorization(tx, authorization.id);
 				}
 
 				return updated;

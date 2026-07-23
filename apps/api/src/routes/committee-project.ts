@@ -13,6 +13,7 @@ import { textToHtml } from "../lib/emails/templates/textToHtml";
 import { env } from "../lib/env";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
+import { ensureDeliveriesForProject } from "../lib/project-delivery-targets";
 import { sendPushToUsers } from "../lib/push";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -893,9 +894,20 @@ committeeProjectRoute.patch(
 		// 責任者情報のバリデーション
 		await validateProjectOwnerUpdates(projectId, data);
 
-		const updated = await prisma.project.updateMany({
-			where: { id: projectId, deletedAt: null },
-			data,
+		const shouldEnsureDeliveries =
+			data.type !== undefined || data.location !== undefined;
+
+		const updated = await prisma.$transaction(async tx => {
+			const updated = await tx.project.updateMany({
+				where: { id: projectId, deletedAt: null },
+				data,
+			});
+
+			if (updated.count > 0 && shouldEnsureDeliveries) {
+				await ensureDeliveriesForProject(tx, projectId);
+			}
+
+			return updated;
 		});
 
 		if (updated.count === 0) {

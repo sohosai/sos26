@@ -43,7 +43,7 @@ import {
 	notifyFormAuthorizationRequested,
 } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
-import { findCategoryDeliveryTargetProjects } from "../lib/project-delivery-targets";
+import { ensureFormDeliveriesForAuthorization } from "../lib/project-delivery-targets";
 import { getObject, objectExists } from "../lib/storage/presign";
 import {
 	getCommitteeMember,
@@ -1068,19 +1068,7 @@ committeeFormRoute.patch(
 					status === "APPROVED" &&
 					authorization.deliveryMode === "CATEGORY"
 				) {
-					const targetProjects = await findCategoryDeliveryTargetProjects(tx, {
-						filterTypes: authorization.filterTypes,
-						filterLocations: authorization.filterLocations,
-					});
-					if (targetProjects.length > 0) {
-						await tx.formDelivery.createMany({
-							data: targetProjects.map(project => ({
-								formAuthorizationId: authorization.id,
-								projectId: project.id,
-							})),
-							skipDuplicates: true,
-						});
-					}
+					await ensureFormDeliveriesForAuthorization(tx, authorization.id);
 				}
 
 				return { updated, authorization };

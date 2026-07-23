@@ -36,6 +36,7 @@ import {
 	notifySubOwnerRequestSent,
 } from "../lib/notifications";
 import { handlePrismaError, prisma } from "../lib/prisma";
+import { ensureDeliveriesForProject } from "../lib/project-delivery-targets";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -307,6 +308,8 @@ projectRoute.post("/create", requireAuth, async c => {
 				});
 			}
 		}
+
+		await ensureDeliveriesForProject(tx, created.id);
 
 		return created;
 	});
@@ -916,9 +919,20 @@ projectRoute.patch(
 			);
 		}
 
-		const updated = await prisma.project.update({
-			where: { id: project.id },
-			data,
+		const shouldEnsureDeliveries =
+			data.type !== undefined || data.location !== undefined;
+
+		const updated = await prisma.$transaction(async tx => {
+			const updated = await tx.project.update({
+				where: { id: project.id },
+				data,
+			});
+
+			if (shouldEnsureDeliveries) {
+				await ensureDeliveriesForProject(tx, updated.id);
+			}
+
+			return updated;
 		});
 
 		return c.json({ project: updated });
