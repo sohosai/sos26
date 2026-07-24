@@ -980,7 +980,16 @@ export function ColumnPanel({
 			<Dialog.Root open={open} onOpenChange={onOpenChange}>
 				<Dialog.Content maxWidth="800px" minHeight="560px" width="90vw">
 					<div className={styles.header}>
-						<Dialog.Title mb="0">カラム</Dialog.Title>
+						<div className={styles.headerTitle}>
+							<Dialog.Title mb="0">カラム</Dialog.Title>
+							<IconButton
+								aria-label="閉じる"
+								onClick={() => onOpenChange(false)}
+								className={styles.columnCloseButtonMobile}
+							>
+								<IconX size={16} />
+							</IconButton>
+						</div>
 						<div className={styles.headerActions}>
 							<Button
 								intent="secondary"
@@ -997,7 +1006,7 @@ export function ColumnPanel({
 								<IconPlus size={16} /> カスタム追加
 							</Button>
 							<IconButton
-								aria-label="閉じる"
+								aria-label="閉じる"
 								onClick={() => onOpenChange(false)}
 								className={styles.columnCloseButton}
 							>
