@@ -1,4 +1,10 @@
 import "./lib/sentry";
+import { applyGoogleTranslatePatch } from "./lib/google-translate-patch";
+
+// Google 翻訳による DOM 改変と React reconciler の競合を防ぐ
+// ※ React の import および createRoot() より前に実行する必要がある
+applyGoogleTranslatePatch();
+
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
