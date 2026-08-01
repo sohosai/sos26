@@ -7,7 +7,7 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b",
     "preview": "vite preview",
-    "clean": "rm -rf dist .turbo",
+    "clean": "rimraf dist .turbo",
     "test:run": "vitest run",
     "test:watch": "vitest"
   },
@@ -50,6 +50,6 @@
     "@types/react-dom": "^19.2.3",
     "@types/streamsaver": "^2.0.4",
     "@vitejs/plugin-react-swc": "^4.2.2",
-    "vite": "^7.2.4"
+    "vite": "^8.1.3"
   }
 }
