@@ -5,9 +5,12 @@
 ## 開発のはじめかた
 
 ```bash
-bun install        # 依存関係のインストール（ルート）
-bun run dev        # すべてのアプリを起動（Turbo）
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env
+docker compose --profile setup up
 ```
+
+開発環境は Docker Compose で起動します。Web は http://localhost:5173、API は http://localhost:3000 で利用できます。
 
 ## タスク実行
 
@@ -17,6 +20,7 @@ bun run dev        # すべてのアプリを起動（Turbo）
 - Lint/Format: `bun run lint` / `bun run format` / `bun run check`
 
 ワークスペース個別のタスクは各 `apps/*` / `packages/*` の `package.json` を参照してください。
+Bun コマンドを直接実行する場合は、必要に応じて `docker compose exec app bun run ...` のように `app` コンテナ内で実行してください。
 
 ## コーディング規約
 

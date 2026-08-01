@@ -151,15 +151,13 @@ apps/api/prisma/schema.prisma
 ### 2. マイグレーション作成・適用
 
 ```bash
-bun run db:migrate:dev
-# または apps/api ディレクトリで
-bun run db:migrate:dev
+docker compose exec app bun run db:migrate:dev
 ```
 
 ### 3. クライアント再生成（自動実行される）
 
 ```bash
-bun run db:generate
+docker compose exec app bun run db:generate
 ```
 
 ---

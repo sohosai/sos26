@@ -71,6 +71,9 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY----
 # 認証
 APP_URL=http://localhost:5173
 
+# Database（Docker Compose 開発環境）
+DATABASE_URL=postgres://app:password@db:5432/app
+
 # プッシュ通知
 ADMIN_MAIL=admin@example.com
 VAPID_PUBLIC_KEY=your_vapid_public_key_here
@@ -80,12 +83,12 @@ VAPID_PRIVATE_KEY=your_vapid_private_key_here
 # 内部通知同期
 NOTIFICATION_SYNC_PASSWORD=change-this-to-a-long-random-string
 
-# S3互換オブジェクトストレージ
-S3_ENDPOINT=https://s3.isk01.sakurastorage.jp
+# S3互換オブジェクトストレージ（Docker Compose 開発環境）
+S3_ENDPOINT=http://object-storage:9000
 # S3_REGION=jp-north-1  # デフォルト
-S3_BUCKET=your-bucket-name
-S3_ACCESS_KEY_ID=your_access_key
-S3_SECRET_ACCESS_KEY=your_secret_key
+S3_BUCKET=local-bucket
+S3_ACCESS_KEY_ID=dev_access_key
+S3_SECRET_ACCESS_KEY=dev_secret_access_key
 # S3_PRESIGNED_URL_EXPIRES=3600  # デフォルト1時間
 # S3_MAX_FILE_SIZE=1000000000  # デフォルト1GB
 
@@ -95,6 +98,8 @@ FILE_TOKEN_SECRET=your-file-token-secret-at-least-32-chars
 # ローカル専用にしたい場合は .env.local を使用
 # apps/api/.env.local が存在すればこちらが優先されます
 ```
+
+Docker Compose で起動する場合、`DATABASE_URL` と `S3_ENDPOINT` のホスト名は `db` / `object-storage` のように Compose サービス名を指定します。ホスト PC から直接接続する場合は、DB は `localhost:5432`、RustFS は `localhost:9000` でアクセスできます。
 
 ## バリデーション
 
