@@ -9,6 +9,7 @@ import {
 	decideSubOwnerRequestResponseSchema,
 	getApplicationPeriodResponseSchema,
 	getProjectDetailResponseSchema,
+	getProjectNotificationStatusResponseSchema,
 	getProjectRegistrationFormResponsesResponseSchema,
 	joinProjectRequestSchema,
 	joinProjectResponseSchema,
@@ -123,6 +124,24 @@ export const getProjectDetailEndpoint: GetEndpoint<
 	query: undefined,
 	request: undefined,
 	response: getProjectDetailResponseSchema,
+} as const;
+
+/**
+ * GET /project/:projectId/notification-status
+ * 企画側でユーザーに通知すべき未処理状態を取得
+ */
+export const getProjectNotificationStatusEndpoint: GetEndpoint<
+	"/project/:projectId/notification-status",
+	typeof projectIdPathParamsSchema,
+	undefined,
+	typeof getProjectNotificationStatusResponseSchema
+> = {
+	method: "GET",
+	path: "/project/:projectId/notification-status",
+	pathParams: projectIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: getProjectNotificationStatusResponseSchema,
 } as const;
 
 /**

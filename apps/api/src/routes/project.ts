@@ -36,6 +36,7 @@ import {
 	notifySubOwnerRequestSent,
 } from "../lib/notifications";
 import { handlePrismaError, prisma } from "../lib/prisma";
+import { ensureDeliveriesForProject } from "../lib/project-delivery-targets";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -50,6 +51,34 @@ const generateInviteCode = () =>
 		const idx = randomInt(0, INVITE_CODE_CHARS.length);
 		return INVITE_CODE_CHARS[idx];
 	}).join("");
+
+function getCommentSentAt(comment: { sentAt: Date | null; createdAt: Date }) {
+	return comment.sentAt ?? comment.createdAt;
+}
+
+function getLatestCommitteeActivityAt(inquiry: {
+	sentAt: Date | null;
+	creatorRole: "PROJECT" | "COMMITTEE";
+	createdAt: Date;
+	comments: Array<{ createdAt: Date; sentAt: Date | null }>;
+}) {
+	const latestCommitteeComment = inquiry.comments[0] ?? null;
+	const latestCommitteeCommentAt = latestCommitteeComment
+		? getCommentSentAt(latestCommitteeComment)
+		: null;
+	const committeeCreatedAt =
+		inquiry.creatorRole === "COMMITTEE"
+			? (inquiry.sentAt ?? inquiry.createdAt)
+			: null;
+
+	if (latestCommitteeCommentAt && committeeCreatedAt) {
+		return latestCommitteeCommentAt.getTime() > committeeCreatedAt.getTime()
+			? latestCommitteeCommentAt
+			: committeeCreatedAt;
+	}
+
+	return latestCommitteeCommentAt ?? committeeCreatedAt;
+}
 
 // 企画登録フォーム回答をPrisma用データに変換
 const buildPrismaAnswerData = (
@@ -280,6 +309,8 @@ projectRoute.post("/create", requireAuth, async c => {
 			}
 		}
 
+		await ensureDeliveriesForProject(tx, created.id);
+
 		return created;
 	});
 
@@ -307,6 +338,122 @@ projectRoute.get("/list", requireAuth, async c => {
 
 	return c.json({ projects });
 });
+
+// ─────────────────────────────────────────
+// GET /project/:projectId/notification-status
+// 企画側でユーザーに通知すべき未処理状態を取得
+// ─────────────────────────────────────────
+projectRoute.get(
+	"/:projectId/notification-status",
+	requireAuth,
+	requireProjectMember,
+	async c => {
+		const user = c.get("user");
+		const project = c.get("project");
+		const projectRole = c.get("projectRole");
+		const now = new Date();
+
+		const canAccessOwnerOnly =
+			projectRole === "OWNER" || projectRole === "SUB_OWNER";
+
+		const [
+			unansweredFormsCount,
+			uncheckedNoticesCount,
+			inquiriesWithCommitteeActivity,
+		] = await Promise.all([
+			prisma.formDelivery.count({
+				where: {
+					projectId: project.id,
+					formAuthorization: {
+						status: "APPROVED",
+						scheduledSendAt: { lte: now },
+						form: { deletedAt: null },
+						OR: [
+							{ deadlineAt: null },
+							{ allowLateResponse: true },
+							{ deadlineAt: { gte: now } },
+						],
+						...(canAccessOwnerOnly ? {} : { ownerOnly: false }),
+					},
+					responses: { none: { submittedAt: { not: null } } },
+				},
+			}),
+			prisma.noticeDelivery.count({
+				where: {
+					projectId: project.id,
+					noticeAuthorization: {
+						status: "APPROVED",
+						deliveredAt: { lte: now },
+						notice: { deletedAt: null },
+					},
+					readStatuses: { none: { userId: user.id } },
+				},
+			}),
+			prisma.inquiry.findMany({
+				where: {
+					projectId: project.id,
+					deletedAt: null,
+					isDraft: false,
+					assignees: {
+						some: { userId: user.id, side: "PROJECT", deletedAt: null },
+					},
+					OR: [
+						{ creatorRole: "COMMITTEE" },
+						{
+							comments: {
+								some: {
+									deletedAt: null,
+									isDraft: false,
+									senderRole: "COMMITTEE",
+								},
+							},
+						},
+					],
+				},
+				select: {
+					creatorRole: true,
+					createdAt: true,
+					sentAt: true,
+					comments: {
+						where: {
+							deletedAt: null,
+							isDraft: false,
+							senderRole: "COMMITTEE",
+						},
+						select: { createdAt: true, sentAt: true },
+						orderBy: [
+							{ sentAt: { sort: "desc", nulls: "last" } },
+							{ createdAt: "desc" },
+						],
+						take: 1,
+					},
+					commentReadStatuses: {
+						where: { userId: user.id },
+						select: { lastReadAt: true },
+						take: 1,
+					},
+				},
+			}),
+		]);
+
+		const hasUnreadInquiryComments = inquiriesWithCommitteeActivity.some(
+			inquiry => {
+				const latestCommitteeActivityAt = getLatestCommitteeActivityAt(inquiry);
+				const lastReadAt = inquiry.commentReadStatuses[0]?.lastReadAt ?? null;
+				return latestCommitteeActivityAt
+					? !lastReadAt ||
+							latestCommitteeActivityAt.getTime() > lastReadAt.getTime()
+					: false;
+			}
+		);
+
+		return c.json({
+			hasUnansweredForms: unansweredFormsCount > 0,
+			hasUncheckedNotices: uncheckedNoticesCount > 0,
+			hasUnreadInquiryComments,
+		});
+	}
+);
 
 // ─────────────────────────────────────────
 // POST /project/join
@@ -772,9 +919,20 @@ projectRoute.patch(
 			);
 		}
 
-		const updated = await prisma.project.update({
-			where: { id: project.id },
-			data,
+		const shouldEnsureDeliveries =
+			data.type !== undefined || data.location !== undefined;
+
+		const updated = await prisma.$transaction(async tx => {
+			const updated = await tx.project.update({
+				where: { id: project.id },
+				data,
+			});
+
+			if (shouldEnsureDeliveries) {
+				await ensureDeliveriesForProject(tx, updated.id);
+			}
+
+			return updated;
 		});
 
 		return c.json({ project: updated });

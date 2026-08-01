@@ -18,6 +18,7 @@ import {
 	notifyNoticeAuthorizationRequested,
 } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
+import { ensureNoticeDeliveriesForAuthorization } from "../lib/project-delivery-targets";
 import { sanitizeHtml } from "../lib/sanitize";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -790,11 +791,23 @@ committeeNoticeRoute.patch(
 				);
 			}
 
-			// where に status: "PENDING" を含めることで、
-			// 同時リクエストによる二重承認を防止する
-			const updated = await prisma.noticeAuthorization.update({
-				where: { id: authorizationId, status: "PENDING" },
-				data: { status, decidedAt: now },
+			const updated = await prisma.$transaction(async tx => {
+				// where に status: "PENDING" を含めることで、
+				// 同時リクエストによる二重承認を防止する
+				const updated = await tx.noticeAuthorization.update({
+					where: { id: authorizationId, status: "PENDING" },
+					data: { status, decidedAt: now },
+				});
+
+				if (
+					status === "APPROVED" &&
+					authorization.deliveryMode === "CATEGORY"
+				) {
+					// 読み取りAPIで補完していたカテゴリ指定 delivery を承認時に確定する。
+					await ensureNoticeDeliveriesForAuthorization(tx, authorization.id);
+				}
+
+				return updated;
 			});
 
 			void notifyNoticeAuthorizationDecided({
