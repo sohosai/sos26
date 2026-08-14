@@ -10,12 +10,9 @@ let client: S3Client | null = null;
 export function initStorage() {
 	if (client) return;
 
-	const endpoint = env.S3_ENDPOINT.startsWith("http")
-		? env.S3_ENDPOINT
-		: `https://${env.S3_ENDPOINT}`;
-
+	// S3_ENDPOINT のスキームは env スキーマ側で検証済み
 	client = new S3Client({
-		endpoint,
+		endpoint: env.S3_ENDPOINT,
 		region: env.S3_REGION,
 		credentials: {
 			accessKeyId: env.S3_ACCESS_KEY_ID,

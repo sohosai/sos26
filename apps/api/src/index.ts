@@ -41,7 +41,21 @@ const app = new Hono();
 // 統一エラーハンドラ
 app.onError(errorHandler);
 
-// CORS
+// 公開API（オンラインマップ等の外部アプリ向け）
+// 認証不要・読み取り専用のため全オリジンから利用できる。
+// 認証情報を送らせないよう credentials は付けない。
+// 後段の CORS より先に登録し、このルートには適用されないようにしている。
+app.use(
+	"/openapi/*",
+	cors({
+		origin: "*",
+		allowMethods: ["GET"],
+		maxAge: 86400,
+	})
+);
+app.route("/openapi", openApiRoute);
+
+// CORS（認証付きAPI向け）
 app.use(
 	"/*",
 	cors({
@@ -80,7 +94,6 @@ app.route("/project", projectPublicInfoRoute);
 app.route("/push", pushRoute);
 app.route("/user", userRoute);
 app.route("/files", fileRoute);
-app.route("/openapi", openApiRoute);
 app.route("/committee/map-settings", committeeMapSettingsRoute);
 
 export { app };

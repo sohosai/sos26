@@ -94,9 +94,6 @@
     },
     "packages/shared": {
       "name": "@sos26/shared",
-      "dependencies": {
-        "@hono/zod-openapi": "^1.4.0",
-      },
     },
   },
   "packages": {

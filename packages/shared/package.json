@@ -17,8 +17,5 @@
     "clean": "rm -rf dist .turbo",
     "test:run": "vitest run",
     "test:watch": "vitest"
-  },
-  "dependencies": {
-    "@hono/zod-openapi": "^1.4.0"
   }
 }

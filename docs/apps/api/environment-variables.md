@@ -157,6 +157,7 @@ FILE_TOKEN_SECRET=your-file-token-secret-at-least-32-chars
 
 **S3_ENDPOINT:**
 - 空であってはならない必須文字列
+- `http://` または `https://` で始まる必要がある（スキームを省略すると起動時にエラー）
 
 **S3_REGION:**
 - 既定は `jp-north-1`

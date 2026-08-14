@@ -47,7 +47,7 @@ import { toast } from "sonner";
 import { UserAvatar } from "@/components/common/UserAvatar";
 import { DiscardChangesDialog } from "@/components/patterns";
 import { Button, Select, TextArea } from "@/components/primitives";
-import { uploadFile } from "@/lib/api/files";
+import { deleteFile, uploadFile } from "@/lib/api/files";
 import { getMapAppSetting } from "@/lib/api/map-app-setting";
 import { updateProjectPublicInfo } from "@/lib/api/project-public-info";
 import { useAuthStore } from "@/lib/auth";
@@ -144,14 +144,24 @@ function ProjectPublicInfoPage() {
 	const setProjectIconFileId = useProjectStore(state => state.setIconFileId);
 	const project = projects.find(p => p.id === selectedProjectId);
 
-	const { publicInfo, publicInfoLoadFailed } = projectRoute.useLoaderData();
+	const { publicInfo, publicInfoProjectId, publicInfoLoadFailed } =
+		projectRoute.useLoaderData();
 	const { setting } = Route.useLoaderData();
 
+	// 親ローダーの再取得が終わるまでは、前の企画の情報を表示しない
+	const isPublicInfoStale = publicInfoProjectId !== selectedProjectId;
+
 	const isEditable =
-		project?.ownerId === user?.id || project?.subOwnerId === user?.id;
+		!!project &&
+		!!user &&
+		project.deletionStatus === null &&
+		(project.ownerId === user.id || project.subOwnerId === user.id);
 
 	// サーバー上の値。編集中（draft !== null）でなければ、そのまま画面に反映する
-	const serverValues = useMemo(() => toFormValues(publicInfo), [publicInfo]);
+	const serverValues = useMemo(
+		() => toFormValues(isPublicInfoStale ? null : publicInfo),
+		[publicInfo, isPublicInfoStale]
+	);
 	const serverValuesRef = useRef(serverValues);
 	serverValuesRef.current = serverValues;
 
@@ -191,6 +201,39 @@ function ProjectPublicInfoPage() {
 		[]
 	);
 
+	/**
+	 * この画面でアップロードしたが、まだ保存されていないファイルID。
+	 * アップロード直後のファイルは公開ファイルとして配信されてしまうため、
+	 * 保存されないまま画面から外れたものはサーバーから削除する。
+	 */
+	const unsavedFileIdsRef = useRef<Set<string>>(new Set());
+
+	const discardUnsavedFile = useCallback(
+		(fileId: string | null | undefined) => {
+			if (!fileId || !unsavedFileIdsRef.current.has(fileId)) return;
+			unsavedFileIdsRef.current.delete(fileId);
+
+			// サーバー側に保存済みのファイルは消さない
+			const server = serverValuesRef.current;
+			if (
+				server.iconFileId === fileId ||
+				server.mapImageFileIds.includes(fileId)
+			) {
+				return;
+			}
+			// 失敗しても画面上の操作は継続させる（残っても実害は保存容量のみ）
+			void deleteFile(fileId).catch(() => undefined);
+		},
+		[]
+	);
+
+	/** 未保存のアップロードをまとめて破棄する */
+	const discardAllUnsavedFiles = useCallback(() => {
+		for (const fileId of [...unsavedFileIdsRef.current]) {
+			discardUnsavedFile(fileId);
+		}
+	}, [discardUnsavedFile]);
+
 	const blocker = useBlocker({
 		shouldBlockFn: () => isDirty,
 		enableBeforeUnload: () => isDirty,
@@ -220,9 +263,12 @@ function ProjectPublicInfoPage() {
 		}
 
 		toast.success("企画情報を保存しました。");
+		// 保存できたファイルは削除対象から外す
+		// （公開情報から外れたファイルはサーバー側で回収される）
+		unsavedFileIdsRef.current.clear();
 		// サイドバーのアイコンにも即時反映
 		if (setting.isIconEditable) {
-			setProjectIconFileId(project.id, values.iconFileId);
+			setProjectIconFileId(project.id, values.iconFileId || null);
 		}
 		// 保存は成功しているため、再取得の成否にかかわらず編集状態は解除する
 		await router.invalidate().catch(() => undefined);
@@ -230,6 +276,7 @@ function ProjectPublicInfoPage() {
 	};
 
 	const handleCancel = () => {
+		discardAllUnsavedFiles();
 		setDraft(null);
 	};
 
@@ -256,11 +303,15 @@ function ProjectPublicInfoPage() {
 	const handleCropComplete = async (blob: Blob) => {
 		setIsUploadingIcon(true);
 		try {
+			const previousIconFileId = values.iconFileId;
 			const res = await uploadFile(
 				new File([blob], "icon.png", { type: "image/png" }),
 				{ isPublic: true }
 			);
+			unsavedFileIdsRef.current.add(res.file.id);
 			updateValues({ iconFileId: res.file.id });
+			// 差し替え前のアイコンが未保存なら削除する
+			discardUnsavedFile(previousIconFileId);
 		} catch (error) {
 			reportHandledError({
 				error,
@@ -303,6 +354,9 @@ function ProjectPublicInfoPage() {
 			const newIds = results
 				.filter(r => r.status === "fulfilled")
 				.map(r => r.value.file.id);
+			for (const id of newIds) {
+				unsavedFileIdsRef.current.add(id);
+			}
 
 			if (newIds.length > 0) {
 				updateValues(current => ({
@@ -334,10 +388,12 @@ function ProjectPublicInfoPage() {
 	};
 
 	const removeMapImage = (index: number) => {
+		const removedFileId = values.mapImageFileIds[index];
 		updateValues(current => ({
 			...current,
 			mapImageFileIds: current.mapImageFileIds.filter((_, i) => i !== index),
 		}));
+		discardUnsavedFile(removedFileId);
 	};
 
 	const handleDragEnd = (event: DragEndEvent) => {
@@ -475,7 +531,11 @@ function ProjectPublicInfoPage() {
 								<button
 									type="button"
 									className={styles.iconDeleteBtn}
-									onClick={() => updateValues({ iconFileId: "" })}
+									onClick={() => {
+										const removed = values.iconFileId;
+										updateValues({ iconFileId: "" });
+										discardUnsavedFile(removed);
+									}}
 									aria-label="アイコンをデフォルトに戻す"
 								>
 									<IconX size={12} />
@@ -688,7 +748,10 @@ function ProjectPublicInfoPage() {
 				onOpenChange={open => {
 					if (!open) blocker.reset?.();
 				}}
-				onConfirm={() => blocker.proceed?.()}
+				onConfirm={() => {
+					discardAllUnsavedFiles();
+					blocker.proceed?.();
+				}}
 				title="保存していない変更があります"
 				description="このページを離れると、保存していない変更は失われます。"
 				cancelLabel="編集を続ける"

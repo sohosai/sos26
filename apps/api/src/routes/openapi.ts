@@ -2,19 +2,137 @@ import { swaggerUI } from "@hono/swagger-ui";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { projectPublicInfoSchema } from "@sos26/shared";
 import { prisma } from "../lib/prisma";
+import { getPublicApiCacheVersion } from "../lib/public-api-cache";
 
 export const openApiRoute = new OpenAPIHono();
 
-const publicProjectListResponseSchema = z.array(
-	z.object({
-		id: z.string(),
-		name: z.string(),
-		organizationName: z.string(),
-		type: z.enum(["STAGE", "FOOD", "NORMAL"]),
-		location: z.enum(["INDOOR", "OUTDOOR", "STAGE"]),
-		publicInfo: projectPublicInfoSchema.nullable(),
-	})
-);
+/**
+ * 一覧レスポンスのキャッシュ保持時間（ミリ秒）
+ *
+ * 無認証で誰でも叩けるエンドポイントのため、DBへの負荷が
+ * リクエスト数に比例しないようプロセス内でキャッシュする。
+ */
+const LIST_CACHE_TTL_MS = 60_000;
+const CACHE_CONTROL = `public, max-age=${LIST_CACHE_TTL_MS / 1000}`;
+
+const publicProjectSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	organizationName: z.string(),
+	type: z.enum(["STAGE", "FOOD", "NORMAL"]),
+	location: z.enum(["INDOOR", "OUTDOOR", "STAGE"]),
+	publicInfo: projectPublicInfoSchema,
+});
+
+type PublicProject = z.infer<typeof publicProjectSchema>;
+
+const publicProjectListResponseSchema = z.array(publicProjectSchema);
+
+const errorResponseSchema = z.object({
+	error: z.object({
+		code: z.string(),
+		message: z.string(),
+	}),
+});
+
+/**
+ * 公開対象の企画の絞り込み条件
+ *
+ * 公開情報（ProjectPublicInfo）を作成した企画だけを対象にする。
+ * 企画側が「企画情報」画面で保存して初めてレコードが作られるため、
+ * これがオンラインマップ掲載のオプトインとして機能する。
+ */
+const publicProjectWhere = {
+	deletedAt: null,
+	deletionStatus: null,
+	publicInfo: { isNot: null },
+} as const;
+
+const publicProjectSelect = {
+	id: true,
+	name: true,
+	organizationName: true,
+	type: true,
+	location: true,
+	publicInfo: {
+		select: {
+			description: true,
+			iconFileId: true,
+			openStatus: true,
+			stockStatus: true,
+			mapImages: {
+				orderBy: { sortOrder: "asc" },
+				select: { fileId: true },
+			},
+		},
+	},
+} as const;
+
+type PublicProjectRow = {
+	id: string;
+	name: string;
+	organizationName: string;
+	type: PublicProject["type"];
+	location: PublicProject["location"];
+	publicInfo: {
+		description: string | null;
+		iconFileId: string | null;
+		openStatus: PublicProject["publicInfo"]["openStatus"];
+		stockStatus: PublicProject["publicInfo"]["stockStatus"];
+		mapImages: { fileId: string }[];
+	} | null;
+};
+
+/** publicInfo が null の行は publicProjectWhere で除外済みのため取り除く */
+function toPublicProject(row: PublicProjectRow): PublicProject | null {
+	if (!row.publicInfo) return null;
+
+	return {
+		id: row.id,
+		name: row.name,
+		organizationName: row.organizationName,
+		type: row.type,
+		location: row.location,
+		publicInfo: {
+			description: row.publicInfo.description,
+			iconFileId: row.publicInfo.iconFileId,
+			mapImageFileIds: row.publicInfo.mapImages.map(img => img.fileId),
+			openStatus: row.publicInfo.openStatus,
+			stockStatus: row.publicInfo.stockStatus,
+		},
+	};
+}
+
+let listCache: {
+	expiresAt: number;
+	version: number;
+	value: PublicProject[];
+} | null = null;
+
+async function getPublicProjects(): Promise<PublicProject[]> {
+	const now = Date.now();
+	const version = getPublicApiCacheVersion();
+	if (listCache && listCache.expiresAt > now && listCache.version === version) {
+		return listCache.value;
+	}
+
+	const rows = await prisma.project.findMany({
+		where: publicProjectWhere,
+		select: publicProjectSelect,
+		orderBy: { number: "asc" },
+	});
+
+	const value = rows
+		.map(toPublicProject)
+		.filter((p): p is PublicProject => p !== null);
+	listCache = { expiresAt: now + LIST_CACHE_TTL_MS, version, value };
+	return value;
+}
+
+/** テスト用にキャッシュを破棄する */
+export function clearPublicProjectsCache(): void {
+	listCache = null;
+}
 
 const getProjectsRoute = createRoute({
 	method: "get",
@@ -32,34 +150,9 @@ const getProjectsRoute = createRoute({
 });
 
 openApiRoute.openapi(getProjectsRoute, async c => {
-	const projects = await prisma.project.findMany({
-		where: { deletedAt: null, deletionStatus: null },
-		include: {
-			publicInfo: {
-				include: {
-					mapImages: { orderBy: { sortOrder: "asc" } },
-				},
-			},
-		},
-	});
+	const response = await getPublicProjects();
 
-	const response = projects.map(p => ({
-		id: p.id,
-		name: p.name,
-		organizationName: p.organizationName,
-		type: p.type,
-		location: p.location,
-		publicInfo: p.publicInfo
-			? {
-					description: p.publicInfo.description,
-					iconFileId: p.publicInfo.iconFileId,
-					mapImageFileIds: p.publicInfo.mapImages.map(img => img.fileId),
-					openStatus: p.publicInfo.openStatus,
-					stockStatus: p.publicInfo.stockStatus,
-				}
-			: null,
-	}));
-
+	c.header("Cache-Control", CACHE_CONTROL);
 	return c.json(response, 200);
 });
 
@@ -75,51 +168,44 @@ const getProjectDetailRoute = createRoute({
 		200: {
 			content: {
 				"application/json": {
-					schema: publicProjectListResponseSchema.element,
+					schema: publicProjectSchema,
 				},
 			},
 			description: "企画の情報（個別）",
 		},
 		404: {
-			description: "Project not found",
+			content: {
+				"application/json": {
+					schema: errorResponseSchema,
+				},
+			},
+			description: "企画が見つからない、または未公開",
 		},
 	},
 });
 
 openApiRoute.openapi(getProjectDetailRoute, async c => {
 	const id = c.req.valid("param").id;
-	const project = await prisma.project.findFirst({
-		where: { id, deletedAt: null, deletionStatus: null },
-		include: {
-			publicInfo: {
-				include: {
-					mapImages: { orderBy: { sortOrder: "asc" } },
-				},
-			},
-		},
+	const row = await prisma.project.findFirst({
+		where: { ...publicProjectWhere, id },
+		select: publicProjectSelect,
 	});
 
-	if (!project) {
-		return c.notFound();
+	const response = row ? toPublicProject(row) : null;
+
+	if (!response) {
+		return c.json(
+			{
+				error: {
+					code: "NOT_FOUND",
+					message: "企画が見つかりません",
+				},
+			},
+			404
+		);
 	}
 
-	const response = {
-		id: project.id,
-		name: project.name,
-		organizationName: project.organizationName,
-		type: project.type,
-		location: project.location,
-		publicInfo: project.publicInfo
-			? {
-					description: project.publicInfo.description,
-					iconFileId: project.publicInfo.iconFileId,
-					mapImageFileIds: project.publicInfo.mapImages.map(img => img.fileId),
-					openStatus: project.publicInfo.openStatus,
-					stockStatus: project.publicInfo.stockStatus,
-				}
-			: null,
-	};
-
+	c.header("Cache-Control", CACHE_CONTROL);
 	return c.json(response, 200);
 });
 
@@ -128,7 +214,8 @@ openApiRoute.doc("/openapi.json", {
 	info: {
 		title: "sos26 Public API",
 		version: "1.0.0",
-		description: "雙峰祭オンラインマップにデータ連携をするためのAPI",
+		description:
+			"雙峰祭オンラインマップにデータ連携をするためのAPI。認証不要で、企画側が公開情報を登録した企画のみを返す。",
 	},
 });
 

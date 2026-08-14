@@ -1,30 +1,28 @@
-import { Callout, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import { Card, Flex, Heading, Text } from "@radix-ui/themes";
 import type { MapAppSetting, UpdateMapAppSettingRequest } from "@sos26/shared";
-import { IconInfoCircle } from "@tabler/icons-react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Switch } from "@/components/primitives";
-import { getMyPermissions } from "@/lib/api/committee-member";
 import {
 	getMapAppSetting,
 	updateMapAppSetting,
 } from "@/lib/api/map-app-setting";
+import { ForbiddenError, useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
 import styles from "./route.module.scss";
 
 export const Route = createFileRoute("/committee/map-settings")({
+	// サイドバーでも非表示にしている画面なので、URL直打ちでも同じ扱いにする。
+	// 権限は /committee の beforeLoad で取得済みのため再取得しない。
+	beforeLoad: () => {
+		if (useAuthStore.getState().hasMapAppSettingPermission !== true) {
+			throw new ForbiddenError();
+		}
+	},
 	loader: async () => {
-		const [settingRes, permsRes] = await Promise.all([
-			getMapAppSetting(),
-			getMyPermissions(),
-		]);
-		return {
-			setting: settingRes.setting,
-			canEdit: permsRes.permissions.some(
-				p => p.permission === "MAP_APP_SETTING_EDIT"
-			),
-		};
+		const { setting } = await getMapAppSetting();
+		return { setting };
 	},
 	component: MapSettingsPage,
 });
@@ -39,7 +37,7 @@ const SWITCHES: { key: keyof MapAppSetting; label: string }[] = [
 
 function MapSettingsPage() {
 	const router = useRouter();
-	const { setting: loadedSetting, canEdit } = Route.useLoaderData();
+	const { setting: loadedSetting } = Route.useLoaderData();
 	const [setting, setSetting] = useState(loadedSetting);
 	/** 保存中は全スイッチを無効化する（保存中の操作が無言で巻き戻るのを防ぐ） */
 	const [isSaving, setIsSaving] = useState(false);
@@ -85,17 +83,6 @@ function MapSettingsPage() {
 				</Text>
 			</div>
 
-			{!canEdit && (
-				<Callout.Root color="gray" className={styles.callout}>
-					<Callout.Icon>
-						<IconInfoCircle size={16} />
-					</Callout.Icon>
-					<Callout.Text>
-						マップ設定変更権限がないため、閲覧のみ可能です。
-					</Callout.Text>
-				</Callout.Root>
-			)}
-
 			<Card className={styles.card}>
 				<Flex direction="column" gap="4">
 					{SWITCHES.map(({ key, label }) => (
@@ -104,7 +91,7 @@ function MapSettingsPage() {
 								label={label}
 								checked={setting[key]}
 								onCheckedChange={checked => void handleToggle(key, checked)}
-								disabled={!canEdit || isSaving}
+								disabled={isSaving}
 							/>
 						</Flex>
 					))}

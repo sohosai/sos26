@@ -1,4 +1,7 @@
-import { updateMapAppSettingEndpoint } from "@sos26/shared";
+import {
+	DEFAULT_MAP_APP_SETTING,
+	updateMapAppSettingEndpoint,
+} from "@sos26/shared";
 import { Hono } from "hono";
 import { requirePermission } from "../lib/committee-permission";
 import { prisma } from "../lib/prisma";
@@ -9,14 +12,12 @@ export const committeeMapSettingsRoute = new Hono<AuthEnv>();
 
 committeeMapSettingsRoute.use("*", requireAuth);
 
-const DEFAULT_MAP_APP_SETTING = {
-	isDescriptionEditable: true,
-	isIconEditable: true,
-	isMapImagesEditable: true,
-	isOpenStatusEditable: false,
-	isStockStatusEditable: false,
-};
-
+/**
+ * GET は認証済みユーザー全員が読める。
+ * 企画側の「企画情報」ページが、どの項目を編集できるか判定するために参照するため、
+ * 実委人権限で塞いではいけない。返すのは編集可否のフラグのみ。
+ * 更新（PUT）は MAP_APP_SETTING_EDIT 権限が必要。
+ */
 committeeMapSettingsRoute.get("/", async c => {
 	const setting = await prisma.mapAppSetting.findUnique({
 		where: { id: "GLOBAL" },

@@ -10,6 +10,19 @@ export const mapAppSettingSchema = z.object({
 
 export type MapAppSetting = z.infer<typeof mapAppSettingSchema>;
 
+/**
+ * マップアプリ設定の既定値（レコード未作成時に使う）
+ *
+ * Prisma スキーマの `MapAppSetting` の `@default` と必ず一致させること。
+ */
+export const DEFAULT_MAP_APP_SETTING: MapAppSetting = {
+	isDescriptionEditable: true,
+	isIconEditable: true,
+	isMapImagesEditable: true,
+	isOpenStatusEditable: false,
+	isStockStatusEditable: false,
+};
+
 // GET /committee/map-settings
 export const getMapAppSettingResponseSchema = z.object({
 	setting: mapAppSettingSchema,

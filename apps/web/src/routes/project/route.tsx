@@ -1,5 +1,5 @@
 import { Callout, Heading, Text } from "@radix-ui/themes";
-import type { Project } from "@sos26/shared";
+import type { MyProject, Project } from "@sos26/shared";
 import {
 	createFileRoute,
 	Outlet,
@@ -141,16 +141,12 @@ export const Route = createFileRoute("/project")({
 				getProjectPublicInfo(selectedProjectId),
 			]);
 
-		// 企画公開情報はサイドバーのアイコンと企画情報ページで共用する（重複取得を避ける）
+		// 企画公開情報は企画情報ページと共用する（重複取得を避ける）
+		// サイドバーのアイコンは /project/list が返す iconFileId を使う
 		const publicInfo =
 			publicInfoResult.status === "fulfilled"
 				? publicInfoResult.value.publicInfo
 				: null;
-
-		// アイコン画像IDをストアに保存（未設定の場合はクリア）
-		if (publicInfoResult.status === "fulfilled") {
-			store.setIconFileId(selectedProjectId, publicInfo?.iconFileId ?? "");
-		}
 
 		const forms =
 			formsResult.status === "fulfilled" ? formsResult.value.forms : [];
@@ -196,13 +192,8 @@ function ProjectLayout() {
 		Route.useLoaderData();
 	const navigate = useNavigate();
 	const router = useRouter();
-	const {
-		projects,
-		selectedProjectId,
-		setSelectedProjectId,
-		setProjects,
-		iconFileIds,
-	} = useProjectStore();
+	const { projects, selectedProjectId, setSelectedProjectId, setProjects } =
+		useProjectStore();
 	const selectedProject =
 		projects.find(p => p.id === selectedProjectId) ?? null;
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -267,7 +258,8 @@ function ProjectLayout() {
 			const { project } = await joinProject({ inviteCode });
 
 			if (!projects.some(p => p.id === project.id)) {
-				setProjects([...projects, project]);
+				// アイコンは直後の invalidate による一覧再取得で反映される
+				setProjects([...projects, { ...project, iconFileId: null }]);
 			}
 
 			setSelectedProjectId(project.id);
@@ -296,10 +288,10 @@ function ProjectLayout() {
 				projectId={selectedProjectId}
 				projectSelector={
 					<ProjectSelector
-						projects={projects.map((project: Project) => ({
+						projects={projects.map((project: MyProject) => ({
 							id: project.id,
 							name: project.name,
-							iconFileId: iconFileIds[project.id] ?? null,
+							iconFileId: project.iconFileId,
 						}))}
 						selectedProjectId={selectedProjectId}
 						collapsed={sidebarCollapsed}
@@ -347,7 +339,8 @@ function ProjectLayout() {
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}
 				onCreated={project => {
-					setProjects([...projects, project]);
+					// アイコンは直後の invalidate による一覧再取得で反映される
+					setProjects([...projects, { ...project, iconFileId: null }]);
 					setSelectedProjectId(project.id);
 					router.invalidate();
 				}}
