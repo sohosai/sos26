@@ -1,7 +1,7 @@
 import { Card, Flex, Heading, Text } from "@radix-ui/themes";
 import type { MapAppSetting, UpdateMapAppSettingRequest } from "@sos26/shared";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Switch } from "@/components/primitives";
 import {
@@ -37,26 +37,42 @@ const SWITCHES: { key: keyof MapAppSetting; label: string }[] = [
 ];
 
 function MapSettingsPage() {
-	const router = useRouter();
 	const { setting: loadedSetting } = Route.useLoaderData();
 	const [setting, setSetting] = useState(loadedSetting);
-	/** 保存中は全スイッチを無効化する（保存中の操作が無言で巻き戻るのを防ぐ） */
-	const [isSaving, setIsSaving] = useState(false);
+	/**
+	 * 保存中のスイッチ。操作中のものだけを無効化する。
+	 * 全スイッチを無効化すると、Radix の disabled スタイルで
+	 * ON のスイッチまで灰色になり、一斉に OFF になったように見えるため。
+	 */
+	const [savingKeys, setSavingKeys] = useState<
+		ReadonlySet<keyof MapAppSetting>
+	>(new Set());
 
-	useEffect(() => {
-		setSetting(loadedSetting);
-	}, [loadedSetting]);
+	const setSaving = (key: keyof MapAppSetting, saving: boolean) => {
+		setSavingKeys(prev => {
+			const next = new Set(prev);
+			if (saving) {
+				next.add(key);
+			} else {
+				next.delete(key);
+			}
+			return next;
+		});
+	};
 
 	// スイッチ操作でそのまま反映する（変更した項目のみ送信し、他の管理者の変更を上書きしない）
 	const handleToggle = async (key: keyof MapAppSetting, checked: boolean) => {
 		const previous = setting[key];
 		setSetting(prev => ({ ...prev, [key]: checked }));
-		setIsSaving(true);
+		setSaving(key, true);
 
 		try {
 			const payload: UpdateMapAppSettingRequest = {};
 			payload[key] = checked;
-			await updateMapAppSetting(payload);
+			const { setting: saved } = await updateMapAppSetting(payload);
+			// 操作したキーだけをサーバーの値で確定させる。
+			// レスポンス全体を反映すると、同時に操作した別のキーを巻き戻してしまう
+			setSetting(prev => ({ ...prev, [key]: saved[key] }));
 		} catch (error) {
 			setSetting(prev => ({ ...prev, [key]: previous }));
 			reportHandledError({
@@ -67,12 +83,10 @@ function MapSettingsPage() {
 			});
 			return;
 		} finally {
-			setIsSaving(false);
+			setSaving(key, false);
 		}
 
 		toast.success("設定を保存しました");
-		// 保存自体は成功しているため、再取得の失敗は保存失敗として扱わない
-		void router.invalidate();
 	};
 
 	return (
@@ -92,7 +106,7 @@ function MapSettingsPage() {
 								label={label}
 								checked={setting[key]}
 								onCheckedChange={checked => void handleToggle(key, checked)}
-								disabled={isSaving}
+								disabled={savingKeys.has(key)}
 							/>
 						</Flex>
 					))}

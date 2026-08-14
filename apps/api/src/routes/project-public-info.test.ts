@@ -1,5 +1,6 @@
 // @ts-nocheck - テストファイルでは res.json() の unknown 型を許容
 import type { Project, User } from "@prisma/client";
+import { PROJECT_DESCRIPTION_MAX_LENGTH } from "@sos26/shared";
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -476,14 +477,28 @@ describe("PUT /project/:projectId/public-info", () => {
 			);
 		});
 
-		it("400文字を超える紹介文は400エラー", async () => {
+		it("上限を超える紹介文は400エラー", async () => {
 			const app = makeApp();
 			setupAuthAsOwner();
 			setupUpdateMocks();
 
-			const res = await put(app, { description: "あ".repeat(401) });
+			const res = await put(app, {
+				description: "あ".repeat(PROJECT_DESCRIPTION_MAX_LENGTH + 1),
+			});
 
 			expect(res.status).toBe(400);
+		});
+
+		it("ちょうど上限の紹介文は保存できる", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks();
+
+			const res = await put(app, {
+				description: "あ".repeat(PROJECT_DESCRIPTION_MAX_LENGTH),
+			});
+
+			expect(res.status).toBe(200);
 		});
 	});
 });

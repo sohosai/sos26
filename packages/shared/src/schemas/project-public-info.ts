@@ -10,10 +10,20 @@ export const stockStatusSchema = z.enum([
 ]);
 export type StockStatus = z.infer<typeof stockStatusSchema>;
 
+/**
+ * 紹介文の最大文字数
+ *
+ * Prisma スキーマの `ProjectPublicInfo.description` の VarChar と必ず一致させること。
+ */
+export const PROJECT_DESCRIPTION_MAX_LENGTH = 200;
+
+/** 掲載画像の最大枚数 */
+export const PROJECT_MAP_IMAGES_MAX_COUNT = 10;
+
 export const projectPublicInfoSchema = z.object({
-	description: z.string().max(400).nullable(),
+	description: z.string().max(PROJECT_DESCRIPTION_MAX_LENGTH).nullable(),
 	iconFileId: z.string().nullable(),
-	mapImageFileIds: z.array(z.string()).max(10),
+	mapImageFileIds: z.array(z.string()).max(PROJECT_MAP_IMAGES_MAX_COUNT),
 	openStatus: openStatusSchema,
 	stockStatus: stockStatusSchema,
 });
@@ -30,9 +40,16 @@ export type GetProjectPublicInfoResponse = z.infer<
 
 // PUT /project/:projectId/public-info
 export const updateProjectPublicInfoRequestSchema = z.object({
-	description: z.string().max(400).nullable().optional(),
+	description: z
+		.string()
+		.max(PROJECT_DESCRIPTION_MAX_LENGTH)
+		.nullable()
+		.optional(),
 	iconFileId: z.string().nullable().optional(),
-	mapImageFileIds: z.array(z.string()).max(10).optional(),
+	mapImageFileIds: z
+		.array(z.string())
+		.max(PROJECT_MAP_IMAGES_MAX_COUNT)
+		.optional(),
 	openStatus: openStatusSchema.optional(),
 	stockStatus: stockStatusSchema.optional(),
 });

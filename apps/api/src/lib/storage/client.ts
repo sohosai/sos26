@@ -10,7 +10,7 @@ let client: S3Client | null = null;
 export function initStorage() {
 	if (client) return;
 
-	// S3_ENDPOINT のスキームは env スキーマ側で検証済み
+	// env.S3_ENDPOINT はスキームを補完済みの完全なURL（env スキーマ側で正規化）
 	client = new S3Client({
 		endpoint: env.S3_ENDPOINT,
 		region: env.S3_REGION,

@@ -1672,7 +1672,7 @@ model ProjectPublicInfo {
   projectId String  @unique
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  description String? @db.VarChar(400)
+  description String? @db.VarChar(200)
 
   iconFileId String?
   iconFile   File?   @relation("ProjectPublicInfoIcon", fields: [iconFileId], references: [id])

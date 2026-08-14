@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+	PROJECT_DESCRIPTION_MAX_LENGTH,
 	projectPublicInfoSchema,
 	updateProjectPublicInfoRequestSchema,
 } from "./project-public-info";
+
+const MAX = PROJECT_DESCRIPTION_MAX_LENGTH;
 
 describe("projectPublicInfoSchema", () => {
 	const createValid = (overrides = {}) => ({
@@ -25,18 +28,22 @@ describe("projectPublicInfoSchema", () => {
 		expect(result.success).toBe(true);
 	});
 
-	it("紹介文が400文字を超えると拒否する", () => {
+	it("紹介文が上限を超えると拒否する", () => {
 		const result = projectPublicInfoSchema.safeParse(
-			createValid({ description: "あ".repeat(401) })
+			createValid({ description: "あ".repeat(MAX + 1) })
 		);
 		expect(result.success).toBe(false);
 	});
 
-	it("紹介文がちょうど400文字なら受け入れる", () => {
+	it("紹介文がちょうど上限なら受け入れる", () => {
 		const result = projectPublicInfoSchema.safeParse(
-			createValid({ description: "あ".repeat(400) })
+			createValid({ description: "あ".repeat(MAX) })
 		);
 		expect(result.success).toBe(true);
+	});
+
+	it("紹介文の上限は200文字", () => {
+		expect(PROJECT_DESCRIPTION_MAX_LENGTH).toBe(200);
 	});
 
 	it("掲載画像が11枚以上だと拒否する", () => {
@@ -83,9 +90,9 @@ describe("updateProjectPublicInfoRequestSchema", () => {
 		expect(result.success).toBe(false);
 	});
 
-	it("紹介文が400文字を超えると拒否する", () => {
+	it("紹介文が上限を超えると拒否する", () => {
 		const result = updateProjectPublicInfoRequestSchema.safeParse({
-			description: "あ".repeat(401),
+			description: "あ".repeat(MAX + 1),
 		});
 		expect(result.success).toBe(false);
 	});

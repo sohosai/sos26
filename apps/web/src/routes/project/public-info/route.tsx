@@ -27,6 +27,8 @@ import {
 	allowedImageExtensions,
 	imageAcceptAttribute,
 	isAllowedImageFile,
+	PROJECT_DESCRIPTION_MAX_LENGTH,
+	PROJECT_MAP_IMAGES_MAX_COUNT,
 } from "@sos26/shared";
 import {
 	IconInfoCircle,
@@ -58,8 +60,9 @@ import { ImagePreviewModal } from "./ImagePreviewModal";
 import styles from "./route.module.scss";
 import { SortableMapImageItem } from "./SortableMapImageItem";
 
-const MAX_MAP_IMAGES = 10;
-const DESCRIPTION_MAX_LENGTH = 400;
+// 上限は shared のスキーマと共通（サーバー側の検証と必ず一致させる）
+const MAX_MAP_IMAGES = PROJECT_MAP_IMAGES_MAX_COUNT;
+const DESCRIPTION_MAX_LENGTH = PROJECT_DESCRIPTION_MAX_LENGTH;
 
 const projectRoute = getRouteApi("/project");
 
@@ -131,7 +134,7 @@ function RestrictedNotice() {
 	return (
 		<Flex align="center" gap="1" className={styles.restrictedNotice}>
 			<IconLock size={14} />
-			<Text size="1">実行委員会により、現在この項目は編集できません</Text>
+			<Text size="1">この項目は現在編集できません</Text>
 		</Flex>
 	);
 }
@@ -470,7 +473,7 @@ function ProjectPublicInfoPage() {
 					{isEditable && !setting.isDescriptionEditable && <RestrictedNotice />}
 					<Flex direction="column" gap="2">
 						<TextArea
-							label="紹介文（400文字以内）"
+							label={`紹介文（${DESCRIPTION_MAX_LENGTH}文字以内）`}
 							value={values.description}
 							onChange={description =>
 								updateValues({
@@ -478,7 +481,7 @@ function ProjectPublicInfoPage() {
 								})
 							}
 							disabled={!canEditDescription}
-							placeholder="400文字以内で入力してください"
+							placeholder={`${DESCRIPTION_MAX_LENGTH}文字以内で入力してください`}
 							rows={4}
 						/>
 						<Text size="1" color="gray" align="right">
