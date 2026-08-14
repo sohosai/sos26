@@ -6,7 +6,7 @@ import {
 	Sidebar,
 } from "@/components/layout/Sidebar";
 import {
-	preloadMemberEditPermission,
+	preloadCommitteePermissions,
 	requireAuth,
 	useAuthStore,
 } from "@/lib/auth";
@@ -15,7 +15,7 @@ import styles from "./route.module.scss";
 export const Route = createFileRoute("/settings")({
 	beforeLoad: async ({ location }) => {
 		await requireAuth(location.pathname);
-		await preloadMemberEditPermission();
+		await preloadCommitteePermissions();
 	},
 	component: SettingsLayout,
 });

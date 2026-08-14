@@ -1,10 +1,11 @@
-import { Button, Dialog, Flex } from "@radix-ui/themes";
+import { Dialog, Flex } from "@radix-ui/themes";
 import { useRef, useState } from "react";
 import ReactCrop, {
 	type Crop,
 	centerCrop,
 	makeAspectCrop,
 } from "react-image-crop";
+import { Button } from "@/components/primitives";
 import "react-image-crop/dist/ReactCrop.css";
 
 function centerAspectCrop(
@@ -138,11 +139,7 @@ export function ImageCropperModal({
 						</ReactCrop>
 					)}
 					<Flex gap="3" justify="end" width="100%">
-						<Button
-							variant="soft"
-							color="gray"
-							onClick={() => onOpenChange(false)}
-						>
+						<Button intent="secondary" onClick={() => onOpenChange(false)}>
 							キャンセル
 						</Button>
 						<Button onClick={handleComplete}>確定する</Button>

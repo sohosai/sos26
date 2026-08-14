@@ -218,6 +218,7 @@ export function Sidebar({
 		isCommitteeMember,
 		hasMemberEditPermission,
 		hasProjectRegistrationPermission,
+		hasMapAppSettingPermission,
 		signOut,
 	} = useAuthStore();
 	const shouldCheckMemberEdit = menuItems.some(
@@ -225,6 +226,9 @@ export function Sidebar({
 	);
 	const shouldCheckProjectRegistration = menuItems.some(
 		item => item.to === "/committee/project-registration"
+	);
+	const shouldCheckMapAppSetting = menuItems.some(
+		item => item.to === "/committee/map-settings"
 	);
 
 	useEffect(() => {
@@ -286,6 +290,13 @@ export function Sidebar({
 			shouldCheckProjectRegistration &&
 			hasProjectRegistrationPermission !== true &&
 			item.to === "/committee/project-registration"
+		) {
+			return false;
+		}
+		if (
+			shouldCheckMapAppSetting &&
+			hasMapAppSettingPermission !== true &&
+			item.to === "/committee/map-settings"
 		) {
 			return false;
 		}

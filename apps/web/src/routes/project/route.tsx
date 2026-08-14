@@ -22,7 +22,7 @@ import { listProjectInquiries } from "@/lib/api/project-inquiry";
 import { listProjectNotices } from "@/lib/api/project-notice";
 import { getProjectPublicInfo } from "@/lib/api/project-public-info";
 import {
-	preloadMemberEditPermission,
+	preloadCommitteePermissions,
 	requireAuth,
 	useAuthStore,
 } from "@/lib/auth";
@@ -104,7 +104,7 @@ export const Route = createFileRoute("/project")({
 	beforeLoad: async ({ location }) => {
 		await requireAuth(location.href);
 		useAuthStore.getState().setActivePortal("project");
-		await preloadMemberEditPermission();
+		await preloadCommitteePermissions();
 
 		const res = await listMyProjects();
 
@@ -127,6 +127,9 @@ export const Route = createFileRoute("/project")({
 				hasUnansweredForms: false,
 				hasUncheckedNotices: false,
 				hasUnreadInquiryComments: false,
+				publicInfoProjectId: null,
+				publicInfo: null,
+				publicInfoLoadFailed: false,
 			};
 		}
 
@@ -138,10 +141,15 @@ export const Route = createFileRoute("/project")({
 				getProjectPublicInfo(selectedProjectId),
 			]);
 
+		// 企画公開情報はサイドバーのアイコンと企画情報ページで共用する（重複取得を避ける）
+		const publicInfo =
+			publicInfoResult.status === "fulfilled"
+				? publicInfoResult.value.publicInfo
+				: null;
+
 		// アイコン画像IDをストアに保存（未設定の場合はクリア）
 		if (publicInfoResult.status === "fulfilled") {
-			const iconFileId = publicInfoResult.value.publicInfo?.iconFileId ?? "";
-			store.setIconFileId(selectedProjectId, iconFileId);
+			store.setIconFileId(selectedProjectId, publicInfo?.iconFileId ?? "");
 		}
 
 		const forms =
@@ -175,6 +183,9 @@ export const Route = createFileRoute("/project")({
 			hasUnansweredForms,
 			hasUncheckedNotices,
 			hasUnreadInquiryComments,
+			publicInfoProjectId: selectedProjectId,
+			publicInfo,
+			publicInfoLoadFailed: publicInfoResult.status === "rejected",
 		};
 	},
 	component: ProjectLayout,

@@ -15,8 +15,37 @@
 	max-width: 720px;
 }
 
+.callout {
+	max-width: 720px;
+}
+
 .settingRow {
 	flex-wrap: wrap;
+}
+
+/* 実委人により編集が制限されている項目の注記 */
+.restrictedNotice {
+	color: var(--amber-11);
+}
+
+/* ─── 保存バー（スクロールしても常に見える） ─── */
+
+.actionBar {
+	position: sticky;
+	bottom: 0;
+	z-index: 5;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
+	flex-wrap: wrap;
+	max-width: 720px;
+	margin-top: auto;
+	padding: var(--space-3);
+	border: 1px solid var(--gray-a5);
+	border-radius: var(--radius-3);
+	background: var(--color-panel-solid);
+	box-shadow: var(--shadow-4);
 }
 
 /* ─── アイコン画像 ─── */
@@ -45,7 +74,7 @@
 	cursor: default;
 }
 
-.iconImg {
+.iconButton img {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
@@ -382,7 +411,9 @@
 		gap: var(--space-4);
 	}
 
-	.card {
+	.card,
+	.callout,
+	.actionBar {
 		max-width: 100%;
 	}
 

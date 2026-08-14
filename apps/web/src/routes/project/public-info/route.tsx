@@ -14,27 +14,42 @@ import {
 	SortableContext,
 	sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
+import { Callout, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import type {
+	MapAppSetting,
+	OpenStatus,
+	Project,
+	ProjectPublicInfo,
+	StockStatus,
+	UpdateProjectPublicInfoRequest,
+} from "@sos26/shared";
 import {
-	Button,
-	Card,
-	Flex,
-	Heading,
-	Select,
-	Text,
-	TextArea,
-} from "@radix-ui/themes";
-import { IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
-import BoringAvatar from "boring-avatars";
-import { useEffect, useRef, useState } from "react";
+	allowedImageExtensions,
+	imageAcceptAttribute,
+	isAllowedImageFile,
+} from "@sos26/shared";
+import {
+	IconInfoCircle,
+	IconLock,
+	IconPhoto,
+	IconUpload,
+	IconX,
+} from "@tabler/icons-react";
+import {
+	createFileRoute,
+	getRouteApi,
+	useBlocker,
+	useRouter,
+} from "@tanstack/react-router";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { getFileContentUrl, uploadFile } from "@/lib/api/files";
+import { UserAvatar } from "@/components/common/UserAvatar";
+import { DiscardChangesDialog } from "@/components/patterns";
+import { Button, Select, TextArea } from "@/components/primitives";
+import { uploadFile } from "@/lib/api/files";
 import { getMapAppSetting } from "@/lib/api/map-app-setting";
-import {
-	getProjectPublicInfo,
-	updateProjectPublicInfo,
-} from "@/lib/api/project-public-info";
+import { updateProjectPublicInfo } from "@/lib/api/project-public-info";
 import { useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
 import { useProjectStore } from "@/lib/project/store";
@@ -43,128 +58,192 @@ import { ImagePreviewModal } from "./ImagePreviewModal";
 import styles from "./route.module.scss";
 import { SortableMapImageItem } from "./SortableMapImageItem";
 
+const MAX_MAP_IMAGES = 10;
+const DESCRIPTION_MAX_LENGTH = 400;
+
+const projectRoute = getRouteApi("/project");
+
 export const Route = createFileRoute("/project/public-info")({
+	// 企画公開情報は親（/project）ローダーの取得結果を共用する
 	loader: async () => {
-		const projectId = useProjectStore.getState().selectedProjectId;
-		if (!projectId) throw new Error("No project selected");
-		const [infoRes, settingRes] = await Promise.all([
-			getProjectPublicInfo(projectId),
-			getMapAppSetting(),
-		]);
-		return {
-			publicInfo: infoRes.publicInfo,
-			setting: settingRes.setting,
-		};
+		const { setting } = await getMapAppSetting();
+		return { setting };
 	},
 	component: ProjectPublicInfoPage,
 });
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy code
+type FormValues = {
+	description: string;
+	iconFileId: string;
+	mapImageFileIds: string[];
+	openStatus: OpenStatus;
+	stockStatus: StockStatus;
+};
+
+function toFormValues(info: ProjectPublicInfo | null): FormValues {
+	return {
+		description: info?.description ?? "",
+		iconFileId: info?.iconFileId ?? "",
+		mapImageFileIds: info?.mapImageFileIds ?? [],
+		openStatus: info?.openStatus ?? "NOT_APPLICABLE",
+		stockStatus: info?.stockStatus ?? "NOT_APPLICABLE",
+	};
+}
+
+function isSameValues(a: FormValues, b: FormValues): boolean {
+	return (
+		a.description === b.description &&
+		a.iconFileId === b.iconFileId &&
+		a.openStatus === b.openStatus &&
+		a.stockStatus === b.stockStatus &&
+		a.mapImageFileIds.length === b.mapImageFileIds.length &&
+		a.mapImageFileIds.every((id, i) => id === b.mapImageFileIds[i])
+	);
+}
+
+/** 実委人が編集を許可している項目だけを送信する（禁止項目は undefined = 変更なし） */
+function buildUpdateRequest(
+	values: FormValues,
+	setting: MapAppSetting,
+	projectType: Project["type"]
+): UpdateProjectPublicInfoRequest {
+	const canEditStatus = projectType !== "STAGE";
+
+	return {
+		description: setting.isDescriptionEditable ? values.description : undefined,
+		iconFileId: setting.isIconEditable ? values.iconFileId : undefined,
+		mapImageFileIds: setting.isMapImagesEditable
+			? values.mapImageFileIds
+			: undefined,
+		openStatus:
+			canEditStatus && setting.isOpenStatusEditable
+				? values.openStatus
+				: undefined,
+		stockStatus:
+			canEditStatus && setting.isStockStatusEditable
+				? values.stockStatus
+				: undefined,
+	};
+}
+
+/** 実委人により編集が制限されている項目に表示する注記 */
+function RestrictedNotice() {
+	return (
+		<Flex align="center" gap="1" className={styles.restrictedNotice}>
+			<IconLock size={14} />
+			<Text size="1">実行委員会により、現在この項目は編集できません</Text>
+		</Flex>
+	);
+}
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: 1画面に複数の編集セクションを持つページのため
 function ProjectPublicInfoPage() {
 	const router = useRouter();
 	const { user } = useAuthStore();
 	const { projects, selectedProjectId } = useProjectStore();
-	const { setIconFileId: saveProjectIconFileId } = useProjectStore.getState();
+	const setProjectIconFileId = useProjectStore(state => state.setIconFileId);
 	const project = projects.find(p => p.id === selectedProjectId);
-	const projectRole =
-		project?.ownerId === user?.id
-			? "OWNER"
-			: project?.subOwnerId === user?.id
-				? "SUB_OWNER"
-				: "MEMBER";
 
-	const { publicInfo, setting } = Route.useLoaderData();
+	const { publicInfo, publicInfoLoadFailed } = projectRoute.useLoaderData();
+	const { setting } = Route.useLoaderData();
 
-	const [description, setDescription] = useState(publicInfo?.description ?? "");
-	const [iconFileId, setIconFileId] = useState(publicInfo?.iconFileId ?? "");
-	const [mapImageFileIds, setMapImageFileIds] = useState<string[]>(
-		publicInfo?.mapImageFileIds ?? []
-	);
-	const [openStatus, setOpenStatus] = useState(
-		publicInfo?.openStatus ?? "NOT_APPLICABLE"
-	);
-	const [stockStatus, setStockStatus] = useState(
-		publicInfo?.stockStatus ?? "NOT_APPLICABLE"
-	);
+	const isEditable =
+		project?.ownerId === user?.id || project?.subOwnerId === user?.id;
+
+	// サーバー上の値。編集中（draft !== null）でなければ、そのまま画面に反映する
+	const serverValues = useMemo(() => toFormValues(publicInfo), [publicInfo]);
+	const serverValuesRef = useRef(serverValues);
+	serverValuesRef.current = serverValues;
+
+	const [draft, setDraft] = useState<FormValues | null>(null);
+	const values = draft ?? serverValues;
+	const isDirty = draft !== null && !isSameValues(draft, serverValues);
 
 	const [isSaving, setIsSaving] = useState(false);
-	const [isUploadingMapImages, setIsUploadingMapImages] = useState(false);
 	const [uploadingCount, setUploadingCount] = useState(0);
+	const [isUploadingIcon, setIsUploadingIcon] = useState(false);
+	const isUploading = uploadingCount > 0 || isUploadingIcon;
 
 	const [cropImageSrc, setCropImageSrc] = useState("");
 	const [isCropModalOpen, setIsCropModalOpen] = useState(false);
-
-	useEffect(() => {
-		if (publicInfo) {
-			setDescription(publicInfo.description ?? "");
-			setIconFileId(publicInfo.iconFileId ?? "");
-			setMapImageFileIds(publicInfo.mapImageFileIds ?? []);
-			setOpenStatus(publicInfo.openStatus ?? "NOT_APPLICABLE");
-			setStockStatus(publicInfo.stockStatus ?? "NOT_APPLICABLE");
-		}
-	}, [publicInfo]);
-
-	// プレビューモーダル
 	const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 	const [previewIndex, setPreviewIndex] = useState(0);
 
 	const iconInputRef = useRef<HTMLInputElement>(null);
 	const mapImagesInputRef = useRef<HTMLInputElement>(null);
 
-	const isEditable = projectRole === "OWNER" || projectRole === "SUB_OWNER";
+	// 企画を切り替えたら編集内容を破棄する（前の企画の内容が残らないように）
+	const [draftProjectId, setDraftProjectId] = useState(selectedProjectId);
+	if (draftProjectId !== selectedProjectId) {
+		setDraftProjectId(selectedProjectId);
+		setDraft(null);
+	}
 
-	const isUnsaved =
-		description !== (publicInfo?.description ?? "") ||
-		iconFileId !== (publicInfo?.iconFileId ?? "") ||
-		openStatus !== (publicInfo?.openStatus ?? "NOT_APPLICABLE") ||
-		stockStatus !== (publicInfo?.stockStatus ?? "NOT_APPLICABLE") ||
-		JSON.stringify(mapImageFileIds) !==
-			JSON.stringify(publicInfo?.mapImageFileIds ?? []);
-
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: handleSave needs to perform several checks
-	const handleSave = async () => {
-		if (!project?.id) return;
-		try {
-			setIsSaving(true);
-			await updateProjectPublicInfo(project.id, {
-				description: setting.isDescriptionEditable ? description : undefined,
-				iconFileId: setting.isIconEditable ? iconFileId : undefined,
-				mapImageFileIds: setting.isMapImagesEditable
-					? mapImageFileIds
-					: undefined,
-				openStatus: setting.isOpenStatusEditable
-					? (openStatus as "OPEN" | "CLOSED" | "NOT_APPLICABLE")
-					: undefined,
-				stockStatus: setting.isStockStatusEditable
-					? (stockStatus as "IN_STOCK" | "OUT_OF_STOCK" | "NOT_APPLICABLE")
-					: undefined,
+	const updateValues = useCallback(
+		(patch: Partial<FormValues> | ((current: FormValues) => FormValues)) => {
+			setDraft(prev => {
+				const base = prev ?? serverValuesRef.current;
+				return typeof patch === "function"
+					? patch(base)
+					: { ...base, ...patch };
 			});
-			toast.success("企画情報が更新されました。");
-			// ストアのアイコンも即時更新してサイドバーに反映
-			if (setting.isIconEditable) {
-				if (iconFileId) {
-					saveProjectIconFileId(project.id, iconFileId);
-				} else {
-					// 空文字 = アイコン削除 → ストアからも消す
-					saveProjectIconFileId(project.id, "");
-				}
-			}
-			await router.invalidate();
+		},
+		[]
+	);
+
+	const blocker = useBlocker({
+		shouldBlockFn: () => isDirty,
+		enableBeforeUnload: () => isDirty,
+		withResolver: true,
+	});
+
+	const handleSave = async () => {
+		if (!project?.id || !isEditable) return;
+
+		setIsSaving(true);
+		try {
+			await updateProjectPublicInfo(
+				project.id,
+				buildUpdateRequest(values, setting, project.type)
+			);
 		} catch (error) {
 			reportHandledError({
 				error,
 				operation: "update_project_public_info",
 				userMessage: "保存に失敗しました。",
 				ui: { type: "toast" },
+				context: { projectId: project.id },
 			});
+			return;
 		} finally {
 			setIsSaving(false);
 		}
+
+		toast.success("企画情報を保存しました。");
+		// サイドバーのアイコンにも即時反映
+		if (setting.isIconEditable) {
+			setProjectIconFileId(project.id, values.iconFileId);
+		}
+		// 保存は成功しているため、再取得の成否にかかわらず編集状態は解除する
+		await router.invalidate().catch(() => undefined);
+		setDraft(null);
 	};
 
-	const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+	const handleCancel = () => {
+		setDraft(null);
+	};
+
+	const handleIconSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
+		e.target.value = "";
 		if (!file) return;
+
+		if (!isAllowedImageFile(file)) {
+			toast.error(
+				`画像ファイルを選択してください（${allowedImageExtensions}）。`
+			);
+			return;
+		}
 
 		const reader = new FileReader();
 		reader.onload = () => {
@@ -172,23 +251,26 @@ function ProjectPublicInfoPage() {
 			setIsCropModalOpen(true);
 		};
 		reader.readAsDataURL(file);
-		e.target.value = "";
 	};
 
 	const handleCropComplete = async (blob: Blob) => {
+		setIsUploadingIcon(true);
 		try {
 			const res = await uploadFile(
 				new File([blob], "icon.png", { type: "image/png" }),
 				{ isPublic: true }
 			);
-			setIconFileId(res.file.id);
+			updateValues({ iconFileId: res.file.id });
 		} catch (error) {
 			reportHandledError({
 				error,
-				operation: "save",
+				operation: "update_project_public_info",
 				userMessage: "アイコンのアップロードに失敗しました。",
 				ui: { type: "toast" },
+				context: { projectId: project?.id ?? null },
 			});
+		} finally {
+			setIsUploadingIcon(false);
 		}
 	};
 
@@ -196,48 +278,82 @@ function ProjectPublicInfoPage() {
 		e: React.ChangeEvent<HTMLInputElement>
 	) => {
 		const files = Array.from(e.target.files ?? []);
+		e.target.value = "";
 		if (!files.length) return;
-		if (mapImageFileIds.length + files.length > 10) {
-			toast.error("Map掲載画像は最大10枚までです");
-			e.target.value = "";
+
+		const invalidFile = files.find(file => !isAllowedImageFile(file));
+		if (invalidFile) {
+			toast.error(
+				`画像ファイルのみアップロードできます（${allowedImageExtensions}）。`
+			);
 			return;
 		}
 
+		if (values.mapImageFileIds.length + files.length > MAX_MAP_IMAGES) {
+			toast.error(`Map掲載画像は最大${MAX_MAP_IMAGES}枚までです。`);
+			return;
+		}
+
+		setUploadingCount(files.length);
 		try {
-			setIsUploadingMapImages(true);
-			setUploadingCount(files.length);
-			const uploadPromises = files.map(file =>
-				uploadFile(file, { isPublic: true })
+			// 1枚失敗しても、成功した画像は取りこぼさない
+			const results = await Promise.allSettled(
+				files.map(file => uploadFile(file, { isPublic: true }))
 			);
-			const results = await Promise.all(uploadPromises);
-			const newIds = results.map(r => r.file.id);
-			setMapImageFileIds(prev => [...prev, ...newIds]);
-			toast.success(`${files.length}枚の画像をアップロードしました。`);
-		} catch (error) {
-			console.error(error);
-			toast.error("画像のアップロードに失敗しました。");
+			const newIds = results
+				.filter(r => r.status === "fulfilled")
+				.map(r => r.value.file.id);
+
+			if (newIds.length > 0) {
+				updateValues(current => ({
+					...current,
+					mapImageFileIds: [
+						...current.mapImageFileIds,
+						// 同じ画像を続けてアップロードした場合の重複を防ぐ
+						...newIds.filter(id => !current.mapImageFileIds.includes(id)),
+					].slice(0, MAX_MAP_IMAGES),
+				}));
+				toast.success(
+					`${newIds.length}枚の画像をアップロードしました。「保存する」を押すと反映されます。`
+				);
+			}
+
+			const failed = results.find(r => r.status === "rejected");
+			if (failed) {
+				reportHandledError({
+					error: failed.reason,
+					operation: "update_project_public_info",
+					userMessage: `${results.length - newIds.length}枚の画像のアップロードに失敗しました。`,
+					ui: { type: "toast" },
+					context: { projectId: project?.id ?? null },
+				});
+			}
 		} finally {
-			setIsUploadingMapImages(false);
 			setUploadingCount(0);
-			e.target.value = "";
 		}
 	};
 
 	const removeMapImage = (index: number) => {
-		setMapImageFileIds(prev => prev.filter((_, i) => i !== index));
+		updateValues(current => ({
+			...current,
+			mapImageFileIds: current.mapImageFileIds.filter((_, i) => i !== index),
+		}));
 	};
 
 	const handleDragEnd = (event: DragEndEvent) => {
 		const { active, over } = event;
+		if (!over || active.id === over.id) return;
 
-		if (over && active.id !== over.id) {
-			setMapImageFileIds(items => {
-				const oldIndex = items.indexOf(active.id as string);
-				const newIndex = items.indexOf(over.id as string);
+		updateValues(current => {
+			const oldIndex = current.mapImageFileIds.indexOf(active.id as string);
+			const newIndex = current.mapImageFileIds.indexOf(over.id as string);
+			if (oldIndex < 0 || newIndex < 0) return current;
 
-				return arrayMove(items, oldIndex, newIndex);
-			});
-		}
+			return {
+				...current,
+				mapImageFileIds: arrayMove(current.mapImageFileIds, oldIndex, newIndex),
+			};
+		});
 	};
 
 	const sensors = useSensors(
@@ -247,10 +363,14 @@ function ProjectPublicInfoPage() {
 		})
 	);
 
+	const canEditDescription = isEditable && setting.isDescriptionEditable;
+	const canEditIcon = isEditable && setting.isIconEditable;
+	const canEditMapImages = isEditable && setting.isMapImagesEditable;
+	const canEditOpenStatus = isEditable && setting.isOpenStatusEditable;
+	const canEditStockStatus = isEditable && setting.isStockStatusEditable;
 	const canAddMore =
-		mapImageFileIds.length + uploadingCount < 10 &&
-		isEditable &&
-		setting.isMapImagesEditable;
+		canEditMapImages &&
+		values.mapImageFileIds.length + uploadingCount < MAX_MAP_IMAGES;
 
 	return (
 		<div className={styles.page}>
@@ -261,27 +381,52 @@ function ProjectPublicInfoPage() {
 				</Text>
 			</div>
 
+			{publicInfoLoadFailed && (
+				<Callout.Root color="red" className={styles.callout}>
+					<Callout.Icon>
+						<IconInfoCircle size={16} />
+					</Callout.Icon>
+					<Callout.Text>
+						企画情報の取得に失敗しました。ページを再読み込みしてください。
+					</Callout.Text>
+				</Callout.Root>
+			)}
+
+			{!isEditable && (
+				<Callout.Root color="gray" className={styles.callout}>
+					<Callout.Icon>
+						<IconInfoCircle size={16} />
+					</Callout.Icon>
+					<Callout.Text>
+						企画情報を編集できるのは企画責任者・副企画責任者のみです。閲覧のみ可能です。
+					</Callout.Text>
+				</Callout.Root>
+			)}
+
 			<Card className={styles.card}>
 				<Flex direction="column" gap="4">
 					<div>
 						<Heading size="4">紹介文</Heading>
 						<Text color="gray" size="2">
-							紹介文を設定します
+							オンラインマップに表示される企画の紹介文です。
 						</Text>
 					</div>
+					{isEditable && !setting.isDescriptionEditable && <RestrictedNotice />}
 					<Flex direction="column" gap="2">
 						<TextArea
-							value={description}
-							onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-								setDescription(e.target.value)
+							label="紹介文（400文字以内）"
+							value={values.description}
+							onChange={description =>
+								updateValues({
+									description: description.slice(0, DESCRIPTION_MAX_LENGTH),
+								})
 							}
-							disabled={!isEditable || !setting.isDescriptionEditable}
+							disabled={!canEditDescription}
 							placeholder="400文字以内で入力してください"
-							maxLength={400}
 							rows={4}
 						/>
 						<Text size="1" color="gray" align="right">
-							{description.length}/400
+							{values.description.length}/{DESCRIPTION_MAX_LENGTH}
 						</Text>
 					</Flex>
 				</Flex>
@@ -295,12 +440,13 @@ function ProjectPublicInfoPage() {
 							正方形にトリミングされて表示されます。
 						</Text>
 					</div>
+					{isEditable && !setting.isIconEditable && <RestrictedNotice />}
 					<input
 						type="file"
 						ref={iconInputRef}
 						style={{ display: "none" }}
-						accept="image/*"
-						onChange={handleIconUpload}
+						accept={imageAcceptAttribute}
+						onChange={handleIconSelect}
 					/>
 					<Flex gap="4" align="center">
 						{/* クリックで変更できるアバター */}
@@ -308,28 +454,16 @@ function ProjectPublicInfoPage() {
 							<button
 								type="button"
 								className={styles.iconButton}
-								onClick={() =>
-									isEditable &&
-									setting.isIconEditable &&
-									iconInputRef.current?.click()
-								}
-								disabled={!isEditable || !setting.isIconEditable}
+								onClick={() => iconInputRef.current?.click()}
+								disabled={!canEditIcon || isUploadingIcon}
 								aria-label="アイコン画像を変更"
 							>
-								{iconFileId ? (
-									<img
-										src={getFileContentUrl(iconFileId)}
-										alt="アイコン"
-										className={styles.iconImg}
-									/>
-								) : (
-									<BoringAvatar
-										size={96}
-										name={project?.id ?? "unknown"}
-										variant="beam"
-									/>
-								)}
-								{isEditable && setting.isIconEditable && (
+								<UserAvatar
+									size={96}
+									name={project?.name ?? ""}
+									avatarFileId={values.iconFileId || null}
+								/>
+								{canEditIcon && (
 									<span className={styles.iconOverlay}>
 										<IconUpload size={20} color="white" />
 										<span className={styles.iconOverlayLabel}>変更</span>
@@ -337,11 +471,11 @@ function ProjectPublicInfoPage() {
 								)}
 							</button>
 							{/* 削除バッジ */}
-							{iconFileId && isEditable && setting.isIconEditable && (
+							{values.iconFileId && canEditIcon && (
 								<button
 									type="button"
 									className={styles.iconDeleteBtn}
-									onClick={() => setIconFileId("")}
+									onClick={() => updateValues({ iconFileId: "" })}
 									aria-label="アイコンをデフォルトに戻す"
 								>
 									<IconX size={12} />
@@ -350,10 +484,12 @@ function ProjectPublicInfoPage() {
 						</div>
 						<Flex direction="column" gap="1">
 							<Text size="2" weight="medium">
-								{iconFileId ? "アイコンを変更する" : "アイコンを設定する"}
+								{values.iconFileId
+									? "アイコンを変更する"
+									: "アイコンを設定する"}
 							</Text>
 							<Text size="1" color="gray">
-								{iconFileId
+								{values.iconFileId
 									? "画像をクリックするか、右上の × でデフォルトに戻せます"
 									: "クリックして画像をアップロードしてください"}
 							</Text>
@@ -367,15 +503,17 @@ function ProjectPublicInfoPage() {
 					<div>
 						<Heading size="4">Map掲載画像</Heading>
 						<Text size="2" color="gray">
-							オンラインマップに掲載される画像です（最大10枚）。ドラッグで並び替えできます。
+							オンラインマップに掲載される画像です（最大{MAX_MAP_IMAGES}
+							枚）。ドラッグで並び替えできます。
 						</Text>
 					</div>
+					{isEditable && !setting.isMapImagesEditable && <RestrictedNotice />}
 					<input
 						type="file"
 						multiple
 						ref={mapImagesInputRef}
 						style={{ display: "none" }}
-						accept="image/*"
+						accept={imageAcceptAttribute}
 						onChange={handleMapImagesUpload}
 					/>
 
@@ -386,16 +524,16 @@ function ProjectPublicInfoPage() {
 						modifiers={[restrictToParentElement]}
 					>
 						<SortableContext
-							items={mapImageFileIds}
+							items={values.mapImageFileIds}
 							strategy={rectSortingStrategy}
 						>
 							<div className={styles.mapImageGrid}>
-								{mapImageFileIds.map((fileId, index) => (
+								{values.mapImageFileIds.map((fileId, index) => (
 									<SortableMapImageItem
 										key={fileId}
 										id={fileId}
 										index={index}
-										isEditable={isEditable && setting.isMapImagesEditable}
+										isEditable={canEditMapImages}
 										onRemove={() => removeMapImage(index)}
 										onPreview={() => {
 											setPreviewIndex(index);
@@ -405,16 +543,15 @@ function ProjectPublicInfoPage() {
 								))}
 
 								{/* アップロード中のスケルトン */}
-								{isUploadingMapImages &&
-									Array.from({ length: uploadingCount }).map((_, i) => (
-										<div
-											// biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholder
-											key={`skeleton-${i}`}
-											className={styles.mapImageSkeleton}
-										>
-											<IconPhoto size={24} className={styles.skeletonIcon} />
-										</div>
-									))}
+								{Array.from({ length: uploadingCount }).map((_, i) => (
+									<div
+										// biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholder
+										key={`skeleton-${i}`}
+										className={styles.mapImageSkeleton}
+									>
+										<IconPhoto size={24} className={styles.skeletonIcon} />
+									</div>
+								))}
 
 								{/* 追加ボタン（グリッドの末尾） */}
 								{canAddMore && (
@@ -422,13 +559,14 @@ function ProjectPublicInfoPage() {
 										type="button"
 										className={styles.mapImageAddCard}
 										onClick={() => mapImagesInputRef.current?.click()}
-										disabled={isUploadingMapImages}
+										disabled={uploadingCount > 0}
 										aria-label="画像を追加"
 									>
 										<IconUpload size={20} />
 										<span>追加</span>
 										<span className={styles.mapImageAddHint}>
-											{10 - mapImageFileIds.length}枚まで追加可
+											{MAX_MAP_IMAGES - values.mapImageFileIds.length}
+											枚まで追加可
 										</span>
 									</button>
 								)}
@@ -438,7 +576,7 @@ function ProjectPublicInfoPage() {
 
 					{/* 枚数インジケーター */}
 					<Text size="1" color="gray">
-						{mapImageFileIds.length} / 10 枚
+						{values.mapImageFileIds.length} / {MAX_MAP_IMAGES} 枚
 					</Text>
 				</Flex>
 			</Card>
@@ -453,26 +591,22 @@ function ProjectPublicInfoPage() {
 									現在の営業状態を設定します。
 								</Text>
 							</div>
-							<div className={styles.fieldWithHelp}>
-								<Select.Root
-									value={
-										!setting.isOpenStatusEditable
-											? "NOT_APPLICABLE"
-											: openStatus
-									}
-									onValueChange={(val: "OPEN" | "CLOSED" | "NOT_APPLICABLE") =>
-										setOpenStatus(val)
-									}
-									disabled={!isEditable || !setting.isOpenStatusEditable}
-								>
-									<Select.Trigger />
-									<Select.Content>
-										<Select.Item value="OPEN">営業中</Select.Item>
-										<Select.Item value="CLOSED">準備中・閉店</Select.Item>
-										<Select.Item value="NOT_APPLICABLE">設定なし</Select.Item>
-									</Select.Content>
-								</Select.Root>
-							</div>
+							{isEditable && !setting.isOpenStatusEditable && (
+								<RestrictedNotice />
+							)}
+							<Select
+								aria-label="開店状態"
+								value={values.openStatus}
+								onValueChange={value =>
+									updateValues({ openStatus: value as OpenStatus })
+								}
+								disabled={!canEditOpenStatus}
+								options={[
+									{ value: "OPEN", label: "営業中" },
+									{ value: "CLOSED", label: "準備中・閉店" },
+									{ value: "NOT_APPLICABLE", label: "設定なし" },
+								]}
+							/>
 						</Flex>
 					</Card>
 
@@ -484,46 +618,48 @@ function ProjectPublicInfoPage() {
 									現在の在庫状況を設定します。
 								</Text>
 							</div>
-							<div className={styles.fieldWithHelp}>
-								<Select.Root
-									value={
-										!setting.isStockStatusEditable
-											? "NOT_APPLICABLE"
-											: stockStatus
-									}
-									onValueChange={(
-										val: "IN_STOCK" | "OUT_OF_STOCK" | "NOT_APPLICABLE"
-									) => setStockStatus(val)}
-									disabled={!isEditable || !setting.isStockStatusEditable}
-								>
-									<Select.Trigger />
-									<Select.Content>
-										<Select.Item value="IN_STOCK">在庫あり</Select.Item>
-										<Select.Item value="OUT_OF_STOCK">
-											在庫なし（完売）
-										</Select.Item>
-										<Select.Item value="NOT_APPLICABLE">設定なし</Select.Item>
-									</Select.Content>
-								</Select.Root>
-							</div>
+							{isEditable && !setting.isStockStatusEditable && (
+								<RestrictedNotice />
+							)}
+							<Select
+								aria-label="在庫状態"
+								value={values.stockStatus}
+								onValueChange={value =>
+									updateValues({ stockStatus: value as StockStatus })
+								}
+								disabled={!canEditStockStatus}
+								options={[
+									{ value: "IN_STOCK", label: "在庫あり" },
+									{ value: "OUT_OF_STOCK", label: "在庫なし（完売）" },
+									{ value: "NOT_APPLICABLE", label: "設定なし" },
+								]}
+							/>
 						</Flex>
 					</Card>
 				</>
 			)}
 
 			{isEditable && (
-				<div style={{ maxWidth: 720 }}>
-					<Flex justify="end" align="center" gap="3">
-						{isUnsaved && (
-							<Text size="2" color="blue" weight="bold">
-								未保存の変更があります
-							</Text>
-						)}
+				<div className={styles.actionBar}>
+					<Text size="2" color="gray">
+						{isUploading
+							? "画像をアップロード中です…"
+							: isDirty
+								? "未保存の変更があります"
+								: "変更はありません"}
+					</Text>
+					<Flex gap="3">
 						<Button
-							size="3"
+							intent="secondary"
+							onClick={handleCancel}
+							disabled={!isDirty || isSaving || isUploading}
+						>
+							変更を破棄
+						</Button>
+						<Button
 							onClick={handleSave}
-							disabled={isSaving || !isUnsaved}
-							color={isUnsaved ? "blue" : "gray"}
+							loading={isSaving}
+							disabled={!isDirty || isSaving || isUploading}
 						>
 							保存する
 						</Button>
@@ -541,10 +677,22 @@ function ProjectPublicInfoPage() {
 			<ImagePreviewModal
 				isOpen={isPreviewOpen}
 				onOpenChange={setIsPreviewOpen}
-				fileIds={mapImageFileIds}
+				fileIds={values.mapImageFileIds}
 				initialIndex={previewIndex}
 				currentIndex={previewIndex}
 				onChangeIndex={setPreviewIndex}
+			/>
+
+			<DiscardChangesDialog
+				open={blocker.status === "blocked"}
+				onOpenChange={open => {
+					if (!open) blocker.reset?.();
+				}}
+				onConfirm={() => blocker.proceed?.()}
+				title="保存していない変更があります"
+				description="このページを離れると、保存していない変更は失われます。"
+				cancelLabel="編集を続ける"
+				confirmLabel="破棄して移動"
 			/>
 		</div>
 	);

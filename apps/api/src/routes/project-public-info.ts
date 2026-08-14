@@ -89,74 +89,64 @@ projectPublicInfoRoute.put(
 			}
 		}
 
-		const currentInfo = await prisma.projectPublicInfo.findUnique({
-			where: { projectId: project.id },
-		});
+		const mapImageFileIds = data.mapImageFileIds;
+		if (
+			mapImageFileIds &&
+			new Set(mapImageFileIds).size !== mapImageFileIds.length
+		) {
+			throw Errors.invalidRequest("同じ画像を複数登録することはできません");
+		}
 
-		const mapImagesPayload = data.mapImageFileIds
-			? {
-					deleteMany: {},
-					create: data.mapImageFileIds.map((fileId, sortOrder) => ({
-						fileId,
-						sortOrder,
-					})),
-				}
-			: undefined;
+		const isStage = project.type === "STAGE";
+		const openStatus = isStage ? "NOT_APPLICABLE" : data.openStatus;
+		const stockStatus = isStage ? "NOT_APPLICABLE" : data.stockStatus;
 
-		// biome-ignore lint/suspicious/noExplicitAny: type is too complex to deduce cleanly
-		let updated: any;
-		if (currentInfo) {
-			updated = await prisma.projectPublicInfo.update({
+		// 掲載画像は「全削除 → 並び順どおりに再作成」で置き換えるため、
+		// sortOrder のユニーク制約に引っかからないよう順序を保証する
+		const updated = await prisma.$transaction(async tx => {
+			const info = await tx.projectPublicInfo.upsert({
 				where: { projectId: project.id },
-				data: {
+				update: {
 					description: data.description,
 					iconFileId,
-					openStatus:
-						project.type === "STAGE" ? "NOT_APPLICABLE" : data.openStatus,
-					stockStatus:
-						project.type === "STAGE" ? "NOT_APPLICABLE" : data.stockStatus,
-					mapImages: mapImagesPayload,
+					openStatus,
+					stockStatus,
 				},
-				include: {
-					mapImages: { orderBy: { sortOrder: "asc" } },
-				},
-			});
-		} else {
-			updated = await prisma.projectPublicInfo.create({
-				data: {
+				create: {
 					projectId: project.id,
 					description: data.description ?? null,
 					iconFileId: iconFileId ?? null,
-					openStatus:
-						project.type === "STAGE"
-							? "NOT_APPLICABLE"
-							: (data.openStatus ?? "NOT_APPLICABLE"),
-					stockStatus:
-						project.type === "STAGE"
-							? "NOT_APPLICABLE"
-							: (data.stockStatus ?? "NOT_APPLICABLE"),
-					mapImages: data.mapImageFileIds
-						? {
-								create: data.mapImageFileIds.map((fileId, sortOrder) => ({
-									fileId,
-									sortOrder,
-								})),
-							}
-						: undefined,
+					openStatus: openStatus ?? "NOT_APPLICABLE",
+					stockStatus: stockStatus ?? "NOT_APPLICABLE",
 				},
+			});
+
+			if (mapImageFileIds) {
+				await tx.projectPublicMapImage.deleteMany({
+					where: { projectPublicInfoId: info.id },
+				});
+				await tx.projectPublicMapImage.createMany({
+					data: mapImageFileIds.map((fileId, sortOrder) => ({
+						projectPublicInfoId: info.id,
+						fileId,
+						sortOrder,
+					})),
+				});
+			}
+
+			return tx.projectPublicInfo.findUniqueOrThrow({
+				where: { id: info.id },
 				include: {
 					mapImages: { orderBy: { sortOrder: "asc" } },
 				},
 			});
-		}
+		});
 
 		return c.json({
 			publicInfo: {
 				description: updated.description,
 				iconFileId: updated.iconFileId,
-				mapImageFileIds: updated.mapImages.map(
-					(img: { fileId: string }) => img.fileId
-				),
+				mapImageFileIds: updated.mapImages.map(img => img.fileId),
 				openStatus: updated.openStatus,
 				stockStatus: updated.stockStatus,
 			},

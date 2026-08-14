@@ -1,3 +1,4 @@
+import type { CommitteePermission } from "@sos26/shared";
 import { redirect } from "@tanstack/react-router";
 import { getMyPermissions } from "../api/committee-member";
 import { authReady, useAuthStore } from "./store";
@@ -47,53 +48,38 @@ export async function requireCommitteeMember(): Promise<void> {
 	}
 }
 
+const NO_COMMITTEE_PERMISSIONS = {
+	hasMemberEditPermission: false,
+	hasProjectRegistrationPermission: false,
+	hasMapAppSettingPermission: false,
+} as const;
+
 /**
- * サイドバー表示制御用に MEMBER_EDIT 権限を事前取得する
+ * サイドバー表示制御用に実委人の権限を事前取得する
  * beforeLoad で呼び出すことで、初回描画時のチラつきを防ぐ
  */
-export async function preloadMemberEditPermission(): Promise<void> {
+export async function preloadCommitteePermissions(): Promise<void> {
 	const { isCommitteeMember } = useAuthStore.getState();
 
 	if (!isCommitteeMember) {
-		useAuthStore.setState({ hasMemberEditPermission: false });
+		useAuthStore.setState(NO_COMMITTEE_PERMISSIONS);
 		return;
 	}
 
 	try {
 		const res = await getMyPermissions();
+		const has = (permission: CommitteePermission) =>
+			res.permissions.some(p => p.permission === permission);
+
 		useAuthStore.setState({
-			hasMemberEditPermission: res.permissions.some(
-				p => p.permission === "MEMBER_EDIT"
-			),
+			hasMemberEditPermission: has("MEMBER_EDIT"),
+			hasProjectRegistrationPermission:
+				has("PROJECT_REGISTRATION_FORM_CREATE") ||
+				has("PROJECT_REGISTRATION_FORM_DELIVER"),
+			hasMapAppSettingPermission: has("MAP_APP_SETTING_EDIT"),
 		});
 	} catch {
-		useAuthStore.setState({ hasMemberEditPermission: false });
-	}
-}
-
-/**
- * サイドバー表示制御用に企画登録関連権限を事前取得する
- * beforeLoad で呼び出すことで、初回描画時のチラつきを防ぐ
- */
-export async function preloadProjectRegistrationPermission(): Promise<void> {
-	const { isCommitteeMember } = useAuthStore.getState();
-
-	if (!isCommitteeMember) {
-		useAuthStore.setState({ hasProjectRegistrationPermission: false });
-		return;
-	}
-
-	try {
-		const res = await getMyPermissions();
-		useAuthStore.setState({
-			hasProjectRegistrationPermission: res.permissions.some(
-				p =>
-					p.permission === "PROJECT_REGISTRATION_FORM_CREATE" ||
-					p.permission === "PROJECT_REGISTRATION_FORM_DELIVER"
-			),
-		});
-	} catch {
-		useAuthStore.setState({ hasProjectRegistrationPermission: false });
+		useAuthStore.setState(NO_COMMITTEE_PERMISSIONS);
 	}
 }
 

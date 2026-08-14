@@ -1,6 +1,7 @@
-import { Button, Dialog, Flex } from "@radix-ui/themes";
+import { Dialog, Flex } from "@radix-ui/themes";
 import { IconChevronLeft, IconChevronRight, IconX } from "@tabler/icons-react";
 import { useEffect } from "react";
+import { Button } from "@/components/primitives";
 import { getFileContentUrl } from "@/lib/api/files";
 import styles from "./route.module.scss";
 
@@ -74,11 +75,9 @@ export function ImagePreviewModal({
 					className={styles.previewNav}
 				>
 					<Button
-						variant="soft"
-						color="gray"
+						intent="secondary"
 						disabled={!hasPrev}
 						onClick={() => onChangeIndex(currentIndex - 1)}
-						aria-label="前の画像"
 					>
 						<IconChevronLeft size={16} />
 						前へ
@@ -87,11 +86,9 @@ export function ImagePreviewModal({
 						{currentIndex + 1} / {total}
 					</span>
 					<Button
-						variant="soft"
-						color="gray"
+						intent="secondary"
 						disabled={!hasNext}
 						onClick={() => onChangeIndex(currentIndex + 1)}
-						aria-label="次の画像"
 					>
 						次へ
 						<IconChevronRight size={16} />

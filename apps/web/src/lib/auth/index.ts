@@ -1,7 +1,6 @@
 export {
 	ForbiddenError,
-	preloadMemberEditPermission,
-	preloadProjectRegistrationPermission,
+	preloadCommitteePermissions,
 	requireAuth,
 	requireCommitteeMember,
 	sanitizeReturnTo,

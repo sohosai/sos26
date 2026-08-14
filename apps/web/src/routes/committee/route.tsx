@@ -3,8 +3,7 @@ import { useState } from "react";
 import { ForbiddenErrorBoundary } from "@/components/layout/ForbiddenContent";
 import { committeeMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import {
-	preloadMemberEditPermission,
-	preloadProjectRegistrationPermission,
+	preloadCommitteePermissions,
 	requireAuth,
 	requireCommitteeMember,
 	useAuthStore,
@@ -16,8 +15,7 @@ export const Route = createFileRoute("/committee")({
 		await requireAuth(location.pathname);
 		await requireCommitteeMember();
 		useAuthStore.getState().setActivePortal("committee");
-		await preloadMemberEditPermission();
-		await preloadProjectRegistrationPermission();
+		await preloadCommitteePermissions();
 	},
 	errorComponent: ForbiddenErrorBoundary,
 	component: CommitteeLayout,
