@@ -21,11 +21,7 @@ import { listProjectForms } from "@/lib/api/project-form";
 import { listProjectInquiries } from "@/lib/api/project-inquiry";
 import { listProjectNotices } from "@/lib/api/project-notice";
 import { getProjectPublicInfo } from "@/lib/api/project-public-info";
-import {
-	preloadCommitteePermissions,
-	requireAuth,
-	useAuthStore,
-} from "@/lib/auth";
+import { requireAuth, useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
 import { useProjectStore } from "@/lib/project/store";
 import styles from "./route.module.scss";
@@ -104,7 +100,6 @@ export const Route = createFileRoute("/project")({
 	beforeLoad: async ({ location }) => {
 		await requireAuth(location.href);
 		useAuthStore.getState().setActivePortal("project");
-		await preloadCommitteePermissions();
 
 		const res = await listMyProjects();
 

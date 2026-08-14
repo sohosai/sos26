@@ -515,7 +515,7 @@ function SupportSidebar({
 	) => Promise<void>;
 	onRemoveAssignee: (assigneeId: string, userId: string) => Promise<void>;
 	statusLabel: string;
-	statusColor: "orange" | "blue" | "green";
+	statusColor: "red" | "orange" | "blue" | "green";
 	StatusIcon: typeof IconCheck;
 	currentUserId: string;
 	onStartEditDraft: () => void;

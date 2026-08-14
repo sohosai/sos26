@@ -260,13 +260,11 @@ authRoute.post("/register", requireRegTicket, async c => {
 // 現在のログインユーザーを取得
 // ─────────────────────────────────────────────────────────────
 authRoute.get("/me", requireAuth, async c => {
-	const user = c.get("user");
-
-	const committeeMember = await prisma.committeeMember.findFirst({
-		where: { userId: user.id, deletedAt: null },
+	return c.json({
+		user: c.get("user"),
+		committeeMember: c.get("committeeMember"),
+		permissions: Array.from(c.get("permissions")),
 	});
-
-	return c.json({ user, committeeMember: committeeMember ?? null });
 });
 
 export { authRoute };

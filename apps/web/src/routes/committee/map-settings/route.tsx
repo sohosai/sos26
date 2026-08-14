@@ -14,9 +14,10 @@ import styles from "./route.module.scss";
 
 export const Route = createFileRoute("/committee/map-settings")({
 	// サイドバーでも非表示にしている画面なので、URL直打ちでも同じ扱いにする。
-	// 権限は /committee の beforeLoad で取得済みのため再取得しない。
+	// 権限は GET /auth/me で取得済みのため再取得しない。
 	beforeLoad: () => {
-		if (useAuthStore.getState().hasMapAppSettingPermission !== true) {
+		const { permissions } = useAuthStore.getState();
+		if (!permissions?.has("MAP_APP_SETTING_EDIT")) {
 			throw new ForbiddenError();
 		}
 	},

@@ -7,7 +7,6 @@ import {
 	deleteCommitteeMemberEndpoint,
 	type GrantCommitteeMemberPermissionRequest,
 	type GrantCommitteeMemberPermissionResponse,
-	getMyPermissionsEndpoint,
 	grantCommitteeMemberPermissionEndpoint,
 	type ListCommitteeMemberPermissionsResponse,
 	type ListCommitteeMembersPickerResponse,
@@ -77,14 +76,6 @@ export async function deleteCommitteeMember(
 	return callNoBodyApi(deleteCommitteeMemberEndpoint, {
 		pathParams: { id },
 	});
-}
-
-/**
- * GET /committee/members/me/permissions
- * 自分自身の権限一覧を取得
- */
-export async function getMyPermissions(): Promise<ListCommitteeMemberPermissionsResponse> {
-	return callGetApi(getMyPermissionsEndpoint);
 }
 
 /**
