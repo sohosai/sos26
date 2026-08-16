@@ -863,7 +863,7 @@ async function validateProjectOwnerUpdates(
 
 		if (existingOwnerRole) {
 			throw Errors.invalidRequest(
-				"このメンバーは既に別の企画の企画責任者として登録されています"
+				"このメンバーは既に別の企画の企画責任者または副企画責任者として登録されています"
 			);
 		}
 	}
