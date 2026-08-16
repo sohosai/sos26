@@ -177,10 +177,12 @@ projectRoute.post("/create", requireAuth, async c => {
 	// ── 企画応募期間チェック ──
 	assertWithinApplicationPeriod();
 
-	// ── 他の企画で企画責任者・副企画責任者をやっていないか確認 ──
+	// ── 他の有効な企画で企画責任者・副企画責任者をやっていないか確認 ──
+	// deletionStatus: null で有効な企画のみを対象とする
 	const hasOtherPrivilegedProject = await prisma.project.findFirst({
 		where: {
 			deletedAt: null,
+			deletionStatus: null,
 			OR: [{ ownerId: userId }, { subOwnerId: userId }],
 		},
 	});
@@ -979,10 +981,11 @@ projectRoute.post(
 			throw Errors.invalidRequest("企画責任者を副企画責任者には指定できません");
 		}
 
-		// 他企画で企画責任者、副企画責任者をやっていないかチェック
+		// 他の有効な企画で企画責任者、副企画責任者をやっていないかチェック
 		const hasOtherPrivilegedProject = await prisma.project.findFirst({
 			where: {
 				deletedAt: null,
+				deletionStatus: null,
 				id: {
 					not: project.id,
 				},
@@ -1096,10 +1099,11 @@ projectRoute.post(
 			if (currentProject.subOwnerId) {
 				throw Errors.invalidRequest("既に副企画責任者が任命されています");
 			}
-			// 他企画で企画責任者、副企画責任者をやっていないかチェック
+			// 他の有効な企画で企画責任者、副企画責任者をやっていないかチェック
 			const hasOtherPrivilegedProject = await tx.project.findFirst({
 				where: {
 					deletedAt: null,
+					deletionStatus: null,
 					id: {
 						not: project.id,
 					},

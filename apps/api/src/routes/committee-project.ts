@@ -649,6 +649,34 @@ async function handleUpdateProjectDeletionStatus(c: Context<AuthEnv>) {
 
 	const projectBefore = await findProjectBeforeDeletionStatusUpdate(projectId);
 
+	// 有効に戻す場合、責任者・副責任者が他の有効な企画で役割を持っていないか確認
+	if (projectBefore.deletionStatus !== null && deletionStatus === null) {
+		const privilegedUserIds = [
+			projectBefore.owner?.id,
+			projectBefore.subOwner?.id,
+		].filter((id): id is string => Boolean(id));
+
+		if (privilegedUserIds.length > 0) {
+			const hasOtherPrivilegedProject = await prisma.project.findFirst({
+				where: {
+					deletedAt: null,
+					deletionStatus: null,
+					id: { not: projectId },
+					OR: [
+						{ ownerId: { in: privilegedUserIds } },
+						{ subOwnerId: { in: privilegedUserIds } },
+					],
+				},
+			});
+
+			if (hasOtherPrivilegedProject) {
+				throw Errors.invalidRequest(
+					"この企画の責任者または副責任者が既に別の有効な企画で役割を持っているため、有効に戻せません"
+				);
+			}
+		}
+	}
+
 	await prisma.project.updateMany({
 		where: { id: projectId, deletedAt: null },
 		data: { deletionStatus } as Prisma.ProjectUpdateInput,
@@ -823,10 +851,11 @@ async function validateProjectOwnerUpdates(
 			throw Errors.notFound("新しい企画責任者は企画メンバーではありません");
 		}
 
-		// 新しい責任者が他の企画で既に責任者または副責任者になっていないか確認
+		// 新しい責任者が他の有効な企画で既に責任者または副責任者になっていないか確認
 		const existingOwnerRole = await prisma.project.findFirst({
 			where: {
 				deletedAt: null,
+				deletionStatus: null,
 				id: { not: projectId },
 				OR: [{ ownerId: data.ownerId }, { subOwnerId: data.ownerId }],
 			},
@@ -857,10 +886,11 @@ async function validateProjectOwnerUpdates(
 			throw Errors.notFound("新しい副企画責任者は企画メンバーではありません");
 		}
 
-		// 新しい副責任者が他の企画で既に責任者または副責任者になっていないか確認
+		// 新しい副責任者が他の有効な企画で既に責任者または副責任者になっていないか確認
 		const existingSubOwnerRole = await prisma.project.findFirst({
 			where: {
 				deletedAt: null,
+				deletionStatus: null,
 				id: { not: projectId },
 				OR: [{ ownerId: data.subOwnerId }, { subOwnerId: data.subOwnerId }],
 			},
