@@ -23,6 +23,7 @@ import {
 	updateCommitteeProjectDeletionStatus,
 } from "@/lib/api/committee-project";
 import { formatDate, formatProjectNumber } from "@/lib/format";
+import { isClientError } from "@/lib/http/error";
 import {
 	PROJECT_LOCATION_LABELS,
 	PROJECT_TYPE_LABELS,
@@ -245,8 +246,10 @@ function CommitteeProjectInfoPage() {
 					? `企画を「${statusLabel(status)}」に設定しました`
 					: "企画の削除状態を取り消しました"
 			);
-		} catch {
-			toast.error("企画状態の更新に失敗しました");
+		} catch (error) {
+			toast.error(
+				isClientError(error) ? error.message : "企画状態の更新に失敗しました"
+			);
 		} finally {
 			setSaving(false);
 		}
