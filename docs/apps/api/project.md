@@ -64,6 +64,7 @@
 - `subOwnerId` は `null`
 - 企画参加コード（6文字英数字）を生成し、重複時は再生成
 - 作成者を `projectMembers` に自動追加
+- 実行ユーザーが他の有効な企画（`deletionStatus == null`）で既に責任者・副責任者を務めている場合は作成不可（`INVALID_REQUEST`）
 
 ### GET `/project/list`
 
@@ -136,7 +137,7 @@
 - 既に副企画責任者がいる場合は不可
 - 同一企画に `PENDING` の依頼が既にある場合は不可
 - OWNER を副企画責任者に指定することは不可
-- さらに「他企画で既に OWNER/SUB_OWNER ではない」ことを検証
+- さらに「他の有効な企画（`deletionStatus == null`）で既に OWNER/SUB_OWNER ではない」ことを検証
 - レスポンス:
   - `success: true`
   - `requestId: string`
@@ -150,7 +151,7 @@
 - 依頼対象本人のみ承認可能（`projectSubOwnerRequest` の `projectId + userId + PENDING` を検索）
 - 実行者ロールは `MEMBER` のみ（既存 `SUB_OWNER` / `OWNER` は不可）
 - 既に副企画責任者が存在する場合は不可
-- さらに「他企画で既に OWNER/SUB_OWNER ではない」ことを検証
+- さらに「他の有効な企画（`deletionStatus == null`）で既に OWNER/SUB_OWNER ではない」ことを検証
 - 承認時の更新:
   - `projectSubOwnerRequest.status = APPROVED`
   - `projectSubOwnerRequest.decidedAt = now`
@@ -204,4 +205,4 @@
   - 1. OWNER が依頼送信（`PENDING`）
   - 2. 対象 MEMBER が承認した時点で確定（`APPROVED` + `project.subOwnerId` 更新）
 - OWNER/SUB_OWNER は削除 API の対象外
-- ユーザーは「別企画で既に OWNER/SUB_OWNER」である場合、他企画の副企画責任者に任命されない
+- ユーザーは「別の有効な企画（`deletionStatus == null`）で既に OWNER/SUB_OWNER」である場合、他企画の副企画責任者に任命されない
