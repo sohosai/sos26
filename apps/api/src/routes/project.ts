@@ -36,6 +36,7 @@ import {
 	notifySubOwnerRequestSent,
 } from "../lib/notifications";
 import { handlePrismaError, prisma } from "../lib/prisma";
+import { findOtherPrivilegedProject } from "../lib/project-check";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -179,12 +180,8 @@ projectRoute.post("/create", requireAuth, async c => {
 
 	// ── 他の有効な企画で企画責任者・副企画責任者をやっていないか確認 ──
 	// deletionStatus: null で有効な企画のみを対象とする
-	const hasOtherPrivilegedProject = await prisma.project.findFirst({
-		where: {
-			deletedAt: null,
-			deletionStatus: null,
-			OR: [{ ownerId: userId }, { subOwnerId: userId }],
-		},
+	const hasOtherPrivilegedProject = await findOtherPrivilegedProject(prisma, {
+		userIds: [userId],
 	});
 
 	if (hasOtherPrivilegedProject) {
@@ -982,15 +979,9 @@ projectRoute.post(
 		}
 
 		// 他の有効な企画で企画責任者、副企画責任者をやっていないかチェック
-		const hasOtherPrivilegedProject = await prisma.project.findFirst({
-			where: {
-				deletedAt: null,
-				deletionStatus: null,
-				id: {
-					not: project.id,
-				},
-				OR: [{ ownerId: userId }, { subOwnerId: userId }],
-			},
+		const hasOtherPrivilegedProject = await findOtherPrivilegedProject(prisma, {
+			userIds: [userId],
+			excludeProjectId: project.id,
 		});
 
 		if (hasOtherPrivilegedProject) {
@@ -1100,18 +1091,9 @@ projectRoute.post(
 				throw Errors.invalidRequest("既に副企画責任者が任命されています");
 			}
 			// 他の有効な企画で企画責任者、副企画責任者をやっていないかチェック
-			const hasOtherPrivilegedProject = await tx.project.findFirst({
-				where: {
-					deletedAt: null,
-					deletionStatus: null,
-					id: {
-						not: project.id,
-					},
-					OR: [{ ownerId: userId }, { subOwnerId: userId }],
-				},
-				select: {
-					id: true,
-				},
+			const hasOtherPrivilegedProject = await findOtherPrivilegedProject(tx, {
+				userIds: [userId],
+				excludeProjectId: project.id,
 			});
 
 			if (hasOtherPrivilegedProject) {

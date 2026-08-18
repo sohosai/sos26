@@ -13,6 +13,7 @@ import { textToHtml } from "../lib/emails/templates/textToHtml";
 import { env } from "../lib/env";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
+import { findOtherPrivilegedProject } from "../lib/project-check";
 import { sendPushToUsers } from "../lib/push";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -658,16 +659,9 @@ async function handleUpdateProjectDeletionStatus(c: Context<AuthEnv>) {
 
 		if (privilegedUserIds.length > 0) {
 			await prisma.$transaction(async tx => {
-				const hasOtherPrivilegedProject = await tx.project.findFirst({
-					where: {
-						deletedAt: null,
-						deletionStatus: null,
-						id: { not: projectId },
-						OR: [
-							{ ownerId: { in: privilegedUserIds } },
-							{ subOwnerId: { in: privilegedUserIds } },
-						],
-					},
+				const hasOtherPrivilegedProject = await findOtherPrivilegedProject(tx, {
+					userIds: privilegedUserIds,
+					excludeProjectId: projectId,
 				});
 
 				if (hasOtherPrivilegedProject) {
@@ -864,13 +858,9 @@ async function validateProjectOwnerUpdates(
 		}
 
 		// 新しい責任者が他の有効な企画で既に責任者または副責任者になっていないか確認
-		const existingOwnerRole = await prisma.project.findFirst({
-			where: {
-				deletedAt: null,
-				deletionStatus: null,
-				id: { not: projectId },
-				OR: [{ ownerId: data.ownerId }, { subOwnerId: data.ownerId }],
-			},
+		const existingOwnerRole = await findOtherPrivilegedProject(prisma, {
+			userIds: [data.ownerId],
+			excludeProjectId: projectId,
 		});
 
 		if (existingOwnerRole) {
@@ -899,13 +889,9 @@ async function validateProjectOwnerUpdates(
 		}
 
 		// 新しい副責任者が他の有効な企画で既に責任者または副責任者になっていないか確認
-		const existingSubOwnerRole = await prisma.project.findFirst({
-			where: {
-				deletedAt: null,
-				deletionStatus: null,
-				id: { not: projectId },
-				OR: [{ ownerId: data.subOwnerId }, { subOwnerId: data.subOwnerId }],
-			},
+		const existingSubOwnerRole = await findOtherPrivilegedProject(prisma, {
+			userIds: [data.subOwnerId],
+			excludeProjectId: projectId,
 		});
 
 		if (existingSubOwnerRole) {
