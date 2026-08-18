@@ -741,7 +741,6 @@ function ProjectPublicInfoPage() {
 				isOpen={isPreviewOpen}
 				onOpenChange={setIsPreviewOpen}
 				fileIds={values.mapImageFileIds}
-				initialIndex={previewIndex}
 				currentIndex={previewIndex}
 				onChangeIndex={setPreviewIndex}
 			/>

@@ -9,7 +9,6 @@ type Props = {
 	isOpen: boolean;
 	onOpenChange: (open: boolean) => void;
 	fileIds: string[];
-	initialIndex: number;
 	currentIndex: number;
 	onChangeIndex: (index: number) => void;
 };

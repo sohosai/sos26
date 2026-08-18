@@ -120,7 +120,12 @@ function setupAuthAsMember() {
 /** 更新系で共通して必要になる DB 応答を用意する */
 function setupUpdateMocks(
 	options: {
-		files?: { id: string; mimeType: string; uploadedById: string }[];
+		files?: {
+			id: string;
+			mimeType: string;
+			uploadedById: string;
+			isPublic?: boolean;
+		}[];
 		before?: {
 			iconFileId: string | null;
 			mapImages: { fileId: string }[];
@@ -130,16 +135,30 @@ function setupUpdateMocks(
 ) {
 	const {
 		files = [
-			{ id: ICON_FILE_ID, mimeType: "image/png", uploadedById: OWNER_ID },
-			{ id: MAP_FILE_ID, mimeType: "image/jpeg", uploadedById: OWNER_ID },
+			{
+				id: ICON_FILE_ID,
+				mimeType: "image/png",
+				uploadedById: OWNER_ID,
+				isPublic: true,
+			},
+			{
+				id: MAP_FILE_ID,
+				mimeType: "image/jpeg",
+				uploadedById: OWNER_ID,
+				isPublic: true,
+			},
 		],
 		before = null,
 		saved = {},
 	} = options;
 
-	// 実際の findMany と同じく、要求された ID に該当するものだけを返す
+	// 実際の findMany と同じく、要求された ID と isPublic 条件に合致するものだけを返す
 	mockPrisma.file.findMany.mockImplementation(async (args: any) =>
-		files.filter(f => (args?.where?.id?.in ?? []).includes(f.id))
+		files.filter(
+			f =>
+				(args?.where?.id?.in ?? []).includes(f.id) &&
+				(f.isPublic ?? true) === (args?.where?.isPublic ?? true)
+		)
 	);
 	mockPrisma.projectMember.findMany.mockResolvedValue([
 		{ userId: OWNER_ID },
@@ -320,6 +339,26 @@ describe("PUT /project/:projectId/public-info", () => {
 			setupUpdateMocks({ files: [] });
 
 			const res = await put(app, { iconFileId: "not-exist" });
+
+			expect(res.status).toBe(400);
+			expect(mockPrisma.projectPublicInfo.upsert).not.toHaveBeenCalled();
+		});
+
+		it("非公開ファイルは400エラー", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks({
+				files: [
+					{
+						id: ICON_FILE_ID,
+						mimeType: "image/png",
+						uploadedById: OWNER_ID,
+						isPublic: false,
+					},
+				],
+			});
+
+			const res = await put(app, { iconFileId: ICON_FILE_ID });
 
 			expect(res.status).toBe(400);
 			expect(mockPrisma.projectPublicInfo.upsert).not.toHaveBeenCalled();

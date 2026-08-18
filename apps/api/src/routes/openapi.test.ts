@@ -145,4 +145,14 @@ describe("GET /openapi/openapi.json", () => {
 		expect(body.paths["/projects"]).toBeDefined();
 		expect(body.paths["/projects/{id}"]).toBeDefined();
 	});
+
+	it("servers にサブアプリのマウント先（/openapi）を含める", async () => {
+		const app = makeApp();
+
+		const res = await app.request("http://localhost:3000/openapi/openapi.json");
+
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.servers).toEqual([{ url: "http://localhost:3000/openapi" }]);
+	});
 });

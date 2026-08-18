@@ -547,7 +547,7 @@ erDiagram
 "ProjectPublicInfo" {
   String id PK
   String projectId FK,UK
-  String(400) description "nullable"
+  String(200) description "nullable"
   String iconFileId FK "nullable"
   OpenStatus openStatus
   StockStatus stockStatus

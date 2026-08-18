@@ -209,7 +209,7 @@ openApiRoute.openapi(getProjectDetailRoute, async c => {
 	return c.json(response, 200);
 });
 
-openApiRoute.doc("/openapi.json", {
+openApiRoute.doc("/openapi.json", c => ({
 	openapi: "3.0.0",
 	info: {
 		title: "sos26 Public API",
@@ -217,6 +217,11 @@ openApiRoute.doc("/openapi.json", {
 		description:
 			"雙峰祭オンラインマップにデータ連携をするためのAPI。認証不要で、企画側が公開情報を登録した企画のみを返す。",
 	},
-});
+	// createRoute のパスはこのサブアプリ内の相対パス（例: /projects）で
+	// spec に出力される。servers を明示しないと Swagger UI の Try it out や
+	// クライアント生成がオリジン直下（/projects）を叩いて404になるため、
+	// 実際のマウント先（/openapi）をリクエストから動的に組み立てる
+	servers: [{ url: `${new URL(c.req.url).origin}/openapi` }],
+}));
 
 openApiRoute.get("/swagger", swaggerUI({ url: "/openapi/openapi.json" }));

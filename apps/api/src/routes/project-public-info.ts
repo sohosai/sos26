@@ -56,8 +56,14 @@ function assertFieldsEditable(
  * 公開情報に紐づけようとしているファイルが使用可能か検証する。
  *
  * ファイルIDはクライアントから任意の値を送れるため、
- * 「実在する」「アップロード完了済み」「画像」「自企画のメンバーがアップロードした」
- * の4点をサーバー側で必ず確認する。
+ * 「実在する」「アップロード完了済み」「公開ファイル」「画像」
+ * 「自企画のメンバーがアップロードした」の5点をサーバー側で必ず確認する。
+ *
+ * isPublic を要求しないと、フォーム回答の添付など非公開ファイルのIDを
+ * 直接APIで指定でき、無認証の公開APIから壊れ画像として見えてしまう。
+ * また softDeleteUnreferencedFiles は公開情報系テーブルの参照しか見ないため、
+ * 非公開ファイルを紐づけ→外す操作で他機能が使用中のファイルを誤って
+ * ソフトデリートしてしまう経路も塞ぐ必要がある。
  */
 async function assertFilesUsable(
 	projectId: string,
@@ -67,7 +73,12 @@ async function assertFilesUsable(
 
 	const [files, members] = await Promise.all([
 		prisma.file.findMany({
-			where: { id: { in: fileIds }, status: "CONFIRMED", deletedAt: null },
+			where: {
+				id: { in: fileIds },
+				status: "CONFIRMED",
+				isPublic: true,
+				deletedAt: null,
+			},
 			select: { id: true, mimeType: true, uploadedById: true },
 		}),
 		prisma.projectMember.findMany({

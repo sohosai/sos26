@@ -1,6 +1,6 @@
 import { Card, Flex, Heading, Text } from "@radix-ui/themes";
 import type { MapAppSetting, UpdateMapAppSettingRequest } from "@sos26/shared";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Switch } from "@/components/primitives";
@@ -37,8 +37,17 @@ const SWITCHES: { key: keyof MapAppSetting; label: string }[] = [
 ];
 
 function MapSettingsPage() {
+	const router = useRouter();
 	const { setting: loadedSetting } = Route.useLoaderData();
-	const [setting, setSetting] = useState(loadedSetting);
+	/**
+	 * loader の値との差分だけを保持する。
+	 * state を loader 値のコピーで seed すると、他ページから戻って
+	 * loader が裏で再実行されても画面が古い値のまま固定されてしまうため、
+	 * 表示値は常に「最新の loader 値 + 未確定の差分」として計算する。
+	 */
+	const [overrides, setOverrides] = useState<Partial<MapAppSetting>>({});
+	const setting: MapAppSetting = { ...loadedSetting, ...overrides };
+
 	/**
 	 * 保存中のスイッチ。操作中のものだけを無効化する。
 	 * 全スイッチを無効化すると、Radix の disabled スタイルで
@@ -60,21 +69,37 @@ function MapSettingsPage() {
 		});
 	};
 
+	const setOverride = (
+		key: keyof MapAppSetting,
+		value: boolean | undefined
+	) => {
+		setOverrides(prev => {
+			const next = { ...prev };
+			if (value === undefined) {
+				delete next[key];
+			} else {
+				next[key] = value;
+			}
+			return next;
+		});
+	};
+
 	// スイッチ操作でそのまま反映する（変更した項目のみ送信し、他の管理者の変更を上書きしない）
 	const handleToggle = async (key: keyof MapAppSetting, checked: boolean) => {
-		const previous = setting[key];
-		setSetting(prev => ({ ...prev, [key]: checked }));
+		setOverride(key, checked);
 		setSaving(key, true);
 
 		try {
 			const payload: UpdateMapAppSettingRequest = {};
 			payload[key] = checked;
-			const { setting: saved } = await updateMapAppSetting(payload);
-			// 操作したキーだけをサーバーの値で確定させる。
-			// レスポンス全体を反映すると、同時に操作した別のキーを巻き戻してしまう
-			setSetting(prev => ({ ...prev, [key]: saved[key] }));
+			await updateMapAppSetting(payload);
+			// loader を再取得して他ページから戻った際も最新値が表示されるようにする。
+			// 差分は loader 値が追いつくまで保持し、反映が終わってから消す
+			// （先に消すと一瞬だけ古い loader 値が表示されてしまう）
+			await router.invalidate().catch(() => undefined);
+			setOverride(key, undefined);
 		} catch (error) {
-			setSetting(prev => ({ ...prev, [key]: previous }));
+			setOverride(key, undefined);
 			reportHandledError({
 				error,
 				operation: "update_map_setting",
