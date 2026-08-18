@@ -22,6 +22,7 @@ import {
 	getCommitteeProjectDetail,
 	updateCommitteeProjectDeletionStatus,
 } from "@/lib/api/committee-project";
+import { reportHandledError } from "@/lib/error/report";
 import { formatDate, formatProjectNumber } from "@/lib/format";
 import { isClientError } from "@/lib/http/error";
 import {
@@ -247,9 +248,20 @@ function CommitteeProjectInfoPage() {
 					: "企画の削除状態を取り消しました"
 			);
 		} catch (error) {
-			toast.error(
-				isClientError(error) ? error.message : "企画状態の更新に失敗しました"
-			);
+			reportHandledError({
+				error,
+				operation: "update_deletion_status",
+				userMessage: "企画状態の更新に失敗しました",
+				ui: { type: "toast" },
+				context: { projectId: project.id },
+				// このエンドポイントでは INVALID_REQUEST のみ業務上のメッセージ（トーストに載せても問題ない内容）を返す。
+				resolveMessage: ({ error: e, fallbackMessage }) => {
+					if (isClientError(e) && e.code === "INVALID_REQUEST") {
+						return e.message;
+					}
+					return fallbackMessage;
+				},
+			});
 		} finally {
 			setSaving(false);
 		}
