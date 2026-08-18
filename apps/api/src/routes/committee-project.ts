@@ -657,30 +657,42 @@ async function handleUpdateProjectDeletionStatus(c: Context<AuthEnv>) {
 		].filter((id): id is string => Boolean(id));
 
 		if (privilegedUserIds.length > 0) {
-			const hasOtherPrivilegedProject = await prisma.project.findFirst({
-				where: {
-					deletedAt: null,
-					deletionStatus: null,
-					id: { not: projectId },
-					OR: [
-						{ ownerId: { in: privilegedUserIds } },
-						{ subOwnerId: { in: privilegedUserIds } },
-					],
-				},
+			await prisma.$transaction(async tx => {
+				const hasOtherPrivilegedProject = await tx.project.findFirst({
+					where: {
+						deletedAt: null,
+						deletionStatus: null,
+						id: { not: projectId },
+						OR: [
+							{ ownerId: { in: privilegedUserIds } },
+							{ subOwnerId: { in: privilegedUserIds } },
+						],
+					},
+				});
+
+				if (hasOtherPrivilegedProject) {
+					throw Errors.invalidRequest(
+						"この企画の責任者または副責任者が既に別の有効な企画で役割を持っているため、有効に戻せません"
+					);
+				}
+
+				await tx.project.updateMany({
+					where: { id: projectId, deletedAt: null },
+					data: { deletionStatus } as Prisma.ProjectUpdateInput,
+				});
 			});
-
-			if (hasOtherPrivilegedProject) {
-				throw Errors.invalidRequest(
-					"この企画の責任者または副責任者が既に別の有効な企画で役割を持っているため、有効に戻せません"
-				);
-			}
+		} else {
+			await prisma.project.updateMany({
+				where: { id: projectId, deletedAt: null },
+				data: { deletionStatus } as Prisma.ProjectUpdateInput,
+			});
 		}
+	} else {
+		await prisma.project.updateMany({
+			where: { id: projectId, deletedAt: null },
+			data: { deletionStatus } as Prisma.ProjectUpdateInput,
+		});
 	}
-
-	await prisma.project.updateMany({
-		where: { id: projectId, deletedAt: null },
-		data: { deletionStatus } as Prisma.ProjectUpdateInput,
-	});
 
 	const project = await findProjectAfterDeletionStatusUpdate(projectId);
 	const beforeStatus = getProjectStatusFields(projectBefore);
