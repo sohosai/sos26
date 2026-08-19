@@ -198,7 +198,9 @@ function ProjectLayout() {
 	}, []);
 
 	const hasPrivilegedProject = projects.some(
-		project => project.ownerId === user?.id || project.subOwnerId === user?.id
+		project =>
+			project.deletionStatus === null &&
+			(project.ownerId === user?.id || project.subOwnerId === user?.id)
 	);
 	const projectMenuItemsWithDot = projectMenuItems.map(item => ({
 		...item,

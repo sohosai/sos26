@@ -39,7 +39,7 @@ function createUserAffiliation(
  * ユーザーIDリストから所属情報をまとめて取得する。
  * 実委所属は committeeBureau、企画所属は affiliatedProjects に集約する。
  * affiliatedProjects には owner / subOwner / projectMember として所属する
- * 有効な企画名をすべて含める。
+ * 企画名をすべて含める。
  */
 function getOrCreateProjectSet(
 	projectMap: Map<string, Set<string>>,

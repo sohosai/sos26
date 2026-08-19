@@ -13,6 +13,7 @@ import { textToHtml } from "../lib/emails/templates/textToHtml";
 import { env } from "../lib/env";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
+import { findOtherPrivilegedProject } from "../lib/project-check";
 import { sendPushToUsers } from "../lib/push";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -649,10 +650,36 @@ async function handleUpdateProjectDeletionStatus(c: Context<AuthEnv>) {
 
 	const projectBefore = await findProjectBeforeDeletionStatusUpdate(projectId);
 
-	await prisma.project.updateMany({
-		where: { id: projectId, deletedAt: null },
-		data: { deletionStatus } as Prisma.ProjectUpdateInput,
-	});
+	// 有効に戻す場合、責任者・副責任者が他の有効な企画で役割を持っていないか確認
+	if (projectBefore.deletionStatus !== null && deletionStatus === null) {
+		const privilegedUserIds = [
+			projectBefore.owner.id,
+			projectBefore.subOwner?.id,
+		].filter((id): id is string => Boolean(id));
+
+		await prisma.$transaction(async tx => {
+			const hasOtherPrivilegedProject = await findOtherPrivilegedProject(tx, {
+				userIds: privilegedUserIds,
+				excludeProjectId: projectId,
+			});
+
+			if (hasOtherPrivilegedProject) {
+				throw Errors.invalidRequest(
+					"この企画の責任者または副責任者が既に別の有効な企画で役割を持っているため、有効に戻せません"
+				);
+			}
+
+			await tx.project.updateMany({
+				where: { id: projectId, deletedAt: null },
+				data: { deletionStatus } as Prisma.ProjectUpdateInput,
+			});
+		});
+	} else {
+		await prisma.project.updateMany({
+			where: { id: projectId, deletedAt: null },
+			data: { deletionStatus } as Prisma.ProjectUpdateInput,
+		});
+	}
 
 	const project = await findProjectAfterDeletionStatusUpdate(projectId);
 	const beforeStatus = getProjectStatusFields(projectBefore);
@@ -823,18 +850,15 @@ async function validateProjectOwnerUpdates(
 			throw Errors.notFound("新しい企画責任者は企画メンバーではありません");
 		}
 
-		// 新しい責任者が他の企画で既に責任者または副責任者になっていないか確認
-		const existingOwnerRole = await prisma.project.findFirst({
-			where: {
-				deletedAt: null,
-				id: { not: projectId },
-				OR: [{ ownerId: data.ownerId }, { subOwnerId: data.ownerId }],
-			},
+		// 新しい責任者が他の有効な企画で既に責任者または副責任者になっていないか確認
+		const existingOwnerRole = await findOtherPrivilegedProject(prisma, {
+			userIds: [data.ownerId],
+			excludeProjectId: projectId,
 		});
 
 		if (existingOwnerRole) {
 			throw Errors.invalidRequest(
-				"このメンバーは既に別の企画の企画責任者として登録されています"
+				"このメンバーは既に別の企画の企画責任者または副企画責任者として登録されています"
 			);
 		}
 	}
@@ -857,13 +881,10 @@ async function validateProjectOwnerUpdates(
 			throw Errors.notFound("新しい副企画責任者は企画メンバーではありません");
 		}
 
-		// 新しい副責任者が他の企画で既に責任者または副責任者になっていないか確認
-		const existingSubOwnerRole = await prisma.project.findFirst({
-			where: {
-				deletedAt: null,
-				id: { not: projectId },
-				OR: [{ ownerId: data.subOwnerId }, { subOwnerId: data.subOwnerId }],
-			},
+		// 新しい副責任者が他の有効な企画で既に責任者または副責任者になっていないか確認
+		const existingSubOwnerRole = await findOtherPrivilegedProject(prisma, {
+			userIds: [data.subOwnerId],
+			excludeProjectId: projectId,
 		});
 
 		if (existingSubOwnerRole) {

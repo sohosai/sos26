@@ -18,6 +18,7 @@ const IMPORTANT_ERROR_OPERATIONS = [
 	"comment_submit",
 	"assignee_update",
 	"update_base_info",
+	"update_deletion_status",
 	"api_response_validation",
 	"download_files_zip",
 ] as const;

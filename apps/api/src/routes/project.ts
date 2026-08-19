@@ -36,6 +36,7 @@ import {
 	notifySubOwnerRequestSent,
 } from "../lib/notifications";
 import { handlePrismaError, prisma } from "../lib/prisma";
+import { findOtherPrivilegedProject } from "../lib/project-check";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -177,12 +178,10 @@ projectRoute.post("/create", requireAuth, async c => {
 	// ── 企画応募期間チェック ──
 	assertWithinApplicationPeriod();
 
-	// ── 他の企画で企画責任者・副企画責任者をやっていないか確認 ──
-	const hasOtherPrivilegedProject = await prisma.project.findFirst({
-		where: {
-			deletedAt: null,
-			OR: [{ ownerId: userId }, { subOwnerId: userId }],
-		},
+	// ── 他の有効な企画で企画責任者・副企画責任者をやっていないか確認 ──
+	// deletionStatus: null で有効な企画のみを対象とする
+	const hasOtherPrivilegedProject = await findOtherPrivilegedProject(prisma, {
+		userIds: [userId],
 	});
 
 	if (hasOtherPrivilegedProject) {
@@ -979,15 +978,10 @@ projectRoute.post(
 			throw Errors.invalidRequest("企画責任者を副企画責任者には指定できません");
 		}
 
-		// 他企画で企画責任者、副企画責任者をやっていないかチェック
-		const hasOtherPrivilegedProject = await prisma.project.findFirst({
-			where: {
-				deletedAt: null,
-				id: {
-					not: project.id,
-				},
-				OR: [{ ownerId: userId }, { subOwnerId: userId }],
-			},
+		// 他の有効な企画で企画責任者、副企画責任者をやっていないかチェック
+		const hasOtherPrivilegedProject = await findOtherPrivilegedProject(prisma, {
+			userIds: [userId],
+			excludeProjectId: project.id,
 		});
 
 		if (hasOtherPrivilegedProject) {
@@ -1096,18 +1090,10 @@ projectRoute.post(
 			if (currentProject.subOwnerId) {
 				throw Errors.invalidRequest("既に副企画責任者が任命されています");
 			}
-			// 他企画で企画責任者、副企画責任者をやっていないかチェック
-			const hasOtherPrivilegedProject = await tx.project.findFirst({
-				where: {
-					deletedAt: null,
-					id: {
-						not: project.id,
-					},
-					OR: [{ ownerId: userId }, { subOwnerId: userId }],
-				},
-				select: {
-					id: true,
-				},
+			// 他の有効な企画で企画責任者、副企画責任者をやっていないかチェック
+			const hasOtherPrivilegedProject = await findOtherPrivilegedProject(tx, {
+				userIds: [userId],
+				excludeProjectId: project.id,
 			});
 
 			if (hasOtherPrivilegedProject) {
