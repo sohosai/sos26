@@ -14,6 +14,7 @@ import type {
 	CommitteeProjectDetail,
 	ProjectDeletionStatus,
 } from "@sos26/shared";
+import { ErrorCode } from "@sos26/shared";
 import { IconChevronRight } from "@tabler/icons-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
@@ -256,7 +257,7 @@ function CommitteeProjectInfoPage() {
 				context: { projectId: project.id },
 				// このエンドポイントでは INVALID_REQUEST のみ業務上のメッセージ（トーストに載せても問題ない内容）を返す。
 				resolveMessage: ({ error: e, fallbackMessage }) => {
-					if (isClientError(e) && e.code === "INVALID_REQUEST") {
+					if (isClientError(e) && e.code === ErrorCode.INVALID_REQUEST) {
 						return e.message;
 					}
 					return fallbackMessage;
