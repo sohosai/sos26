@@ -27,6 +27,20 @@ export const allowedMimeTypes = [
 export const mimeTypeSchema = z.enum(allowedMimeTypes);
 export type AllowedMimeType = z.infer<typeof mimeTypeSchema>;
 
+/** 画像として扱える MIME タイプ */
+export const allowedImageMimeTypes = [
+	"image/jpeg",
+	"image/png",
+	"image/gif",
+	"image/webp",
+] as const satisfies readonly AllowedMimeType[];
+
+/** 画像用 input accept 属性の文字列 */
+export const imageAcceptAttribute = allowedImageMimeTypes.join(",");
+
+/** 人間が読める画像形式一覧 */
+export const allowedImageExtensions = "JPEG, PNG, GIF, WebP";
+
 /** MIMEタイプ → 表示名のマップ */
 export const mimeTypeLabels: Record<AllowedMimeType, string> = {
 	"image/jpeg": "JPEG",
@@ -94,6 +108,17 @@ export function isAllowedFileType(file: {
 }): boolean {
 	const effectiveType = resolveFileMimeType(file);
 	return allowedMimeTypes.includes(effectiveType as AllowedMimeType);
+}
+
+/** ファイルが画像として扱える MIME タイプか判定 */
+export function isAllowedImageFile(file: {
+	name: string;
+	type: string;
+}): boolean {
+	const effectiveType = resolveFileMimeType(file);
+	return allowedImageMimeTypes.includes(
+		effectiveType as (typeof allowedImageMimeTypes)[number]
+	);
 }
 
 /** 拡張子がブラウザストリーミング対応か判定（プレビュー用） */

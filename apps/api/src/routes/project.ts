@@ -302,9 +302,18 @@ projectRoute.get("/list", requireAuth, async c => {
 				},
 			},
 		},
+		include: {
+			publicInfo: { select: { iconFileId: true } },
+		},
 	});
 
-	return c.json({ projects });
+	// サイドバーの企画セレクタでアイコンを表示するため、公開情報のアイコンIDを含める
+	return c.json({
+		projects: projects.map(({ publicInfo, ...project }) => ({
+			...project,
+			iconFileId: publicInfo?.iconFileId ?? null,
+		})),
+	});
 });
 
 // ─────────────────────────────────────────

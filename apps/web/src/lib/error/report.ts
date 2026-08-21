@@ -21,6 +21,8 @@ const IMPORTANT_ERROR_OPERATIONS = [
 	"update_deletion_status",
 	"api_response_validation",
 	"download_files_zip",
+	"update_map_setting",
+	"update_project_public_info",
 ] as const;
 
 type ImportantErrorOperation = (typeof IMPORTANT_ERROR_OPERATIONS)[number];

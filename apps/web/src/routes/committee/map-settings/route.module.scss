@@ -1,0 +1,22 @@
+.header {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	margin-bottom: var(--space-5);
+}
+
+.callout {
+	max-width: 720px;
+	margin-bottom: var(--space-4);
+}
+
+.card {
+	max-width: 720px;
+}
+
+@media (max-width: 900px) {
+	.callout,
+	.card {
+		max-width: 100%;
+	}
+}

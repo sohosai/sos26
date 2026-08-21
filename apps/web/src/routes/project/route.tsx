@@ -1,5 +1,5 @@
 import { Callout, Heading, Text } from "@radix-ui/themes";
-import type { Project } from "@sos26/shared";
+import type { MyProject, Project } from "@sos26/shared";
 import {
 	createFileRoute,
 	Outlet,
@@ -20,6 +20,7 @@ import {
 import { listProjectForms } from "@/lib/api/project-form";
 import { listProjectInquiries } from "@/lib/api/project-inquiry";
 import { listProjectNotices } from "@/lib/api/project-notice";
+import { getProjectPublicInfo } from "@/lib/api/project-public-info";
 import { requireAuth, useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
 import { useProjectStore } from "@/lib/project/store";
@@ -113,22 +114,34 @@ export const Route = createFileRoute("/project")({
 		}
 	},
 	loader: async () => {
-		const { selectedProjectId } = useProjectStore.getState();
+		const store = useProjectStore.getState();
+		const { selectedProjectId } = store;
 
 		if (!selectedProjectId) {
 			return {
 				hasUnansweredForms: false,
 				hasUncheckedNotices: false,
 				hasUnreadInquiryComments: false,
+				publicInfoProjectId: null,
+				publicInfo: null,
+				publicInfoLoadFailed: false,
 			};
 		}
 
-		const [formsResult, noticesResult, inquiriesResult] =
+		const [formsResult, noticesResult, inquiriesResult, publicInfoResult] =
 			await Promise.allSettled([
 				listProjectForms(selectedProjectId),
 				listProjectNotices(selectedProjectId),
 				listProjectInquiries(selectedProjectId),
+				getProjectPublicInfo(selectedProjectId),
 			]);
+
+		// 企画公開情報は企画情報ページと共用する（重複取得を避ける）
+		// サイドバーのアイコンは /project/list が返す iconFileId を使う
+		const publicInfo =
+			publicInfoResult.status === "fulfilled"
+				? publicInfoResult.value.publicInfo
+				: null;
 
 		const forms =
 			formsResult.status === "fulfilled" ? formsResult.value.forms : [];
@@ -161,6 +174,9 @@ export const Route = createFileRoute("/project")({
 			hasUnansweredForms,
 			hasUncheckedNotices,
 			hasUnreadInquiryComments,
+			publicInfoProjectId: selectedProjectId,
+			publicInfo,
+			publicInfoLoadFailed: publicInfoResult.status === "rejected",
 		};
 	},
 	component: ProjectLayout,
@@ -239,7 +255,8 @@ function ProjectLayout() {
 			const { project } = await joinProject({ inviteCode });
 
 			if (!projects.some(p => p.id === project.id)) {
-				setProjects([...projects, project]);
+				// アイコンは直後の invalidate による一覧再取得で反映される
+				setProjects([...projects, { ...project, iconFileId: null }]);
 			}
 
 			setSelectedProjectId(project.id);
@@ -268,12 +285,11 @@ function ProjectLayout() {
 				projectId={selectedProjectId}
 				projectSelector={
 					<ProjectSelector
-						projects={projects.map((project: Project) => {
-							return {
-								id: project.id,
-								name: project.name,
-							};
-						})}
+						projects={projects.map((project: MyProject) => ({
+							id: project.id,
+							name: project.name,
+							iconFileId: project.iconFileId,
+						}))}
 						selectedProjectId={selectedProjectId}
 						collapsed={sidebarCollapsed}
 						onSelectProject={handleSelectProject}
@@ -320,7 +336,8 @@ function ProjectLayout() {
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}
 				onCreated={project => {
-					setProjects([...projects, project]);
+					// アイコンは直後の invalidate による一覧再取得で反映される
+					setProjects([...projects, { ...project, iconFileId: null }]);
 					setSelectedProjectId(project.id);
 					router.invalidate();
 				}}

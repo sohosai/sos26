@@ -5,7 +5,7 @@ import {
 	requestUploadUrlRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
-import { stream } from "hono/streaming";
+
 import { env } from "../lib/env";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
@@ -24,7 +24,7 @@ import {
 	generatePreviewUrl,
 	generateUploadUrl,
 	getObject,
-	objectExists,
+	getObjectSize,
 } from "../lib/storage/presign";
 import { requireAuth } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -174,9 +174,15 @@ fileRoute.post("/multipart/complete", requireAuth, async c => {
 
 	await completeMultipartUploadServer(file.key, parsed.uploadId);
 
+	// size はアップロード要求時の自己申告値なので、S3 上の実サイズで上書きする
+	const actualSize = await getObjectSize(file.key);
+	if (actualSize === null) {
+		throw Errors.validationError("ファイルがアップロードされていません");
+	}
+
 	const updated = await prisma.file.update({
 		where: { id: parsed.fileId },
-		data: { status: "CONFIRMED" },
+		data: { status: "CONFIRMED", size: actualSize },
 	});
 
 	return c.json({ file: toFileResponse(updated) });
@@ -238,15 +244,17 @@ fileRoute.post("/:id/confirm", requireAuth, async c => {
 		return c.json({ file: toFileResponse(file) });
 	}
 
-	// S3 上にオブジェクトが存在するか確認
-	const exists = await objectExists(file.key);
-	if (!exists) {
+	// S3 上にオブジェクトが存在するか確認し、実サイズを取得する
+	// （size はアップロード要求時の自己申告値のため、ここで実測値に上書きする。
+	//   GET /files/:id/content の Content-Length がボディと食い違うのを防ぐ）
+	const actualSize = await getObjectSize(file.key);
+	if (actualSize === null) {
 		throw Errors.validationError("ファイルがアップロードされていません");
 	}
 
 	const updated = await prisma.file.update({
 		where: { id: fileId },
-		data: { status: "CONFIRMED" },
+		data: { status: "CONFIRMED", size: actualSize },
 	});
 
 	return c.json({ file: toFileResponse(updated) });
@@ -382,30 +390,23 @@ fileRoute.get("/:id/content", async c => {
 		throw Errors.internal("ファイルの取得に失敗しました");
 	}
 
-	c.header("Content-Type", file.mimeType);
-	c.header("Content-Length", String(file.size));
-	c.header(
-		"Cache-Control",
-		file.isPublic ? "public, max-age=86400" : "private, max-age=3600"
-	);
 	const encodedFileName = encodeURIComponent(file.fileName);
-	c.header(
-		"Content-Disposition",
-		`inline; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`
-	);
 
-	return stream(c, async s => {
-		const readable = s3Body.transformToWebStream();
-		const reader = readable.getReader();
-		try {
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-				await s.write(value);
-			}
-		} finally {
-			reader.releaseLock();
-		}
+	// AWS SDK の ReadableStream 型は DOM 型なしでは Response のボディ型と一致しないため変換する
+	const bodyStream =
+		s3Body.transformToWebStream() as unknown as ConstructorParameters<
+			typeof Response
+		>[0];
+
+	return new Response(bodyStream, {
+		headers: {
+			"Content-Type": file.mimeType,
+			"Content-Length": String(file.size),
+			"Cache-Control": file.isPublic
+				? "public, max-age=86400"
+				: "private, max-age=3600",
+			"Content-Disposition": `inline; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`,
+		},
 	});
 });
 

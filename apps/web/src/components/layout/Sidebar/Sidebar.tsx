@@ -219,11 +219,16 @@ export function Sidebar({
 	const hasProjectRegistrationPermission =
 		permissions?.has("PROJECT_REGISTRATION_FORM_CREATE") === true ||
 		permissions?.has("PROJECT_REGISTRATION_FORM_DELIVER") === true;
+	const hasMapAppSettingPermission =
+		permissions?.has("MAP_APP_SETTING_EDIT") ?? false;
 	const shouldCheckMemberEdit = menuItems.some(
 		item => item.to === "/committee/members"
 	);
 	const shouldCheckProjectRegistration = menuItems.some(
 		item => item.to === "/committee/project-registration"
+	);
+	const shouldCheckMapAppSetting = menuItems.some(
+		item => item.to === "/committee/map-settings"
 	);
 
 	useEffect(() => {
@@ -285,6 +290,13 @@ export function Sidebar({
 			shouldCheckProjectRegistration &&
 			hasProjectRegistrationPermission !== true &&
 			item.to === "/committee/project-registration"
+		) {
+			return false;
+		}
+		if (
+			shouldCheckMapAppSetting &&
+			hasMapAppSettingPermission !== true &&
+			item.to === "/committee/map-settings"
 		) {
 			return false;
 		}

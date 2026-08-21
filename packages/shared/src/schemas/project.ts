@@ -136,8 +136,14 @@ export type CreateProjectResponse = z.infer<typeof createProjectResponseSchema>;
 // GET /project/list
 // ─────────────────────────────────────────────────────────────
 
+/** 企画一覧用。サイドバー表示に使うアイコン画像IDを含む */
+export const myProjectSchema = projectSchema.extend({
+	iconFileId: z.string().nullable(),
+});
+export type MyProject = z.infer<typeof myProjectSchema>;
+
 export const listMyProjectsResponseSchema = z.object({
-	projects: z.array(projectSchema),
+	projects: z.array(myProjectSchema),
 });
 
 export type ListMyProjectsResponse = z.infer<

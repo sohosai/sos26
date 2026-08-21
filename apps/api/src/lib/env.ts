@@ -46,7 +46,16 @@ const envSchema = z.object({
 	NOTIFICATION_SYNC_PASSWORD: z.string().min(1),
 
 	// S3互換オブジェクトストレージ
-	S3_ENDPOINT: z.string().min(1),
+	// スキームは省略可。省略時は https を補う。
+	// ローカルの MinIO 等 http で動かす場合は http:// を明示すること。
+	// 補完はここだけで行い、env.S3_ENDPOINT は常に完全なURLとして扱えるようにする。
+	S3_ENDPOINT: z
+		.string()
+		.min(1)
+		.transform(v => {
+			const trimmed = v.trim();
+			return /^https?:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`;
+		}),
 	S3_REGION: z.string().default("jp-north-1"),
 	S3_BUCKET: z.string().min(1),
 	S3_ACCESS_KEY_ID: z.string().min(1),

@@ -544,6 +544,32 @@ erDiagram
   String formItemOptionId FK
   DateTime createdAt
 }
+"ProjectPublicInfo" {
+  String id PK
+  String projectId FK,UK
+  String(200) description "nullable"
+  String iconFileId FK "nullable"
+  OpenStatus openStatus
+  StockStatus stockStatus
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectPublicMapImage" {
+  String id PK
+  String projectPublicInfoId FK
+  String fileId FK
+  Int sortOrder
+  DateTime createdAt
+}
+"MapAppSetting" {
+  String id PK
+  Boolean isDescriptionEditable
+  Boolean isIconEditable
+  Boolean isMapImagesEditable
+  Boolean isOpenStatusEditable
+  Boolean isStockStatusEditable
+  DateTime updatedAt
+}
 "Project" }o--|| "User" : owner
 "Project" }o--o| "User" : subOwner
 "ProjectMember" }o--|| "Project" : project
@@ -650,6 +676,10 @@ erDiagram
 "ProjectRegistrationFormAnswerFile" }o--|| "File" : file
 "ProjectRegistrationFormAnswerSelectedOption" }o--|| "ProjectRegistrationFormAnswer" : answer
 "ProjectRegistrationFormAnswerSelectedOption" }o--|| "ProjectRegistrationFormItemOption" : formItemOption
+"ProjectPublicInfo" |o--|| "Project" : project
+"ProjectPublicInfo" }o--o| "File" : iconFile
+"ProjectPublicMapImage" }o--|| "ProjectPublicInfo" : projectPublicInfo
+"ProjectPublicMapImage" }o--|| "File" : file
 ```
 
 ### `EmailVerification`
@@ -1361,3 +1391,38 @@ Properties as follows:
 - `answerId`:
 - `formItemOptionId`:
 - `createdAt`:
+
+### `ProjectPublicInfo`
+
+Properties as follows:
+
+- `id`:
+- `projectId`:
+- `description`:
+- `iconFileId`:
+- `openStatus`:
+- `stockStatus`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectPublicMapImage`
+
+Properties as follows:
+
+- `id`:
+- `projectPublicInfoId`:
+- `fileId`:
+- `sortOrder`:
+- `createdAt`:
+
+### `MapAppSetting`
+
+Properties as follows:
+
+- `id`:
+- `isDescriptionEditable`:
+- `isIconEditable`:
+- `isMapImagesEditable`:
+- `isOpenStatusEditable`:
+- `isStockStatusEditable`:
+- `updatedAt`:

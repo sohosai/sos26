@@ -157,6 +157,8 @@ FILE_TOKEN_SECRET=your-file-token-secret-at-least-32-chars
 
 **S3_ENDPOINT:**
 - 空であってはならない必須文字列
+- スキーム（`http://` / `https://`）は省略可。省略した場合は `https://` を補完する
+- ローカルの MinIO 等を http で動かす場合は `http://` を明示すること
 
 **S3_REGION:**
 - 既定は `jp-north-1`

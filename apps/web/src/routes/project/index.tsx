@@ -491,7 +491,10 @@ function ProjectIndexPage() {
 				onOpenChange={setDetailEditOpen}
 				project={project}
 				onUpdated={updated => {
-					setProjects(projects.map(p => (p.id === updated.id ? updated : p)));
+					// iconFileId は詳細更新のレスポンスに含まれないため既存の値を残す
+					setProjects(
+						projects.map(p => (p.id === updated.id ? { ...p, ...updated } : p))
+					);
 					void (async () => {
 						const [formsResult, responsesResult] = await Promise.allSettled([
 							getActiveProjectRegistrationForms(updated.type, updated.location),
