@@ -21,7 +21,7 @@ vi.mock("../lib/env", () => ({
 
 vi.mock("../lib/prisma", () => {
 	const prisma = {
-		user: { findFirst: vi.fn() },
+		user: { findFirst: vi.fn(), findMany: vi.fn() },
 		project: { findFirst: vi.fn() },
 		projectMember: { findFirst: vi.fn(), findMany: vi.fn() },
 		projectPublicInfo: {
@@ -35,6 +35,14 @@ vi.mock("../lib/prisma", () => {
 			deleteMany: vi.fn(),
 			createMany: vi.fn(),
 		},
+		// findReferencedFileIds が確認する、他機能側のファイル参照先
+		noticeAttachment: { findMany: vi.fn() },
+		inquiryAttachment: { findMany: vi.fn() },
+		formAttachment: { findMany: vi.fn() },
+		formAnswerFile: { findMany: vi.fn() },
+		formItemEditHistoryFile: { findMany: vi.fn() },
+		projectRegistrationFormItemEditHistoryFile: { findMany: vi.fn() },
+		projectRegistrationFormAnswerFile: { findMany: vi.fn() },
 		mapAppSetting: { findUnique: vi.fn() },
 		file: { findMany: vi.fn(), updateMany: vi.fn() },
 		$transaction: vi.fn(),
@@ -180,6 +188,17 @@ function setupUpdateMocks(
 	mockPrisma.projectPublicMapImage.createMany.mockResolvedValue({ count: 0 });
 	mockPrisma.projectPublicInfo.findMany.mockResolvedValue([]);
 	mockPrisma.projectPublicMapImage.findMany.mockResolvedValue([]);
+	// findReferencedFileIds が確認する他機能側の参照先。既定では「どこからも参照されていない」
+	mockPrisma.user.findMany.mockResolvedValue([]);
+	mockPrisma.noticeAttachment.findMany.mockResolvedValue([]);
+	mockPrisma.inquiryAttachment.findMany.mockResolvedValue([]);
+	mockPrisma.formAttachment.findMany.mockResolvedValue([]);
+	mockPrisma.formAnswerFile.findMany.mockResolvedValue([]);
+	mockPrisma.formItemEditHistoryFile.findMany.mockResolvedValue([]);
+	mockPrisma.projectRegistrationFormItemEditHistoryFile.findMany.mockResolvedValue(
+		[]
+	);
+	mockPrisma.projectRegistrationFormAnswerFile.findMany.mockResolvedValue([]);
 	mockPrisma.file.updateMany.mockResolvedValue({ count: 0 });
 	mockPrisma.$transaction.mockImplementation(async cb => cb(mockPrisma));
 }
@@ -477,6 +496,26 @@ describe("PUT /project/:projectId/public-info", () => {
 			});
 			mockPrisma.projectPublicInfo.findMany.mockResolvedValue([
 				{ iconFileId: "clffffffffffffffold" },
+			] as any);
+
+			const res = await put(app, { iconFileId: ICON_FILE_ID });
+
+			expect(res.status).toBe(200);
+			expect(mockPrisma.file.updateMany).not.toHaveBeenCalled();
+		});
+
+		it("ユーザーのアバターとして使われているファイルは削除しない", async () => {
+			// 他人のアバターの fileId を一時的にアイコンへ流用→解除しても、
+			// アバターを壊してはいけない（本来は project-public-info のテーブルからしか
+			// 参照が外れておらず、softDeleteUnreferencedFiles が他機能を見落とすと壊れる）
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks({
+				before: { iconFileId: "clffffffffffffffold", mapImages: [] },
+				saved: { iconFileId: ICON_FILE_ID },
+			});
+			mockPrisma.user.findMany.mockResolvedValue([
+				{ avatarFileId: "clffffffffffffffold" },
 			] as any);
 
 			const res = await put(app, { iconFileId: ICON_FILE_ID });

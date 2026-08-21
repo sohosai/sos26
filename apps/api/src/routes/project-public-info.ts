@@ -13,6 +13,7 @@ import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
 import { bumpPublicApiCacheVersion } from "../lib/public-api-cache";
+import { findReferencedFileIds } from "../lib/storage/references";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -184,6 +185,10 @@ async function savePublicInfo(params: SavePublicInfoParams) {
  *
  * 差し替え・削除した画像をそのまま残すと、公開ファイルとして
  * URLを知る者から参照され続け、ストレージにも溜まり続けるため。
+ *
+ * ファイルIDは他機能（アバター等）から流用されている可能性があるため、
+ * この企画の公開情報から外れたというだけでは削除してよい根拠にならない。
+ * 削除前に findReferencedFileIds で他機能からの参照有無を必ず確認する。
  */
 async function softDeleteUnreferencedFiles(
 	previousFileIds: string[],
@@ -195,25 +200,8 @@ async function softDeleteUnreferencedFiles(
 	);
 	if (removedIds.length === 0) return;
 
-	// 他の企画からも参照されているファイルは消さない
-	const [stillUsedAsIcon, stillUsedAsMapImage] = await Promise.all([
-		prisma.projectPublicInfo.findMany({
-			where: { iconFileId: { in: removedIds } },
-			select: { iconFileId: true },
-		}),
-		prisma.projectPublicMapImage.findMany({
-			where: { fileId: { in: removedIds } },
-			select: { fileId: true },
-		}),
-	]);
-
-	const stillUsed = new Set<string>([
-		...stillUsedAsIcon
-			.map(i => i.iconFileId)
-			.filter((id): id is string => !!id),
-		...stillUsedAsMapImage.map(i => i.fileId),
-	]);
-	const deletableIds = removedIds.filter(id => !stillUsed.has(id));
+	const referenced = await findReferencedFileIds(removedIds);
+	const deletableIds = removedIds.filter(id => !referenced.has(id));
 	if (deletableIds.length === 0) return;
 
 	await prisma.file.updateMany({
