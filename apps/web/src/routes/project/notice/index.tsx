@@ -42,6 +42,7 @@ type SelectedNotice = {
 	id: string;
 	projectId: string;
 	initialNotice: NoticeDetail | null;
+	source: "list" | "search";
 };
 
 const noticeColumnHelper = createColumnHelper<NoticeRow>();
@@ -166,7 +167,11 @@ function RouteComponent() {
 	useEffect(() => {
 		const targetNoticeId = search.noticeId;
 		if (!targetNoticeId) {
-			setSelectedNotice(null);
+			// 一覧から開いたお知らせは、既読更新によるloaderの再実行後も閉じない。
+			// URL経由で開いた場合のみ、noticeIdがなくなったら選択を解除する。
+			setSelectedNotice(current =>
+				current?.source === "search" ? null : current
+			);
 			return;
 		}
 
@@ -195,6 +200,7 @@ function RouteComponent() {
 						id: targetNoticeId,
 						projectId: result.projectId,
 						initialNotice: result.notice,
+						source: "search",
 					});
 				} else {
 					toast.error("このお知らせを表示する権限がありません");
@@ -262,6 +268,7 @@ function RouteComponent() {
 							id: row.original.id,
 							projectId: selectedProjectId,
 							initialNotice: null,
+							source: "list",
 						});
 					}}
 				>
