@@ -73,6 +73,12 @@ export const Route = createFileRoute("/project/public-info")({
 		return { setting };
 	},
 	component: ProjectPublicInfoPage,
+	head: () => ({
+		meta: [
+			{ title: "企画情報 | 雙峰祭オンラインシステム" },
+			{ name: "description", content: "企画情報の入力" },
+		],
+	}),
 });
 
 type FormValues = {
@@ -436,7 +442,7 @@ function ProjectPublicInfoPage() {
 			<div className={styles.header}>
 				<Heading size="6">企画情報</Heading>
 				<Text size="2" color="gray">
-					設定した情報は「雙峰祭オンラインマップ」に公開されます。
+					設定した情報は「企画検索システム」に公開されます。
 				</Text>
 			</div>
 
@@ -467,7 +473,7 @@ function ProjectPublicInfoPage() {
 					<div>
 						<Heading size="4">紹介文</Heading>
 						<Text color="gray" size="2">
-							オンラインマップに表示される企画の紹介文です。
+							企画検索システムに表示される企画の紹介文です。
 						</Text>
 					</div>
 					{isEditable && !setting.isDescriptionEditable && <RestrictedNotice />}
@@ -564,9 +570,9 @@ function ProjectPublicInfoPage() {
 			<Card className={styles.card}>
 				<Flex direction="column" gap="4">
 					<div>
-						<Heading size="4">Map掲載画像</Heading>
+						<Heading size="4">詳細画像</Heading>
 						<Text size="2" color="gray">
-							オンラインマップに掲載される画像です（最大{MAX_MAP_IMAGES}
+							企画検索システムに掲載される画像です（最大{MAX_MAP_IMAGES}
 							枚）。ドラッグで並び替えできます。
 						</Text>
 					</div>
