@@ -26,6 +26,12 @@ export const Route = createFileRoute("/committee/map-settings")({
 		return { setting };
 	},
 	component: MapSettingsPage,
+	head: () => ({
+		meta: [
+			{ title: "企画検索システム | 雙峰祭オンラインシステム" },
+			{ name: "description", content: "企画が入力した企画情報の管理" },
+		],
+	}),
 });
 
 const SWITCHES: { key: keyof MapAppSetting; label: string }[] = [
@@ -117,7 +123,7 @@ function MapSettingsPage() {
 	return (
 		<div>
 			<div className={styles.header}>
-				<Heading size="6">雙峰祭オンラインマップ</Heading>
+				<Heading size="6">企画検索システム</Heading>
 				<Text size="2" color="gray">
 					企画側で編集できる項目を設定します。変更は即時反映されます。
 				</Text>
