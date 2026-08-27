@@ -71,7 +71,7 @@ export const committeeMenuItems: MenuItem[] = [
 		to: "/committee/project-registration",
 	},
 	{
-		label: "雙峰祭オンラインマップ",
+		label: "企画検索システム",
 		icon: <IconLayoutDashboard size={18} />,
 		to: "/committee/map-settings",
 	},
