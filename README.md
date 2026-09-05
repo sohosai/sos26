@@ -10,8 +10,8 @@
 	- [前提条件](#前提条件)
 	- [セットアップ](#セットアップ)
 	- [開発](#開発)
-		- [すべてのアプリを同時に起動](#すべてのアプリを同時に起動)
-		- [個別に起動](#個別に起動)
+		- [Docker Compose で起動](#docker-compose-で起動)
+		- [ローカルで個別に起動](#ローカルで個別に起動)
 	- [ビルド](#ビルド)
 	- [テスト](#テスト)
 	- [コード品質](#コード品質)
@@ -40,28 +40,66 @@
 
 ## 前提条件
 
+- Docker / Docker Compose
 - Bun: >= 1.2.10
 
 ## セットアップ
 
+開発環境の起動は Docker Compose を前提にしています。最初に環境変数ファイルを作成してください。
+
 ```bash
-bun install
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env
 ```
+
+`apps/api/.env` はコンテナ内から接続するため、ローカル開発では次の接続先を使います。
+
+- `DATABASE_URL="postgres://app:password@db:5432/app"`
+- `S3_ENDPOINT=http://object-storage:9000`
+- `S3_BUCKET=local-bucket`
+- `S3_ACCESS_KEY_ID=dev_access_key`
+- `S3_SECRET_ACCESS_KEY=dev_secret_access_key`
 
 ## 開発
 
-### すべてのアプリを同時に起動
+### Docker Compose で起動
 
 ```bash
-bun run dev
+docker compose --profile setup up
 ```
 
-### 個別に起動
+起動時に `app` コンテナ内で依存関係のインストール、Prisma マイグレーション、Web/API の開発サーバー起動が実行されます。
+
+- Web: http://localhost:5173
+- API: http://localhost:3000
+- Postgres: `localhost:5432`
+- RustFS API: http://localhost:9000
+- RustFS Console: http://localhost:9001
+
+2回目以降、バケット作成が不要な場合は次のコマンドでも起動できます。
+
+```bash
+docker compose up
+```
+
+停止する場合:
+
+```bash
+docker compose down
+```
+
+DB やオブジェクトストレージのデータも削除して初期化する場合:
+
+```bash
+docker compose down -v
+```
+
+### ローカルで個別に起動
 
 - API: `cd apps/api && bun run dev`  （http://localhost:3000）
 - Web: `cd apps/web && bun run dev`  （http://localhost:5173）
 
-Web の `VITE_API_BASE_URL` は `apps/web/.env`（または `.env.local`）で設定できます（既定は `http://localhost:3000`）。
+ローカルで直接起動する場合は、別途 Postgres と S3 互換オブジェクトストレージを用意し、`apps/api/.env` の接続先をローカル向けに変更してください。Web の `VITE_API_BASE_URL` は `apps/web/.env`（または `.env.local`）で設定できます（既定は `http://localhost:3000`）。
 
 ## ビルド
 
@@ -134,7 +172,10 @@ bun run ci
 
 | コマンド | 説明 |
 |---------|------|
-| `bun run dev` | すべてのアプリを同時に起動 |
+| `docker compose --profile setup up` | 開発環境を起動（Web/API/DB/オブジェクトストレージ） |
+| `docker compose up` | バケット作成を除いて開発環境を起動 |
+| `docker compose down` | 開発環境を停止 |
+| `bun run dev` | ローカル環境で全アプリを同時に起動 |
 | `bun run build` | すべてのパッケージをビルド |
 | `bun run typecheck` | TypeScript の型チェック |
 | `bun run test:run` | テスト（ワンショット） |
