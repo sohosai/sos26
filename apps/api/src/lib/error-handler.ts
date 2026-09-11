@@ -1,3 +1,4 @@
+import { SpanStatusCode, trace } from "@opentelemetry/api";
 import * as Sentry from "@sentry/bun";
 import type { ApiErrorResponse } from "@sos26/shared";
 import type { ErrorHandler } from "hono";
@@ -38,6 +39,12 @@ export const errorHandler: ErrorHandler = (err, c) => {
 	}
 
 	// その他の予期しないエラー: 詳細を隠蔽してINTERNALとして返却
+	// OTEL-004: 予期しないエラーのみ span status を ERROR として記録する。
+	// AppError / ZodError は正常系の一部として扱い、エラー率の指標を汚染しないため対象外。
+	const activeSpan = trace.getActiveSpan();
+	activeSpan?.recordException(err);
+	activeSpan?.setStatus({ code: SpanStatusCode.ERROR });
+
 	Sentry.captureException(err);
 	logUnexpectedApiError("Internal Error", err, {
 		method: c.req.method,
