@@ -9,7 +9,12 @@ import { useState } from "react";
 import { UserAvatar } from "@/components/common/UserAvatar";
 import styles from "./NewInquiryForm.module.scss";
 
-type UserSummary = { id: string; name: string; avatarFileId?: string | null };
+type UserSummary = {
+	id: string;
+	name: string;
+	role?: "OWNER" | "SUB_OWNER" | "MEMBER";
+	avatarFileId?: string | null;
+};
 
 export function MemberSelectPopover({
 	members,
@@ -24,6 +29,8 @@ export function MemberSelectPopover({
 }) {
 	const [open, setOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
+
+	// console.log("members", members);
 
 	return (
 		<Popover.Root
