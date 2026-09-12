@@ -17,19 +17,19 @@ import { env } from "./lib/env";
  *
  * 詳細な設計・検証結果は docs/observability-spec.md を参照。
  *
- * - NEW_RELIC_LICENSE_KEY が未設定の場合、計装は初期化しない（OTEL-006）。
+ * - NEW_RELIC_LICENSE_KEY が未設定の場合、計装は初期化しない。
  * - Bun は Node の自動計装（モジュールパッチ方式）が使えないため、
  *   HTTP サーバスパンは @hono/otel ミドルウェア、DB スパンは
- *   @prisma/instrumentation による明示的計装で構成する（C-01）。
+ *   @prisma/instrumentation による明示的計装で構成する。
  * - Sentry (@sentry/bun) は内部で OpenTelemetry のグローバル状態を
  *   占有するため、Sentry.init() 側で skipOpenTelemetrySetup: true を
- *   指定した上で、この初期化を Sentry の初期化後に行うこと（C-04）。
+ *   指定した上で、この初期化を Sentry の初期化後に行うこと。
  */
 
 /**
  * New Relic へ送信する直前に、スパン属性からクエリ文字列を除去する SpanExporter ラッパー
  *
- * OTEL-105: files ルートはアクセストークンをクエリパラメータ `token` で受け取るため、
+ * files ルートはアクセストークンをクエリパラメータ `token` で受け取るため、
  * @hono/otel が付与する `url.full` をそのまま送信するとトークンが外部に流出する。
  *
  * SpanProcessor.onEnd() 内での Span.setAttribute() は、スパン終了後は
@@ -84,7 +84,7 @@ if (env.NEW_RELIC_LICENSE_KEY) {
 	});
 	trace.setGlobalTracerProvider(provider);
 
-	// OTEL-002: Prisma Client のトレーシングフックを有効化する。
+	// Prisma Client のトレーシングフックを有効化する。
 	// lib/prisma.ts で PrismaClient がインスタンス化される前に登録する必要があるため、
 	// otel.ts は index.ts の先頭（他のモジュールの import より前）で読み込むこと。
 	registerInstrumentations({
@@ -94,10 +94,10 @@ if (env.NEW_RELIC_LICENSE_KEY) {
 }
 
 /**
- * 外部 I/O（OTEL-003）を計装するための Tracer
+ * 外部 I/O を計装するための Tracer
  *
  * NEW_RELIC_LICENSE_KEY 未設定時は no-op のスパンを返すため、
- * 呼び出し側で有効/無効を分岐する必要はない（OTEL-006）。
+ * 呼び出し側で有効/無効を分岐する必要はない。
  */
 export const tracer = trace.getTracer(env.OTEL_SERVICE_NAME);
 

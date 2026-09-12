@@ -1,6 +1,6 @@
 import "./lib/sentry";
 // otel.ts は Sentry 初期化の直後、かつ Prisma Client を使用するモジュール（各 routes 経由）
-// より前に読み込む必要がある。詳細: docs/observability-spec.md C-04, OTEL-002
+// より前に読み込む必要がある。詳細: docs/observability-spec.md §3, §4
 import "./otel";
 import { httpInstrumentationMiddleware } from "@hono/otel";
 import { Hono } from "hono";
@@ -42,8 +42,8 @@ import "./lib/storage/checkers";
 
 const app = new Hono();
 
-// HTTP サーバスパン（OTEL-001）
-// NEW_RELIC_LICENSE_KEY 未設定時は no-op として動作する（OTEL-006）。
+// HTTP サーバスパン
+// NEW_RELIC_LICENSE_KEY 未設定時は no-op として動作する。
 app.use(httpInstrumentationMiddleware({ serviceName: env.OTEL_SERVICE_NAME }));
 
 // 統一エラーハンドラ

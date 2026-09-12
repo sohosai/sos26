@@ -23,7 +23,7 @@ export function initStorage() {
 		forcePathStyle: true,
 	});
 
-	// OTEL-003: S3 互換オブジェクトストレージへの呼び出しを計装する。
+	// S3 互換オブジェクトストレージへの呼び出しを計装する。
 	// SDK の middleware stack に一度だけ登録することで、presign.ts / multipart.ts など
 	// 個々の呼び出し箇所を変更せずに全操作をスパンとして記録できる。
 	client.middlewareStack.add(

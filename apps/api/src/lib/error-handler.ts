@@ -17,7 +17,7 @@ import { logUnexpectedApiError } from "./error-logging";
 export const errorHandler: ErrorHandler = (err, c) => {
 	// AppError: 明示的にthrowされたビジネスエラー
 	if (err instanceof AppError) {
-		// OTEL-004: @hono/otel は c.error が設定されたままだと span を
+		// @hono/otel は c.error が設定されたままだと span を
 		// 自動で ERROR 化してしまうため、正常系として扱うここでクリアする。
 		c.error = undefined;
 		return c.json(err.toResponse(), err.status as ContentfulStatusCode);
@@ -25,7 +25,7 @@ export const errorHandler: ErrorHandler = (err, c) => {
 
 	// ZodError: リクエストバリデーションエラー
 	if (err instanceof ZodError) {
-		// OTEL-004: 同上（想定内エラーのため span を ERROR 化しない）。
+		// 同上（想定内エラーのため span を ERROR 化しない）。
 		c.error = undefined;
 		const response: ApiErrorResponse = {
 			error: {
@@ -43,7 +43,7 @@ export const errorHandler: ErrorHandler = (err, c) => {
 	}
 
 	// その他の予期しないエラー: 詳細を隠蔽してINTERNALとして返却
-	// OTEL-004: span への recordException / ERROR 化は @hono/otel が
+	// span への recordException / ERROR 化は @hono/otel が
 	// c.error とレスポンスステータス(500) を見て自動で行うため、ここでは行わない
 	// （二重記録を避けるため）。
 	Sentry.captureException(err);

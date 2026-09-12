@@ -13,7 +13,7 @@ export async function sendPush(
 	subscription: PushSubscription,
 	payload: PushPayload
 ) {
-	// OTEL-003: Web Push 送信を計装する。呼び出し側の成功/失敗ハンドリング
+	// Web Push 送信を計装する。呼び出し側の成功/失敗ハンドリング
 	// （無効な購読の削除等）は変更しない。
 	return tracer.startActiveSpan("webpush.sendNotification", async span => {
 		try {

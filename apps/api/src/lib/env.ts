@@ -71,7 +71,7 @@ const envSchema = z.object({
 	SENTRY_ENVIRONMENT: z.string().default("development"),
 
 	// OpenTelemetry / New Relic
-	// NEW_RELIC_LICENSE_KEY が未設定の場合、計装は初期化されない（docs/observability-spec.md OTEL-006）
+	// NEW_RELIC_LICENSE_KEY が未設定の場合、計装は初期化されない
 	NEW_RELIC_LICENSE_KEY: z.string().min(1).optional(),
 	OTEL_SERVICE_NAME: z.string().min(1).default("sos26-api"),
 	OTEL_SERVICE_VERSION: z.string().min(1).default("unknown"),

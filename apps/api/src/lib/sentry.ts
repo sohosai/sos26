@@ -6,6 +6,14 @@ if (env.SENTRY_DSN) {
 		dsn: env.SENTRY_DSN,
 		environment: env.SENTRY_ENVIRONMENT,
 		tracesSampleRate: 1.0,
+		// BunServer 統合は Bun.serve をグローバルにパッチし、リクエストごとに
+		// Sentry 独自の http.server スパンを作る。@hono/otel も同じく
+		// HTTP サーバスパンを作るため、有効なままだと1リクエストにつき
+		// スパンが二重に生成されてしまう。Sentry.captureException による
+		// エラー収集は integrations から外れても機能するため、ここで除外する。
+		integrations: Sentry.getDefaultIntegrations({}).filter(
+			integration => integration.name !== "BunServer"
+		),
 		// OpenTelemetry (New Relic 向け) のグローバル TracerProvider / ContextManager と
 		// 同一プロセスで共存させるための設定。
 		// Sentry は内部で OpenTelemetry を使用しており、これを指定しない場合

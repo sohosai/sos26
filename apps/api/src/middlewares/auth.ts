@@ -48,8 +48,7 @@ export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
 	let firebaseUid: string | null = null;
 
 	try {
-		// OTEL-003: Firebase ID トークン検証を計装する。
-		// OTEL-103: トークン本体は属性に含めない。
+		// Firebase ID トークン検証を計装する。トークン本体は属性に含めない。
 		const decodedToken = await tracer.startActiveSpan(
 			"firebase.verifyIdToken",
 			async span => {

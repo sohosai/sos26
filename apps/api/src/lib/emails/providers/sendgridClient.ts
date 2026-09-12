@@ -21,8 +21,7 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
 	try {
 		const parsed = SendEmailInputSchema.parse(input);
 
-		// OTEL-003: メール送信（SendGrid）を計装する。
-		// OTEL-103: 宛先メールアドレス等の個人情報は属性に含めない。
+		// メール送信（SendGrid）を計装する。宛先メールアドレス等の個人情報は属性に含めない。
 		await tracer.startActiveSpan("sendgrid.send", async span => {
 			try {
 				await sgMail.send({

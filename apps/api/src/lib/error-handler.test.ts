@@ -85,7 +85,7 @@ describe("errorHandler", () => {
 		});
 	});
 
-	// OTEL-004: c.error は @hono/otel が span を ERROR 化する際の判定に使われる
+	// c.error は @hono/otel が span を ERROR 化する際の判定に使われる
 	// （hono の compose は onError 呼び出し前に c.error をセットする）。
 	// AppError / ZodError は正常系として扱うため c.error をクリアし、
 	// 予期しないエラーはクリアせず @hono/otel 側の自動記録に委ねる。
