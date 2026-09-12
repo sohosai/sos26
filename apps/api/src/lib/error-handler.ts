@@ -17,11 +17,16 @@ import { logUnexpectedApiError } from "./error-logging";
 export const errorHandler: ErrorHandler = (err, c) => {
 	// AppError: 明示的にthrowされたビジネスエラー
 	if (err instanceof AppError) {
+		// @hono/otel は c.error が設定されたままだと span を
+		// 自動で ERROR 化してしまうため、正常系として扱うここでクリアする。
+		c.error = undefined;
 		return c.json(err.toResponse(), err.status as ContentfulStatusCode);
 	}
 
 	// ZodError: リクエストバリデーションエラー
 	if (err instanceof ZodError) {
+		// 同上（想定内エラーのため span を ERROR 化しない）。
+		c.error = undefined;
 		const response: ApiErrorResponse = {
 			error: {
 				code: "VALIDATION_ERROR",
@@ -38,6 +43,9 @@ export const errorHandler: ErrorHandler = (err, c) => {
 	}
 
 	// その他の予期しないエラー: 詳細を隠蔽してINTERNALとして返却
+	// span への recordException / ERROR 化は @hono/otel が
+	// c.error とレスポンスステータス(500) を見て自動で行うため、ここでは行わない
+	// （二重記録を避けるため）。
 	Sentry.captureException(err);
 	logUnexpectedApiError("Internal Error", err, {
 		method: c.req.method,

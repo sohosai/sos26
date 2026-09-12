@@ -53,6 +53,7 @@
   - ドキュメント記事追加: `docs/how-to/add-docs-article.md`
 - 設定・運用
   - Web 設定: `docs/apps/web/configuration.md`
+  - 分散トレーシング（OpenTelemetry + New Relic）: `docs/observability-spec.md`
 - コントリビュート: `CONTRIBUTING.md`
 
 必要に応じて、各トピックを拡張・更新してください。

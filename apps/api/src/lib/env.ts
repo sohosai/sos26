@@ -70,6 +70,14 @@ const envSchema = z.object({
 	SENTRY_DSN: z.string().url().optional(),
 	SENTRY_ENVIRONMENT: z.string().default("development"),
 
+	// OpenTelemetry / New Relic
+	// NEW_RELIC_LICENSE_KEY が未設定の場合、計装は初期化されない
+	NEW_RELIC_LICENSE_KEY: z.string().min(1).optional(),
+	OTEL_SERVICE_NAME: z.string().min(1).default("sos26-api"),
+	OTEL_SERVICE_VERSION: z.string().min(1).default("unknown"),
+	OTEL_DEPLOYMENT_ENVIRONMENT: z.string().min(1).default("development"),
+	OTEL_TRACES_SAMPLER_ARG: z.coerce.number().min(0).max(1).default(1.0),
+
 	// 企画応募期間（カンマ区切りで複数期間指定可能、未指定の場合は無期限）
 	PROJECT_APPLICATION_PERIODS: z
 		.string()
@@ -132,6 +140,11 @@ export const env = envSchema.parse({
 	SENTRY_DSN: process.env.SENTRY_DSN,
 	SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT,
 	PROJECT_APPLICATION_PERIODS: process.env.PROJECT_APPLICATION_PERIODS,
+	NEW_RELIC_LICENSE_KEY: process.env.NEW_RELIC_LICENSE_KEY,
+	OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME,
+	OTEL_SERVICE_VERSION: process.env.OTEL_SERVICE_VERSION,
+	OTEL_DEPLOYMENT_ENVIRONMENT: process.env.OTEL_DEPLOYMENT_ENVIRONMENT,
+	OTEL_TRACES_SAMPLER_ARG: process.env.OTEL_TRACES_SAMPLER_ARG,
 });
 
 export type Env = z.infer<typeof envSchema>;
