@@ -35,7 +35,7 @@ import { env } from "./lib/env";
  * SpanProcessor.onEnd() 内での Span.setAttribute() は、スパン終了後は
  * isRecording() が false になるため無効化される（サイレントに無視される）。
  * そのため SpanProcessor ではなく、実際の送信直前である SpanExporter.export() で
- * ReadableSpan.attributes（plain object）を直接書き換える（docs/observability-spec.md §11.5）。
+ * ReadableSpan.attributes（plain object）を直接書き換える（docs/observability-spec.md §5）。
  */
 export function withUrlQuerySanitizer(delegate: SpanExporter): SpanExporter {
 	return {

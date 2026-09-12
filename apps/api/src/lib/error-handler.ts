@@ -1,4 +1,3 @@
-import { SpanStatusCode, trace } from "@opentelemetry/api";
 import * as Sentry from "@sentry/bun";
 import type { ApiErrorResponse } from "@sos26/shared";
 import type { ErrorHandler } from "hono";
@@ -18,11 +17,16 @@ import { logUnexpectedApiError } from "./error-logging";
 export const errorHandler: ErrorHandler = (err, c) => {
 	// AppError: 明示的にthrowされたビジネスエラー
 	if (err instanceof AppError) {
+		// OTEL-004: @hono/otel は c.error が設定されたままだと span を
+		// 自動で ERROR 化してしまうため、正常系として扱うここでクリアする。
+		c.error = undefined;
 		return c.json(err.toResponse(), err.status as ContentfulStatusCode);
 	}
 
 	// ZodError: リクエストバリデーションエラー
 	if (err instanceof ZodError) {
+		// OTEL-004: 同上（想定内エラーのため span を ERROR 化しない）。
+		c.error = undefined;
 		const response: ApiErrorResponse = {
 			error: {
 				code: "VALIDATION_ERROR",
@@ -39,12 +43,9 @@ export const errorHandler: ErrorHandler = (err, c) => {
 	}
 
 	// その他の予期しないエラー: 詳細を隠蔽してINTERNALとして返却
-	// OTEL-004: 予期しないエラーのみ span status を ERROR として記録する。
-	// AppError / ZodError は正常系の一部として扱い、エラー率の指標を汚染しないため対象外。
-	const activeSpan = trace.getActiveSpan();
-	activeSpan?.recordException(err);
-	activeSpan?.setStatus({ code: SpanStatusCode.ERROR });
-
+	// OTEL-004: span への recordException / ERROR 化は @hono/otel が
+	// c.error とレスポンスステータス(500) を見て自動で行うため、ここでは行わない
+	// （二重記録を避けるため）。
 	Sentry.captureException(err);
 	logUnexpectedApiError("Internal Error", err, {
 		method: c.req.method,

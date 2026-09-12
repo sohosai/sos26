@@ -20,7 +20,7 @@ Sentry のパフォーマンス計測は導入済みだが、Bun 上では自動
 - **Bun では Node 向けの自動計装（`@opentelemetry/auto-instrumentations-node`）が動作しない**。`require-in-the-middle` によるモジュールパッチに依存しており、Bun のモジュール解決系では安定しないため。Hono on Bun も `node:http` ではなく `Bun.serve` 上で動くため、そもそもサーバスパンを自動計装で取れない。
   → 自動計装に頼らず、ミドルウェア＋手動スパンで明示的に計装する。
 - OpenTelemetry Collector は導入せず、アプリケーションから New Relic（`https://otlp.nr-data.net`）へ直接送信する。
-- Sentry と同一プロセス上で共存させる必要がある。`Sentry.init()` は OpenTelemetry のグローバル TracerProvider を先に占有するため、素朴に共存させるとスパインが1件も New Relic に届かない。`skipOpenTelemetrySetup: true` を指定することで回避する（`Sentry.captureException()` によるエラー収集は維持されるが、Sentry 側のパフォーマンス計測は失われる＝実質エラー収集専用になる）。
+- Sentry と同一プロセス上で共存させる必要がある。`Sentry.init()` は OpenTelemetry のグローバル TracerProvider を先に占有するため、素朴に共存させるとスパンが1件も New Relic に届かない。New Relic 有効時（`NEW_RELIC_LICENSE_KEY` 設定時）のみ `skipOpenTelemetrySetup: true` を指定することで回避する（`Sentry.captureException()` によるエラー収集は維持されるが、Sentry 側のパフォーマンス計測は失われる＝実質エラー収集専用になる）。New Relic 未使用の環境（ローカル開発など）では skip せず、Sentry 単体のパフォーマンス計測を維持する。
 
 ## 4. アーキテクチャ
 
@@ -45,7 +45,7 @@ GET /project/:projectId/forms          (HTTPサーバスパン: @hono/otel)
 | HTTP サーバスパン | `@hono/otel` ミドルウェア（ルートパターン化されたスパン名を生成、パスパラメータは含めない） |
 | DB スパン | `@prisma/instrumentation` |
 | 外部 I/O（S3・SendGrid・Web Push・Firebase） | `lib/storage` `lib/emails` `lib/push` `lib/firebase.ts` の各境界に手動スパンを付与 |
-| エラー記録 | `error-handler.ts` の予期しない例外経路でアクティブスパインを `ERROR` にする。`AppError` / `ZodError` などの業務上想定内のエラーは対象外（正常系の一部のため） |
+| エラー記録 | 予期しない例外は `@hono/otel` が `c.error` とレスポンスステータス（500）を見てアクティブスパンを自動で `ERROR` にする。`AppError` / `ZodError` などの業務上想定内のエラーは `error-handler.ts` が `c.error` をクリアすることで対象外とする（正常系の一部のため） |
 
 ## 5. セキュリティ
 
