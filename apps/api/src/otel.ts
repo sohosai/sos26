@@ -2,7 +2,6 @@ import { context, trace } from "@opentelemetry/api";
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
-import { PrismaInstrumentation } from "@prisma/instrumentation";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import type { ReadableSpan, SpanExporter } from "@opentelemetry/sdk-trace-base";
 import {
@@ -10,6 +9,7 @@ import {
 	BatchSpanProcessor,
 	TraceIdRatioBasedSampler,
 } from "@opentelemetry/sdk-trace-base";
+import { PrismaInstrumentation } from "@prisma/instrumentation";
 import { env } from "./lib/env";
 
 /**

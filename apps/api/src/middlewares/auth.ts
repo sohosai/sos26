@@ -1,5 +1,5 @@
-import type { CommitteeMember } from "@prisma/client";
 import { SpanStatusCode } from "@opentelemetry/api";
+import type { CommitteeMember } from "@prisma/client";
 import * as Sentry from "@sentry/bun";
 import type { CommitteePermission } from "@sos26/shared";
 import { FirebaseAuthError } from "firebase-admin/auth";
