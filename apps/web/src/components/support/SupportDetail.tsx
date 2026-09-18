@@ -53,7 +53,7 @@ type SupportDetailProps = {
 	projectMembers: {
 		id: string;
 		name: string;
-		role: "OWNER" | "SUB_OWNER" | "MEMBER";
+		role?: "OWNER" | "SUB_OWNER" | "MEMBER";
 		avatarFileId?: string | null;
 	}[];
 	onUpdateStatus: (status: "RESOLVED" | "IN_PROGRESS") => Promise<void>;
