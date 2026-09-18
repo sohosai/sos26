@@ -377,7 +377,7 @@ function CommitteeContent({
 	selectedViewers: ViewerInput[];
 	onChangeViewers: (viewers: ViewerInput[]) => void;
 }) {
-	// console.log("loadedProjectMembers", loadedProjectMembers);
+	//console.log("loadedProjectMembers", loadedProjectMembers);
 	return (
 		<>
 			{projects && (

@@ -30,7 +30,7 @@ export function MemberSelectPopover({
 	const [open, setOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 
-	// console.log("members", members);
+	//console.log("members", members);
 
 	return (
 		<Popover.Root
@@ -89,6 +89,16 @@ export function MemberSelectPopover({
 									<div className={styles.assignOptionText}>
 										<Text size="2">{person.name}</Text>
 									</div>
+									{person.role === "OWNER" && (
+										<Text size="1" color="gray">
+											責任者
+										</Text>
+									)}
+									{person.role === "SUB_OWNER" && (
+										<Text size="1" color="gray">
+											副責任者
+										</Text>
+									)}
 									{isSelected && (
 										<IconCheck size={14} className={styles.assignOptionCheck} />
 									)}
