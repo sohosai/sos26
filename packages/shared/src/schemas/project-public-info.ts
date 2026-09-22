@@ -20,10 +20,44 @@ export const PROJECT_DESCRIPTION_MAX_LENGTH = 200;
 /** 掲載画像の最大枚数 */
 export const PROJECT_MAP_IMAGES_MAX_COUNT = 10;
 
+/**
+ * SNSリンクの最大文字数
+ *
+ * Prisma スキーマの `ProjectPublicInfo` の各URL列の VarChar と必ず一致させること。
+ */
+export const PROJECT_SNS_URL_MAX_LENGTH = 2048;
+
+/** 企画情報として収集するSNSリンクの項目 */
+export const projectSnsLinkKeys = [
+	"websiteUrl",
+	"xUrl",
+	"instagramUrl",
+	"youtubeUrl",
+] as const;
+export type ProjectSnsLinkKey = (typeof projectSnsLinkKeys)[number];
+
+// 公開APIからそのままリンクとして配信されるため、javascript: などを弾く
+export const projectSnsUrlSchema = z
+	.url({
+		protocol: /^https?$/,
+		error: "http(s) から始まるURLを入力してください",
+	})
+	.max(PROJECT_SNS_URL_MAX_LENGTH);
+
+// 空文字は「未設定に戻す」を意味する
+const updateSnsUrlSchema = z
+	.union([z.literal(""), projectSnsUrlSchema])
+	.nullable()
+	.optional();
+
 export const projectPublicInfoSchema = z.object({
 	description: z.string().max(PROJECT_DESCRIPTION_MAX_LENGTH).nullable(),
 	iconFileId: z.string().nullable(),
 	mapImageFileIds: z.array(z.string()).max(PROJECT_MAP_IMAGES_MAX_COUNT),
+	websiteUrl: projectSnsUrlSchema.nullable(),
+	xUrl: projectSnsUrlSchema.nullable(),
+	instagramUrl: projectSnsUrlSchema.nullable(),
+	youtubeUrl: projectSnsUrlSchema.nullable(),
 	openStatus: openStatusSchema,
 	stockStatus: stockStatusSchema,
 });
@@ -50,6 +84,10 @@ export const updateProjectPublicInfoRequestSchema = z.object({
 		.array(z.string())
 		.max(PROJECT_MAP_IMAGES_MAX_COUNT)
 		.optional(),
+	websiteUrl: updateSnsUrlSchema,
+	xUrl: updateSnsUrlSchema,
+	instagramUrl: updateSnsUrlSchema,
+	youtubeUrl: updateSnsUrlSchema,
 	openStatus: openStatusSchema.optional(),
 	stockStatus: stockStatusSchema.optional(),
 });

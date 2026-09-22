@@ -4,6 +4,7 @@ export const mapAppSettingSchema = z.object({
 	isDescriptionEditable: z.boolean(),
 	isIconEditable: z.boolean(),
 	isMapImagesEditable: z.boolean(),
+	isSnsLinksEditable: z.boolean(),
 	isOpenStatusEditable: z.boolean(),
 	isStockStatusEditable: z.boolean(),
 });
@@ -19,6 +20,7 @@ export const DEFAULT_MAP_APP_SETTING: MapAppSetting = {
 	isDescriptionEditable: true,
 	isIconEditable: true,
 	isMapImagesEditable: true,
+	isSnsLinksEditable: true,
 	isOpenStatusEditable: false,
 	isStockStatusEditable: false,
 };

@@ -1677,6 +1677,11 @@ model ProjectPublicInfo {
   iconFileId String?
   iconFile   File?   @relation("ProjectPublicInfoIcon", fields: [iconFileId], references: [id])
 
+  websiteUrl   String? @db.VarChar(2048)
+  xUrl         String? @db.VarChar(2048)
+  instagramUrl String? @db.VarChar(2048)
+  youtubeUrl   String? @db.VarChar(2048)
+
   openStatus  OpenStatus  @default(NOT_APPLICABLE)
   stockStatus StockStatus @default(NOT_APPLICABLE)
 
@@ -1709,6 +1714,7 @@ model MapAppSetting {
   isDescriptionEditable Boolean @default(true)
   isIconEditable        Boolean @default(true)
   isMapImagesEditable   Boolean @default(true)
+  isSnsLinksEditable    Boolean @default(true)
   isOpenStatusEditable  Boolean @default(false)
   isStockStatusEditable Boolean @default(false)
 

@@ -323,6 +323,24 @@ describe("PUT /project/:projectId/public-info", () => {
 			expect(res.status).toBe(400);
 		});
 
+		it("SNSリンクの編集が無効なら400エラー", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks();
+			mockPrisma.mapAppSetting.findUnique.mockResolvedValue({
+				isDescriptionEditable: true,
+				isIconEditable: true,
+				isMapImagesEditable: true,
+				isOpenStatusEditable: true,
+				isStockStatusEditable: true,
+				isSnsLinksEditable: false,
+			} as any);
+
+			const res = await put(app, { xUrl: "https://x.com/sohosai" });
+
+			expect(res.status).toBe(400);
+		});
+
 		it("既定では開店状態を編集できない", async () => {
 			const app = makeApp();
 			setupAuthAsOwner();
@@ -577,6 +595,44 @@ describe("PUT /project/:projectId/public-info", () => {
 			});
 
 			expect(res.status).toBe(200);
+		});
+
+		it("SNSリンクを保存し、空文字は null として保存する", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks({
+				saved: { websiteUrl: "https://example.com", xUrl: null },
+			});
+
+			const res = await put(app, {
+				websiteUrl: "https://example.com",
+				xUrl: "",
+			});
+
+			expect(res.status).toBe(200);
+			expect(mockPrisma.projectPublicInfo.upsert).toHaveBeenCalledWith(
+				expect.objectContaining({
+					update: expect.objectContaining({
+						websiteUrl: "https://example.com",
+						xUrl: null,
+						instagramUrl: undefined,
+						youtubeUrl: undefined,
+					}),
+				})
+			);
+			expect((await res.json()).publicInfo.websiteUrl).toBe(
+				"https://example.com"
+			);
+		});
+
+		it("http(s) 以外のSNSリンクは400エラー", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks();
+
+			const res = await put(app, { websiteUrl: "javascript:alert(1)" });
+
+			expect(res.status).toBe(400);
 		});
 	});
 });

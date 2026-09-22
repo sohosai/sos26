@@ -32,10 +32,11 @@ describe("DEFAULT_MAP_APP_SETTING", () => {
 		expect(DEFAULT_MAP_APP_SETTING.isStockStatusEditable).toBe(false);
 	});
 
-	it("紹介文・アイコン・掲載画像の編集は既定で有効", () => {
+	it("紹介文・アイコン・掲載画像・SNSリンクの編集は既定で有効", () => {
 		expect(DEFAULT_MAP_APP_SETTING.isDescriptionEditable).toBe(true);
 		expect(DEFAULT_MAP_APP_SETTING.isIconEditable).toBe(true);
 		expect(DEFAULT_MAP_APP_SETTING.isMapImagesEditable).toBe(true);
+		expect(DEFAULT_MAP_APP_SETTING.isSnsLinksEditable).toBe(true);
 	});
 });
 

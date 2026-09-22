@@ -29,6 +29,10 @@ const mockRow = {
 		iconFileId: "clfffffffffffffff01",
 		openStatus: "OPEN",
 		stockStatus: "IN_STOCK",
+		websiteUrl: "https://example.com",
+		xUrl: "https://x.com/sohosai",
+		instagramUrl: null,
+		youtubeUrl: null,
 		mapImages: [{ fileId: "clfffffffffffffff02" }],
 	},
 };
@@ -56,6 +60,12 @@ describe("GET /openapi/projects", () => {
 		const body = await res.json();
 		expect(body).toHaveLength(1);
 		expect(body[0].publicInfo.mapImageFileIds).toEqual(["clfffffffffffffff02"]);
+		expect(body[0].publicInfo).toMatchObject({
+			websiteUrl: "https://example.com",
+			xUrl: "https://x.com/sohosai",
+			instagramUrl: null,
+			youtubeUrl: null,
+		});
 	});
 
 	it("公開情報を登録していない企画は取得対象に含めない", async () => {

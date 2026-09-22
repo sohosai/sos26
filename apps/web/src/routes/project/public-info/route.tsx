@@ -20,6 +20,7 @@ import type {
 	OpenStatus,
 	Project,
 	ProjectPublicInfo,
+	ProjectSnsLinkKey,
 	StockStatus,
 	UpdateProjectPublicInfoRequest,
 } from "@sos26/shared";
@@ -29,6 +30,8 @@ import {
 	isAllowedImageFile,
 	PROJECT_DESCRIPTION_MAX_LENGTH,
 	PROJECT_MAP_IMAGES_MAX_COUNT,
+	projectSnsLinkKeys,
+	projectSnsUrlSchema,
 } from "@sos26/shared";
 import {
 	IconInfoCircle,
@@ -48,7 +51,7 @@ import { toast } from "sonner";
 
 import { UserAvatar } from "@/components/common/UserAvatar";
 import { DiscardChangesDialog } from "@/components/patterns";
-import { Button, Select, TextArea } from "@/components/primitives";
+import { Button, Select, TextArea, TextField } from "@/components/primitives";
 import { deleteFile, uploadFile } from "@/lib/api/files";
 import { getMapAppSetting } from "@/lib/api/map-app-setting";
 import { updateProjectPublicInfo } from "@/lib/api/project-public-info";
@@ -65,6 +68,32 @@ const MAX_MAP_IMAGES = PROJECT_MAP_IMAGES_MAX_COUNT;
 const DESCRIPTION_MAX_LENGTH = PROJECT_DESCRIPTION_MAX_LENGTH;
 
 const projectRoute = getRouteApi("/project");
+
+const SNS_LINK_FIELDS: {
+	key: ProjectSnsLinkKey;
+	label: string;
+	placeholder: string;
+}[] = [
+	{ key: "websiteUrl", label: "Webサイト", placeholder: "https://example.com" },
+	{ key: "xUrl", label: "X", placeholder: "https://x.com/..." },
+	{
+		key: "instagramUrl",
+		label: "Instagram",
+		placeholder: "https://www.instagram.com/...",
+	},
+	{
+		key: "youtubeUrl",
+		label: "YouTube",
+		placeholder: "https://www.youtube.com/...",
+	},
+];
+
+/** 入力途中のURLが保存できない形式ならエラーメッセージを返す（未入力は可） */
+function getSnsUrlError(value: string): string | undefined {
+	if (value === "") return undefined;
+	const result = projectSnsUrlSchema.safeParse(value);
+	return result.success ? undefined : result.error.issues[0]?.message;
+}
 
 export const Route = createFileRoute("/project/public-info")({
 	// 企画公開情報は親（/project）ローダーの取得結果を共用する
@@ -87,13 +116,17 @@ type FormValues = {
 	mapImageFileIds: string[];
 	openStatus: OpenStatus;
 	stockStatus: StockStatus;
-};
+} & Record<ProjectSnsLinkKey, string>;
 
 function toFormValues(info: ProjectPublicInfo | null): FormValues {
 	return {
 		description: info?.description ?? "",
 		iconFileId: info?.iconFileId ?? "",
 		mapImageFileIds: info?.mapImageFileIds ?? [],
+		websiteUrl: info?.websiteUrl ?? "",
+		xUrl: info?.xUrl ?? "",
+		instagramUrl: info?.instagramUrl ?? "",
+		youtubeUrl: info?.youtubeUrl ?? "",
 		openStatus: info?.openStatus ?? "NOT_APPLICABLE",
 		stockStatus: info?.stockStatus ?? "NOT_APPLICABLE",
 	};
@@ -105,6 +138,7 @@ function isSameValues(a: FormValues, b: FormValues): boolean {
 		a.iconFileId === b.iconFileId &&
 		a.openStatus === b.openStatus &&
 		a.stockStatus === b.stockStatus &&
+		projectSnsLinkKeys.every(key => a[key] === b[key]) &&
 		a.mapImageFileIds.length === b.mapImageFileIds.length &&
 		a.mapImageFileIds.every((id, i) => id === b.mapImageFileIds[i])
 	);
@@ -117,6 +151,8 @@ function buildUpdateRequest(
 	projectType: Project["type"]
 ): UpdateProjectPublicInfoRequest {
 	const canEditStatus = projectType !== "STAGE";
+	const snsLink = (key: ProjectSnsLinkKey) =>
+		setting.isSnsLinksEditable ? values[key] : undefined;
 
 	return {
 		description: setting.isDescriptionEditable ? values.description : undefined,
@@ -124,6 +160,10 @@ function buildUpdateRequest(
 		mapImageFileIds: setting.isMapImagesEditable
 			? values.mapImageFileIds
 			: undefined,
+		websiteUrl: snsLink("websiteUrl"),
+		xUrl: snsLink("xUrl"),
+		instagramUrl: snsLink("instagramUrl"),
+		youtubeUrl: snsLink("youtubeUrl"),
 		openStatus:
 			canEditStatus && setting.isOpenStatusEditable
 				? values.openStatus
@@ -433,6 +473,10 @@ function ProjectPublicInfoPage() {
 	const canEditMapImages = isEditable && setting.isMapImagesEditable;
 	const canEditOpenStatus = isEditable && setting.isOpenStatusEditable;
 	const canEditStockStatus = isEditable && setting.isStockStatusEditable;
+	const canEditSnsLinks = isEditable && setting.isSnsLinksEditable;
+	const hasSnsUrlError =
+		canEditSnsLinks &&
+		projectSnsLinkKeys.some(key => getSnsUrlError(values[key]) !== undefined);
 	const canAddMore =
 		canEditMapImages &&
 		values.mapImageFileIds.length + uploadingCount < MAX_MAP_IMAGES;
@@ -650,6 +694,30 @@ function ProjectPublicInfoPage() {
 				</Flex>
 			</Card>
 
+			<Card className={styles.card}>
+				<Flex direction="column" gap="4">
+					<div>
+						<Heading size="4">SNSリンク</Heading>
+						<Text size="2" color="gray">
+							企画検索システムに掲載するリンクです。URLを入力してください。
+						</Text>
+					</div>
+					{isEditable && !setting.isSnsLinksEditable && <RestrictedNotice />}
+					{SNS_LINK_FIELDS.map(({ key, label, placeholder }) => (
+						<TextField
+							key={key}
+							type="url"
+							label={label}
+							value={values[key]}
+							onChange={value => updateValues({ [key]: value.trim() })}
+							error={canEditSnsLinks ? getSnsUrlError(values[key]) : undefined}
+							disabled={!canEditSnsLinks}
+							placeholder={placeholder}
+						/>
+					))}
+				</Flex>
+			</Card>
+
 			{project?.type !== "STAGE" && (
 				<>
 					<Card className={styles.card}>
@@ -728,7 +796,7 @@ function ProjectPublicInfoPage() {
 						<Button
 							onClick={handleSave}
 							loading={isSaving}
-							disabled={!isDirty || isSaving || isUploading}
+							disabled={!isDirty || isSaving || isUploading || hasSnsUrlError}
 						>
 							保存する
 						</Button>

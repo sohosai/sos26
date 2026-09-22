@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	PROJECT_DESCRIPTION_MAX_LENGTH,
+	PROJECT_SNS_URL_MAX_LENGTH,
 	projectPublicInfoSchema,
 	updateProjectPublicInfoRequestSchema,
 } from "./project-public-info";
@@ -14,6 +15,10 @@ describe("projectPublicInfoSchema", () => {
 		mapImageFileIds: ["cjld2cyuq0000t3rmniod1foy"],
 		openStatus: "OPEN",
 		stockStatus: "IN_STOCK",
+		websiteUrl: "https://example.com",
+		xUrl: "https://x.com/sohosai",
+		instagramUrl: null,
+		youtubeUrl: null,
 		...overrides,
 	});
 
@@ -51,6 +56,13 @@ describe("projectPublicInfoSchema", () => {
 			createValid({
 				mapImageFileIds: Array.from({ length: 11 }, (_, i) => `file-${i}`),
 			})
+		);
+		expect(result.success).toBe(false);
+	});
+
+	it("http(s) 以外のSNSリンクを拒否する", () => {
+		const result = projectPublicInfoSchema.safeParse(
+			createValid({ websiteUrl: "javascript:alert(1)" })
 		);
 		expect(result.success).toBe(false);
 	});
@@ -93,6 +105,30 @@ describe("updateProjectPublicInfoRequestSchema", () => {
 	it("紹介文が上限を超えると拒否する", () => {
 		const result = updateProjectPublicInfoRequestSchema.safeParse({
 			description: "あ".repeat(MAX + 1),
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("SNSリンク削除を意味する空文字を受け入れる", () => {
+		const result = updateProjectPublicInfoRequestSchema.safeParse({
+			websiteUrl: "",
+			xUrl: "",
+			instagramUrl: "",
+			youtubeUrl: "",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("URLでないSNSリンクを拒否する", () => {
+		const result = updateProjectPublicInfoRequestSchema.safeParse({
+			instagramUrl: "sohosai",
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("SNSリンクが上限を超えると拒否する", () => {
+		const result = updateProjectPublicInfoRequestSchema.safeParse({
+			youtubeUrl: `https://youtube.com/${"a".repeat(PROJECT_SNS_URL_MAX_LENGTH)}`,
 		});
 		expect(result.success).toBe(false);
 	});
