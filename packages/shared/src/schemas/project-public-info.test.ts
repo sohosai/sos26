@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
 	PROJECT_DESCRIPTION_MAX_LENGTH,
+	PROJECT_INSTAGRAM_ID_MAX_LENGTH,
 	PROJECT_SNS_URL_MAX_LENGTH,
+	PROJECT_X_ID_MAX_LENGTH,
+	PROJECT_YOUTUBE_ID_MAX_LENGTH,
 	projectPublicInfoSchema,
 	updateProjectPublicInfoRequestSchema,
 } from "./project-public-info";
@@ -16,9 +19,9 @@ describe("projectPublicInfoSchema", () => {
 		openStatus: "OPEN",
 		stockStatus: "IN_STOCK",
 		websiteUrl: "https://example.com",
-		xUrl: "https://x.com/sohosai",
-		instagramUrl: null,
-		youtubeUrl: null,
+		xId: "sohosai",
+		instagramId: null,
+		youtubeId: null,
 		...overrides,
 	});
 
@@ -112,24 +115,86 @@ describe("updateProjectPublicInfoRequestSchema", () => {
 	it("SNSリンク削除を意味する空文字を受け入れる", () => {
 		const result = updateProjectPublicInfoRequestSchema.safeParse({
 			websiteUrl: "",
-			xUrl: "",
-			instagramUrl: "",
-			youtubeUrl: "",
+			xId: "",
+			instagramId: "",
+			youtubeId: "",
 		});
 		expect(result.success).toBe(true);
 	});
 
-	it("URLでないSNSリンクを拒否する", () => {
+	it("URLでないWebサイトを拒否する", () => {
 		const result = updateProjectPublicInfoRequestSchema.safeParse({
-			instagramUrl: "sohosai",
+			websiteUrl: "sohosai",
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("X・Instagram の先頭の @ を外して受け入れる", () => {
+		const result = updateProjectPublicInfoRequestSchema.parse({
+			xId: "@sohosai",
+			instagramId: "@soho.sai_26",
+		});
+		expect(result.xId).toBe("sohosai");
+		expect(result.instagramId).toBe("soho.sai_26");
+	});
+
+	it("X・Instagram に URL を入れると拒否する", () => {
+		expect(
+			updateProjectPublicInfoRequestSchema.safeParse({
+				xId: "https://x.com/sohosai",
+			}).success
+		).toBe(false);
+		expect(
+			updateProjectPublicInfoRequestSchema.safeParse({
+				instagramId: "https://www.instagram.com/sohosai",
+			}).success
+		).toBe(false);
+	});
+
+	it("X・Instagram の ID が上限を超えると拒否する", () => {
+		expect(
+			updateProjectPublicInfoRequestSchema.safeParse({
+				xId: "a".repeat(PROJECT_X_ID_MAX_LENGTH + 1),
+			}).success
+		).toBe(false);
+		expect(
+			updateProjectPublicInfoRequestSchema.safeParse({
+				instagramId: "a".repeat(PROJECT_INSTAGRAM_ID_MAX_LENGTH + 1),
+			}).success
+		).toBe(false);
+	});
+
+	it("@ だけの ID を拒否する", () => {
+		const result = updateProjectPublicInfoRequestSchema.safeParse({
+			xId: "@",
 		});
 		expect(result.success).toBe(false);
 	});
 
 	it("SNSリンクが上限を超えると拒否する", () => {
 		const result = updateProjectPublicInfoRequestSchema.safeParse({
-			youtubeUrl: `https://youtube.com/${"a".repeat(PROJECT_SNS_URL_MAX_LENGTH)}`,
+			websiteUrl: `https://example.com/${"a".repeat(PROJECT_SNS_URL_MAX_LENGTH)}`,
 		});
 		expect(result.success).toBe(false);
+	});
+
+	it("YouTube のハンドルは日本語を含めて受け入れ、先頭の @ を外す", () => {
+		const result = updateProjectPublicInfoRequestSchema.parse({
+			youtubeId: "@雙峰祭_sohosai.26",
+		});
+		expect(result.youtubeId).toBe("雙峰祭_sohosai.26");
+	});
+
+	it("YouTube に URL や短すぎるハンドルを入れると拒否する", () => {
+		for (const youtubeId of [
+			"https://www.youtube.com/@sohosai",
+			"ab",
+			"a".repeat(PROJECT_YOUTUBE_ID_MAX_LENGTH + 1),
+		]) {
+			expect(
+				updateProjectPublicInfoRequestSchema.safeParse({ youtubeId }).success,
+				youtubeId
+			).toBe(false);
+		}
 	});
 });

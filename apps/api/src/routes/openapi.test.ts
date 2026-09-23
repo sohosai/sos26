@@ -30,9 +30,9 @@ const mockRow = {
 		openStatus: "OPEN",
 		stockStatus: "IN_STOCK",
 		websiteUrl: "https://example.com",
-		xUrl: "https://x.com/sohosai",
-		instagramUrl: null,
-		youtubeUrl: null,
+		xId: "sohosai",
+		instagramId: null,
+		youtubeId: null,
 		mapImages: [{ fileId: "clfffffffffffffff02" }],
 	},
 };
@@ -62,9 +62,9 @@ describe("GET /openapi/projects", () => {
 		expect(body[0].publicInfo.mapImageFileIds).toEqual(["clfffffffffffffff02"]);
 		expect(body[0].publicInfo).toMatchObject({
 			websiteUrl: "https://example.com",
-			xUrl: "https://x.com/sohosai",
-			instagramUrl: null,
-			youtubeUrl: null,
+			xId: "sohosai",
+			instagramId: null,
+			youtubeId: null,
 		});
 	});
 

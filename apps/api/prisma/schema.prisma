@@ -1678,9 +1678,9 @@ model ProjectPublicInfo {
   iconFile   File?   @relation("ProjectPublicInfoIcon", fields: [iconFileId], references: [id])
 
   websiteUrl   String? @db.VarChar(2048)
-  xUrl         String? @db.VarChar(2048)
-  instagramUrl String? @db.VarChar(2048)
-  youtubeUrl   String? @db.VarChar(2048)
+  xId          String? @db.VarChar(15)
+  instagramId  String? @db.VarChar(30)
+  youtubeId    String? @db.VarChar(30)
 
   openStatus  OpenStatus  @default(NOT_APPLICABLE)
   stockStatus StockStatus @default(NOT_APPLICABLE)

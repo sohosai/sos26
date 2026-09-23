@@ -31,7 +31,7 @@ import {
 	PROJECT_DESCRIPTION_MAX_LENGTH,
 	PROJECT_MAP_IMAGES_MAX_COUNT,
 	projectSnsLinkKeys,
-	projectSnsUrlSchema,
+	updateProjectPublicInfoRequestSchema,
 } from "@sos26/shared";
 import {
 	IconInfoCircle,
@@ -72,26 +72,44 @@ const projectRoute = getRouteApi("/project");
 const SNS_LINK_FIELDS: {
 	key: ProjectSnsLinkKey;
 	label: string;
+	type: "url" | "text";
 	placeholder: string;
+	hint: string;
 }[] = [
-	{ key: "websiteUrl", label: "Webサイト", placeholder: "https://example.com" },
-	{ key: "xUrl", label: "X", placeholder: "https://x.com/..." },
 	{
-		key: "instagramUrl",
-		label: "Instagram",
-		placeholder: "https://www.instagram.com/...",
+		key: "websiteUrl",
+		label: "Webサイト（URL）",
+		type: "url",
+		placeholder: "https://sohosai.com/",
+		hint: "例：https://sohosai.com/",
 	},
 	{
-		key: "youtubeUrl",
-		label: "YouTube",
-		placeholder: "https://www.youtube.com/...",
+		key: "xId",
+		label: "X（ユーザーID）",
+		type: "text",
+		placeholder: "sohosai",
+		hint: "@ は付けずに入力。例：https://x.com/sohosai → sohosai",
+	},
+	{
+		key: "instagramId",
+		label: "Instagram（ユーザーネーム）",
+		type: "text",
+		placeholder: "sohosai",
+		hint: "例：https://www.instagram.com/sohosai/ → sohosai",
+	},
+	{
+		key: "youtubeId",
+		label: "YouTube（ハンドル）",
+		type: "text",
+		placeholder: "sohosai",
+		hint: "@ は付けずに入力。例：https://www.youtube.com/@sohosai → sohosai",
 	},
 ];
 
-/** 入力途中のURLが保存できない形式ならエラーメッセージを返す（未入力は可） */
-function getSnsUrlError(value: string): string | undefined {
-	if (value === "") return undefined;
-	const result = projectSnsUrlSchema.safeParse(value);
+/** 入力値が保存できない形式ならエラーメッセージを返す（未入力は可） */
+function getSnsLinkError(key: ProjectSnsLinkKey, value: string) {
+	const result =
+		updateProjectPublicInfoRequestSchema.shape[key].safeParse(value);
 	return result.success ? undefined : result.error.issues[0]?.message;
 }
 
@@ -124,9 +142,9 @@ function toFormValues(info: ProjectPublicInfo | null): FormValues {
 		iconFileId: info?.iconFileId ?? "",
 		mapImageFileIds: info?.mapImageFileIds ?? [],
 		websiteUrl: info?.websiteUrl ?? "",
-		xUrl: info?.xUrl ?? "",
-		instagramUrl: info?.instagramUrl ?? "",
-		youtubeUrl: info?.youtubeUrl ?? "",
+		xId: info?.xId ?? "",
+		instagramId: info?.instagramId ?? "",
+		youtubeId: info?.youtubeId ?? "",
 		openStatus: info?.openStatus ?? "NOT_APPLICABLE",
 		stockStatus: info?.stockStatus ?? "NOT_APPLICABLE",
 	};
@@ -161,9 +179,9 @@ function buildUpdateRequest(
 			? values.mapImageFileIds
 			: undefined,
 		websiteUrl: snsLink("websiteUrl"),
-		xUrl: snsLink("xUrl"),
-		instagramUrl: snsLink("instagramUrl"),
-		youtubeUrl: snsLink("youtubeUrl"),
+		xId: snsLink("xId"),
+		instagramId: snsLink("instagramId"),
+		youtubeId: snsLink("youtubeId"),
 		openStatus:
 			canEditStatus && setting.isOpenStatusEditable
 				? values.openStatus
@@ -474,9 +492,11 @@ function ProjectPublicInfoPage() {
 	const canEditOpenStatus = isEditable && setting.isOpenStatusEditable;
 	const canEditStockStatus = isEditable && setting.isStockStatusEditable;
 	const canEditSnsLinks = isEditable && setting.isSnsLinksEditable;
-	const hasSnsUrlError =
+	const hasSnsLinkError =
 		canEditSnsLinks &&
-		projectSnsLinkKeys.some(key => getSnsUrlError(values[key]) !== undefined);
+		projectSnsLinkKeys.some(
+			key => getSnsLinkError(key, values[key]) !== undefined
+		);
 	const canAddMore =
 		canEditMapImages &&
 		values.mapImageFileIds.length + uploadingCount < MAX_MAP_IMAGES;
@@ -699,21 +719,29 @@ function ProjectPublicInfoPage() {
 					<div>
 						<Heading size="4">SNSリンク</Heading>
 						<Text size="2" color="gray">
-							企画検索システムに掲載するリンクです。URLを入力してください。
+							企画や実施団体を広報するものがあれば入力してください。企画検索システムに掲載されます。
 						</Text>
 					</div>
 					{isEditable && !setting.isSnsLinksEditable && <RestrictedNotice />}
-					{SNS_LINK_FIELDS.map(({ key, label, placeholder }) => (
-						<TextField
-							key={key}
-							type="url"
-							label={label}
-							value={values[key]}
-							onChange={value => updateValues({ [key]: value.trim() })}
-							error={canEditSnsLinks ? getSnsUrlError(values[key]) : undefined}
-							disabled={!canEditSnsLinks}
-							placeholder={placeholder}
-						/>
+					{SNS_LINK_FIELDS.map(({ key, label, type, placeholder, hint }) => (
+						<Flex key={key} direction="column" gap="1">
+							<TextField
+								type={type}
+								label={label}
+								value={values[key]}
+								onChange={value => updateValues({ [key]: value.trim() })}
+								error={
+									canEditSnsLinks
+										? getSnsLinkError(key, values[key])
+										: undefined
+								}
+								disabled={!canEditSnsLinks}
+								placeholder={placeholder}
+							/>
+							<Text size="1" color="gray">
+								{hint}
+							</Text>
+						</Flex>
 					))}
 				</Flex>
 			</Card>
@@ -796,7 +824,7 @@ function ProjectPublicInfoPage() {
 						<Button
 							onClick={handleSave}
 							loading={isSaving}
-							disabled={!isDirty || isSaving || isUploading || hasSnsUrlError}
+							disabled={!isDirty || isSaving || isUploading || hasSnsLinkError}
 						>
 							保存する
 						</Button>

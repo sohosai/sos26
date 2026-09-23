@@ -59,9 +59,9 @@ const publicProjectSelect = {
 			description: true,
 			iconFileId: true,
 			websiteUrl: true,
-			xUrl: true,
-			instagramUrl: true,
-			youtubeUrl: true,
+			xId: true,
+			instagramId: true,
+			youtubeId: true,
 			openStatus: true,
 			stockStatus: true,
 			mapImages: {
@@ -82,9 +82,9 @@ type PublicProjectRow = {
 		description: string | null;
 		iconFileId: string | null;
 		websiteUrl: string | null;
-		xUrl: string | null;
-		instagramUrl: string | null;
-		youtubeUrl: string | null;
+		xId: string | null;
+		instagramId: string | null;
+		youtubeId: string | null;
 		openStatus: PublicProject["publicInfo"]["openStatus"];
 		stockStatus: PublicProject["publicInfo"]["stockStatus"];
 		mapImages: { fileId: string }[];
@@ -106,9 +106,9 @@ function toPublicProject(row: PublicProjectRow): PublicProject | null {
 			iconFileId: row.publicInfo.iconFileId,
 			mapImageFileIds: row.publicInfo.mapImages.map(img => img.fileId),
 			websiteUrl: row.publicInfo.websiteUrl,
-			xUrl: row.publicInfo.xUrl,
-			instagramUrl: row.publicInfo.instagramUrl,
-			youtubeUrl: row.publicInfo.youtubeUrl,
+			xId: row.publicInfo.xId,
+			instagramId: row.publicInfo.instagramId,
+			youtubeId: row.publicInfo.youtubeId,
 			openStatus: row.publicInfo.openStatus,
 			stockStatus: row.publicInfo.stockStatus,
 		},

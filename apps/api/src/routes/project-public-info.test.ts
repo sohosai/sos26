@@ -336,7 +336,7 @@ describe("PUT /project/:projectId/public-info", () => {
 				isSnsLinksEditable: false,
 			} as any);
 
-			const res = await put(app, { xUrl: "https://x.com/sohosai" });
+			const res = await put(app, { xId: "sohosai" });
 
 			expect(res.status).toBe(400);
 		});
@@ -601,12 +601,12 @@ describe("PUT /project/:projectId/public-info", () => {
 			const app = makeApp();
 			setupAuthAsOwner();
 			setupUpdateMocks({
-				saved: { websiteUrl: "https://example.com", xUrl: null },
+				saved: { websiteUrl: "https://example.com", xId: null },
 			});
 
 			const res = await put(app, {
 				websiteUrl: "https://example.com",
-				xUrl: "",
+				xId: "",
 			});
 
 			expect(res.status).toBe(200);
@@ -614,15 +614,42 @@ describe("PUT /project/:projectId/public-info", () => {
 				expect.objectContaining({
 					update: expect.objectContaining({
 						websiteUrl: "https://example.com",
-						xUrl: null,
-						instagramUrl: undefined,
-						youtubeUrl: undefined,
+						xId: null,
+						instagramId: undefined,
+						youtubeId: undefined,
 					}),
 				})
 			);
 			expect((await res.json()).publicInfo.websiteUrl).toBe(
 				"https://example.com"
 			);
+		});
+
+		it("X の ID は先頭の @ を外して保存する", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks({ saved: { xId: "sohosai" } });
+
+			const res = await put(app, { xId: "@sohosai" });
+
+			expect(res.status).toBe(200);
+			expect(mockPrisma.projectPublicInfo.upsert).toHaveBeenCalledWith(
+				expect.objectContaining({
+					update: expect.objectContaining({ xId: "sohosai" }),
+				})
+			);
+		});
+
+		it("Instagram に URL を送ると400エラー", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks();
+
+			const res = await put(app, {
+				instagramId: "https://www.instagram.com/sohosai",
+			});
+
+			expect(res.status).toBe(400);
 		});
 
 		it("http(s) 以外のSNSリンクは400エラー", async () => {

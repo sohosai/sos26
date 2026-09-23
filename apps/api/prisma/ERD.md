@@ -550,9 +550,9 @@ erDiagram
   String(200) description "nullable"
   String iconFileId FK "nullable"
   String(2048) websiteUrl "nullable"
-  String(2048) xUrl "nullable"
-  String(2048) instagramUrl "nullable"
-  String(2048) youtubeUrl "nullable"
+  String(15) xId "nullable"
+  String(30) instagramId "nullable"
+  String(30) youtubeId "nullable"
   OpenStatus openStatus
   StockStatus stockStatus
   DateTime createdAt
@@ -1406,9 +1406,9 @@ Properties as follows:
 - `description`:
 - `iconFileId`:
 - `websiteUrl`:
-- `xUrl`:
-- `instagramUrl`:
-- `youtubeUrl`:
+- `xId`:
+- `instagramId`:
+- `youtubeId`:
 - `openStatus`:
 - `stockStatus`:
 - `createdAt`:
