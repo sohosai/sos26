@@ -79,11 +79,25 @@ export const projectYoutubeIdSchema = z
 	.string()
 	.regex(
 		new RegExp(
-			`^[\\p{L}\\p{M}\\p{N}._·-]{3,${PROJECT_YOUTUBE_ID_MAX_LENGTH}}$`,
+			`^[\\p{L}\\p{M}\\p{N}._·-]{1,${PROJECT_YOUTUBE_ID_MAX_LENGTH}}$`,
 			"u"
 		),
-		`YouTubeのハンドルは3〜${PROJECT_YOUTUBE_ID_MAX_LENGTH}文字の文字・数字と . _ - で入力してください`
-	);
+		`YouTubeのハンドルは${PROJECT_YOUTUBE_ID_MAX_LENGTH}文字以内の文字・数字と . _ - で入力してください`
+	)
+	.refine(value => {
+		const length = Array.from(value).length;
+		// 漢字・ハングルは1文字から、かな・エチオピア文字は2文字から使える。
+		return (
+			length >= 3 ||
+			/^[\p{Script_Extensions=Han}\p{Script_Extensions=Hangul}]+$/u.test(
+				value
+			) ||
+			(length >= 2 &&
+				/^[\p{Script_Extensions=Han}\p{Script_Extensions=Hangul}\p{Script_Extensions=Hiragana}\p{Script_Extensions=Katakana}\p{Script_Extensions=Ethiopic}]+$/u.test(
+					value
+				))
+		);
+	}, "YouTubeのハンドルは3文字以上（漢字・ハングルは1文字以上、ひらがな・カタカナなどは2文字以上）で入力してください");
 
 // 空文字は「未設定に戻す」を意味する
 function updateSnsLinkSchema(schema: z.ZodType<string, string>) {

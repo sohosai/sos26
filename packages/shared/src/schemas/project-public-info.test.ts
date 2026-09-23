@@ -189,6 +189,8 @@ describe("updateProjectPublicInfoRequestSchema", () => {
 		for (const youtubeId of [
 			"https://www.youtube.com/@sohosai",
 			"ab",
+			"あ",
+			"ア",
 			"a".repeat(PROJECT_YOUTUBE_ID_MAX_LENGTH + 1),
 		]) {
 			expect(
@@ -196,5 +198,25 @@ describe("updateProjectPublicInfoRequestSchema", () => {
 				youtubeId
 			).toBe(false);
 		}
+	});
+
+	it.each([
+		"祭",
+		"雙峰",
+		"あい",
+		"アイ",
+		"カー",
+		"お茶",
+		"𠮷",
+		"한",
+	])("短い日本語などのYouTubeハンドル %s を保存・取得できる", youtubeId => {
+		const result = updateProjectPublicInfoRequestSchema.parse({
+			youtubeId: `@${youtubeId}`,
+		});
+		expect(result.youtubeId).toBe(youtubeId);
+		expect(
+			projectPublicInfoSchema.shape.youtubeId.safeParse(result.youtubeId)
+				.success
+		).toBe(true);
 	});
 });
