@@ -1,12 +1,14 @@
 import type {
 	MapAppSetting,
 	OpenStatus,
+	ProjectSnsLinkKey,
 	StockStatus,
 	UpdateProjectPublicInfoRequest,
 } from "@sos26/shared";
 import {
 	allowedImageMimeTypes,
 	DEFAULT_MAP_APP_SETTING,
+	projectSnsLinkKeys,
 	updateProjectPublicInfoEndpoint,
 } from "@sos26/shared";
 import { Hono } from "hono";
@@ -41,6 +43,12 @@ function assertFieldsEditable(
 	}
 	if (!setting.isMapImagesEditable && data.mapImageFileIds !== undefined) {
 		throw Errors.invalidRequest("掲載画像は現在編集できません");
+	}
+	if (
+		!setting.isSnsLinksEditable &&
+		projectSnsLinkKeys.some(key => data[key] !== undefined)
+	) {
+		throw Errors.invalidRequest("SNSリンクは現在編集できません");
 	}
 	// ステージ企画は開店・在庫状態を持たないため、設定に関係なく無視する
 	if (projectType === "STAGE") return;
@@ -124,6 +132,7 @@ type SavePublicInfoParams = {
 	description: string | null | undefined;
 	iconFileId: string | null | undefined;
 	mapImageFileIds: string[] | undefined;
+	snsLinks: Record<ProjectSnsLinkKey, string | null | undefined>;
 	openStatus: OpenStatus | undefined;
 	stockStatus: StockStatus | undefined;
 };
@@ -141,6 +150,7 @@ async function savePublicInfo(params: SavePublicInfoParams) {
 		description,
 		iconFileId,
 		mapImageFileIds,
+		snsLinks,
 		openStatus,
 		stockStatus,
 	} = params;
@@ -148,11 +158,15 @@ async function savePublicInfo(params: SavePublicInfoParams) {
 	return prisma.$transaction(async tx => {
 		const info = await tx.projectPublicInfo.upsert({
 			where: { projectId },
-			update: { description, iconFileId, openStatus, stockStatus },
+			update: { description, iconFileId, ...snsLinks, openStatus, stockStatus },
 			create: {
 				projectId,
 				description: description ?? null,
 				iconFileId: iconFileId ?? null,
+				websiteUrl: snsLinks.websiteUrl ?? null,
+				xId: snsLinks.xId ?? null,
+				instagramId: snsLinks.instagramId ?? null,
+				youtubeId: snsLinks.youtubeId ?? null,
 				openStatus: openStatus ?? "NOT_APPLICABLE",
 				stockStatus: stockStatus ?? "NOT_APPLICABLE",
 			},
@@ -235,6 +249,10 @@ projectPublicInfoRoute.get(
 				description: info.description,
 				iconFileId: info.iconFileId,
 				mapImageFileIds: info.mapImages.map(img => img.fileId),
+				websiteUrl: info.websiteUrl,
+				xId: info.xId,
+				instagramId: info.instagramId,
+				youtubeId: info.youtubeId,
 				openStatus: info.openStatus,
 				stockStatus: info.stockStatus,
 			},
@@ -262,10 +280,16 @@ projectPublicInfoRoute.put(
 		const data = updateProjectPublicInfoEndpoint.request.parse(body);
 
 		// 空文字は「未設定に戻す」を意味するため、DB上はnullとして扱う
-		// （アイコンは FK 制約違反、紹介文は空文字と未設定の混在を防ぐ）
+		// （アイコンは FK 制約違反、紹介文・SNSリンクは空文字と未設定の混在を防ぐ）
 		const iconFileId = data.iconFileId === "" ? null : data.iconFileId;
 		const description = data.description === "" ? null : data.description;
 		const mapImageFileIds = data.mapImageFileIds;
+		const snsLinks = {
+			websiteUrl: data.websiteUrl === "" ? null : data.websiteUrl,
+			xId: data.xId === "" ? null : data.xId,
+			instagramId: data.instagramId === "" ? null : data.instagramId,
+			youtubeId: data.youtubeId === "" ? null : data.youtubeId,
+		};
 
 		const setting = await getMapAppSetting();
 		assertFieldsEditable(setting, data, project.type);
@@ -297,6 +321,7 @@ projectPublicInfoRoute.put(
 			description,
 			iconFileId,
 			mapImageFileIds,
+			snsLinks,
 			openStatus: isStage ? "NOT_APPLICABLE" : data.openStatus,
 			stockStatus: isStage ? "NOT_APPLICABLE" : data.stockStatus,
 		});
@@ -315,6 +340,10 @@ projectPublicInfoRoute.put(
 				description: updated.description,
 				iconFileId: updated.iconFileId,
 				mapImageFileIds: updated.mapImages.map(img => img.fileId),
+				websiteUrl: updated.websiteUrl,
+				xId: updated.xId,
+				instagramId: updated.instagramId,
+				youtubeId: updated.youtubeId,
 				openStatus: updated.openStatus,
 				stockStatus: updated.stockStatus,
 			},

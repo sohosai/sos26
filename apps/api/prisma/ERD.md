@@ -549,6 +549,10 @@ erDiagram
   String projectId FK,UK
   String(200) description "nullable"
   String iconFileId FK "nullable"
+  String(2048) websiteUrl "nullable"
+  String(15) xId "nullable"
+  String(30) instagramId "nullable"
+  String(30) youtubeId "nullable"
   OpenStatus openStatus
   StockStatus stockStatus
   DateTime createdAt
@@ -566,6 +570,7 @@ erDiagram
   Boolean isDescriptionEditable
   Boolean isIconEditable
   Boolean isMapImagesEditable
+  Boolean isSnsLinksEditable
   Boolean isOpenStatusEditable
   Boolean isStockStatusEditable
   DateTime updatedAt
@@ -1400,6 +1405,10 @@ Properties as follows:
 - `projectId`:
 - `description`:
 - `iconFileId`:
+- `websiteUrl`:
+- `xId`:
+- `instagramId`:
+- `youtubeId`:
 - `openStatus`:
 - `stockStatus`:
 - `createdAt`:
@@ -1423,6 +1432,7 @@ Properties as follows:
 - `isDescriptionEditable`:
 - `isIconEditable`:
 - `isMapImagesEditable`:
+- `isSnsLinksEditable`:
 - `isOpenStatusEditable`:
 - `isStockStatusEditable`:
 - `updatedAt`:

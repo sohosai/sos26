@@ -323,6 +323,24 @@ describe("PUT /project/:projectId/public-info", () => {
 			expect(res.status).toBe(400);
 		});
 
+		it("SNSリンクの編集が無効なら400エラー", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks();
+			mockPrisma.mapAppSetting.findUnique.mockResolvedValue({
+				isDescriptionEditable: true,
+				isIconEditable: true,
+				isMapImagesEditable: true,
+				isOpenStatusEditable: true,
+				isStockStatusEditable: true,
+				isSnsLinksEditable: false,
+			} as any);
+
+			const res = await put(app, { xId: "sohosai" });
+
+			expect(res.status).toBe(400);
+		});
+
 		it("既定では開店状態を編集できない", async () => {
 			const app = makeApp();
 			setupAuthAsOwner();
@@ -577,6 +595,71 @@ describe("PUT /project/:projectId/public-info", () => {
 			});
 
 			expect(res.status).toBe(200);
+		});
+
+		it("SNSリンクを保存し、空文字は null として保存する", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks({
+				saved: { websiteUrl: "https://example.com", xId: null },
+			});
+
+			const res = await put(app, {
+				websiteUrl: "https://example.com",
+				xId: "",
+			});
+
+			expect(res.status).toBe(200);
+			expect(mockPrisma.projectPublicInfo.upsert).toHaveBeenCalledWith(
+				expect.objectContaining({
+					update: expect.objectContaining({
+						websiteUrl: "https://example.com",
+						xId: null,
+						instagramId: undefined,
+						youtubeId: undefined,
+					}),
+				})
+			);
+			expect((await res.json()).publicInfo.websiteUrl).toBe(
+				"https://example.com"
+			);
+		});
+
+		it("X の ID は先頭の @ を外して保存する", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks({ saved: { xId: "sohosai" } });
+
+			const res = await put(app, { xId: "@sohosai" });
+
+			expect(res.status).toBe(200);
+			expect(mockPrisma.projectPublicInfo.upsert).toHaveBeenCalledWith(
+				expect.objectContaining({
+					update: expect.objectContaining({ xId: "sohosai" }),
+				})
+			);
+		});
+
+		it("Instagram に URL を送ると400エラー", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks();
+
+			const res = await put(app, {
+				instagramId: "https://www.instagram.com/sohosai",
+			});
+
+			expect(res.status).toBe(400);
+		});
+
+		it("http(s) 以外のSNSリンクは400エラー", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks();
+
+			const res = await put(app, { websiteUrl: "javascript:alert(1)" });
+
+			expect(res.status).toBe(400);
 		});
 	});
 });

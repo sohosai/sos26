@@ -38,6 +38,7 @@ const SWITCHES: { key: keyof MapAppSetting; label: string }[] = [
 	{ key: "isDescriptionEditable", label: "紹介文の編集" },
 	{ key: "isIconEditable", label: "アイコン画像の編集" },
 	{ key: "isMapImagesEditable", label: "Map掲載画像の編集" },
+	{ key: "isSnsLinksEditable", label: "SNSリンクの編集" },
 	{ key: "isOpenStatusEditable", label: "開店・閉店状態の編集" },
 	{ key: "isStockStatusEditable", label: "在庫状態の編集" },
 ];
