@@ -1,6 +1,6 @@
 // @ts-nocheck - テストファイルでは res.json() の unknown 型を許容
 import { Hono } from "hono";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../lib/prisma", () => ({
 	prisma: {
@@ -8,9 +8,22 @@ vi.mock("../lib/prisma", () => ({
 			findMany: vi.fn(),
 			findFirst: vi.fn(),
 		},
+		mastersheetColumn: {
+			findMany: vi.fn(),
+		},
+		mastersheetCellValue: {
+			findMany: vi.fn(),
+		},
 	},
 }));
 
+vi.mock("../lib/env", () => ({
+	env: {
+		PUBLIC_API_MASTERSHEET_COLUMN_IDS: [] as string[],
+	},
+}));
+
+import { env } from "../lib/env";
 import { errorHandler } from "../lib/error-handler";
 import { prisma } from "../lib/prisma";
 import { bumpPublicApiCacheVersion } from "../lib/public-api-cache";
@@ -20,6 +33,7 @@ const mockPrisma = vi.mocked(prisma, true);
 
 const mockRow = {
 	id: "clpppppppppppppppp1",
+	number: 12,
 	name: "焼きそば屋",
 	organizationName: "サークルA",
 	type: "FOOD",
@@ -55,6 +69,8 @@ describe("GET /openapi/projects", () => {
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body).toHaveLength(1);
+		expect(body[0].number).toBe(12);
+		expect(body[0].customFields).toEqual([]);
 		expect(body[0].publicInfo.mapImageFileIds).toEqual(["clfffffffffffffff02"]);
 	});
 
@@ -131,6 +147,98 @@ describe("GET /openapi/projects/{id}", () => {
 		expect(res.status).toBe(404);
 		expect(res.headers.get("Content-Type")).toContain("application/json");
 		expect((await res.json()).error.code).toBe("NOT_FOUND");
+	});
+});
+
+describe("GET /openapi/projects (customFields)", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		clearPublicProjectsCache();
+		env.PUBLIC_API_MASTERSHEET_COLUMN_IDS = ["col-stage"];
+	});
+
+	afterEach(() => {
+		env.PUBLIC_API_MASTERSHEET_COLUMN_IDS = [];
+	});
+
+	it("環境変数で指定した SELECT 列の選択肢名を customFields として返す", async () => {
+		const app = makeApp();
+		mockPrisma.project.findMany.mockResolvedValue([mockRow] as any);
+		mockPrisma.mastersheetColumn.findMany.mockResolvedValue([
+			{ id: "col-stage", name: "出演ステージ", dataType: "SELECT" },
+		] as any);
+		mockPrisma.mastersheetCellValue.findMany.mockResolvedValue([
+			{
+				columnId: "col-stage",
+				projectId: mockRow.id,
+				textValue: null,
+				numberValue: null,
+				selectedOptions: [{ option: { label: "メインステージ" } }],
+			},
+		] as any);
+
+		const res = await app.request("/openapi/projects");
+
+		const body = await res.json();
+		expect(body[0].customFields).toEqual([
+			{ name: "出演ステージ", value: "メインステージ" },
+		]);
+	});
+
+	it("セル値が未入力の場合は value を null にする", async () => {
+		const app = makeApp();
+		mockPrisma.project.findMany.mockResolvedValue([mockRow] as any);
+		mockPrisma.mastersheetColumn.findMany.mockResolvedValue([
+			{ id: "col-stage", name: "出演ステージ", dataType: "SELECT" },
+		] as any);
+		mockPrisma.mastersheetCellValue.findMany.mockResolvedValue([] as any);
+
+		const res = await app.request("/openapi/projects");
+
+		const body = await res.json();
+		expect(body[0].customFields).toEqual([
+			{ name: "出演ステージ", value: null },
+		]);
+	});
+
+	it("MULTI_SELECT 列は選択肢名の配列を返す", async () => {
+		const app = makeApp();
+		env.PUBLIC_API_MASTERSHEET_COLUMN_IDS = ["col-genre"];
+		mockPrisma.project.findMany.mockResolvedValue([mockRow] as any);
+		mockPrisma.mastersheetColumn.findMany.mockResolvedValue([
+			{ id: "col-genre", name: "ジャンル", dataType: "MULTI_SELECT" },
+		] as any);
+		mockPrisma.mastersheetCellValue.findMany.mockResolvedValue([
+			{
+				columnId: "col-genre",
+				projectId: mockRow.id,
+				textValue: null,
+				numberValue: null,
+				selectedOptions: [
+					{ option: { label: "音楽" } },
+					{ option: { label: "ダンス" } },
+				],
+			},
+		] as any);
+
+		const res = await app.request("/openapi/projects");
+
+		const body = await res.json();
+		expect(body[0].customFields).toEqual([
+			{ name: "ジャンル", value: ["音楽", "ダンス"] },
+		]);
+	});
+
+	it("指定した列IDがマスターシートに存在しない場合は無視する", async () => {
+		const app = makeApp();
+		mockPrisma.project.findMany.mockResolvedValue([mockRow] as any);
+		mockPrisma.mastersheetColumn.findMany.mockResolvedValue([] as any);
+
+		const res = await app.request("/openapi/projects");
+
+		const body = await res.json();
+		expect(body[0].customFields).toEqual([]);
+		expect(mockPrisma.mastersheetCellValue.findMany).not.toHaveBeenCalled();
 	});
 });
 

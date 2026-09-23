@@ -1,3 +1,5 @@
+import { env } from "./env";
+
 /**
  * 公開API（/openapi）のキャッシュ無効化用のバージョン番号。
  *
@@ -15,4 +17,18 @@ export function bumpPublicApiCacheVersion(): void {
 /** 現在のキャッシュバージョンを返す */
 export function getPublicApiCacheVersion(): number {
 	return version;
+}
+
+const publicMastersheetColumnIds = new Set(
+	env.PUBLIC_API_MASTERSHEET_COLUMN_IDS
+);
+
+/**
+ * 指定したマスターシート列が公開API（customFields）の対象かどうか。
+ *
+ * この列のセル値・選択肢・名前を更新する箇所では、trueの場合に
+ * bumpPublicApiCacheVersion() を呼んで公開APIのキャッシュを破棄すること。
+ */
+export function isPublicMastersheetColumn(columnId: string): boolean {
+	return publicMastersheetColumnIds.has(columnId);
 }

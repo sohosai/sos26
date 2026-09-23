@@ -13,6 +13,10 @@ import {
 } from "../../lib/form-answer-files";
 import { prisma } from "../../lib/prisma";
 import {
+	bumpPublicApiCacheVersion,
+	isPublicMastersheetColumn,
+} from "../../lib/public-api-cache";
+import {
 	getCommitteeMember,
 	requireAuth,
 	requireCommitteeMember,
@@ -253,6 +257,11 @@ cellsRoute.put(
 			},
 			{ isolationLevel: "Serializable" }
 		);
+
+		// 公開API（customFields）の対象列なら、値の更新をキャッシュに即時反映する
+		if (isPublicMastersheetColumn(columnId)) {
+			bumpPublicApiCacheVersion();
+		}
 
 		return c.json({
 			cell: {
