@@ -10,6 +10,10 @@ import { Hono } from "hono";
 import { Errors } from "../../lib/error";
 import { prisma } from "../../lib/prisma";
 import {
+	bumpPublicApiCacheVersion,
+	isPublicMastersheetColumn,
+} from "../../lib/public-api-cache";
+import {
 	getCommitteeMember,
 	requireAuth,
 	requireCommitteeMember,
@@ -443,6 +447,11 @@ columnsRoute.patch(
 			editablePrfFormIds
 		);
 
+		// 列名・選択肢は公開API（customFields）にも反映されるため、対象列ならキャッシュを破棄する
+		if (isPublicMastersheetColumn(columnId)) {
+			bumpPublicApiCacheVersion();
+		}
+
 		return c.json({ column: formatColumnDef(col, userId, canEdit) });
 	}
 );
@@ -463,6 +472,11 @@ columnsRoute.delete(
 		await requireColumnOwner(columnId, userId);
 
 		await prisma.mastersheetColumn.delete({ where: { id: columnId } });
+
+		// 公開API（customFields）の対象列が消えた場合はキャッシュを破棄する
+		if (isPublicMastersheetColumn(columnId)) {
+			bumpPublicApiCacheVersion();
+		}
 
 		return c.json({ success: true as const });
 	}
