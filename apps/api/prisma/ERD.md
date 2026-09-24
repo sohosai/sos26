@@ -549,10 +549,10 @@ erDiagram
   String projectId FK,UK
   String(200) description "nullable"
   String iconFileId FK "nullable"
-  String(2048) websiteUrl "nullable"
-  String(15) xId "nullable"
-  String(30) instagramId "nullable"
-  String(30) youtubeId "nullable"
+  String(2048) websiteUrls
+  String(15) xIds
+  String(30) instagramIds
+  String(30) youtubeIds
   OpenStatus openStatus
   StockStatus stockStatus
   DateTime createdAt
@@ -1405,10 +1405,10 @@ Properties as follows:
 - `projectId`:
 - `description`:
 - `iconFileId`:
-- `websiteUrl`:
-- `xId`:
-- `instagramId`:
-- `youtubeId`:
+- `websiteUrls`:
+- `xIds`:
+- `instagramIds`:
+- `youtubeIds`:
 - `openStatus`:
 - `stockStatus`:
 - `createdAt`:

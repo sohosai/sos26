@@ -20,17 +20,20 @@ export const PROJECT_DESCRIPTION_MAX_LENGTH = 200;
 /** 掲載画像の最大枚数 */
 export const PROJECT_MAP_IMAGES_MAX_COUNT = 10;
 
+/** SNSリンクの項目ごとに登録できる最大件数 */
+export const PROJECT_SNS_LINKS_MAX_COUNT = 2;
+
 /**
  * Webサイトの URL の最大文字数
  *
- * Prisma スキーマの `ProjectPublicInfo.websiteUrl` の VarChar と必ず一致させること。
+ * Prisma スキーマの `ProjectPublicInfo.websiteUrls` の VarChar と必ず一致させること。
  */
 export const PROJECT_SNS_URL_MAX_LENGTH = 2048;
 
 /**
  * X・Instagram・YouTube の ID の最大文字数（各サービスの仕様による）
  *
- * Prisma スキーマの `ProjectPublicInfo.xId` / `instagramId` / `youtubeId` の VarChar と必ず一致させること。
+ * Prisma スキーマの `ProjectPublicInfo.xIds` / `instagramIds` / `youtubeIds` の VarChar と必ず一致させること。
  */
 export const PROJECT_X_ID_MAX_LENGTH = 15;
 export const PROJECT_INSTAGRAM_ID_MAX_LENGTH = 30;
@@ -45,10 +48,10 @@ export const PROJECT_YOUTUBE_ID_MAX_LENGTH = 30;
  * 利用側で `https://x.com/{id}` のように組み立てられるようにするため。
  */
 export const projectSnsLinkKeys = [
-	"websiteUrl",
-	"xId",
-	"instagramId",
-	"youtubeId",
+	"websiteUrls",
+	"xIds",
+	"instagramIds",
+	"youtubeIds",
 ] as const;
 export type ProjectSnsLinkKey = (typeof projectSnsLinkKeys)[number];
 
@@ -99,43 +102,41 @@ export const projectYoutubeIdSchema = z
 		);
 	}, "YouTubeのハンドルは3文字以上（漢字・ハングルは1文字以上、ひらがな・カタカナなどは2文字以上）で入力してください");
 
-// 空文字は「未設定に戻す」を意味する
-function updateSnsLinkSchema(schema: z.ZodType<string, string>) {
+// プロフィールの表示どおり「@sohosai」と入力されても受け付け、@ を外して扱う
+function snsIdInputSchema(schema: z.ZodString) {
 	return z
-		.union([z.literal(""), schema])
-		.nullable()
-		.optional();
+		.string()
+		.trim()
+		.overwrite(v => v.replace(/^@/, ""))
+		.pipe(schema);
 }
 
-// プロフィールの表示どおり「@sohosai」と入力されても受け付け、@ を外して扱う
-function updateSnsIdSchema(schema: z.ZodString) {
-	return updateSnsLinkSchema(
-		z
-			.string()
-			.trim()
-			.overwrite(v => v.replace(/^@/, ""))
-			.pipe(schema)
-	);
+/** 入力欄1つ分の値の検証に使うスキーマ */
+export const projectSnsLinkInputSchemas = {
+	websiteUrls: projectSnsUrlSchema,
+	xIds: snsIdInputSchema(projectXIdSchema),
+	instagramIds: snsIdInputSchema(projectInstagramIdSchema),
+	youtubeIds: snsIdInputSchema(projectYoutubeIdSchema),
+} satisfies Record<ProjectSnsLinkKey, z.ZodType<string, string>>;
+
+function snsLinksSchema<T extends z.ZodType>(schema: T) {
+	return z.array(schema).max(PROJECT_SNS_LINKS_MAX_COUNT);
 }
 
 export const projectPublicInfoSchema = z.object({
 	description: z.string().max(PROJECT_DESCRIPTION_MAX_LENGTH).nullable(),
 	iconFileId: z.string().nullable(),
 	mapImageFileIds: z.array(z.string()).max(PROJECT_MAP_IMAGES_MAX_COUNT),
-	websiteUrl: projectSnsUrlSchema.nullable().describe("WebサイトのURL"),
-	xId: projectXIdSchema
-		.nullable()
-		.describe("XのユーザーID（@ を除く）。URL は https://x.com/{xId}"),
-	instagramId: projectInstagramIdSchema
-		.nullable()
-		.describe(
-			"Instagramのユーザーネーム。URL は https://www.instagram.com/{instagramId}"
-		),
-	youtubeId: projectYoutubeIdSchema
-		.nullable()
-		.describe(
-			"YouTubeチャンネルのハンドル（@ を除く）。URL は https://www.youtube.com/@{youtubeId}"
-		),
+	websiteUrls: snsLinksSchema(projectSnsUrlSchema).describe("WebサイトのURL"),
+	xIds: snsLinksSchema(projectXIdSchema).describe(
+		"XのユーザーID（@ を除く）。URL は https://x.com/{xId}"
+	),
+	instagramIds: snsLinksSchema(projectInstagramIdSchema).describe(
+		"Instagramのユーザーネーム。URL は https://www.instagram.com/{instagramId}"
+	),
+	youtubeIds: snsLinksSchema(projectYoutubeIdSchema).describe(
+		"YouTubeチャンネルのハンドル（@ を除く）。URL は https://www.youtube.com/@{youtubeId}"
+	),
 	openStatus: openStatusSchema,
 	stockStatus: stockStatusSchema,
 });
@@ -162,10 +163,14 @@ export const updateProjectPublicInfoRequestSchema = z.object({
 		.array(z.string())
 		.max(PROJECT_MAP_IMAGES_MAX_COUNT)
 		.optional(),
-	websiteUrl: updateSnsLinkSchema(projectSnsUrlSchema),
-	xId: updateSnsIdSchema(projectXIdSchema),
-	instagramId: updateSnsIdSchema(projectInstagramIdSchema),
-	youtubeId: updateSnsIdSchema(projectYoutubeIdSchema),
+	websiteUrls: snsLinksSchema(
+		projectSnsLinkInputSchemas.websiteUrls
+	).optional(),
+	xIds: snsLinksSchema(projectSnsLinkInputSchemas.xIds).optional(),
+	instagramIds: snsLinksSchema(
+		projectSnsLinkInputSchemas.instagramIds
+	).optional(),
+	youtubeIds: snsLinksSchema(projectSnsLinkInputSchemas.youtubeIds).optional(),
 	openStatus: openStatusSchema.optional(),
 	stockStatus: stockStatusSchema.optional(),
 });

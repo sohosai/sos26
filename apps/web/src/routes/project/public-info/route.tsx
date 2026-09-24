@@ -30,8 +30,9 @@ import {
 	isAllowedImageFile,
 	PROJECT_DESCRIPTION_MAX_LENGTH,
 	PROJECT_MAP_IMAGES_MAX_COUNT,
+	PROJECT_SNS_LINKS_MAX_COUNT,
+	projectSnsLinkInputSchemas,
 	projectSnsLinkKeys,
-	updateProjectPublicInfoRequestSchema,
 } from "@sos26/shared";
 import {
 	IconInfoCircle,
@@ -77,28 +78,28 @@ const SNS_LINK_FIELDS: {
 	hint: string;
 }[] = [
 	{
-		key: "websiteUrl",
+		key: "websiteUrls",
 		label: "Webサイト（URL）",
 		type: "url",
 		placeholder: "https://sohosai.com/",
 		hint: "例：https://sohosai.com/",
 	},
 	{
-		key: "xId",
+		key: "xIds",
 		label: "X（ユーザーID）",
 		type: "text",
 		placeholder: "sohosai",
 		hint: "@ は付けずに入力。例：https://x.com/sohosai → sohosai",
 	},
 	{
-		key: "instagramId",
+		key: "instagramIds",
 		label: "Instagram（ユーザーネーム）",
 		type: "text",
 		placeholder: "sohosai",
 		hint: "例：https://www.instagram.com/sohosai/ → sohosai",
 	},
 	{
-		key: "youtubeId",
+		key: "youtubeIds",
 		label: "YouTube（ハンドル）",
 		type: "text",
 		placeholder: "sohosai",
@@ -108,9 +109,17 @@ const SNS_LINK_FIELDS: {
 
 /** 入力値が保存できない形式ならエラーメッセージを返す（未入力は可） */
 function getSnsLinkError(key: ProjectSnsLinkKey, value: string) {
-	const result =
-		updateProjectPublicInfoRequestSchema.shape[key].safeParse(value);
+	if (value === "") return undefined;
+	const result = projectSnsLinkInputSchemas[key].safeParse(value);
 	return result.success ? undefined : result.error.issues[0]?.message;
+}
+
+/** 入力欄の数に合わせて未入力の欄を空文字で埋める */
+function toSnsLinkInputs(links: string[] | undefined): string[] {
+	return Array.from(
+		{ length: PROJECT_SNS_LINKS_MAX_COUNT },
+		(_, i) => links?.[i] ?? ""
+	);
 }
 
 export const Route = createFileRoute("/project/public-info")({
@@ -134,17 +143,17 @@ type FormValues = {
 	mapImageFileIds: string[];
 	openStatus: OpenStatus;
 	stockStatus: StockStatus;
-} & Record<ProjectSnsLinkKey, string>;
+} & Record<ProjectSnsLinkKey, string[]>;
 
 function toFormValues(info: ProjectPublicInfo | null): FormValues {
 	return {
 		description: info?.description ?? "",
 		iconFileId: info?.iconFileId ?? "",
 		mapImageFileIds: info?.mapImageFileIds ?? [],
-		websiteUrl: info?.websiteUrl ?? "",
-		xId: info?.xId ?? "",
-		instagramId: info?.instagramId ?? "",
-		youtubeId: info?.youtubeId ?? "",
+		websiteUrls: toSnsLinkInputs(info?.websiteUrls),
+		xIds: toSnsLinkInputs(info?.xIds),
+		instagramIds: toSnsLinkInputs(info?.instagramIds),
+		youtubeIds: toSnsLinkInputs(info?.youtubeIds),
 		openStatus: info?.openStatus ?? "NOT_APPLICABLE",
 		stockStatus: info?.stockStatus ?? "NOT_APPLICABLE",
 	};
@@ -156,7 +165,9 @@ function isSameValues(a: FormValues, b: FormValues): boolean {
 		a.iconFileId === b.iconFileId &&
 		a.openStatus === b.openStatus &&
 		a.stockStatus === b.stockStatus &&
-		projectSnsLinkKeys.every(key => a[key] === b[key]) &&
+		projectSnsLinkKeys.every(key =>
+			a[key].every((value, i) => value === b[key][i])
+		) &&
 		a.mapImageFileIds.length === b.mapImageFileIds.length &&
 		a.mapImageFileIds.every((id, i) => id === b.mapImageFileIds[i])
 	);
@@ -169,8 +180,10 @@ function buildUpdateRequest(
 	projectType: Project["type"]
 ): UpdateProjectPublicInfoRequest {
 	const canEditStatus = projectType !== "STAGE";
-	const snsLink = (key: ProjectSnsLinkKey) =>
-		setting.isSnsLinksEditable ? values[key] : undefined;
+	const snsLinks = (key: ProjectSnsLinkKey) =>
+		setting.isSnsLinksEditable
+			? values[key].filter(value => value !== "")
+			: undefined;
 
 	return {
 		description: setting.isDescriptionEditable ? values.description : undefined,
@@ -178,10 +191,10 @@ function buildUpdateRequest(
 		mapImageFileIds: setting.isMapImagesEditable
 			? values.mapImageFileIds
 			: undefined,
-		websiteUrl: snsLink("websiteUrl"),
-		xId: snsLink("xId"),
-		instagramId: snsLink("instagramId"),
-		youtubeId: snsLink("youtubeId"),
+		websiteUrls: snsLinks("websiteUrls"),
+		xIds: snsLinks("xIds"),
+		instagramIds: snsLinks("instagramIds"),
+		youtubeIds: snsLinks("youtubeIds"),
 		openStatus:
 			canEditStatus && setting.isOpenStatusEditable
 				? values.openStatus
@@ -494,8 +507,8 @@ function ProjectPublicInfoPage() {
 	const canEditSnsLinks = isEditable && setting.isSnsLinksEditable;
 	const hasSnsLinkError =
 		canEditSnsLinks &&
-		projectSnsLinkKeys.some(
-			key => getSnsLinkError(key, values[key]) !== undefined
+		projectSnsLinkKeys.some(key =>
+			values[key].some(value => getSnsLinkError(key, value) !== undefined)
 		);
 	const canAddMore =
 		canEditMapImages &&
@@ -719,25 +732,38 @@ function ProjectPublicInfoPage() {
 					<div>
 						<Heading size="4">SNSリンク</Heading>
 						<Text size="2" color="gray">
-							企画や実施団体を広報するものがあれば入力してください。企画検索システムに掲載されます。
+							企画や実施団体を広報するものがあれば入力してください（各
+							{PROJECT_SNS_LINKS_MAX_COUNT}
+							つまで登録できます）。企画検索システムに掲載されます。
 						</Text>
 					</div>
 					{isEditable && !setting.isSnsLinksEditable && <RestrictedNotice />}
 					{SNS_LINK_FIELDS.map(({ key, label, type, placeholder, hint }) => (
 						<Flex key={key} direction="column" gap="1">
-							<TextField
-								type={type}
-								label={label}
-								value={values[key]}
-								onChange={value => updateValues({ [key]: value.trim() })}
-								error={
-									canEditSnsLinks
-										? getSnsLinkError(key, values[key])
-										: undefined
-								}
-								disabled={!canEditSnsLinks}
-								placeholder={placeholder}
-							/>
+							{values[key].map((linkValue, index) => (
+								<TextField
+									// biome-ignore lint/suspicious/noArrayIndexKey: 入力欄の数は固定
+									key={index}
+									type={type}
+									label={index === 0 ? label : `${label} ${index + 1}つ目`}
+									value={linkValue}
+									onChange={value =>
+										updateValues(current => ({
+											...current,
+											[key]: current[key].map((v, i) =>
+												i === index ? value.trim() : v
+											),
+										}))
+									}
+									error={
+										canEditSnsLinks
+											? getSnsLinkError(key, linkValue)
+											: undefined
+									}
+									disabled={!canEditSnsLinks}
+									placeholder={placeholder}
+								/>
+							))}
 							<Text size="1" color="gray">
 								{hint}
 							</Text>
