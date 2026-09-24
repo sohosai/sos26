@@ -10,15 +10,17 @@
 
 ```bash
 # apps/api/.env
-DATABASE_URL="postgresql://user:password@localhost:5432/dbname?schema=public"
+DATABASE_URL="postgres://app:password@db:5432/app"
 ```
+
+Docker Compose の `app` コンテナから接続するため、ホスト名は `localhost` ではなく Compose サービス名の `db` を使います。ホスト PC から直接 DB に接続する場合は `postgres://app:password@localhost:5432/app` を使えます。
 
 ### Prisma Client の生成
 
 スキーマ変更後は以下のコマンドで Prisma Client を再生成してください。
 
 ```bash
-bun run db:generate
+docker compose exec app bun run db:generate
 ```
 
 生成されたクライアントはデフォルトで `node_modules/@prisma/client` に出力されます。
@@ -57,7 +59,7 @@ model User {
 ### 2. マイグレーションの作成・適用
 
 ```bash
-bun run db:migrate:dev --name add_users_table
+docker compose exec app bun run db:migrate:dev --name add_users_table
 ```
 
 このコマンドは以下を実行します：
@@ -110,16 +112,15 @@ Prisma を初めて使う方向けに、よくあるシーン別に使うコマ�
 ### プロジェクトに新しく参加したとき
 
 ```bash
-# 1. 依存関係をインストール
-bun install
-
-# 2. apps/api/.env ファイルを作成し、DATABASE_URL を設定
+# 1. 環境変数ファイルを作成
 cp apps/api/.env.example apps/api/.env
-# .env を編集して DATABASE_URL を設定
+cp apps/web/.env.example apps/web/.env
 
-# 3. マイグレーションを適用してDBを最新状態にする
-bun run db:migrate:dev
+# 2. DB を含む開発環境を起動
+docker compose --profile setup up
 ```
+
+起動時に `app` コンテナ内で `bun run db:migrate:dev` が実行され、DB は最新のマイグレーションまで適用されます。
 
 ### 新しいテーブルやカラムを追加したいとき
 
@@ -127,8 +128,8 @@ bun run db:migrate:dev
 # 1. apps/api/prisma/schema.prisma を編集してモデルを追加・変更
 
 # 2. マイグレーションを作成・適用
-bun run db:migrate:dev --name 変更内容を表す名前
-# 例: bun run db:migrate:dev --name add_posts_table
+docker compose exec app bun run db:migrate:dev --name 変更内容を表す名前
+# 例: docker compose exec app bun run db:migrate:dev --name add_posts_table
 
 # これで Prisma Client も自動で再生成されます
 ```
@@ -139,7 +140,7 @@ bun run db:migrate:dev --name 変更内容を表す名前
 
 ```bash
 # マイグレーションを適用
-bun run db:migrate:dev
+docker compose exec app bun run db:migrate:dev
 ```
 
 新しいマイグレーションファイルがあれば自動で適用され、Prisma Client も再生成されます。
@@ -148,7 +149,7 @@ bun run db:migrate:dev
 
 ```bash
 # Prisma Studio を起動（ブラウザで GUI が開きます）
-bun run db:studio
+docker compose exec app bun run db:studio
 ```
 
 Prisma Studio では：
@@ -162,12 +163,12 @@ Prisma Studio では：
 
 ```bash
 # 全データを削除してマイグレーションを再適用
-bun run db:migrate:reset
+docker compose exec app bun run db:migrate:reset
 ```
 
 **注意**: このコマンドは**全データが消えます**。開発環境でのみ使用してください。
 
-リセット後にデータを復元する場合は `bun run db:seed` を実行してください（`docs/how-to/seed.md` 参照）。
+リセット後にデータを復元する場合は `docker compose exec app bun run db:seed` を実行してください（`docs/how-to/seed.md` 参照）。
 
 ## データ規約
 
