@@ -29,10 +29,10 @@ const mockRow = {
 		iconFileId: "clfffffffffffffff01",
 		openStatus: "OPEN",
 		stockStatus: "IN_STOCK",
-		websiteUrl: "https://example.com",
-		xId: "sohosai",
-		instagramId: null,
-		youtubeId: null,
+		websiteUrls: ["https://example.com"],
+		xIds: ["sohosai"],
+		instagramIds: [],
+		youtubeIds: [],
 		mapImages: [{ fileId: "clfffffffffffffff02" }],
 	},
 };
@@ -61,10 +61,10 @@ describe("GET /openapi/projects", () => {
 		expect(body).toHaveLength(1);
 		expect(body[0].publicInfo.mapImageFileIds).toEqual(["clfffffffffffffff02"]);
 		expect(body[0].publicInfo).toMatchObject({
-			websiteUrl: "https://example.com",
-			xId: "sohosai",
-			instagramId: null,
-			youtubeId: null,
+			websiteUrls: ["https://example.com"],
+			xIds: ["sohosai"],
+			instagramIds: [],
+			youtubeIds: [],
 		});
 	});
 

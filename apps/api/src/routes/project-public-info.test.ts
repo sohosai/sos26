@@ -336,7 +336,7 @@ describe("PUT /project/:projectId/public-info", () => {
 				isSnsLinksEditable: false,
 			} as any);
 
-			const res = await put(app, { xId: "sohosai" });
+			const res = await put(app, { xIds: ["sohosai"] });
 
 			expect(res.status).toBe(400);
 		});
@@ -597,45 +597,59 @@ describe("PUT /project/:projectId/public-info", () => {
 			expect(res.status).toBe(200);
 		});
 
-		it("SNSリンクを保存し、空文字は null として保存する", async () => {
+		it("SNSリンクを保存し、送らなかった項目は変更しない", async () => {
 			const app = makeApp();
 			setupAuthAsOwner();
 			setupUpdateMocks({
-				saved: { websiteUrl: "https://example.com", xId: null },
+				saved: {
+					websiteUrls: ["https://example.com", "https://example.org"],
+					xIds: [],
+				},
 			});
 
 			const res = await put(app, {
-				websiteUrl: "https://example.com",
-				xId: "",
+				websiteUrls: ["https://example.com", "https://example.org"],
+				xIds: [],
 			});
 
 			expect(res.status).toBe(200);
 			expect(mockPrisma.projectPublicInfo.upsert).toHaveBeenCalledWith(
 				expect.objectContaining({
 					update: expect.objectContaining({
-						websiteUrl: "https://example.com",
-						xId: null,
-						instagramId: undefined,
-						youtubeId: undefined,
+						websiteUrls: ["https://example.com", "https://example.org"],
+						xIds: [],
+						instagramIds: undefined,
+						youtubeIds: undefined,
 					}),
 				})
 			);
-			expect((await res.json()).publicInfo.websiteUrl).toBe(
-				"https://example.com"
-			);
+			expect((await res.json()).publicInfo.websiteUrls).toEqual([
+				"https://example.com",
+				"https://example.org",
+			]);
+		});
+
+		it("SNSリンクが項目ごとの上限件数を超えると400エラー", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks();
+
+			const res = await put(app, { xIds: ["a", "b", "c"] });
+
+			expect(res.status).toBe(400);
 		});
 
 		it("X の ID は先頭の @ を外して保存する", async () => {
 			const app = makeApp();
 			setupAuthAsOwner();
-			setupUpdateMocks({ saved: { xId: "sohosai" } });
+			setupUpdateMocks({ saved: { xIds: ["sohosai"] } });
 
-			const res = await put(app, { xId: "@sohosai" });
+			const res = await put(app, { xIds: ["@sohosai"] });
 
 			expect(res.status).toBe(200);
 			expect(mockPrisma.projectPublicInfo.upsert).toHaveBeenCalledWith(
 				expect.objectContaining({
-					update: expect.objectContaining({ xId: "sohosai" }),
+					update: expect.objectContaining({ xIds: ["sohosai"] }),
 				})
 			);
 		});
@@ -646,7 +660,7 @@ describe("PUT /project/:projectId/public-info", () => {
 			setupUpdateMocks();
 
 			const res = await put(app, {
-				instagramId: "https://www.instagram.com/sohosai",
+				instagramIds: ["https://www.instagram.com/sohosai"],
 			});
 
 			expect(res.status).toBe(400);
@@ -657,7 +671,7 @@ describe("PUT /project/:projectId/public-info", () => {
 			setupAuthAsOwner();
 			setupUpdateMocks();
 
-			const res = await put(app, { websiteUrl: "javascript:alert(1)" });
+			const res = await put(app, { websiteUrls: ["javascript:alert(1)"] });
 
 			expect(res.status).toBe(400);
 		});
