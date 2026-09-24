@@ -39,6 +39,7 @@
   - 企画登録フォーム機能: `docs/project-registration-form-spec.md`
   - マスターシート × 企画登録フォーム連携: `docs/mastersheet-project-registration-form-spec.md`
   - 配信先指定モード（カテゴリ指定）: `docs/delivery-target-spec.md`
+  - 企画情報管理（実委）: `docs/project-public-info-moderation-spec.md`
 - 共有仕様
   - Shared パッケージ: `packages/shared/README.md`
 - テスト全般: `docs/testing.md`
