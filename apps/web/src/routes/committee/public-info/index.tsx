@@ -62,10 +62,12 @@ function snsLinks(info: PublicInfo): { label: string; href: string }[] {
 }
 
 function escapeCsvField(str: string): string {
-	if (/[,"\r\n]/.test(str)) {
-		return `"${str.replace(/"/g, '""')}"`;
+	// 引用符で囲むだけでは数式として評価されるため、先に文字列化する。
+	const value = /^(?:\s*[=+\-@]|[\t\r\n])/.test(str) ? `'${str}` : str;
+	if (/[,"\r\n]/.test(value)) {
+		return `"${value.replace(/"/g, '""')}"`;
 	}
-	return str;
+	return value;
 }
 
 function downloadPublicInfoCsv(
