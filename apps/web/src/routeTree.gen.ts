@@ -36,6 +36,7 @@ import { Route as DevSearchIndexRouteImport } from './routes/dev/search/index'
 import { Route as DevFilePreviewIndexRouteImport } from './routes/dev/filePreview/index'
 import { Route as DevCommitteeMemberIndexRouteImport } from './routes/dev/committeeMember/index'
 import { Route as CommitteeSupportIndexRouteImport } from './routes/committee/support/index'
+import { Route as CommitteePublicInfoIndexRouteImport } from './routes/committee/public-info/index'
 import { Route as CommitteeProjectRegistrationIndexRouteImport } from './routes/committee/project-registration/index'
 import { Route as CommitteeNoticeIndexRouteImport } from './routes/committee/notice/index'
 import { Route as CommitteeMembersIndexRouteImport } from './routes/committee/members/index'
@@ -190,6 +191,12 @@ const CommitteeSupportIndexRoute = CommitteeSupportIndexRouteImport.update({
   path: '/support/',
   getParentRoute: () => CommitteeRouteRoute,
 } as any)
+const CommitteePublicInfoIndexRoute =
+  CommitteePublicInfoIndexRouteImport.update({
+    id: '/public-info/',
+    path: '/public-info/',
+    getParentRoute: () => CommitteeRouteRoute,
+  } as any)
 const CommitteeProjectRegistrationIndexRoute =
   CommitteeProjectRegistrationIndexRouteImport.update({
     id: '/project-registration/',
@@ -311,6 +318,7 @@ export interface FileRoutesByFullPath {
   '/committee/members/': typeof CommitteeMembersIndexRoute
   '/committee/notice/': typeof CommitteeNoticeIndexRoute
   '/committee/project-registration/': typeof CommitteeProjectRegistrationIndexRoute
+  '/committee/public-info/': typeof CommitteePublicInfoIndexRoute
   '/committee/support/': typeof CommitteeSupportIndexRoute
   '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
   '/dev/filePreview/': typeof DevFilePreviewIndexRoute
@@ -352,6 +360,7 @@ export interface FileRoutesByTo {
   '/committee/members': typeof CommitteeMembersIndexRoute
   '/committee/notice': typeof CommitteeNoticeIndexRoute
   '/committee/project-registration': typeof CommitteeProjectRegistrationIndexRoute
+  '/committee/public-info': typeof CommitteePublicInfoIndexRoute
   '/committee/support': typeof CommitteeSupportIndexRoute
   '/dev/committeeMember': typeof DevCommitteeMemberIndexRoute
   '/dev/filePreview': typeof DevFilePreviewIndexRoute
@@ -399,6 +408,7 @@ export interface FileRoutesById {
   '/committee/members/': typeof CommitteeMembersIndexRoute
   '/committee/notice/': typeof CommitteeNoticeIndexRoute
   '/committee/project-registration/': typeof CommitteeProjectRegistrationIndexRoute
+  '/committee/public-info/': typeof CommitteePublicInfoIndexRoute
   '/committee/support/': typeof CommitteeSupportIndexRoute
   '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
   '/dev/filePreview/': typeof DevFilePreviewIndexRoute
@@ -447,6 +457,7 @@ export interface FileRouteTypes {
     | '/committee/members/'
     | '/committee/notice/'
     | '/committee/project-registration/'
+    | '/committee/public-info/'
     | '/committee/support/'
     | '/dev/committeeMember/'
     | '/dev/filePreview/'
@@ -488,6 +499,7 @@ export interface FileRouteTypes {
     | '/committee/members'
     | '/committee/notice'
     | '/committee/project-registration'
+    | '/committee/public-info'
     | '/committee/support'
     | '/dev/committeeMember'
     | '/dev/filePreview'
@@ -534,6 +546,7 @@ export interface FileRouteTypes {
     | '/committee/members/'
     | '/committee/notice/'
     | '/committee/project-registration/'
+    | '/committee/public-info/'
     | '/committee/support/'
     | '/dev/committeeMember/'
     | '/dev/filePreview/'
@@ -755,6 +768,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CommitteeSupportIndexRouteImport
       parentRoute: typeof CommitteeRouteRoute
     }
+    '/committee/public-info/': {
+      id: '/committee/public-info/'
+      path: '/public-info'
+      fullPath: '/committee/public-info/'
+      preLoaderRoute: typeof CommitteePublicInfoIndexRouteImport
+      parentRoute: typeof CommitteeRouteRoute
+    }
     '/committee/project-registration/': {
       id: '/committee/project-registration/'
       path: '/project-registration'
@@ -907,6 +927,7 @@ interface CommitteeRouteRouteChildren {
   CommitteeMembersIndexRoute: typeof CommitteeMembersIndexRoute
   CommitteeNoticeIndexRoute: typeof CommitteeNoticeIndexRoute
   CommitteeProjectRegistrationIndexRoute: typeof CommitteeProjectRegistrationIndexRoute
+  CommitteePublicInfoIndexRoute: typeof CommitteePublicInfoIndexRoute
   CommitteeSupportIndexRoute: typeof CommitteeSupportIndexRoute
   CommitteeFormsFormIdIndexRoute: typeof CommitteeFormsFormIdIndexRoute
   CommitteeNoticeNoticeIdIndexRoute: typeof CommitteeNoticeNoticeIdIndexRoute
@@ -924,6 +945,7 @@ const CommitteeRouteRouteChildren: CommitteeRouteRouteChildren = {
   CommitteeNoticeIndexRoute: CommitteeNoticeIndexRoute,
   CommitteeProjectRegistrationIndexRoute:
     CommitteeProjectRegistrationIndexRoute,
+  CommitteePublicInfoIndexRoute: CommitteePublicInfoIndexRoute,
   CommitteeSupportIndexRoute: CommitteeSupportIndexRoute,
   CommitteeFormsFormIdIndexRoute: CommitteeFormsFormIdIndexRoute,
   CommitteeNoticeNoticeIdIndexRoute: CommitteeNoticeNoticeIdIndexRoute,

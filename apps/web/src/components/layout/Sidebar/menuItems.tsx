@@ -71,6 +71,11 @@ export const committeeMenuItems: MenuItem[] = [
 		to: "/committee/project-registration",
 	},
 	{
+		label: "企画情報一覧",
+		icon: <IconClipboardList size={18} />,
+		to: "/committee/public-info",
+	},
+	{
 		label: "企画検索システム",
 		icon: <IconLayoutDashboard size={18} />,
 		to: "/committee/map-settings",
