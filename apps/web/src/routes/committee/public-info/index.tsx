@@ -11,6 +11,7 @@ import { UserAvatar } from "@/components/common/UserAvatar";
 import { Button } from "@/components/primitives";
 import { getFileContentUrl } from "@/lib/api/files";
 import { listCommitteeProjectPublicInfos } from "@/lib/api/project-public-info";
+import { formatProjectNumber } from "@/lib/format";
 import { ImagePreviewModal } from "../../project/public-info/ImagePreviewModal";
 import styles from "./index.module.scss";
 
@@ -92,7 +93,7 @@ function downloadPublicInfoCsv(
 	// 1セルに複数の値が入る項目は改行区切りにする
 	const rows = projects.map(
 		({ number, name, organizationName, publicInfo }) => [
-			String(number).padStart(3, "0"),
+			formatProjectNumber(number),
 			name,
 			organizationName,
 			publicInfo ? "入力済み" : "未入力",
@@ -207,7 +208,7 @@ function ProjectCard({
 				</button>
 				<div>
 					<Text as="div" size="1" color="gray">
-						{String(project.number).padStart(3, "0")}
+						{formatProjectNumber(project.number)}
 					</Text>
 					<Text as="div" size="3" weight="bold">
 						{project.name}

@@ -778,27 +778,37 @@ committeeProjectRoute.get(
 				name: true,
 				organizationName: true,
 				publicInfo: {
-					include: { mapImages: { orderBy: { sortOrder: "asc" } } },
+					select: {
+						description: true,
+						iconFileId: true,
+						websiteUrls: true,
+						xIds: true,
+						instagramIds: true,
+						youtubeIds: true,
+						openStatus: true,
+						stockStatus: true,
+						mapImages: {
+							orderBy: { sortOrder: "asc" },
+							select: { fileId: true },
+						},
+					},
 				},
 			},
 			orderBy: { number: "asc" },
 		});
 
 		return c.json({
-			projects: projects.map(({ publicInfo: info, ...project }) => ({
-				...project,
-				publicInfo: info && {
-					description: info.description,
-					iconFileId: info.iconFileId,
-					mapImageFileIds: info.mapImages.map(img => img.fileId),
-					websiteUrls: info.websiteUrls,
-					xIds: info.xIds,
-					instagramIds: info.instagramIds,
-					youtubeIds: info.youtubeIds,
-					openStatus: info.openStatus,
-					stockStatus: info.stockStatus,
-				},
-			})),
+			projects: projects.map(({ publicInfo, ...project }) => {
+				if (!publicInfo) return { ...project, publicInfo: null };
+				const { mapImages, ...info } = publicInfo;
+				return {
+					...project,
+					publicInfo: {
+						...info,
+						mapImageFileIds: mapImages.map(img => img.fileId),
+					},
+				};
+			}),
 		});
 	}
 );
