@@ -143,9 +143,52 @@ export const projectPublicInfoSchema = z.object({
 
 export type ProjectPublicInfo = z.infer<typeof projectPublicInfoSchema>;
 
+/** 実委人が非表示・修正できる項目（掲載画像は1枚ごとに別で扱う） */
+export const projectPublicInfoFieldSchema = z.enum([
+	"DESCRIPTION",
+	"ICON",
+	"WEBSITE_URLS",
+	"X_IDS",
+	"INSTAGRAM_IDS",
+	"YOUTUBE_IDS",
+]);
+export type ProjectPublicInfoField = z.infer<
+	typeof projectPublicInfoFieldSchema
+>;
+
+/** 項目と ProjectPublicInfo のキーの対応 */
+export const projectPublicInfoFieldKeys = {
+	DESCRIPTION: "description",
+	ICON: "iconFileId",
+	WEBSITE_URLS: "websiteUrls",
+	X_IDS: "xIds",
+	INSTAGRAM_IDS: "instagramIds",
+	YOUTUBE_IDS: "youtubeIds",
+} as const satisfies Record<ProjectPublicInfoField, keyof ProjectPublicInfo>;
+
+/** 実委人が修正できる項目（アイコンは非表示のみ） */
+export const correctableProjectPublicInfoFields = [
+	"DESCRIPTION",
+	"WEBSITE_URLS",
+	"X_IDS",
+	"INSTAGRAM_IDS",
+	"YOUTUBE_IDS",
+] as const satisfies readonly ProjectPublicInfoField[];
+
+export const projectPublicInfoModerationKindSchema = z.enum([
+	"HIDDEN",
+	"CORRECTED",
+]);
+export type ProjectPublicInfoModerationKind = z.infer<
+	typeof projectPublicInfoModerationKindSchema
+>;
+
 // GET /project/:projectId/public-info
 export const getProjectPublicInfoResponseSchema = z.object({
 	publicInfo: projectPublicInfoSchema.nullable(),
+	hiddenFields: z.array(projectPublicInfoFieldSchema),
+	correctedFields: z.array(projectPublicInfoFieldSchema),
+	hiddenMapImageFileIds: z.array(z.string()),
 });
 export type GetProjectPublicInfoResponse = z.infer<
 	typeof getProjectPublicInfoResponseSchema

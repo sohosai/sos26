@@ -8,6 +8,7 @@ type Props = {
 	id: string;
 	index: number;
 	isEditable: boolean;
+	isHidden: boolean;
 	onRemove: () => void;
 	onPreview: () => void;
 };
@@ -16,6 +17,7 @@ export function SortableMapImageItem({
 	id,
 	index,
 	isEditable,
+	isHidden,
 	onRemove,
 	onPreview,
 }: Props) {
@@ -85,6 +87,9 @@ export function SortableMapImageItem({
 					<IconTrash size={14} />
 				</button>
 			)}
+
+			{/* 実行委員会による非公開 */}
+			{isHidden && <span className={styles.mapImageHiddenLabel}>非公開</span>}
 
 			{/* 順番バッジ */}
 			<span className={styles.mapImageBadge}>{index + 1}</span>

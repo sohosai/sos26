@@ -30,6 +30,7 @@ vi.mock("../lib/prisma", () => {
 			findMany: vi.fn(),
 			upsert: vi.fn(),
 		},
+		projectPublicInfoModeration: { deleteMany: vi.fn() },
 		projectPublicMapImage: {
 			findMany: vi.fn(),
 			deleteMany: vi.fn(),
@@ -134,10 +135,7 @@ function setupUpdateMocks(
 			uploadedById: string;
 			isPublic?: boolean;
 		}[];
-		before?: {
-			iconFileId: string | null;
-			mapImages: { fileId: string }[];
-		} | null;
+		before?: Record<string, unknown> | null;
 		saved?: Record<string, unknown>;
 	} = {}
 ) {
@@ -186,6 +184,9 @@ function setupUpdateMocks(
 	} as any);
 	mockPrisma.projectPublicMapImage.deleteMany.mockResolvedValue({ count: 0 });
 	mockPrisma.projectPublicMapImage.createMany.mockResolvedValue({ count: 0 });
+	mockPrisma.projectPublicInfoModeration.deleteMany.mockResolvedValue({
+		count: 0,
+	});
 	mockPrisma.projectPublicInfo.findMany.mockResolvedValue([]);
 	mockPrisma.projectPublicMapImage.findMany.mockResolvedValue([]);
 	// findReferencedFileIds が確認する他機能側の参照先。既定では「どこからも参照されていない」
@@ -227,7 +228,11 @@ describe("GET /project/:projectId/public-info", () => {
 			iconFileId: ICON_FILE_ID,
 			openStatus: "OPEN",
 			stockStatus: "IN_STOCK",
-			mapImages: [{ fileId: MAP_FILE_ID }],
+			mapImages: [{ fileId: MAP_FILE_ID, isHidden: true }],
+			moderations: [
+				{ field: "DESCRIPTION", kind: "CORRECTED" },
+				{ field: "ICON", kind: "HIDDEN" },
+			],
 		} as any);
 
 		const res = await app.request(`/project/${PROJECT_ID}/public-info`, {
@@ -239,6 +244,9 @@ describe("GET /project/:projectId/public-info", () => {
 		const body = await res.json();
 		expect(body.publicInfo.description).toBe("焼きそばです");
 		expect(body.publicInfo.mapImageFileIds).toEqual([MAP_FILE_ID]);
+		expect(body.hiddenFields).toEqual(["ICON"]);
+		expect(body.correctedFields).toEqual(["DESCRIPTION"]);
+		expect(body.hiddenMapImageFileIds).toEqual([MAP_FILE_ID]);
 	});
 
 	it("未作成の場合は null を返す", async () => {
@@ -674,6 +682,76 @@ describe("PUT /project/:projectId/public-info", () => {
 			const res = await put(app, { websiteUrls: ["javascript:alert(1)"] });
 
 			expect(res.status).toBe(400);
+		});
+	});
+
+	describe("実委人による非表示・修正との関係", () => {
+		const before = {
+			description: "修正後の紹介文",
+			iconFileId: null,
+			websiteUrls: [],
+			xIds: ["sohosai"],
+			instagramIds: [],
+			youtubeIds: [],
+			mapImages: [{ fileId: MAP_FILE_ID, isHidden: true }],
+		};
+
+		it("掲載画像を保存し直しても、残った画像の非表示を引き継ぐ", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks({
+				before,
+				files: [
+					{ id: MAP_FILE_ID, mimeType: "image/png", uploadedById: OWNER_ID },
+					{ id: ICON_FILE_ID, mimeType: "image/png", uploadedById: OWNER_ID },
+				],
+			});
+
+			const res = await put(app, {
+				mapImageFileIds: [ICON_FILE_ID, MAP_FILE_ID],
+			});
+
+			expect(res.status).toBe(200);
+			expect(mockPrisma.projectPublicMapImage.createMany).toHaveBeenCalledWith({
+				data: [
+					expect.objectContaining({ fileId: ICON_FILE_ID, isHidden: false }),
+					expect.objectContaining({ fileId: MAP_FILE_ID, isHidden: true }),
+				],
+			});
+		});
+
+		it("値を変えた項目だけ修正の記録を消す", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks({ before });
+
+			const res = await put(app, {
+				description: "企画が書き直した紹介文",
+				xIds: ["sohosai"],
+			});
+
+			expect(res.status).toBe(200);
+			expect(
+				mockPrisma.projectPublicInfoModeration.deleteMany
+			).toHaveBeenCalledWith({
+				where: expect.objectContaining({
+					kind: "CORRECTED",
+					field: { in: ["DESCRIPTION"] },
+				}),
+			});
+		});
+
+		it("値が変わらなければ修正の記録を残す", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks({ before });
+
+			const res = await put(app, { description: "修正後の紹介文" });
+
+			expect(res.status).toBe(200);
+			expect(
+				mockPrisma.projectPublicInfoModeration.deleteMany
+			).not.toHaveBeenCalled();
 		});
 	});
 });

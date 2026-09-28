@@ -14,12 +14,13 @@ import {
 	SortableContext,
 	sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
-import { Callout, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import { Badge, Callout, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import type {
 	MapAppSetting,
 	OpenStatus,
 	Project,
 	ProjectPublicInfo,
+	ProjectPublicInfoField,
 	ProjectSnsLinkKey,
 	StockStatus,
 	UpdateProjectPublicInfoRequest,
@@ -72,6 +73,7 @@ const projectRoute = getRouteApi("/project");
 
 const SNS_LINK_FIELDS: {
 	key: ProjectSnsLinkKey;
+	field: ProjectPublicInfoField;
 	label: string;
 	type: "url" | "text";
 	placeholder: string;
@@ -79,6 +81,7 @@ const SNS_LINK_FIELDS: {
 }[] = [
 	{
 		key: "websiteUrls",
+		field: "WEBSITE_URLS",
 		label: "Webサイト（URL）",
 		type: "url",
 		placeholder: "https://sohosai.com/",
@@ -86,6 +89,7 @@ const SNS_LINK_FIELDS: {
 	},
 	{
 		key: "xIds",
+		field: "X_IDS",
 		label: "X（ユーザーID）",
 		type: "text",
 		placeholder: "sohosai",
@@ -93,6 +97,7 @@ const SNS_LINK_FIELDS: {
 	},
 	{
 		key: "instagramIds",
+		field: "INSTAGRAM_IDS",
 		label: "Instagram（ユーザーネーム）",
 		type: "text",
 		placeholder: "sohosai",
@@ -100,6 +105,7 @@ const SNS_LINK_FIELDS: {
 	},
 	{
 		key: "youtubeIds",
+		field: "YOUTUBE_IDS",
 		label: "YouTube（ハンドル）",
 		type: "text",
 		placeholder: "sohosai",
@@ -173,37 +179,100 @@ function isSameValues(a: FormValues, b: FormValues): boolean {
 	);
 }
 
-/** 実委人が編集を許可している項目だけを送信する（禁止項目は undefined = 変更なし） */
+function isSameList(a: string[], b: string[]): boolean {
+	return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
+/**
+ * 編集が許可され、かつ画面を開いたときの値から変更した項目だけを送信する
+ * （それ以外は undefined = 変更なし）。
+ * 画面を開いている間に実委人が修正した項目を、開く前の値で上書きしないため。
+ */
 function buildUpdateRequest(
 	values: FormValues,
+	serverValues: FormValues,
 	setting: MapAppSetting,
 	projectType: Project["type"]
 ): UpdateProjectPublicInfoRequest {
 	const canEditStatus = projectType !== "STAGE";
-	const snsLinks = (key: ProjectSnsLinkKey) =>
-		setting.isSnsLinksEditable
-			? values[key].filter(value => value !== "")
-			: undefined;
+	const changed = <T,>(editable: boolean, value: T, isSame: boolean) =>
+		editable && !isSame ? value : undefined;
+	const snsLinks = (key: ProjectSnsLinkKey) => {
+		const links = values[key].filter(value => value !== "");
+		const serverLinks = serverValues[key].filter(value => value !== "");
+		return changed(
+			setting.isSnsLinksEditable,
+			links,
+			isSameList(links, serverLinks)
+		);
+	};
 
 	return {
-		description: setting.isDescriptionEditable ? values.description : undefined,
-		iconFileId: setting.isIconEditable ? values.iconFileId : undefined,
-		mapImageFileIds: setting.isMapImagesEditable
-			? values.mapImageFileIds
-			: undefined,
+		description: changed(
+			setting.isDescriptionEditable,
+			values.description,
+			values.description === serverValues.description
+		),
+		iconFileId: changed(
+			setting.isIconEditable,
+			values.iconFileId,
+			values.iconFileId === serverValues.iconFileId
+		),
+		mapImageFileIds: changed(
+			setting.isMapImagesEditable,
+			values.mapImageFileIds,
+			isSameList(values.mapImageFileIds, serverValues.mapImageFileIds)
+		),
 		websiteUrls: snsLinks("websiteUrls"),
 		xIds: snsLinks("xIds"),
 		instagramIds: snsLinks("instagramIds"),
 		youtubeIds: snsLinks("youtubeIds"),
-		openStatus:
-			canEditStatus && setting.isOpenStatusEditable
-				? values.openStatus
-				: undefined,
-		stockStatus:
-			canEditStatus && setting.isStockStatusEditable
-				? values.stockStatus
-				: undefined,
+		openStatus: changed(
+			canEditStatus && setting.isOpenStatusEditable,
+			values.openStatus,
+			values.openStatus === serverValues.openStatus
+		),
+		stockStatus: changed(
+			canEditStatus && setting.isStockStatusEditable,
+			values.stockStatus,
+			values.stockStatus === serverValues.stockStatus
+		),
 	};
+}
+
+/** 実行委員会が非表示・修正した項目に表示する注記 */
+function ModerationNotice({
+	isHidden,
+	isCorrected,
+}: {
+	isHidden: boolean;
+	isCorrected: boolean;
+}) {
+	if (!isHidden && !isCorrected) return null;
+	return (
+		<Flex direction="column" gap="1">
+			{isHidden && (
+				<Flex align="center" gap="2" wrap="wrap">
+					<Badge color="red" variant="soft">
+						非公開
+					</Badge>
+					<Text size="1" color="gray">
+						この項目は実行委員会により非公開になっています。変更しても公開されません。詳しくはお問い合わせからご連絡ください。
+					</Text>
+				</Flex>
+			)}
+			{isCorrected && (
+				<Flex align="center" gap="2" wrap="wrap">
+					<Badge color="blue" variant="soft">
+						実行委員会が修正
+					</Badge>
+					<Text size="1" color="gray">
+						この項目は実行委員会が修正しました。
+					</Text>
+				</Flex>
+			)}
+		</Flex>
+	);
 }
 
 /** 実委人により編集が制限されている項目に表示する注記 */
@@ -224,8 +293,12 @@ function ProjectPublicInfoPage() {
 	const setProjectIconFileId = useProjectStore(state => state.setIconFileId);
 	const project = projects.find(p => p.id === selectedProjectId);
 
-	const { publicInfo, publicInfoProjectId, publicInfoLoadFailed } =
-		projectRoute.useLoaderData();
+	const {
+		publicInfo,
+		publicInfoModeration,
+		publicInfoProjectId,
+		publicInfoLoadFailed,
+	} = projectRoute.useLoaderData();
 	const { setting } = Route.useLoaderData();
 
 	// 親ローダーの再取得が終わるまでは、前の企画の情報を表示しない
@@ -236,6 +309,21 @@ function ProjectPublicInfoPage() {
 		!!user &&
 		project.deletionStatus === null &&
 		(project.ownerId === user.id || project.subOwnerId === user.id);
+
+	const moderationNotice = (field: ProjectPublicInfoField) => (
+		<ModerationNotice
+			isHidden={
+				!isPublicInfoStale && publicInfoModeration.hiddenFields.includes(field)
+			}
+			isCorrected={
+				!isPublicInfoStale &&
+				publicInfoModeration.correctedFields.includes(field)
+			}
+		/>
+	);
+	const hiddenMapImageFileIds = new Set(
+		isPublicInfoStale ? [] : publicInfoModeration.hiddenMapImageFileIds
+	);
 
 	// サーバー上の値。編集中（draft !== null）でなければ、そのまま画面に反映する
 	const serverValues = useMemo(
@@ -327,7 +415,7 @@ function ProjectPublicInfoPage() {
 		try {
 			await updateProjectPublicInfo(
 				project.id,
-				buildUpdateRequest(values, setting, project.type)
+				buildUpdateRequest(values, serverValues, setting, project.type)
 			);
 		} catch (error) {
 			reportHandledError({
@@ -553,6 +641,7 @@ function ProjectPublicInfoPage() {
 							企画検索システムに表示される企画の紹介文です。
 						</Text>
 					</div>
+					{moderationNotice("DESCRIPTION")}
 					{isEditable && !setting.isDescriptionEditable && <RestrictedNotice />}
 					<Flex direction="column" gap="2">
 						<TextArea
@@ -582,6 +671,7 @@ function ProjectPublicInfoPage() {
 							正方形にトリミングされて表示されます。
 						</Text>
 					</div>
+					{moderationNotice("ICON")}
 					{isEditable && !setting.isIconEditable && <RestrictedNotice />}
 					<input
 						type="file"
@@ -680,6 +770,7 @@ function ProjectPublicInfoPage() {
 										id={fileId}
 										index={index}
 										isEditable={canEditMapImages}
+										isHidden={hiddenMapImageFileIds.has(fileId)}
 										onRemove={() => removeMapImage(index)}
 										onPreview={() => {
 											setPreviewIndex(index);
@@ -738,37 +829,40 @@ function ProjectPublicInfoPage() {
 						</Text>
 					</div>
 					{isEditable && !setting.isSnsLinksEditable && <RestrictedNotice />}
-					{SNS_LINK_FIELDS.map(({ key, label, type, placeholder, hint }) => (
-						<Flex key={key} direction="column" gap="1">
-							{values[key].map((linkValue, index) => (
-								<TextField
-									// biome-ignore lint/suspicious/noArrayIndexKey: 入力欄の数は固定
-									key={index}
-									type={type}
-									label={index === 0 ? label : `${label} ${index + 1}つ目`}
-									value={linkValue}
-									onChange={value =>
-										updateValues(current => ({
-											...current,
-											[key]: current[key].map((v, i) =>
-												i === index ? value.trim() : v
-											),
-										}))
-									}
-									error={
-										canEditSnsLinks
-											? getSnsLinkError(key, linkValue)
-											: undefined
-									}
-									disabled={!canEditSnsLinks}
-									placeholder={placeholder}
-								/>
-							))}
-							<Text size="1" color="gray">
-								{hint}
-							</Text>
-						</Flex>
-					))}
+					{SNS_LINK_FIELDS.map(
+						({ key, field, label, type, placeholder, hint }) => (
+							<Flex key={key} direction="column" gap="1">
+								{moderationNotice(field)}
+								{values[key].map((linkValue, index) => (
+									<TextField
+										// biome-ignore lint/suspicious/noArrayIndexKey: 入力欄の数は固定
+										key={index}
+										type={type}
+										label={index === 0 ? label : `${label} ${index + 1}つ目`}
+										value={linkValue}
+										onChange={value =>
+											updateValues(current => ({
+												...current,
+												[key]: current[key].map((v, i) =>
+													i === index ? value.trim() : v
+												),
+											}))
+										}
+										error={
+											canEditSnsLinks
+												? getSnsLinkError(key, linkValue)
+												: undefined
+										}
+										disabled={!canEditSnsLinks}
+										placeholder={placeholder}
+									/>
+								))}
+								<Text size="1" color="gray">
+									{hint}
+								</Text>
+							</Flex>
+						)
+					)}
 				</Flex>
 			</Card>
 

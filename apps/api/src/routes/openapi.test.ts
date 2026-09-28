@@ -33,7 +33,8 @@ const mockRow = {
 		xIds: ["sohosai"],
 		instagramIds: [],
 		youtubeIds: [],
-		mapImages: [{ fileId: "clfffffffffffffff02" }],
+		mapImages: [{ fileId: "clfffffffffffffff02", isHidden: false }],
+		moderations: [],
 	},
 };
 
@@ -65,6 +66,42 @@ describe("GET /openapi/projects", () => {
 			xIds: ["sohosai"],
 			instagramIds: [],
 			youtubeIds: [],
+		});
+	});
+
+	it("実委人が非表示にした項目は未入力と同じ値で返す", async () => {
+		const app = makeApp();
+		mockPrisma.project.findMany.mockResolvedValue([
+			{
+				...mockRow,
+				publicInfo: {
+					...mockRow.publicInfo,
+					mapImages: [
+						{ fileId: "clfffffffffffffff02", isHidden: true },
+						{ fileId: "clfffffffffffffff03", isHidden: false },
+					],
+					moderations: [
+						{ field: "DESCRIPTION" },
+						{ field: "ICON" },
+						{ field: "WEBSITE_URLS" },
+					],
+				},
+			},
+		] as any);
+
+		const res = await app.request("/openapi/projects");
+
+		const body = await res.json();
+		expect(body[0].publicInfo).toEqual({
+			description: null,
+			iconFileId: null,
+			mapImageFileIds: ["clfffffffffffffff03"],
+			websiteUrls: [],
+			xIds: ["sohosai"],
+			instagramIds: [],
+			youtubeIds: [],
+			openStatus: "OPEN",
+			stockStatus: "IN_STOCK",
 		});
 	});
 

@@ -2,6 +2,7 @@ import {
 	IconBell,
 	IconClipboardList,
 	IconFileText,
+	IconInfoCircle,
 	IconLayoutDashboard,
 	IconMessageCircleQuestion,
 	IconTable,
@@ -69,6 +70,11 @@ export const committeeMenuItems: MenuItem[] = [
 		label: "企画登録管理",
 		icon: <IconClipboardList size={18} />,
 		to: "/committee/project-registration",
+	},
+	{
+		label: "企画情報",
+		icon: <IconInfoCircle size={18} />,
+		to: "/committee/public-info",
 	},
 	{
 		label: "企画検索システム",

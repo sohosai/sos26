@@ -558,11 +558,21 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"ProjectPublicInfoModeration" {
+  String id PK
+  String projectPublicInfoId FK
+  ProjectPublicInfoField field
+  ProjectPublicInfoModerationKind kind
+  String updatedById FK
+  DateTime createdAt
+  DateTime updatedAt
+}
 "ProjectPublicMapImage" {
   String id PK
   String projectPublicInfoId FK
   String fileId FK
   Int sortOrder
+  Boolean isHidden
   DateTime createdAt
 }
 "MapAppSetting" {
@@ -683,6 +693,8 @@ erDiagram
 "ProjectRegistrationFormAnswerSelectedOption" }o--|| "ProjectRegistrationFormItemOption" : formItemOption
 "ProjectPublicInfo" |o--|| "Project" : project
 "ProjectPublicInfo" }o--o| "File" : iconFile
+"ProjectPublicInfoModeration" }o--|| "ProjectPublicInfo" : projectPublicInfo
+"ProjectPublicInfoModeration" }o--|| "User" : updatedBy
 "ProjectPublicMapImage" }o--|| "ProjectPublicInfo" : projectPublicInfo
 "ProjectPublicMapImage" }o--|| "File" : file
 ```
@@ -1414,6 +1426,18 @@ Properties as follows:
 - `createdAt`:
 - `updatedAt`:
 
+### `ProjectPublicInfoModeration`
+
+Properties as follows:
+
+- `id`:
+- `projectPublicInfoId`:
+- `field`:
+- `kind`:
+- `updatedById`:
+- `createdAt`:
+- `updatedAt`:
+
 ### `ProjectPublicMapImage`
 
 Properties as follows:
@@ -1422,6 +1446,7 @@ Properties as follows:
 - `projectPublicInfoId`:
 - `fileId`:
 - `sortOrder`:
+- `isHidden`:
 - `createdAt`:
 
 ### `MapAppSetting`

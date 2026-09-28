@@ -14,6 +14,7 @@ import { committeeMemberRoute } from "./routes/committee-member";
 import { committeeNoticeRoute } from "./routes/committee-notice";
 import { committeeProjectRoute } from "./routes/committee-project";
 import { committeeProjectRegistrationFormRoute } from "./routes/committee-project-registration-form";
+import { committeePublicInfoRoute } from "./routes/committee-public-info";
 import { committeeUserRoute } from "./routes/committee-user";
 import { fileRoute } from "./routes/files";
 import { healthRoute } from "./routes/health";
@@ -86,6 +87,7 @@ app.route(
 );
 app.route("/committee/mastersheet", committeeMastersheetRoute);
 app.route("/committee/users", committeeUserRoute);
+app.route("/committee/public-info", committeePublicInfoRoute);
 app.route("/project/:projectId/forms", projectFormRoute);
 app.route("/project", projectRoute);
 app.route("/project", projectNoticeRoute);

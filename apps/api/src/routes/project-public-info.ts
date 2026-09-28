@@ -1,13 +1,16 @@
 import type {
 	MapAppSetting,
 	OpenStatus,
+	ProjectPublicInfoField,
 	ProjectSnsLinkKey,
 	StockStatus,
 	UpdateProjectPublicInfoRequest,
 } from "@sos26/shared";
 import {
 	allowedImageMimeTypes,
+	correctableProjectPublicInfoFields,
 	DEFAULT_MAP_APP_SETTING,
+	projectPublicInfoFieldKeys,
 	projectSnsLinkKeys,
 	updateProjectPublicInfoEndpoint,
 } from "@sos26/shared";
@@ -137,11 +140,27 @@ type SavePublicInfoParams = {
 	stockStatus: StockStatus | undefined;
 };
 
+/** 保存で値が変わる、実委人が修正できる項目を返す（undefined は変更なし） */
+function findChangedCorrectableFields(
+	before: Record<string, unknown> | null,
+	next: Record<string, string | string[] | null | undefined>
+): ProjectPublicInfoField[] {
+	if (!before) return [];
+	return correctableProjectPublicInfoFields.filter(field => {
+		const key = projectPublicInfoFieldKeys[field];
+		const nextValue = next[key];
+		if (nextValue === undefined) return false;
+		return JSON.stringify(before[key] ?? null) !== JSON.stringify(nextValue);
+	});
+}
+
 /**
  * 公開情報を作成／更新する。
  *
  * 掲載画像は「全削除 → 並び順どおりに再作成」で置き換えるため、
  * sortOrder のユニーク制約に引っかからないよう1トランザクションで順序を保証する。
+ * 実委人による非表示は、保存後も残る画像にファイルIDで引き継ぐ。
+ * 実委人が修正した項目を企画が変えた場合は、修正の記録を消す。
  * undefined のフィールドは「変更なし」を意味する。
  */
 async function savePublicInfo(params: SavePublicInfoParams) {
@@ -156,6 +175,19 @@ async function savePublicInfo(params: SavePublicInfoParams) {
 	} = params;
 
 	return prisma.$transaction(async tx => {
+		const before = await tx.projectPublicInfo.findUnique({
+			where: { projectId },
+			select: {
+				description: true,
+				iconFileId: true,
+				websiteUrls: true,
+				xIds: true,
+				instagramIds: true,
+				youtubeIds: true,
+				mapImages: { select: { fileId: true, isHidden: true } },
+			},
+		});
+
 		const info = await tx.projectPublicInfo.upsert({
 			where: { projectId },
 			update: { description, iconFileId, ...snsLinks, openStatus, stockStatus },
@@ -173,6 +205,11 @@ async function savePublicInfo(params: SavePublicInfoParams) {
 		});
 
 		if (mapImageFileIds) {
+			const hiddenFileIds = new Set(
+				(before?.mapImages ?? [])
+					.filter(img => img.isHidden)
+					.map(img => img.fileId)
+			);
 			await tx.projectPublicMapImage.deleteMany({
 				where: { projectPublicInfoId: info.id },
 			});
@@ -181,16 +218,33 @@ async function savePublicInfo(params: SavePublicInfoParams) {
 					projectPublicInfoId: info.id,
 					fileId,
 					sortOrder,
+					isHidden: hiddenFileIds.has(fileId),
 				})),
 			});
 		}
 
-		return tx.projectPublicInfo.findUniqueOrThrow({
+		const changedFields = findChangedCorrectableFields(before, {
+			description,
+			...snsLinks,
+		});
+		if (changedFields.length > 0) {
+			await tx.projectPublicInfoModeration.deleteMany({
+				where: {
+					projectPublicInfoId: info.id,
+					kind: "CORRECTED",
+					field: { in: changedFields },
+				},
+			});
+		}
+
+		const updated = await tx.projectPublicInfo.findUniqueOrThrow({
 			where: { id: info.id },
 			include: {
 				mapImages: { orderBy: { sortOrder: "asc" } },
 			},
 		});
+
+		return { before, updated };
 	});
 }
 
@@ -237,14 +291,28 @@ projectPublicInfoRoute.get(
 				mapImages: {
 					orderBy: { sortOrder: "asc" },
 				},
+				moderations: { select: { field: true, kind: true } },
 			},
 		});
 
 		if (!info) {
-			return c.json({ publicInfo: null });
+			return c.json({
+				publicInfo: null,
+				hiddenFields: [],
+				correctedFields: [],
+				hiddenMapImageFileIds: [],
+			});
 		}
 
+		const fieldsOf = (kind: "HIDDEN" | "CORRECTED") =>
+			info.moderations.filter(m => m.kind === kind).map(m => m.field);
+
 		return c.json({
+			hiddenFields: fieldsOf("HIDDEN"),
+			correctedFields: fieldsOf("CORRECTED"),
+			hiddenMapImageFileIds: info.mapImages
+				.filter(img => img.isHidden)
+				.map(img => img.fileId),
 			publicInfo: {
 				description: info.description,
 				iconFileId: info.iconFileId,
@@ -308,15 +376,7 @@ projectPublicInfoRoute.put(
 
 		const isStage = project.type === "STAGE";
 
-		const before = await prisma.projectPublicInfo.findUnique({
-			where: { projectId: project.id },
-			select: {
-				iconFileId: true,
-				mapImages: { select: { fileId: true } },
-			},
-		});
-
-		const updated = await savePublicInfo({
+		const { before, updated } = await savePublicInfo({
 			projectId: project.id,
 			description,
 			iconFileId,

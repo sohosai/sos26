@@ -1,5 +1,6 @@
 import { swaggerUI } from "@hono/swagger-ui";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+import type { ProjectPublicInfoField } from "@sos26/shared";
 import { projectPublicInfoSchema } from "@sos26/shared";
 import { prisma } from "../lib/prisma";
 import { getPublicApiCacheVersion } from "../lib/public-api-cache";
@@ -66,7 +67,11 @@ const publicProjectSelect = {
 			stockStatus: true,
 			mapImages: {
 				orderBy: { sortOrder: "asc" },
-				select: { fileId: true },
+				select: { fileId: true, isHidden: true },
+			},
+			moderations: {
+				where: { kind: "HIDDEN" },
+				select: { field: true },
 			},
 		},
 	},
@@ -87,13 +92,22 @@ type PublicProjectRow = {
 		youtubeIds: string[];
 		openStatus: PublicProject["publicInfo"]["openStatus"];
 		stockStatus: PublicProject["publicInfo"]["stockStatus"];
-		mapImages: { fileId: string }[];
+		mapImages: { fileId: string; isHidden: boolean }[];
+		moderations: { field: ProjectPublicInfoField }[];
 	} | null;
 };
 
-/** publicInfo が null の行は publicProjectWhere で除外済みのため取り除く */
+/**
+ * publicInfo が null の行は publicProjectWhere で除外済みのため取り除く
+ *
+ * 実委人が非表示にした項目は未入力と同じ値にする。
+ * 非表示にされたのか未入力なのかを、公開APIの利用者から区別できないようにするため。
+ */
 function toPublicProject(row: PublicProjectRow): PublicProject | null {
-	if (!row.publicInfo) return null;
+	const info = row.publicInfo;
+	if (!info) return null;
+
+	const hidden = new Set(info.moderations.map(m => m.field));
 
 	return {
 		id: row.id,
@@ -102,15 +116,17 @@ function toPublicProject(row: PublicProjectRow): PublicProject | null {
 		type: row.type,
 		location: row.location,
 		publicInfo: {
-			description: row.publicInfo.description,
-			iconFileId: row.publicInfo.iconFileId,
-			mapImageFileIds: row.publicInfo.mapImages.map(img => img.fileId),
-			websiteUrls: row.publicInfo.websiteUrls,
-			xIds: row.publicInfo.xIds,
-			instagramIds: row.publicInfo.instagramIds,
-			youtubeIds: row.publicInfo.youtubeIds,
-			openStatus: row.publicInfo.openStatus,
-			stockStatus: row.publicInfo.stockStatus,
+			description: hidden.has("DESCRIPTION") ? null : info.description,
+			iconFileId: hidden.has("ICON") ? null : info.iconFileId,
+			mapImageFileIds: info.mapImages
+				.filter(img => !img.isHidden)
+				.map(img => img.fileId),
+			websiteUrls: hidden.has("WEBSITE_URLS") ? [] : info.websiteUrls,
+			xIds: hidden.has("X_IDS") ? [] : info.xIds,
+			instagramIds: hidden.has("INSTAGRAM_IDS") ? [] : info.instagramIds,
+			youtubeIds: hidden.has("YOUTUBE_IDS") ? [] : info.youtubeIds,
+			openStatus: info.openStatus,
+			stockStatus: info.stockStatus,
 		},
 	};
 }
