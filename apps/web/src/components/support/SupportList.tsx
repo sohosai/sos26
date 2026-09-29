@@ -20,7 +20,6 @@ import { statusConfig } from "./constants";
 import styles from "./SupportList.module.scss";
 
 type InquirySummary = ListProjectInquiriesResponse["inquiries"][number];
-type AssigneeInfo = InquirySummary["projectAssignees"][number];
 
 type SupportListProps = {
 	inquiries: InquirySummary[];
@@ -599,7 +598,7 @@ function InquiryCard({
 		inquiry.status !== "RESOLVED" &&
 		inquiry.awaitingReplyFrom === viewerSide;
 
-	const allAssignees: AssigneeInfo[] = [
+	const allAssignees = [
 		...inquiry.committeeAssignees,
 		...inquiry.projectAssignees,
 	];

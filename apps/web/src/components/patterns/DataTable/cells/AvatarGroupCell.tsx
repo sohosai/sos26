@@ -7,6 +7,8 @@ export type AvatarGroupItem = {
 	id: string;
 	name: string;
 	avatarFileId?: string | null;
+	role?: "project" | "committee";
+	bureau?: string | null;
 };
 
 const MAX_VISIBLE = 3;
@@ -33,6 +35,8 @@ export function AvatarGroupCell<TData extends RowData>({
 								size={20}
 								name={user.name}
 								avatarFileId={user.avatarFileId}
+								role={user.role}
+								bureau={user.bureau}
 							/>
 						</span>
 					))}
@@ -49,6 +53,8 @@ export function AvatarGroupCell<TData extends RowData>({
 								size={20}
 								name={user.name}
 								avatarFileId={user.avatarFileId}
+								role={user.role}
+								bureau={user.bureau}
 							/>
 							<Text size="2">{user.name}</Text>
 						</div>
