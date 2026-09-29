@@ -1,10 +1,12 @@
 import type {
 	GetProjectPublicInfoResponse,
+	ListCommitteeProjectPublicInfosResponse,
 	UpdateProjectPublicInfoRequest,
 	UpdateProjectPublicInfoResponse,
 } from "@sos26/shared";
 import {
 	getProjectPublicInfoEndpoint,
+	listCommitteeProjectPublicInfosEndpoint,
 	updateProjectPublicInfoEndpoint,
 } from "@sos26/shared";
 import { callBodyApi, callGetApi } from "./core";
@@ -24,4 +26,8 @@ export async function updateProjectPublicInfo(
 	return callBodyApi(updateProjectPublicInfoEndpoint, data, {
 		pathParams: { projectId },
 	});
+}
+
+export async function listCommitteeProjectPublicInfos(): Promise<ListCommitteeProjectPublicInfosResponse> {
+	return callGetApi(listCommitteeProjectPublicInfosEndpoint);
 }
