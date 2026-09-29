@@ -43,6 +43,11 @@
 	gap: var(--space-1) var(--space-4);
 }
 
+.link {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
 .imageButton {
 	padding: 0;
 	border: none;

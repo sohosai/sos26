@@ -44,19 +44,28 @@ const STOCK_STATUS_LABELS: Record<StockStatus, string | null> = {
 	NOT_APPLICABLE: null,
 };
 
-function snsLinks(info: PublicInfo): { label: string; href: string }[] {
+function snsLinks(
+	info: PublicInfo
+): { service: string; text: string; href: string }[] {
 	return [
-		...info.websiteUrls.map(url => ({ label: url, href: url })),
+		...info.websiteUrls.map(url => ({
+			service: "Website",
+			text: url,
+			href: url,
+		})),
 		...info.xIds.map(id => ({
-			label: `X: @${id}`,
+			service: "X",
+			text: `@${id}`,
 			href: `https://x.com/${id}`,
 		})),
 		...info.instagramIds.map(id => ({
-			label: `Instagram: ${id}`,
+			service: "Instagram",
+			text: id,
 			href: `https://www.instagram.com/${id}`,
 		})),
 		...info.youtubeIds.map(id => ({
-			label: `YouTube: @${id}`,
+			service: "YouTube",
+			text: `@${id}`,
 			href: `https://www.youtube.com/@${id}`,
 		})),
 	];
@@ -238,15 +247,16 @@ function ProjectCard({
 					{links.length > 0 && (
 						<div className={styles.links}>
 							{links.map(link => (
-								<Link
-									key={link.href}
-									href={link.href}
-									target="_blank"
-									rel="noopener noreferrer"
-									size="2"
-								>
-									{link.label}
-								</Link>
+								<Text key={link.href} size="2" className={styles.link}>
+									<Text color="gray">{link.service}: </Text>
+									<Link
+										href={link.href}
+										target="_blank"
+										rel="noopener noreferrer"
+									>
+										{link.text}
+									</Link>
+								</Text>
 							))}
 						</div>
 					)}
