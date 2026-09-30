@@ -1,5 +1,7 @@
+import { SpanStatusCode } from "@opentelemetry/api";
 import sgMail from "@sendgrid/mail";
 import { ZodError, z } from "zod";
+import { tracer } from "../../../otel";
 import { env } from "../../env";
 import { Errors } from "../../error";
 import { logIntegrationFailure } from "../../error-logging";
@@ -19,17 +21,28 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
 	try {
 		const parsed = SendEmailInputSchema.parse(input);
 
-		await sgMail.send({
-			to: parsed.to,
-			from: env.EMAIL_FROM,
-			subject: parsed.subject,
-			html: parsed.html,
-			text: parsed.text,
-			mailSettings: {
-				sandboxMode: {
-					enable: env.EMAIL_SANDBOX,
-				},
-			},
+		// メール送信（SendGrid）を計装する。宛先メールアドレス等の個人情報は属性に含めない。
+		await tracer.startActiveSpan("sendgrid.send", async span => {
+			try {
+				await sgMail.send({
+					to: parsed.to,
+					from: env.EMAIL_FROM,
+					subject: parsed.subject,
+					html: parsed.html,
+					text: parsed.text,
+					mailSettings: {
+						sandboxMode: {
+							enable: env.EMAIL_SANDBOX,
+						},
+					},
+				});
+			} catch (e) {
+				span.recordException(e as Error);
+				span.setStatus({ code: SpanStatusCode.ERROR });
+				throw e;
+			} finally {
+				span.end();
+			}
 		});
 	} catch (err) {
 		// 入力値の不正はそのまま ZodError を返す

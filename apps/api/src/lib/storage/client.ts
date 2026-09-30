@@ -1,4 +1,6 @@
 import { S3Client } from "@aws-sdk/client-s3";
+import { SpanStatusCode } from "@opentelemetry/api";
+import { tracer } from "../../otel";
 import { env } from "../env";
 
 let client: S3Client | null = null;
@@ -20,6 +22,27 @@ export function initStorage() {
 		},
 		forcePathStyle: true,
 	});
+
+	// S3 互換オブジェクトストレージへの呼び出しを計装する。
+	// SDK の middleware stack に一度だけ登録することで、presign.ts / multipart.ts など
+	// 個々の呼び出し箇所を変更せずに全操作をスパンとして記録できる。
+	client.middlewareStack.add(
+		(next, context) => async args => {
+			const commandName = context.commandName ?? "S3Command";
+			return tracer.startActiveSpan(`s3.${commandName}`, async span => {
+				try {
+					return await next(args);
+				} catch (e) {
+					span.recordException(e as Error);
+					span.setStatus({ code: SpanStatusCode.ERROR });
+					throw e;
+				} finally {
+					span.end();
+				}
+			});
+		},
+		{ step: "initialize", name: "otelTracingMiddleware" }
+	);
 }
 
 /**

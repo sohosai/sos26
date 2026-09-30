@@ -1,3 +1,4 @@
+import { SpanStatusCode } from "@opentelemetry/api";
 import type { CommitteeMember } from "@prisma/client";
 import * as Sentry from "@sentry/bun";
 import type { CommitteePermission } from "@sos26/shared";
@@ -8,6 +9,7 @@ import { createMiddleware } from "hono/factory";
 import { AppError, Errors } from "../lib/error";
 import { auth } from "../lib/firebase";
 import { prisma } from "../lib/prisma";
+import { tracer } from "../otel";
 import type { AuthEnv } from "../types/auth-env";
 
 /**
@@ -46,7 +48,21 @@ export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
 	let firebaseUid: string | null = null;
 
 	try {
-		const decodedToken = await auth.verifyIdToken(idToken);
+		// Firebase ID トークン検証を計装する。トークン本体は属性に含めない。
+		const decodedToken = await tracer.startActiveSpan(
+			"firebase.verifyIdToken",
+			async span => {
+				try {
+					return await auth.verifyIdToken(idToken);
+				} catch (e) {
+					span.recordException(e as Error);
+					span.setStatus({ code: SpanStatusCode.ERROR });
+					throw e;
+				} finally {
+					span.end();
+				}
+			}
+		);
 		firebaseUid = decodedToken.uid;
 		const userWithCommitteeMember = await prisma.user.findFirst({
 			where: { firebaseUid: decodedToken.uid, deletedAt: null },

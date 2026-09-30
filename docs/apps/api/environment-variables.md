@@ -46,6 +46,11 @@ apps/apiで使用する環境変数の設定方法とリファレンスです。
 | `S3_PRESIGNED_URL_EXPIRES` | Presigned URL の有効期限（秒） | `3600` | ❌ |
 | `S3_MAX_FILE_SIZE` | 最大ファイルサイズ（バイト） | `1000000000` | ❌ |
 | `FILE_TOKEN_SECRET` | ファイルトークン署名用秘密鍵（32文字以上） | なし | ✅ |
+| `NEW_RELIC_LICENSE_KEY` | New Relic のライセンスキー。設定時のみ分散トレーシングを有効化 | なし | ❌ |
+| `OTEL_SERVICE_NAME` | OpenTelemetry のサービス識別子 | `sos26-api` | ❌ |
+| `OTEL_SERVICE_VERSION` | デプロイされたコードの git SHA | `unknown` | ❌ |
+| `OTEL_DEPLOYMENT_ENVIRONMENT` | デプロイ環境の識別子（`dev` / `zoo` / `prod`）。ローカル・未設定時は `development` | `development` | ❌ |
+| `OTEL_TRACES_SAMPLER_ARG` | トレースのサンプリング率（0.0〜1.0） | `1.0` | ❌ |
 
 ## 設定方法
 
@@ -91,6 +96,14 @@ S3_SECRET_ACCESS_KEY=your_secret_key
 
 # ファイルトークン（openssl rand -base64 48 等で生成）
 FILE_TOKEN_SECRET=your-file-token-secret-at-least-32-chars
+
+# OpenTelemetry / New Relic（任意）
+# NEW_RELIC_LICENSE_KEY=your_new_relic_license_key
+# OTEL_SERVICE_NAME=sos26-api
+# OTEL_SERVICE_VERSION=unknown
+# デプロイ環境は dev / zoo / prod。ローカルでは未設定（development）でよい
+# OTEL_DEPLOYMENT_ENVIRONMENT=dev
+# OTEL_TRACES_SAMPLER_ARG=1.0
 
 # ローカル専用にしたい場合は .env.local を使用
 # apps/api/.env.local が存在すればこちらが優先されます
@@ -181,6 +194,11 @@ FILE_TOKEN_SECRET=your-file-token-secret-at-least-32-chars
 - 32文字以上の文字列
 - HMAC-SHA256 署名に使用。UTF-8 エンコードしてそのまま鍵として使われる
 - `openssl rand -base64 48` 等でランダム生成を推奨
+
+**OTEL_DEPLOYMENT_ENVIRONMENT:**
+- デプロイ環境では `dev`、`zoo`、`prod` のいずれかを指定します
+- ローカル開発や未設定時は `development` になります
+- `development` はデプロイ環境の正式な識別子としては使用しません
 
 ### エラー例
 
