@@ -104,6 +104,20 @@ const envSchema = z.object({
 			});
 			return parsed;
 		}),
+
+	// 公開API（/openapi/projects）に customFields として載せる
+	// マスターシートの CUSTOM 列IDをカンマ区切りで複数指定する。
+	// 指定した列の値は、実委内のカラム閲覧権限（viewers/visibility）に関わらず
+	// 認証なしで誰でも見られるようになる点に注意。
+	PUBLIC_API_MASTERSHEET_COLUMN_IDS: z
+		.string()
+		.default("")
+		.transform(val =>
+			val
+				.split(",")
+				.map(v => v.trim())
+				.filter(Boolean)
+		),
 });
 
 export const env = envSchema.parse({
@@ -132,6 +146,8 @@ export const env = envSchema.parse({
 	SENTRY_DSN: process.env.SENTRY_DSN,
 	SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT,
 	PROJECT_APPLICATION_PERIODS: process.env.PROJECT_APPLICATION_PERIODS,
+	PUBLIC_API_MASTERSHEET_COLUMN_IDS:
+		process.env.PUBLIC_API_MASTERSHEET_COLUMN_IDS,
 });
 
 export type Env = z.infer<typeof envSchema>;

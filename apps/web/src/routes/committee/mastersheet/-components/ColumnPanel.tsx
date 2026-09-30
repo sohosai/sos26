@@ -15,6 +15,7 @@ import type {
 import { bureauLabelMap } from "@sos26/shared";
 import {
 	IconChevronDown,
+	IconCopy,
 	IconEdit,
 	IconPlus,
 	IconSearch,
@@ -283,6 +284,36 @@ function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 		<div className={styles.editForm}>
 			<TextField label="カラム名" value={name} onChange={setName} required />
 			<TextField label="説明" value={description} onChange={setDescription} />
+			{col.type === "CUSTOM" && (
+				<div className={styles.field}>
+					<Text size="2" weight="medium">
+						カラムID
+					</Text>
+					<Text size="1" color="gray">
+						公開API（オンラインマップ連携）にこのカラムを載せる際、開発チームに伝えてください
+					</Text>
+					<div className={styles.columnIdRow}>
+						<RadixTextField.Root
+							size="2"
+							value={col.id}
+							readOnly
+							className={styles.columnIdInput}
+						/>
+						<IconButton
+							aria-label="カラムIDをコピー"
+							size="1"
+							onClick={() => {
+								navigator.clipboard
+									.writeText(col.id)
+									.then(() => toast.success("カラムIDをコピーしました"))
+									.catch(() => toast.error("コピーに失敗しました"));
+							}}
+						>
+							<IconCopy size={14} />
+						</IconButton>
+					</div>
+				</div>
+			)}
 			{col.type === "CUSTOM" && (
 				<div className={styles.field}>
 					<Text size="2" weight="medium">
