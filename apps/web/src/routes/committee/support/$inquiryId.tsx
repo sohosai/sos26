@@ -55,6 +55,7 @@ export const Route = createFileRoute("/committee/support/$inquiryId")({
 			projectMembers: projectMembersRes.members.map(m => ({
 				id: m.userId,
 				name: m.name,
+				role: m.role,
 				avatarFileId: m.avatarFileId,
 			})),
 			availableForms: formsRes.forms
