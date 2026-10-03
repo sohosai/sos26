@@ -5,12 +5,17 @@
 ## 起動
 
 ```bash
-# 依存関係のインストール（リポジトリルートで一度だけ）
-bun install
+# リポジトリルートで実行
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env
 
-# 開発サーバー（デフォルト: http://localhost:3000）
-bun run dev
+# 開発環境（API: http://localhost:3000）
+docker compose --profile setup up
 ```
+
+`compose.yml` の `app` コンテナが `bun install`、`bun run db:migrate:dev`、`bun run dev` を実行します。`db` と `object-storage` も同時に起動するため、`apps/api/.env` の `DATABASE_URL` は `postgres://app:password@db:5432/app`、`S3_ENDPOINT` は `http://object-storage:9000` を使います。
+
+API だけをローカルで直接起動する場合は、Postgres と S3 互換オブジェクトストレージを別途用意してから `bun run dev` を実行してください。
 
 ## エンドポイント設計
 

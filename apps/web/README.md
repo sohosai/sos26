@@ -4,6 +4,18 @@ React 19 + Vite アプリケーション。TanStack Router（ファイルベー�
 
 ## スクリプト
 
+開発環境はリポジトリルートから Docker Compose で起動します。
+
+```bash
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env
+docker compose --profile setup up
+```
+
+Web は http://localhost:5173 で起動します。API も同じ Compose 環境で http://localhost:3000 に公開されます。
+
+アプリ単体をローカルで直接起動する場合は、次のスクリプトを使います。
+
 ```bash
 # 開発サーバー（http://localhost:5173）
 bun run dev
