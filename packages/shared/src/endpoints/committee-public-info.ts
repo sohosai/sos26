@@ -4,29 +4,10 @@ import {
 	committeePublicInfoMapImagePathParamsSchema,
 	correctCommitteePublicInfoRequestSchema,
 	hideCommitteePublicInfoFieldRequestSchema,
-	listCommitteePublicInfoResponseSchema,
 	updateCommitteePublicInfoMapImageRequestSchema,
 } from "../schemas/committee-public-info";
 import { projectIdPathParamsSchema } from "../schemas/project";
-import type { BodyEndpoint, GetEndpoint, NoBodyEndpoint } from "./types";
-
-/**
- * GET /committee/public-info
- * 企画情報一覧
- */
-export const listCommitteePublicInfoEndpoint: GetEndpoint<
-	"/committee/public-info",
-	undefined,
-	undefined,
-	typeof listCommitteePublicInfoResponseSchema
-> = {
-	method: "GET",
-	path: "/committee/public-info",
-	pathParams: undefined,
-	query: undefined,
-	request: undefined,
-	response: listCommitteePublicInfoResponseSchema,
-} as const;
+import type { BodyEndpoint, NoBodyEndpoint } from "./types";
 
 /**
  * PUT /committee/public-info/:projectId/hidden/:field

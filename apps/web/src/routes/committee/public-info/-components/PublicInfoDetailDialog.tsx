@@ -1,6 +1,6 @@
 import { Badge, Dialog, Flex, Heading, Text } from "@radix-ui/themes";
 import type {
-	CommitteePublicInfoItem,
+	CommitteeProjectPublicInfo,
 	CorrectCommitteePublicInfoRequest,
 	ProjectPublicInfoField,
 	ProjectSnsLinkKey,
@@ -29,8 +29,8 @@ import { FieldStatusBadges, findModeration, SNS_FIELDS } from "./shared";
 type Props = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	item: CommitteePublicInfoItem;
-	onItemChange: (item: CommitteePublicInfoItem) => void;
+	item: CommitteeProjectPublicInfo;
+	onItemChange: (item: CommitteeProjectPublicInfo) => void;
 };
 
 /** 修正中の項目と入力値 */
@@ -49,7 +49,7 @@ function ModerationMeta({
 	item,
 	field,
 }: {
-	item: CommitteePublicInfoItem;
+	item: CommitteeProjectPublicInfo;
 	field: ProjectPublicInfoField;
 }) {
 	const entries = (
@@ -79,16 +79,16 @@ export function PublicInfoDetailDialog({
 }: Props) {
 	const [isBusy, setIsBusy] = useState(false);
 	const [editing, setEditing] = useState<Editing | null>(null);
-	const { project, publicInfo } = item;
+	const { publicInfo } = item;
 
 	const run = async (
-		operation: () => Promise<{ item: CommitteePublicInfoItem }>,
+		operation: () => Promise<{ project: CommitteeProjectPublicInfo }>,
 		successMessage: string
 	) => {
 		setIsBusy(true);
 		try {
 			const res = await operation();
-			onItemChange(res.item);
+			onItemChange(res.project);
 			toast.success(successMessage);
 			return true;
 		} catch (error) {
@@ -97,7 +97,7 @@ export function PublicInfoDetailDialog({
 				operation: "update_committee_public_info",
 				userMessage: "更新に失敗しました。",
 				ui: { type: "toast" },
-				context: { projectId: project.id },
+				context: { projectId: item.id },
 			});
 			return false;
 		} finally {
@@ -110,8 +110,8 @@ export function PublicInfoDetailDialog({
 		void run(
 			() =>
 				isHidden
-					? unhideCommitteePublicInfoField(project.id, field)
-					: hideCommitteePublicInfoField(project.id, field),
+					? unhideCommitteePublicInfoField(item.id, field)
+					: hideCommitteePublicInfoField(item.id, field),
 			isHidden ? "非表示を解除しました。" : "非表示にしました。"
 		);
 	};
@@ -119,7 +119,7 @@ export function PublicInfoDetailDialog({
 	const toggleMapImage = (fileId: string) => {
 		const isHidden = item.hiddenMapImageFileIds.includes(fileId);
 		void run(
-			() => updateCommitteePublicInfoMapImage(project.id, fileId, !isHidden),
+			() => updateCommitteePublicInfoMapImage(item.id, fileId, !isHidden),
 			isHidden ? "画像の非表示を解除しました。" : "画像を非表示にしました。"
 		);
 	};
@@ -131,7 +131,7 @@ export function PublicInfoDetailDialog({
 				? { [editing.key]: editing.values.filter(v => v !== "") }
 				: { description: editing.value };
 		const ok = await run(
-			() => correctCommitteePublicInfo(project.id, data),
+			() => correctCommitteePublicInfo(item.id, data),
 			"修正しました。"
 		);
 		if (ok) setEditing(null);
@@ -160,10 +160,10 @@ export function PublicInfoDetailDialog({
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
 			<Dialog.Content maxWidth="720px">
 				<Dialog.Title>
-					{formatProjectNumber(project.number)} {project.name}
+					{formatProjectNumber(item.number)} {item.name}
 				</Dialog.Title>
 				<Dialog.Description size="2" color="gray" mb="4">
-					{project.organizationName}
+					{item.organizationName}
 				</Dialog.Description>
 
 				{publicInfo === null ? (
@@ -246,7 +246,7 @@ export function PublicInfoDetailDialog({
 							{publicInfo.iconFileId ? (
 								<UserAvatar
 									size={64}
-									name={project.name}
+									name={item.name}
 									avatarFileId={publicInfo.iconFileId}
 								/>
 							) : (

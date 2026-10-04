@@ -64,11 +64,7 @@ const mockRow = {
 	number: 1,
 	name: "焼きそば屋",
 	organizationName: "サークルA",
-	type: "FOOD",
-	location: "OUTDOOR",
-	deletionStatus: null,
 	publicInfo: {
-		id: INFO_ID,
 		description: "焼きそばを販売します",
 		iconFileId: null,
 		websiteUrls: [],
@@ -138,11 +134,11 @@ describe("権限", () => {
 		vi.clearAllMocks();
 	});
 
-	it("MAP_APP_SETTING_EDIT 権限がなければ一覧も403エラー", async () => {
+	it("MAP_APP_SETTING_EDIT 権限がなければ403エラー", async () => {
 		const app = makeApp();
 		setupAuth([]);
 
-		const res = await request(app, "GET", "");
+		const res = await request(app, "PUT", `/${PROJECT_ID}/hidden/ICON`, {});
 
 		expect(res.status).toBe(403);
 	});
@@ -150,40 +146,12 @@ describe("権限", () => {
 	it("認証なしで401エラー", async () => {
 		const app = makeApp();
 
-		const res = await app.request("/committee/public-info");
+		const res = await app.request(
+			`/committee/public-info/${PROJECT_ID}/hidden/ICON`,
+			{ method: "PUT" }
+		);
 
 		expect(res.status).toBe(401);
-	});
-});
-
-describe("GET /committee/public-info", () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it("正常系: 登録値と非表示・修正の記録を返す", async () => {
-		const app = makeApp();
-		setupAuth();
-		mockPrisma.project.findMany.mockResolvedValue([
-			mockRow,
-			{ ...mockRow, id: "clpppppppppppppppp2", number: 2, publicInfo: null },
-		] as any);
-
-		const res = await request(app, "GET", "");
-
-		expect(res.status).toBe(200);
-		const { items } = await res.json();
-		// 非表示でも登録値はそのまま返す
-		expect(items[0].publicInfo.description).toBe("焼きそばを販売します");
-		expect(items[0].moderations[0]).toMatchObject({
-			field: "DESCRIPTION",
-			kind: "HIDDEN",
-		});
-		expect(items[0].hiddenMapImageFileIds).toEqual([MAP_FILE_ID]);
-		expect(items[1].publicInfo).toBeNull();
-		expect(mockPrisma.project.findMany).toHaveBeenCalledWith(
-			expect.objectContaining({ where: { deletedAt: null } })
-		);
 	});
 });
 
@@ -212,6 +180,10 @@ describe("PUT/DELETE /committee/public-info/:projectId/hidden/:field", () => {
 			})
 		);
 		expect(getPublicApiCacheVersion()).toBe(version + 1);
+		const { project } = await res.json();
+		// 非表示でも登録値はそのまま返す
+		expect(project.publicInfo.description).toBe("焼きそばを販売します");
+		expect(project.hiddenMapImageFileIds).toEqual([MAP_FILE_ID]);
 	});
 
 	it("正常系: 非表示を解除する", async () => {

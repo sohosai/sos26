@@ -17,6 +17,10 @@ import { findOtherPrivilegedProject } from "../lib/project-check";
 import { sendPushToUsers } from "../lib/push";
 import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
+import {
+	committeeProjectPublicInfoSelect,
+	toCommitteeProjectPublicInfo,
+} from "./committee-public-info";
 
 const committeeProjectRoute = new Hono<AuthEnv>();
 
@@ -772,44 +776,11 @@ committeeProjectRoute.get(
 	async c => {
 		const projects = await prisma.project.findMany({
 			where: { deletedAt: null, deletionStatus: null },
-			select: {
-				id: true,
-				number: true,
-				name: true,
-				organizationName: true,
-				publicInfo: {
-					select: {
-						description: true,
-						iconFileId: true,
-						websiteUrls: true,
-						xIds: true,
-						instagramIds: true,
-						youtubeIds: true,
-						openStatus: true,
-						stockStatus: true,
-						mapImages: {
-							orderBy: { sortOrder: "asc" },
-							select: { fileId: true },
-						},
-					},
-				},
-			},
+			select: committeeProjectPublicInfoSelect,
 			orderBy: { number: "asc" },
 		});
 
-		return c.json({
-			projects: projects.map(({ publicInfo, ...project }) => {
-				if (!publicInfo) return { ...project, publicInfo: null };
-				const { mapImages, ...info } = publicInfo;
-				return {
-					...project,
-					publicInfo: {
-						...info,
-						mapImageFileIds: mapImages.map(img => img.fileId),
-					},
-				};
-			}),
-		});
+		return c.json({ projects: projects.map(toCommitteeProjectPublicInfo) });
 	}
 );
 

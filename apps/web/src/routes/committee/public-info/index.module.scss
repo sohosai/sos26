@@ -72,3 +72,23 @@
 	object-fit: cover;
 	border-radius: var(--radius-2);
 }
+
+.fieldBadges {
+	display: flex;
+	gap: var(--space-1);
+
+	&:empty {
+		display: none;
+	}
+}
+
+.imageWrap {
+	position: relative;
+	display: block;
+}
+
+.hiddenBadge {
+	position: absolute;
+	bottom: 4px;
+	left: 4px;
+}

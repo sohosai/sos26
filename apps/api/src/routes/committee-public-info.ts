@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import type {
-	CommitteePublicInfoItem,
+	CommitteeProjectPublicInfo,
 	ProjectPublicInfoField,
 } from "@sos26/shared";
 import {
@@ -34,17 +34,13 @@ const requireMapAppSettingEdit = createMiddleware<AuthEnv>(async (c, next) => {
 
 committeePublicInfoRoute.use("*", requireAuth, requireMapAppSettingEdit);
 
-const itemSelect = {
+export const committeeProjectPublicInfoSelect = {
 	id: true,
 	number: true,
 	name: true,
 	organizationName: true,
-	type: true,
-	location: true,
-	deletionStatus: true,
 	publicInfo: {
 		select: {
-			id: true,
 			description: true,
 			iconFileId: true,
 			websiteUrls: true,
@@ -68,49 +64,45 @@ const itemSelect = {
 			},
 		},
 	},
-} as const;
+} as const satisfies Prisma.ProjectSelect;
 
-type ItemRow = Prisma.ProjectGetPayload<{ select: typeof itemSelect }>;
-
-function toItem(row: ItemRow): CommitteePublicInfoItem {
-	const info = row.publicInfo;
+export function toCommitteeProjectPublicInfo({
+	publicInfo,
+	...project
+}: Prisma.ProjectGetPayload<{
+	select: typeof committeeProjectPublicInfoSelect;
+}>): CommitteeProjectPublicInfo {
+	if (!publicInfo) {
+		return {
+			...project,
+			publicInfo: null,
+			moderations: [],
+			hiddenMapImageFileIds: [],
+		};
+	}
+	const { mapImages, moderations, ...info } = publicInfo;
 	return {
-		project: {
-			id: row.id,
-			number: row.number,
-			name: row.name,
-			organizationName: row.organizationName,
-			type: row.type,
-			location: row.location,
-			deletionStatus: row.deletionStatus,
+		...project,
+		publicInfo: {
+			...info,
+			mapImageFileIds: mapImages.map(img => img.fileId),
 		},
-		publicInfo: info
-			? {
-					description: info.description,
-					iconFileId: info.iconFileId,
-					mapImageFileIds: info.mapImages.map(img => img.fileId),
-					websiteUrls: info.websiteUrls,
-					xIds: info.xIds,
-					instagramIds: info.instagramIds,
-					youtubeIds: info.youtubeIds,
-					openStatus: info.openStatus,
-					stockStatus: info.stockStatus,
-				}
-			: null,
-		moderations: info?.moderations ?? [],
-		hiddenMapImageFileIds: (info?.mapImages ?? [])
+		moderations,
+		hiddenMapImageFileIds: mapImages
 			.filter(img => img.isHidden)
 			.map(img => img.fileId),
 	};
 }
 
-async function getItem(projectId: string): Promise<CommitteePublicInfoItem> {
+async function getProject(
+	projectId: string
+): Promise<CommitteeProjectPublicInfo> {
 	const row = await prisma.project.findFirst({
 		where: { id: projectId, deletedAt: null },
-		select: itemSelect,
+		select: committeeProjectPublicInfoSelect,
 	});
 	if (!row) throw Errors.notFound("企画が見つかりません");
-	return toItem(row);
+	return toCommitteeProjectPublicInfo(row);
 }
 
 /** 非表示・修正の対象となる企画情報のIDを返す（企画情報が未登録なら 404） */
@@ -122,15 +114,6 @@ async function getPublicInfoId(projectId: string): Promise<string> {
 	if (!info) throw Errors.notFound("企画情報が登録されていません");
 	return info.id;
 }
-
-committeePublicInfoRoute.get("/", async c => {
-	const rows = await prisma.project.findMany({
-		where: { deletedAt: null },
-		select: itemSelect,
-		orderBy: { number: "asc" },
-	});
-	return c.json({ items: rows.map(toItem) });
-});
 
 committeePublicInfoRoute.put("/:projectId/hidden/:field", async c => {
 	const { projectId, field } =
@@ -151,7 +134,7 @@ committeePublicInfoRoute.put("/:projectId/hidden/:field", async c => {
 	});
 	bumpPublicApiCacheVersion();
 
-	return c.json({ item: await getItem(projectId) });
+	return c.json({ project: await getProject(projectId) });
 });
 
 committeePublicInfoRoute.delete("/:projectId/hidden/:field", async c => {
@@ -164,7 +147,7 @@ committeePublicInfoRoute.delete("/:projectId/hidden/:field", async c => {
 	});
 	bumpPublicApiCacheVersion();
 
-	return c.json({ item: await getItem(projectId) });
+	return c.json({ project: await getProject(projectId) });
 });
 
 committeePublicInfoRoute.patch("/:projectId", async c => {
@@ -232,7 +215,7 @@ committeePublicInfoRoute.patch("/:projectId", async c => {
 	});
 	bumpPublicApiCacheVersion();
 
-	return c.json({ item: await getItem(projectId) });
+	return c.json({ project: await getProject(projectId) });
 });
 
 committeePublicInfoRoute.put("/:projectId/map-images/:fileId", async c => {
@@ -250,5 +233,5 @@ committeePublicInfoRoute.put("/:projectId/map-images/:fileId", async c => {
 	if (count === 0) throw Errors.notFound("指定された画像が見つかりません");
 	bumpPublicApiCacheVersion();
 
-	return c.json({ item: await getItem(projectId) });
+	return c.json({ project: await getProject(projectId) });
 });

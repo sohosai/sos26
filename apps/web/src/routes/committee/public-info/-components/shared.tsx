@@ -1,9 +1,11 @@
 import { Badge } from "@radix-ui/themes";
 import type {
-	CommitteePublicInfoItem,
+	CommitteeProjectPublicInfo,
+	CommitteePublicInfoModeration,
 	ProjectPublicInfoField,
 	ProjectSnsLinkKey,
 } from "@sos26/shared";
+import { formatDate } from "@/lib/format";
 
 export const SNS_FIELDS: {
 	key: ProjectSnsLinkKey;
@@ -17,33 +19,39 @@ export const SNS_FIELDS: {
 ];
 
 export function findModeration(
-	item: CommitteePublicInfoItem,
+	item: CommitteeProjectPublicInfo,
 	field: ProjectPublicInfoField,
 	kind: "HIDDEN" | "CORRECTED"
 ) {
 	return item.moderations.find(m => m.field === field && m.kind === kind);
 }
 
-/** 項目に付ける「非表示」「修正」のバッジ */
+/** 項目に付ける「非表示」「修正」のバッジ。操作した実委人と日時をツールチップに出す */
 export function FieldStatusBadges({
 	item,
 	field,
 }: {
-	item: CommitteePublicInfoItem;
+	item: CommitteeProjectPublicInfo;
 	field: ProjectPublicInfoField;
 }) {
+	const hidden = findModeration(item, field, "HIDDEN");
+	const corrected = findModeration(item, field, "CORRECTED");
 	return (
 		<>
-			{findModeration(item, field, "HIDDEN") && (
-				<Badge color="red" variant="soft">
+			{hidden && (
+				<Badge color="red" variant="soft" title={moderationTitle(hidden)}>
 					非表示
 				</Badge>
 			)}
-			{findModeration(item, field, "CORRECTED") && (
-				<Badge color="blue" variant="soft">
+			{corrected && (
+				<Badge color="blue" variant="soft" title={moderationTitle(corrected)}>
 					修正
 				</Badge>
 			)}
 		</>
 	);
+}
+
+function moderationTitle(m: CommitteePublicInfoModeration) {
+	return `${m.updatedBy.name}（${formatDate(m.updatedAt, "datetime")}）`;
 }

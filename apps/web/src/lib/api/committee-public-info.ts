@@ -1,21 +1,15 @@
 import type {
 	CommitteePublicInfoItemResponse,
 	CorrectCommitteePublicInfoRequest,
-	ListCommitteePublicInfoResponse,
 	ProjectPublicInfoField,
 } from "@sos26/shared";
 import {
 	correctCommitteePublicInfoEndpoint,
 	hideCommitteePublicInfoFieldEndpoint,
-	listCommitteePublicInfoEndpoint,
 	unhideCommitteePublicInfoFieldEndpoint,
 	updateCommitteePublicInfoMapImageEndpoint,
 } from "@sos26/shared";
-import { callBodyApi, callGetApi, callNoBodyApi } from "./core";
-
-export async function listCommitteePublicInfo(): Promise<ListCommitteePublicInfoResponse> {
-	return callGetApi(listCommitteePublicInfoEndpoint);
-}
+import { callBodyApi, callNoBodyApi } from "./core";
 
 export async function hideCommitteePublicInfoField(
 	projectId: string,

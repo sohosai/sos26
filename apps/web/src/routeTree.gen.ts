@@ -47,7 +47,6 @@ import { Route as AuthRegisterIndexRouteImport } from './routes/auth/register/in
 import { Route as AuthLoginIndexRouteImport } from './routes/auth/login/index'
 import { Route as ProjectSupportInquiryIdRouteImport } from './routes/project/support/$inquiryId'
 import { Route as CommitteeSupportInquiryIdRouteImport } from './routes/committee/support/$inquiryId'
-import { Route as CommitteePublicInfoManageRouteImport } from './routes/committee/public-info/manage'
 import { Route as CommitteeInfoProjectIdRouteImport } from './routes/committee/info/$projectId'
 import { Route as DevUiComponentsIndexRouteImport } from './routes/dev/ui/components/index'
 import { Route as CommitteeProjectRegistrationFormIdIndexRouteImport } from './routes/committee/project-registration/$formId/index'
@@ -251,12 +250,6 @@ const CommitteeSupportInquiryIdRoute =
     path: '/support/$inquiryId',
     getParentRoute: () => CommitteeRouteRoute,
   } as any)
-const CommitteePublicInfoManageRoute =
-  CommitteePublicInfoManageRouteImport.update({
-    id: '/public-info/manage',
-    path: '/public-info/manage',
-    getParentRoute: () => CommitteeRouteRoute,
-  } as any)
 const CommitteeInfoProjectIdRoute = CommitteeInfoProjectIdRouteImport.update({
   id: '/info/$projectId',
   path: '/info/$projectId',
@@ -315,7 +308,6 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof SettingsIndexRoute
   '/support/': typeof SupportIndexRoute
   '/committee/info/$projectId': typeof CommitteeInfoProjectIdRoute
-  '/committee/public-info/manage': typeof CommitteePublicInfoManageRoute
   '/committee/support/$inquiryId': typeof CommitteeSupportInquiryIdRoute
   '/project/support/$inquiryId': typeof ProjectSupportInquiryIdRoute
   '/auth/login/': typeof AuthLoginIndexRoute
@@ -358,7 +350,6 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsIndexRoute
   '/support': typeof SupportIndexRoute
   '/committee/info/$projectId': typeof CommitteeInfoProjectIdRoute
-  '/committee/public-info/manage': typeof CommitteePublicInfoManageRoute
   '/committee/support/$inquiryId': typeof CommitteeSupportInquiryIdRoute
   '/project/support/$inquiryId': typeof ProjectSupportInquiryIdRoute
   '/auth/login': typeof AuthLoginIndexRoute
@@ -407,7 +398,6 @@ export interface FileRoutesById {
   '/settings/': typeof SettingsIndexRoute
   '/support/': typeof SupportIndexRoute
   '/committee/info/$projectId': typeof CommitteeInfoProjectIdRoute
-  '/committee/public-info/manage': typeof CommitteePublicInfoManageRoute
   '/committee/support/$inquiryId': typeof CommitteeSupportInquiryIdRoute
   '/project/support/$inquiryId': typeof ProjectSupportInquiryIdRoute
   '/auth/login/': typeof AuthLoginIndexRoute
@@ -457,7 +447,6 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/support/'
     | '/committee/info/$projectId'
-    | '/committee/public-info/manage'
     | '/committee/support/$inquiryId'
     | '/project/support/$inquiryId'
     | '/auth/login/'
@@ -500,7 +489,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/support'
     | '/committee/info/$projectId'
-    | '/committee/public-info/manage'
     | '/committee/support/$inquiryId'
     | '/project/support/$inquiryId'
     | '/auth/login'
@@ -548,7 +536,6 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/support/'
     | '/committee/info/$projectId'
-    | '/committee/public-info/manage'
     | '/committee/support/$inquiryId'
     | '/project/support/$inquiryId'
     | '/auth/login/'
@@ -858,13 +845,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CommitteeSupportInquiryIdRouteImport
       parentRoute: typeof CommitteeRouteRoute
     }
-    '/committee/public-info/manage': {
-      id: '/committee/public-info/manage'
-      path: '/public-info/manage'
-      fullPath: '/committee/public-info/manage'
-      preLoaderRoute: typeof CommitteePublicInfoManageRouteImport
-      parentRoute: typeof CommitteeRouteRoute
-    }
     '/committee/info/$projectId': {
       id: '/committee/info/$projectId'
       path: '/info/$projectId'
@@ -941,7 +921,6 @@ interface CommitteeRouteRouteChildren {
   CommitteeMapSettingsRouteRoute: typeof CommitteeMapSettingsRouteRoute
   CommitteeIndexRoute: typeof CommitteeIndexRoute
   CommitteeInfoProjectIdRoute: typeof CommitteeInfoProjectIdRoute
-  CommitteePublicInfoManageRoute: typeof CommitteePublicInfoManageRoute
   CommitteeSupportInquiryIdRoute: typeof CommitteeSupportInquiryIdRoute
   CommitteeFormsIndexRoute: typeof CommitteeFormsIndexRoute
   CommitteeMastersheetIndexRoute: typeof CommitteeMastersheetIndexRoute
@@ -959,7 +938,6 @@ const CommitteeRouteRouteChildren: CommitteeRouteRouteChildren = {
   CommitteeMapSettingsRouteRoute: CommitteeMapSettingsRouteRoute,
   CommitteeIndexRoute: CommitteeIndexRoute,
   CommitteeInfoProjectIdRoute: CommitteeInfoProjectIdRoute,
-  CommitteePublicInfoManageRoute: CommitteePublicInfoManageRoute,
   CommitteeSupportInquiryIdRoute: CommitteeSupportInquiryIdRoute,
   CommitteeFormsIndexRoute: CommitteeFormsIndexRoute,
   CommitteeMastersheetIndexRoute: CommitteeMastersheetIndexRoute,
