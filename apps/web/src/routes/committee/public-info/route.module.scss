@@ -6,9 +6,50 @@
 }
 
 .description {
-	display: -webkit-box;
-	-webkit-line-clamp: 2;
-	-webkit-box-orient: vertical;
+	display: block;
+	min-width: 280px;
+	max-width: 400px;
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+.snsValue {
+	display: block;
+	max-width: 240px;
+	font-size: var(--font-size-2);
 	overflow: hidden;
-	max-width: 280px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.thumbnails {
+	display: grid;
+	grid-template-columns: repeat(3, 56px);
+	gap: var(--space-1);
+}
+
+.thumbnail {
+	position: relative;
+	display: block;
+	width: 56px;
+	height: 56px;
+	border-radius: var(--radius-2);
+	overflow: hidden;
+	background: var(--gray-a3);
+
+	img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+}
+
+.thumbnailHidden {
+	opacity: 0.4;
+}
+
+.thumbnailBadge {
+	position: absolute;
+	bottom: 2px;
+	left: 2px;
 }

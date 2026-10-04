@@ -13,6 +13,7 @@ import { UserAvatar } from "@/components/common/UserAvatar";
 import { DataTable } from "@/components/patterns";
 import { Button, Checkbox, Select } from "@/components/primitives";
 import { listCommitteePublicInfo } from "@/lib/api/committee-public-info";
+import { getFileContentUrl } from "@/lib/api/files";
 import { ForbiddenError, useAuthStore } from "@/lib/auth";
 import { formatProjectNumber } from "@/lib/format";
 import { PublicInfoDetailDialog } from "./-components/PublicInfoDetailDialog";
@@ -201,7 +202,7 @@ function PublicInfoListPage() {
 				return (
 					<FieldCell item={item} field="ICON">
 						<UserAvatar
-							size={32}
+							size={48}
 							name={item.project.name}
 							avatarFileId={item.publicInfo.iconFileId}
 						/>
@@ -235,11 +236,38 @@ function PublicInfoListPage() {
 				);
 				if (registered.length === 0) return <Empty />;
 				return (
-					<Flex direction="column" gap="1">
+					<Flex direction="column" gap="2">
 						{registered.map(({ key, field, label }) => (
-							<Flex key={key} align="center" gap="1" wrap="wrap">
-								<Text size="2">{label}</Text>
-								<FieldStatusBadges item={item} field={field} />
+							<Flex key={key} direction="column" align="start">
+								<Flex align="center" gap="1" wrap="wrap">
+									<Text size="1" color="gray">
+										{label}
+									</Text>
+									<FieldStatusBadges item={item} field={field} />
+								</Flex>
+								{publicInfo?.[key].map(value =>
+									key === "websiteUrls" ? (
+										<a
+											key={value}
+											href={value}
+											target="_blank"
+											rel="noreferrer"
+											title={value}
+											className={styles.snsValue}
+										>
+											{value}
+										</a>
+									) : (
+										<Text
+											key={value}
+											size="2"
+											title={value}
+											className={styles.snsValue}
+										>
+											{value}
+										</Text>
+									)
+								)}
 							</Flex>
 						))}
 					</Flex>
@@ -251,13 +279,39 @@ function PublicInfoListPage() {
 			header: "掲載画像",
 			cell: ({ row }) => {
 				const { item } = row.original;
-				const count = item.publicInfo?.mapImageFileIds.length ?? 0;
-				if (count === 0) return <Empty />;
-				const hidden = item.hiddenMapImageFileIds.length;
+				const fileIds = item.publicInfo?.mapImageFileIds ?? [];
+				if (fileIds.length === 0) return <Empty />;
 				return (
-					<Text size="2">
-						{count}枚{hidden > 0 && `（非表示${hidden}）`}
-					</Text>
+					<div className={styles.thumbnails}>
+						{fileIds.map((fileId, index) => {
+							const isHidden = item.hiddenMapImageFileIds.includes(fileId);
+							return (
+								<a
+									key={fileId}
+									href={getFileContentUrl(fileId)}
+									target="_blank"
+									rel="noreferrer"
+									className={styles.thumbnail}
+								>
+									<img
+										src={getFileContentUrl(fileId)}
+										alt={`掲載画像 ${index + 1}`}
+										className={isHidden ? styles.thumbnailHidden : undefined}
+									/>
+									{isHidden && (
+										<Badge
+											color="red"
+											variant="solid"
+											size="1"
+											className={styles.thumbnailBadge}
+										>
+											非表示
+										</Badge>
+									)}
+								</a>
+							);
+						})}
+					</div>
 				);
 			},
 		}),
