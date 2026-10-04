@@ -230,7 +230,7 @@ export function Sidebar({
 	const shouldCheckMapAppSetting = menuItems.some(
 		item =>
 			item.to === "/committee/map-settings" ||
-			item.to === "/committee/public-info"
+			item.to === "/committee/public-info/manage"
 	);
 
 	useEffect(() => {
@@ -299,7 +299,7 @@ export function Sidebar({
 			shouldCheckMapAppSetting &&
 			hasMapAppSettingPermission !== true &&
 			(item.to === "/committee/map-settings" ||
-				item.to === "/committee/public-info")
+				item.to === "/committee/public-info/manage")
 		) {
 			return false;
 		}

@@ -762,6 +762,58 @@ committeeProjectRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 });
 
 // ─────────────────────────────────────────────────────────────
+// GET /committee/projects/public-infos
+// 有効な全企画の企画情報一覧（/:projectId より先に登録する）
+// ─────────────────────────────────────────────────────────────
+committeeProjectRoute.get(
+	"/public-infos",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const projects = await prisma.project.findMany({
+			where: { deletedAt: null, deletionStatus: null },
+			select: {
+				id: true,
+				number: true,
+				name: true,
+				organizationName: true,
+				publicInfo: {
+					select: {
+						description: true,
+						iconFileId: true,
+						websiteUrls: true,
+						xIds: true,
+						instagramIds: true,
+						youtubeIds: true,
+						openStatus: true,
+						stockStatus: true,
+						mapImages: {
+							orderBy: { sortOrder: "asc" },
+							select: { fileId: true },
+						},
+					},
+				},
+			},
+			orderBy: { number: "asc" },
+		});
+
+		return c.json({
+			projects: projects.map(({ publicInfo, ...project }) => {
+				if (!publicInfo) return { ...project, publicInfo: null };
+				const { mapImages, ...info } = publicInfo;
+				return {
+					...project,
+					publicInfo: {
+						...info,
+						mapImageFileIds: mapImages.map(img => img.fileId),
+					},
+				};
+			}),
+		});
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
 // GET /committee/projects/:projectId
 // 企画詳細（メンバー数・owner/subOwner情報含む）
 // ─────────────────────────────────────────────────────────────

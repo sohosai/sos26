@@ -4,6 +4,7 @@ import {
 	IconFileText,
 	IconInfoCircle,
 	IconLayoutDashboard,
+	IconListDetails,
 	IconMessageCircleQuestion,
 	IconTable,
 	IconUsers,
@@ -72,9 +73,15 @@ export const committeeMenuItems: MenuItem[] = [
 		to: "/committee/project-registration",
 	},
 	{
-		label: "企画情報",
-		icon: <IconInfoCircle size={18} />,
+		label: "企画情報一覧",
+		icon: <IconListDetails size={18} />,
 		to: "/committee/public-info",
+		exact: true,
+	},
+	{
+		label: "企画情報管理",
+		icon: <IconInfoCircle size={18} />,
+		to: "/committee/public-info/manage",
 	},
 	{
 		label: "企画検索システム",

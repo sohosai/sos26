@@ -18,9 +18,9 @@ import { ForbiddenError, useAuthStore } from "@/lib/auth";
 import { formatProjectNumber } from "@/lib/format";
 import { PublicInfoDetailDialog } from "./-components/PublicInfoDetailDialog";
 import { FieldStatusBadges, SNS_FIELDS } from "./-components/shared";
-import styles from "./route.module.scss";
+import styles from "./manage.module.scss";
 
-export const Route = createFileRoute("/committee/public-info")({
+export const Route = createFileRoute("/committee/public-info/manage")({
 	// サイドバーでも非表示にしている画面なので、URL直打ちでも同じ扱いにする。
 	// 権限は GET /auth/me で取得済みのため再取得しない。
 	beforeLoad: () => {
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/committee/public-info")({
 	component: PublicInfoListPage,
 	head: () => ({
 		meta: [
-			{ title: "企画情報 | 雙峰祭オンラインシステム" },
+			{ title: "企画情報管理 | 雙峰祭オンラインシステム" },
 			{ name: "description", content: "企画が入力した企画情報の確認・管理" },
 		],
 	}),
@@ -356,7 +356,7 @@ function PublicInfoListPage() {
 	return (
 		<div>
 			<div className={styles.header}>
-				<Heading size="6">企画情報</Heading>
+				<Heading size="6">企画情報管理</Heading>
 				<Text size="2" color="gray">
 					企画が入力した企画情報を確認し、項目ごとに非表示・修正できます。変更は企画検索システムにすぐ反映されます。
 				</Text>

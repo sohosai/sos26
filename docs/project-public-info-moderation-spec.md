@@ -83,7 +83,9 @@
 
 ## 6. 権限
 
-`MAP_APP_SETTING_EDIT` を持つ実委人だけが、企画情報一覧の閲覧、非表示の設定・解除、修正を行える。権限を持たない実委人にはサイドバーの項目を表示せず、直接アクセスしても `/committee` へ戻す（企画検索システムと同じ扱い）。
+`MAP_APP_SETTING_EDIT` を持つ実委人だけが、企画情報管理画面の閲覧、非表示の設定・解除、修正を行える。権限を持たない実委人にはサイドバーの項目を表示せず、直接アクセスしても `/committee` へ戻す（企画検索システムと同じ扱い）。
+
+全実委人が閲覧できる企画情報一覧（`/committee/public-info`）は別の画面で、この権限を必要としない。
 
 ## 7. データモデル
 
@@ -162,8 +164,8 @@ model ProjectPublicMapImage {
 
 ### 9.1 配置
 
-- パス: `/committee/public-info`
-- サイドバー: 「企画情報」（`MAP_APP_SETTING_EDIT` 保持者のみ表示）
+- パス: `/committee/public-info/manage`
+- サイドバー: 「企画情報管理」（`MAP_APP_SETTING_EDIT` 保持者のみ表示）
 
 ### 9.2 一覧
 

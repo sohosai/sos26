@@ -227,3 +227,19 @@ export const updateProjectPublicInfoResponseSchema = z.object({
 export type UpdateProjectPublicInfoResponse = z.infer<
 	typeof updateProjectPublicInfoResponseSchema
 >;
+
+// GET /committee/projects/public-infos
+export const listCommitteeProjectPublicInfosResponseSchema = z.object({
+	projects: z.array(
+		z.object({
+			id: z.string(),
+			number: z.number().int(),
+			name: z.string(),
+			organizationName: z.string(),
+			publicInfo: projectPublicInfoSchema.nullable(),
+		})
+	),
+});
+export type ListCommitteeProjectPublicInfosResponse = z.infer<
+	typeof listCommitteeProjectPublicInfosResponseSchema
+>;

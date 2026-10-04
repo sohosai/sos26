@@ -25,7 +25,6 @@ import { Route as DocsIndexRouteImport } from './routes/docs/index'
 import { Route as CommitteeIndexRouteImport } from './routes/committee/index'
 import { Route as DocsSlugRouteImport } from './routes/docs/$slug'
 import { Route as ProjectPublicInfoRouteRouteImport } from './routes/project/public-info/route'
-import { Route as CommitteePublicInfoRouteRouteImport } from './routes/committee/public-info/route'
 import { Route as CommitteeMapSettingsRouteRouteImport } from './routes/committee/map-settings/route'
 import { Route as ProjectSupportIndexRouteImport } from './routes/project/support/index'
 import { Route as ProjectNoticeIndexRouteImport } from './routes/project/notice/index'
@@ -37,6 +36,7 @@ import { Route as DevSearchIndexRouteImport } from './routes/dev/search/index'
 import { Route as DevFilePreviewIndexRouteImport } from './routes/dev/filePreview/index'
 import { Route as DevCommitteeMemberIndexRouteImport } from './routes/dev/committeeMember/index'
 import { Route as CommitteeSupportIndexRouteImport } from './routes/committee/support/index'
+import { Route as CommitteePublicInfoIndexRouteImport } from './routes/committee/public-info/index'
 import { Route as CommitteeProjectRegistrationIndexRouteImport } from './routes/committee/project-registration/index'
 import { Route as CommitteeNoticeIndexRouteImport } from './routes/committee/notice/index'
 import { Route as CommitteeMembersIndexRouteImport } from './routes/committee/members/index'
@@ -47,6 +47,7 @@ import { Route as AuthRegisterIndexRouteImport } from './routes/auth/register/in
 import { Route as AuthLoginIndexRouteImport } from './routes/auth/login/index'
 import { Route as ProjectSupportInquiryIdRouteImport } from './routes/project/support/$inquiryId'
 import { Route as CommitteeSupportInquiryIdRouteImport } from './routes/committee/support/$inquiryId'
+import { Route as CommitteePublicInfoManageRouteImport } from './routes/committee/public-info/manage'
 import { Route as CommitteeInfoProjectIdRouteImport } from './routes/committee/info/$projectId'
 import { Route as DevUiComponentsIndexRouteImport } from './routes/dev/ui/components/index'
 import { Route as CommitteeProjectRegistrationFormIdIndexRouteImport } from './routes/committee/project-registration/$formId/index'
@@ -135,12 +136,6 @@ const ProjectPublicInfoRouteRoute = ProjectPublicInfoRouteRouteImport.update({
   path: '/public-info',
   getParentRoute: () => ProjectRouteRoute,
 } as any)
-const CommitteePublicInfoRouteRoute =
-  CommitteePublicInfoRouteRouteImport.update({
-    id: '/public-info',
-    path: '/public-info',
-    getParentRoute: () => CommitteeRouteRoute,
-  } as any)
 const CommitteeMapSettingsRouteRoute =
   CommitteeMapSettingsRouteRouteImport.update({
     id: '/map-settings',
@@ -197,6 +192,12 @@ const CommitteeSupportIndexRoute = CommitteeSupportIndexRouteImport.update({
   path: '/support/',
   getParentRoute: () => CommitteeRouteRoute,
 } as any)
+const CommitteePublicInfoIndexRoute =
+  CommitteePublicInfoIndexRouteImport.update({
+    id: '/public-info/',
+    path: '/public-info/',
+    getParentRoute: () => CommitteeRouteRoute,
+  } as any)
 const CommitteeProjectRegistrationIndexRoute =
   CommitteeProjectRegistrationIndexRouteImport.update({
     id: '/project-registration/',
@@ -250,6 +251,12 @@ const CommitteeSupportInquiryIdRoute =
     path: '/support/$inquiryId',
     getParentRoute: () => CommitteeRouteRoute,
   } as any)
+const CommitteePublicInfoManageRoute =
+  CommitteePublicInfoManageRouteImport.update({
+    id: '/public-info/manage',
+    path: '/public-info/manage',
+    getParentRoute: () => CommitteeRouteRoute,
+  } as any)
 const CommitteeInfoProjectIdRoute = CommitteeInfoProjectIdRouteImport.update({
   id: '/info/$projectId',
   path: '/info/$projectId',
@@ -299,7 +306,6 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRouteRouteWithChildren
   '/support': typeof SupportRouteRouteWithChildren
   '/committee/map-settings': typeof CommitteeMapSettingsRouteRoute
-  '/committee/public-info': typeof CommitteePublicInfoRouteRoute
   '/project/public-info': typeof ProjectPublicInfoRouteRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/committee/': typeof CommitteeIndexRoute
@@ -309,6 +315,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof SettingsIndexRoute
   '/support/': typeof SupportIndexRoute
   '/committee/info/$projectId': typeof CommitteeInfoProjectIdRoute
+  '/committee/public-info/manage': typeof CommitteePublicInfoManageRoute
   '/committee/support/$inquiryId': typeof CommitteeSupportInquiryIdRoute
   '/project/support/$inquiryId': typeof ProjectSupportInquiryIdRoute
   '/auth/login/': typeof AuthLoginIndexRoute
@@ -319,6 +326,7 @@ export interface FileRoutesByFullPath {
   '/committee/members/': typeof CommitteeMembersIndexRoute
   '/committee/notice/': typeof CommitteeNoticeIndexRoute
   '/committee/project-registration/': typeof CommitteeProjectRegistrationIndexRoute
+  '/committee/public-info/': typeof CommitteePublicInfoIndexRoute
   '/committee/support/': typeof CommitteeSupportIndexRoute
   '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
   '/dev/filePreview/': typeof DevFilePreviewIndexRoute
@@ -341,7 +349,6 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteRouteWithChildren
   '/dev': typeof DevRouteRouteWithChildren
   '/committee/map-settings': typeof CommitteeMapSettingsRouteRoute
-  '/committee/public-info': typeof CommitteePublicInfoRouteRoute
   '/project/public-info': typeof ProjectPublicInfoRouteRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/committee': typeof CommitteeIndexRoute
@@ -351,6 +358,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsIndexRoute
   '/support': typeof SupportIndexRoute
   '/committee/info/$projectId': typeof CommitteeInfoProjectIdRoute
+  '/committee/public-info/manage': typeof CommitteePublicInfoManageRoute
   '/committee/support/$inquiryId': typeof CommitteeSupportInquiryIdRoute
   '/project/support/$inquiryId': typeof ProjectSupportInquiryIdRoute
   '/auth/login': typeof AuthLoginIndexRoute
@@ -361,6 +369,7 @@ export interface FileRoutesByTo {
   '/committee/members': typeof CommitteeMembersIndexRoute
   '/committee/notice': typeof CommitteeNoticeIndexRoute
   '/committee/project-registration': typeof CommitteeProjectRegistrationIndexRoute
+  '/committee/public-info': typeof CommitteePublicInfoIndexRoute
   '/committee/support': typeof CommitteeSupportIndexRoute
   '/dev/committeeMember': typeof DevCommitteeMemberIndexRoute
   '/dev/filePreview': typeof DevFilePreviewIndexRoute
@@ -389,7 +398,6 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRouteRouteWithChildren
   '/support': typeof SupportRouteRouteWithChildren
   '/committee/map-settings': typeof CommitteeMapSettingsRouteRoute
-  '/committee/public-info': typeof CommitteePublicInfoRouteRoute
   '/project/public-info': typeof ProjectPublicInfoRouteRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/committee/': typeof CommitteeIndexRoute
@@ -399,6 +407,7 @@ export interface FileRoutesById {
   '/settings/': typeof SettingsIndexRoute
   '/support/': typeof SupportIndexRoute
   '/committee/info/$projectId': typeof CommitteeInfoProjectIdRoute
+  '/committee/public-info/manage': typeof CommitteePublicInfoManageRoute
   '/committee/support/$inquiryId': typeof CommitteeSupportInquiryIdRoute
   '/project/support/$inquiryId': typeof ProjectSupportInquiryIdRoute
   '/auth/login/': typeof AuthLoginIndexRoute
@@ -409,6 +418,7 @@ export interface FileRoutesById {
   '/committee/members/': typeof CommitteeMembersIndexRoute
   '/committee/notice/': typeof CommitteeNoticeIndexRoute
   '/committee/project-registration/': typeof CommitteeProjectRegistrationIndexRoute
+  '/committee/public-info/': typeof CommitteePublicInfoIndexRoute
   '/committee/support/': typeof CommitteeSupportIndexRoute
   '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
   '/dev/filePreview/': typeof DevFilePreviewIndexRoute
@@ -438,7 +448,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/support'
     | '/committee/map-settings'
-    | '/committee/public-info'
     | '/project/public-info'
     | '/docs/$slug'
     | '/committee/'
@@ -448,6 +457,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/support/'
     | '/committee/info/$projectId'
+    | '/committee/public-info/manage'
     | '/committee/support/$inquiryId'
     | '/project/support/$inquiryId'
     | '/auth/login/'
@@ -458,6 +468,7 @@ export interface FileRouteTypes {
     | '/committee/members/'
     | '/committee/notice/'
     | '/committee/project-registration/'
+    | '/committee/public-info/'
     | '/committee/support/'
     | '/dev/committeeMember/'
     | '/dev/filePreview/'
@@ -480,7 +491,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dev'
     | '/committee/map-settings'
-    | '/committee/public-info'
     | '/project/public-info'
     | '/docs/$slug'
     | '/committee'
@@ -490,6 +500,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/support'
     | '/committee/info/$projectId'
+    | '/committee/public-info/manage'
     | '/committee/support/$inquiryId'
     | '/project/support/$inquiryId'
     | '/auth/login'
@@ -500,6 +511,7 @@ export interface FileRouteTypes {
     | '/committee/members'
     | '/committee/notice'
     | '/committee/project-registration'
+    | '/committee/public-info'
     | '/committee/support'
     | '/dev/committeeMember'
     | '/dev/filePreview'
@@ -527,7 +539,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/support'
     | '/committee/map-settings'
-    | '/committee/public-info'
     | '/project/public-info'
     | '/docs/$slug'
     | '/committee/'
@@ -537,6 +548,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/support/'
     | '/committee/info/$projectId'
+    | '/committee/public-info/manage'
     | '/committee/support/$inquiryId'
     | '/project/support/$inquiryId'
     | '/auth/login/'
@@ -547,6 +559,7 @@ export interface FileRouteTypes {
     | '/committee/members/'
     | '/committee/notice/'
     | '/committee/project-registration/'
+    | '/committee/public-info/'
     | '/committee/support/'
     | '/dev/committeeMember/'
     | '/dev/filePreview/'
@@ -691,13 +704,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectPublicInfoRouteRouteImport
       parentRoute: typeof ProjectRouteRoute
     }
-    '/committee/public-info': {
-      id: '/committee/public-info'
-      path: '/public-info'
-      fullPath: '/committee/public-info'
-      preLoaderRoute: typeof CommitteePublicInfoRouteRouteImport
-      parentRoute: typeof CommitteeRouteRoute
-    }
     '/committee/map-settings': {
       id: '/committee/map-settings'
       path: '/map-settings'
@@ -775,6 +781,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CommitteeSupportIndexRouteImport
       parentRoute: typeof CommitteeRouteRoute
     }
+    '/committee/public-info/': {
+      id: '/committee/public-info/'
+      path: '/public-info'
+      fullPath: '/committee/public-info/'
+      preLoaderRoute: typeof CommitteePublicInfoIndexRouteImport
+      parentRoute: typeof CommitteeRouteRoute
+    }
     '/committee/project-registration/': {
       id: '/committee/project-registration/'
       path: '/project-registration'
@@ -843,6 +856,13 @@ declare module '@tanstack/react-router' {
       path: '/support/$inquiryId'
       fullPath: '/committee/support/$inquiryId'
       preLoaderRoute: typeof CommitteeSupportInquiryIdRouteImport
+      parentRoute: typeof CommitteeRouteRoute
+    }
+    '/committee/public-info/manage': {
+      id: '/committee/public-info/manage'
+      path: '/public-info/manage'
+      fullPath: '/committee/public-info/manage'
+      preLoaderRoute: typeof CommitteePublicInfoManageRouteImport
       parentRoute: typeof CommitteeRouteRoute
     }
     '/committee/info/$projectId': {
@@ -919,15 +939,16 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
 
 interface CommitteeRouteRouteChildren {
   CommitteeMapSettingsRouteRoute: typeof CommitteeMapSettingsRouteRoute
-  CommitteePublicInfoRouteRoute: typeof CommitteePublicInfoRouteRoute
   CommitteeIndexRoute: typeof CommitteeIndexRoute
   CommitteeInfoProjectIdRoute: typeof CommitteeInfoProjectIdRoute
+  CommitteePublicInfoManageRoute: typeof CommitteePublicInfoManageRoute
   CommitteeSupportInquiryIdRoute: typeof CommitteeSupportInquiryIdRoute
   CommitteeFormsIndexRoute: typeof CommitteeFormsIndexRoute
   CommitteeMastersheetIndexRoute: typeof CommitteeMastersheetIndexRoute
   CommitteeMembersIndexRoute: typeof CommitteeMembersIndexRoute
   CommitteeNoticeIndexRoute: typeof CommitteeNoticeIndexRoute
   CommitteeProjectRegistrationIndexRoute: typeof CommitteeProjectRegistrationIndexRoute
+  CommitteePublicInfoIndexRoute: typeof CommitteePublicInfoIndexRoute
   CommitteeSupportIndexRoute: typeof CommitteeSupportIndexRoute
   CommitteeFormsFormIdIndexRoute: typeof CommitteeFormsFormIdIndexRoute
   CommitteeNoticeNoticeIdIndexRoute: typeof CommitteeNoticeNoticeIdIndexRoute
@@ -936,9 +957,9 @@ interface CommitteeRouteRouteChildren {
 
 const CommitteeRouteRouteChildren: CommitteeRouteRouteChildren = {
   CommitteeMapSettingsRouteRoute: CommitteeMapSettingsRouteRoute,
-  CommitteePublicInfoRouteRoute: CommitteePublicInfoRouteRoute,
   CommitteeIndexRoute: CommitteeIndexRoute,
   CommitteeInfoProjectIdRoute: CommitteeInfoProjectIdRoute,
+  CommitteePublicInfoManageRoute: CommitteePublicInfoManageRoute,
   CommitteeSupportInquiryIdRoute: CommitteeSupportInquiryIdRoute,
   CommitteeFormsIndexRoute: CommitteeFormsIndexRoute,
   CommitteeMastersheetIndexRoute: CommitteeMastersheetIndexRoute,
@@ -946,6 +967,7 @@ const CommitteeRouteRouteChildren: CommitteeRouteRouteChildren = {
   CommitteeNoticeIndexRoute: CommitteeNoticeIndexRoute,
   CommitteeProjectRegistrationIndexRoute:
     CommitteeProjectRegistrationIndexRoute,
+  CommitteePublicInfoIndexRoute: CommitteePublicInfoIndexRoute,
   CommitteeSupportIndexRoute: CommitteeSupportIndexRoute,
   CommitteeFormsFormIdIndexRoute: CommitteeFormsFormIdIndexRoute,
   CommitteeNoticeNoticeIdIndexRoute: CommitteeNoticeNoticeIdIndexRoute,
