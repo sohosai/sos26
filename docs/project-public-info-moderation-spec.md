@@ -43,7 +43,9 @@
 
 ### 4.2 修正
 
-- 実委人が登録値を直接書き換える。修正前の値は残さない。
+- 実委人が登録値を直接書き換える。
+- 最初に修正したときの企画の値を「修正前の値」として記録に残す。同じ項目を再修正しても、修正前の値は企画の値のまま変えない。
+- 修正を取り消すと、登録値を修正前の値に戻し、修正の記録を消す。
 - どの項目を誰がいつ修正したかを記録し、企画側・実委側の画面に「実行委員会が修正」と表示する。
 - 企画がその項目の値を変えて保存すると、修正の記録は消え、以後は企画の値として扱う。
 
@@ -115,6 +117,9 @@ model ProjectPublicInfoModeration {
   field ProjectPublicInfoField
   kind  ProjectPublicInfoModerationKind
 
+  /// CORRECTED のみ: 最初に修正する前の企画の値（紹介文は文字列または null、SNSリンクは文字列の配列）
+  previousValue Json?
+
   updatedById String
   updatedBy   User   @relation(fields: [updatedById], references: [id])
 
@@ -126,7 +131,7 @@ model ProjectPublicInfoModeration {
 ```
 
 - `HIDDEN` のレコードがあれば非表示。解除はレコードの削除。
-- `CORRECTED` のレコードは修正時に作成（再修正時は更新）し、企画がその項目の値を変えて保存したときに削除する。
+- `CORRECTED` のレコードは修正時に作成（再修正時は操作者と日時だけ更新）し、修正の取り消し時と、企画がその項目の値を変えて保存したときに削除する。
 - 1つの項目に `HIDDEN` と `CORRECTED` が同時にあってよい。
 - `ICON` は `HIDDEN` のみ。
 
@@ -183,6 +188,7 @@ model ProjectPublicMapImage {
 - 操作
   - 非表示にする / 非表示を解除する
   - 修正する（入力欄を開き、保存で登録値を書き換える）
+  - 修正済みの項目には修正前の値を表示し、「元に戻す」で修正を取り消す
   - 掲載画像は1枚ごとに非表示・解除を切り替える
 
 ## 10. 企画側画面（`/project/public-info`）
@@ -210,10 +216,11 @@ model ProjectPublicMapImage {
 | PUT | `/committee/public-info/:projectId/hidden/:field` | 項目を非表示にする |
 | DELETE | `/committee/public-info/:projectId/hidden/:field` | 項目の非表示を解除する |
 | PATCH | `/committee/public-info/:projectId` | 修正。body は `description` / `websiteUrls` / `xIds` / `instagramIds` / `youtubeIds` のうち変更する項目 |
+| DELETE | `/committee/public-info/:projectId/corrections/:field` | 修正を取り消し、登録値を修正前の値に戻す。修正の記録がなければ 404 |
 | PUT | `/committee/public-info/:projectId/map-images/:fileId` | 掲載画像の非表示を切り替える。body: `{ isHidden: boolean }` |
 
 - 非表示・修正の操作は、操作後の企画1件分を一覧と同じ形で返す。
-- `:field` は `ProjectPublicInfoField` の値。
+- `:field` は `ProjectPublicInfoField` の値。修正の取り消しでは、修正できる項目（アイコン以外）に限る。
 - 企画情報が未登録、または指定した画像がその企画の掲載画像でない場合は 404。
 
 ### 11.2 企画側

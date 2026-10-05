@@ -1718,6 +1718,9 @@ model ProjectPublicInfoModeration {
   field ProjectPublicInfoField
   kind  ProjectPublicInfoModerationKind
 
+  /// CORRECTED のみ: 最初に修正する前の企画の値（紹介文は文字列または null、SNSリンクは文字列の配列）
+  previousValue Json?
+
   updatedById String
   updatedBy   User   @relation(fields: [updatedById], references: [id])
 

@@ -1,4 +1,5 @@
 import {
+	committeePublicInfoCorrectionPathParamsSchema,
 	committeePublicInfoFieldPathParamsSchema,
 	committeePublicInfoItemResponseSchema,
 	committeePublicInfoMapImagePathParamsSchema,
@@ -65,6 +66,25 @@ export const correctCommitteePublicInfoEndpoint: BodyEndpoint<
 	pathParams: projectIdPathParamsSchema,
 	query: undefined,
 	request: correctCommitteePublicInfoRequestSchema,
+	response: committeePublicInfoItemResponseSchema,
+} as const;
+
+/**
+ * DELETE /committee/public-info/:projectId/corrections/:field
+ * 修正を取り消し、修正前の企画の値に戻す
+ */
+export const revertCommitteePublicInfoCorrectionEndpoint: NoBodyEndpoint<
+	"DELETE",
+	"/committee/public-info/:projectId/corrections/:field",
+	typeof committeePublicInfoCorrectionPathParamsSchema,
+	undefined,
+	typeof committeePublicInfoItemResponseSchema
+> = {
+	method: "DELETE",
+	path: "/committee/public-info/:projectId/corrections/:field",
+	pathParams: committeePublicInfoCorrectionPathParamsSchema,
+	query: undefined,
+	request: undefined,
 	response: committeePublicInfoItemResponseSchema,
 } as const;
 

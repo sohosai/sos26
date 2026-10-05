@@ -23,7 +23,12 @@ vi.mock("../lib/prisma", () => {
 		committeeMember: { findFirst: vi.fn() },
 		project: { findMany: vi.fn(), findFirst: vi.fn() },
 		projectPublicInfo: { findFirst: vi.fn(), update: vi.fn() },
-		projectPublicInfoModeration: { upsert: vi.fn(), deleteMany: vi.fn() },
+		projectPublicInfoModeration: {
+			upsert: vi.fn(),
+			deleteMany: vi.fn(),
+			findUnique: vi.fn(),
+			delete: vi.fn(),
+		},
 		projectPublicMapImage: { updateMany: vi.fn() },
 		$transaction: vi.fn(),
 	};
@@ -253,9 +258,12 @@ describe("PATCH /committee/public-info/:projectId", () => {
 		);
 		expect(mockPrisma.projectPublicInfoModeration.upsert).toHaveBeenCalledWith(
 			expect.objectContaining({
+				// 再修正では修正前の値を書き換えない
+				update: { updatedById: mockUser.id },
 				create: expect.objectContaining({
 					field: "DESCRIPTION",
 					kind: "CORRECTED",
+					previousValue: "焼きそばを販売します",
 				}),
 			})
 		);
@@ -297,6 +305,65 @@ describe("PATCH /committee/public-info/:projectId", () => {
 		const res = await request(app, "PATCH", `/${PROJECT_ID}`, {
 			websiteUrls: ["javascript:alert(1)"],
 		});
+
+		expect(res.status).toBe(400);
+	});
+});
+
+describe("DELETE /committee/public-info/:projectId/corrections/:field", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("正常系: 修正前の値に戻し、修正の記録を消す", async () => {
+		const app = makeApp();
+		setupAuth();
+		setupUpdateMocks();
+		mockPrisma.projectPublicInfoModeration.findUnique.mockResolvedValue({
+			id: "clmodddddddddddddd1",
+			previousValue: ["original"],
+		} as any);
+		const version = getPublicApiCacheVersion();
+
+		const res = await request(
+			app,
+			"DELETE",
+			`/${PROJECT_ID}/corrections/X_IDS`
+		);
+
+		expect(res.status).toBe(200);
+		expect(mockPrisma.projectPublicInfo.update).toHaveBeenCalledWith({
+			where: { id: INFO_ID },
+			data: { xIds: ["original"] },
+		});
+		expect(mockPrisma.projectPublicInfoModeration.delete).toHaveBeenCalledWith({
+			where: { id: "clmodddddddddddddd1" },
+		});
+		expect(getPublicApiCacheVersion()).toBe(version + 1);
+	});
+
+	it("修正の記録がなければ404エラー", async () => {
+		const app = makeApp();
+		setupAuth();
+		setupUpdateMocks();
+		mockPrisma.projectPublicInfoModeration.findUnique.mockResolvedValue(null);
+
+		const res = await request(
+			app,
+			"DELETE",
+			`/${PROJECT_ID}/corrections/DESCRIPTION`
+		);
+
+		expect(res.status).toBe(404);
+		expect(mockPrisma.projectPublicInfo.update).not.toHaveBeenCalled();
+	});
+
+	it("修正できない項目は400エラー", async () => {
+		const app = makeApp();
+		setupAuth();
+		setupUpdateMocks();
+
+		const res = await request(app, "DELETE", `/${PROJECT_ID}/corrections/ICON`);
 
 		expect(res.status).toBe(400);
 	});

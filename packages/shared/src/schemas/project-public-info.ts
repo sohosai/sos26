@@ -174,6 +174,8 @@ export const correctableProjectPublicInfoFields = [
 	"INSTAGRAM_IDS",
 	"YOUTUBE_IDS",
 ] as const satisfies readonly ProjectPublicInfoField[];
+export type CorrectableProjectPublicInfoField =
+	(typeof correctableProjectPublicInfoFields)[number];
 
 export const projectPublicInfoModerationKindSchema = z.enum([
 	"HIDDEN",
@@ -231,6 +233,8 @@ export type UpdateProjectPublicInfoResponse = z.infer<
 export const committeePublicInfoModerationSchema = z.object({
 	field: projectPublicInfoFieldSchema,
 	kind: projectPublicInfoModerationKindSchema,
+	// CORRECTED のみ: 最初に修正する前の企画の値
+	previousValue: z.union([z.string(), z.array(z.string())]).nullable(),
 	updatedBy: z.object({ id: z.string(), name: z.string() }),
 	updatedAt: z.coerce.date(),
 });

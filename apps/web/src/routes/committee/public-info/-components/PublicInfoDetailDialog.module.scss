@@ -16,6 +16,12 @@
 	word-break: break-all;
 }
 
+.previousValue {
+	padding: var(--space-2) var(--space-3);
+	border-radius: var(--radius-2);
+	background: var(--gray-a2);
+}
+
 .imageGrid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));

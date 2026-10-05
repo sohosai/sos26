@@ -1,11 +1,13 @@
 import type {
 	CommitteePublicInfoItemResponse,
+	CorrectableProjectPublicInfoField,
 	CorrectCommitteePublicInfoRequest,
 	ProjectPublicInfoField,
 } from "@sos26/shared";
 import {
 	correctCommitteePublicInfoEndpoint,
 	hideCommitteePublicInfoFieldEndpoint,
+	revertCommitteePublicInfoCorrectionEndpoint,
 	unhideCommitteePublicInfoFieldEndpoint,
 	updateCommitteePublicInfoMapImageEndpoint,
 } from "@sos26/shared";
@@ -37,6 +39,15 @@ export async function correctCommitteePublicInfo(
 ): Promise<CommitteePublicInfoItemResponse> {
 	return callBodyApi(correctCommitteePublicInfoEndpoint, data, {
 		pathParams: { projectId },
+	});
+}
+
+export async function revertCommitteePublicInfoCorrection(
+	projectId: string,
+	field: CorrectableProjectPublicInfoField
+): Promise<CommitteePublicInfoItemResponse> {
+	return callNoBodyApi(revertCommitteePublicInfoCorrectionEndpoint, {
+		pathParams: { projectId, field },
 	});
 }
 

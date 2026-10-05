@@ -1,6 +1,7 @@
 import { Badge, Dialog, Flex, Heading, Text } from "@radix-ui/themes";
 import type {
 	CommitteeProjectPublicInfo,
+	CorrectableProjectPublicInfoField,
 	CorrectCommitteePublicInfoRequest,
 	ProjectPublicInfoField,
 	ProjectSnsLinkKey,
@@ -17,6 +18,7 @@ import { Button, TextArea, TextField } from "@/components/primitives";
 import {
 	correctCommitteePublicInfo,
 	hideCommitteePublicInfoField,
+	revertCommitteePublicInfoCorrection,
 	unhideCommitteePublicInfoField,
 	updateCommitteePublicInfoMapImage,
 } from "@/lib/api/committee-public-info";
@@ -137,6 +139,46 @@ export function PublicInfoDetailDialog({
 		if (ok) setEditing(null);
 	};
 
+	const revertCorrection = (field: CorrectableProjectPublicInfoField) => {
+		void run(
+			() => revertCommitteePublicInfoCorrection(item.id, field),
+			"修正前の値に戻しました。"
+		);
+	};
+
+	/** 修正済みの項目に、修正前の企画の値と「元に戻す」を出す */
+	const previousValue = (field: CorrectableProjectPublicInfoField) => {
+		const correction = findModeration(item, field, "CORRECTED");
+		if (!correction) return null;
+		const value = correction.previousValue;
+		const text = Array.isArray(value) ? value.join("\n") : value;
+		return (
+			<Flex
+				justify="between"
+				align="start"
+				gap="2"
+				className={styles.previousValue}
+			>
+				<Flex direction="column" gap="1">
+					<Text size="1" color="gray">
+						修正前
+					</Text>
+					<Text size="2" className={styles.value}>
+						{text || "（未入力）"}
+					</Text>
+				</Flex>
+				<Button
+					intent="secondary"
+					size="1"
+					onClick={() => revertCorrection(field)}
+					disabled={isBusy}
+				>
+					元に戻す
+				</Button>
+			</Flex>
+		);
+	};
+
 	const hideButton = (field: ProjectPublicInfoField) => {
 		const isHidden = !!findModeration(item, field, "HIDDEN");
 		return (
@@ -199,6 +241,7 @@ export function PublicInfoDetailDialog({
 								</Flex>
 							</Flex>
 							<ModerationMeta item={item} field="DESCRIPTION" />
+							{previousValue("DESCRIPTION")}
 							{editing && !("key" in editing) ? (
 								<Flex direction="column" gap="2">
 									<TextArea
@@ -341,6 +384,7 @@ export function PublicInfoDetailDialog({
 										</Flex>
 									</Flex>
 									<ModerationMeta item={item} field={field} />
+									{previousValue(field)}
 									{isEditingThis && "key" in editing ? (
 										<Flex direction="column" gap="2">
 											{editing.values.map((value, index) => (

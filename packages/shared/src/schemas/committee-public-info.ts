@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
 	committeeProjectPublicInfoSchema,
+	correctableProjectPublicInfoFields,
 	projectPublicInfoFieldSchema,
 	updateProjectPublicInfoRequestSchema,
 } from "./project-public-info";
@@ -33,6 +34,12 @@ export const correctCommitteePublicInfoRequestSchema =
 export type CorrectCommitteePublicInfoRequest = z.infer<
 	typeof correctCommitteePublicInfoRequestSchema
 >;
+
+// DELETE /committee/public-info/:projectId/corrections/:field
+export const committeePublicInfoCorrectionPathParamsSchema = z.object({
+	projectId: z.string().min(1),
+	field: z.enum(correctableProjectPublicInfoFields),
+});
 
 // PUT /committee/public-info/:projectId/map-images/:fileId
 export const committeePublicInfoMapImagePathParamsSchema = z.object({

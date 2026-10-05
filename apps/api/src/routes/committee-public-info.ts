@@ -1,13 +1,11 @@
-import type { Prisma } from "@prisma/client";
-import type {
-	CommitteeProjectPublicInfo,
-	ProjectPublicInfoField,
-} from "@sos26/shared";
+import { Prisma } from "@prisma/client";
+import type { CommitteeProjectPublicInfo } from "@sos26/shared";
 import {
 	correctableProjectPublicInfoFields,
 	correctCommitteePublicInfoEndpoint,
 	hideCommitteePublicInfoFieldEndpoint,
 	projectPublicInfoFieldKeys,
+	revertCommitteePublicInfoCorrectionEndpoint,
 	unhideCommitteePublicInfoFieldEndpoint,
 	updateCommitteePublicInfoMapImageEndpoint,
 } from "@sos26/shared";
@@ -58,6 +56,7 @@ export const committeeProjectPublicInfoSelect = {
 				select: {
 					field: true,
 					kind: true,
+					previousValue: true,
 					updatedAt: true,
 					updatedBy: { select: { id: true, name: true } },
 				},
@@ -87,7 +86,10 @@ export function toCommitteeProjectPublicInfo({
 			...info,
 			mapImageFileIds: mapImages.map(img => img.fileId),
 		},
-		moderations,
+		moderations: moderations.map(m => ({
+			...m,
+			previousValue: m.previousValue as string | string[] | null,
+		})),
 		hiddenMapImageFileIds: mapImages
 			.filter(img => img.isHidden)
 			.map(img => img.fileId),
@@ -179,15 +181,14 @@ committeePublicInfoRoute.patch("/:projectId", async c => {
 		if (!before) throw Errors.notFound("企画情報が登録されていません");
 
 		// 値が変わった項目だけを修正として記録する
-		const changedFields: ProjectPublicInfoField[] =
-			correctableProjectPublicInfoFields.filter(field => {
-				const key = projectPublicInfoFieldKeys[field];
-				const value = next[key];
-				return (
-					value !== undefined &&
-					JSON.stringify(before[key]) !== JSON.stringify(value)
-				);
-			});
+		const changedFields = correctableProjectPublicInfoFields.filter(field => {
+			const key = projectPublicInfoFieldKeys[field];
+			const value = next[key];
+			return (
+				value !== undefined &&
+				JSON.stringify(before[key]) !== JSON.stringify(value)
+			);
+		});
 		if (changedFields.length === 0) return;
 
 		await tx.projectPublicInfo.update({
@@ -203,15 +204,51 @@ committeePublicInfoRoute.patch("/:projectId", async c => {
 						kind: "CORRECTED",
 					},
 				},
+				// 再修正では修正前の値を変えず、企画の値を残し続ける
 				update: { updatedById: userId },
 				create: {
 					projectPublicInfoId: before.id,
 					field,
 					kind: "CORRECTED",
+					previousValue:
+						before[projectPublicInfoFieldKeys[field]] ?? Prisma.JsonNull,
 					updatedById: userId,
 				},
 			});
 		}
+	});
+	bumpPublicApiCacheVersion();
+
+	return c.json({ project: await getProject(projectId) });
+});
+
+committeePublicInfoRoute.delete("/:projectId/corrections/:field", async c => {
+	const { projectId, field } =
+		revertCommitteePublicInfoCorrectionEndpoint.pathParams.parse(c.req.param());
+	const projectPublicInfoId = await getPublicInfoId(projectId);
+
+	await prisma.$transaction(async tx => {
+		const correction = await tx.projectPublicInfoModeration.findUnique({
+			where: {
+				projectPublicInfoId_field_kind: {
+					projectPublicInfoId,
+					field,
+					kind: "CORRECTED",
+				},
+			},
+			select: { id: true, previousValue: true },
+		});
+		if (!correction) throw Errors.notFound("修正の記録がありません");
+
+		await tx.projectPublicInfo.update({
+			where: { id: projectPublicInfoId },
+			data: {
+				[projectPublicInfoFieldKeys[field]]: correction.previousValue,
+			},
+		});
+		await tx.projectPublicInfoModeration.delete({
+			where: { id: correction.id },
+		});
 	});
 	bumpPublicApiCacheVersion();
 
