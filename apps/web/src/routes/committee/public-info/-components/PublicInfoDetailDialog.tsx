@@ -255,6 +255,9 @@ export function PublicInfoDetailDialog({
 										}
 										rows={4}
 									/>
+									<Text size="1" color="gray" align="right">
+										{editing.value.length}/{PROJECT_DESCRIPTION_MAX_LENGTH}
+									</Text>
 									<Flex gap="2" justify="end">
 										<Button
 											intent="secondary"
