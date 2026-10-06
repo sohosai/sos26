@@ -39,6 +39,7 @@ import { getFileContentUrl, uploadFile } from "@/lib/api/files";
 import { reportHandledError } from "@/lib/error/report";
 import { formatDate, formatProjectNumber } from "@/lib/format";
 import { ImageCropperModal } from "../../../project/public-info/ImageCropperModal";
+import { ImagePreviewModal } from "../../../project/public-info/ImagePreviewModal";
 import styles from "./PublicInfoDetailDialog.module.scss";
 import { findModeration, SNS_FIELDS } from "./shared";
 
@@ -249,6 +250,7 @@ function MapImageTile({
 	fileId,
 	index,
 	isHidden,
+	onPreview,
 	onToggleHidden,
 	onDelete,
 	disabled,
@@ -256,17 +258,18 @@ function MapImageTile({
 	fileId: string;
 	index: number;
 	isHidden: boolean;
+	onPreview: () => void;
 	onToggleHidden: () => void;
 	onDelete: () => void;
 	disabled: boolean;
 }) {
 	return (
 		<div className={styles.imageTile}>
-			<a
-				href={getFileContentUrl(fileId)}
-				target="_blank"
-				rel="noreferrer"
+			<button
+				type="button"
+				onClick={onPreview}
 				className={styles.imageLink}
+				aria-label={`掲載画像 ${index + 1} を拡大`}
 			>
 				<img
 					src={getFileContentUrl(fileId)}
@@ -278,7 +281,7 @@ function MapImageTile({
 						非公開
 					</Badge>
 				)}
-			</a>
+			</button>
 			<div className={styles.imageMenu}>
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger disabled={disabled}>
@@ -302,6 +305,51 @@ function MapImageTile({
 				</DropdownMenu.Root>
 			</div>
 		</div>
+	);
+}
+
+/** 掲載画像の一覧。画像を押すと拡大表示する */
+function MapImageGrid({
+	fileIds,
+	hiddenFileIds,
+	onToggleHidden,
+	onDelete,
+	disabled,
+}: {
+	fileIds: string[];
+	hiddenFileIds: string[];
+	onToggleHidden: (fileId: string) => void;
+	onDelete: (fileId: string) => void;
+	disabled: boolean;
+}) {
+	const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+
+	return (
+		<>
+			<div className={styles.imageGrid}>
+				{fileIds.map((fileId, index) => (
+					<MapImageTile
+						key={fileId}
+						fileId={fileId}
+						index={index}
+						isHidden={hiddenFileIds.includes(fileId)}
+						onPreview={() => setPreviewIndex(index)}
+						onToggleHidden={() => onToggleHidden(fileId)}
+						onDelete={() => onDelete(fileId)}
+						disabled={disabled}
+					/>
+				))}
+			</div>
+			<ImagePreviewModal
+				isOpen={previewIndex !== null}
+				onOpenChange={open => {
+					if (!open) setPreviewIndex(null);
+				}}
+				fileIds={fileIds}
+				currentIndex={previewIndex ?? 0}
+				onChangeIndex={setPreviewIndex}
+			/>
+		</>
 	);
 }
 
@@ -593,28 +641,22 @@ export function PublicInfoDetailDialog({
 									（未設定）
 								</Text>
 							) : (
-								<div className={styles.imageGrid}>
-									{mapImageFileIds.map((fileId, index) => (
-										<MapImageTile
-											key={fileId}
-											fileId={fileId}
-											index={index}
-											isHidden={item.hiddenMapImageFileIds.includes(fileId)}
-											onToggleHidden={() => toggleMapImage(fileId)}
-											onDelete={() =>
-												void correct(
-													{
-														mapImageFileIds: mapImageFileIds.filter(
-															id => id !== fileId
-														),
-													},
-													"画像を削除しました。"
-												)
-											}
-											disabled={isBusy}
-										/>
-									))}
-								</div>
+								<MapImageGrid
+									fileIds={mapImageFileIds}
+									hiddenFileIds={item.hiddenMapImageFileIds}
+									onToggleHidden={toggleMapImage}
+									onDelete={fileId =>
+										void correct(
+											{
+												mapImageFileIds: mapImageFileIds.filter(
+													id => id !== fileId
+												),
+											},
+											"画像を削除しました。"
+										)
+									}
+									disabled={isBusy}
+								/>
 							)}
 						</FieldSection>
 

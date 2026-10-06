@@ -42,6 +42,10 @@
 .imageLink {
 	position: relative;
 	display: block;
+	width: 100%;
+	padding: 0;
+	border: none;
+	cursor: zoom-in;
 	aspect-ratio: 1;
 	border-radius: var(--radius-3);
 	overflow: hidden;
