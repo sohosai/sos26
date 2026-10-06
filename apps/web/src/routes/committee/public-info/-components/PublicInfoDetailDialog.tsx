@@ -1,6 +1,7 @@
 import {
 	Badge,
 	Box,
+	Callout,
 	Dialog,
 	DropdownMenu,
 	Flex,
@@ -11,6 +12,7 @@ import type {
 	CommitteeProjectPublicInfo,
 	CorrectCommitteePublicInfoRequest,
 	HideableProjectPublicInfoField,
+	ProjectPublicInfo,
 	ProjectPublicInfoField,
 	ProjectSnsLinkKey,
 } from "@sos26/shared";
@@ -94,7 +96,7 @@ function FieldSection({
 	field: ProjectPublicInfoField;
 	title: string;
 	headerAction?: ReactNode;
-	visibility?: { onToggle: () => void; disabled: boolean };
+	visibility?: { onToggle: () => void; disabled: boolean } | null;
 	correction: ReactNode;
 	children: ReactNode;
 }) {
@@ -353,6 +355,18 @@ function MapImageGrid({
 	);
 }
 
+const EMPTY_PUBLIC_INFO: ProjectPublicInfo = {
+	description: null,
+	iconFileId: null,
+	mapImageFileIds: [],
+	websiteUrls: [],
+	xIds: [],
+	instagramIds: [],
+	youtubeIds: [],
+	openStatus: "NOT_APPLICABLE",
+	stockStatus: "NOT_APPLICABLE",
+};
+
 export function PublicInfoDetailDialog({
 	open,
 	onOpenChange,
@@ -362,8 +376,9 @@ export function PublicInfoDetailDialog({
 	const [isBusy, setIsBusy] = useState(false);
 	const [editing, setEditing] = useState<Editing | null>(null);
 	const mapImageInputRef = useRef<HTMLInputElement>(null);
-	const { publicInfo } = item;
-	const mapImageFileIds = publicInfo?.mapImageFileIds ?? [];
+	// 企画情報が未登録の企画は空の値として表示し、値を追加できるようにする
+	const publicInfo = item.publicInfo ?? EMPTY_PUBLIC_INFO;
+	const { mapImageFileIds } = publicInfo;
 
 	const run = async (
 		operation: () => Promise<{ project: CommitteeProjectPublicInfo }>,
@@ -424,19 +439,21 @@ export function PublicInfoDetailDialog({
 		}, `${files.length}枚の画像を追加しました。`);
 	};
 
-	const visibility = (field: HideableProjectPublicInfoField) => ({
-		disabled: isBusy,
-		onToggle: () => {
-			const isHidden = !!findModeration(item, field, "HIDDEN");
-			void run(
-				() =>
-					isHidden
-						? unhideCommitteePublicInfoField(item.id, field)
-						: hideCommitteePublicInfoField(item.id, field),
-				isHidden ? "公開しました。" : "非公開にしました。"
-			);
-		},
-	});
+	// 企画情報が未登録の間は、非公開にする対象がないためスイッチを出さない
+	const visibility = (field: HideableProjectPublicInfoField) =>
+		item.publicInfo && {
+			disabled: isBusy,
+			onToggle: () => {
+				const isHidden = !!findModeration(item, field, "HIDDEN");
+				void run(
+					() =>
+						isHidden
+							? unhideCommitteePublicInfoField(item.id, field)
+							: hideCommitteePublicInfoField(item.id, field),
+					isHidden ? "公開しました。" : "非公開にしました。"
+				);
+			},
+		};
 
 	const toggleMapImage = (fileId: string) => {
 		const isHidden = item.hiddenMapImageFileIds.includes(fileId);
@@ -518,209 +535,211 @@ export function PublicInfoDetailDialog({
 					{item.organizationName}
 				</Dialog.Description>
 
-				{publicInfo === null ? (
-					<Text size="2" color="gray">
-						この企画はまだ企画情報を登録していません。
-					</Text>
-				) : (
-					<Flex direction="column" gap="5">
-						<FieldSection
-							item={item}
-							field="DESCRIPTION"
-							title="紹介文"
-							visibility={visibility("DESCRIPTION")}
-							correction={correction("DESCRIPTION")}
-						>
-							{editing && !("key" in editing) ? (
-								<Flex direction="column" gap="2">
-									<TextArea
-										label={`紹介文（${PROJECT_DESCRIPTION_MAX_LENGTH}文字以内）`}
-										value={editing.value}
-										onChange={value =>
-											setEditing({
-												field: "DESCRIPTION",
-												value: value.slice(0, PROJECT_DESCRIPTION_MAX_LENGTH),
-											})
+				{item.publicInfo === null && (
+					<Callout.Root color="gray" mb="4">
+						<Callout.Text>
+							この企画はまだ企画情報を入力していません。ここで値を追加すると、企画検索システムに掲載されます。
+						</Callout.Text>
+					</Callout.Root>
+				)}
+
+				<Flex direction="column" gap="5">
+					<FieldSection
+						item={item}
+						field="DESCRIPTION"
+						title="紹介文"
+						visibility={visibility("DESCRIPTION")}
+						correction={correction("DESCRIPTION")}
+					>
+						{editing && !("key" in editing) ? (
+							<Flex direction="column" gap="2">
+								<TextArea
+									label={`紹介文（${PROJECT_DESCRIPTION_MAX_LENGTH}文字以内）`}
+									value={editing.value}
+									onChange={value =>
+										setEditing({
+											field: "DESCRIPTION",
+											value: value.slice(0, PROJECT_DESCRIPTION_MAX_LENGTH),
+										})
+									}
+									rows={4}
+								/>
+								<Text size="1" color="gray" align="right">
+									{editing.value.length}/{PROJECT_DESCRIPTION_MAX_LENGTH}
+								</Text>
+								{editActions(true)}
+							</Flex>
+						) : (
+							valueWithEdit(
+								<Text size="2" className={styles.value}>
+									{publicInfo.description || "（未入力）"}
+								</Text>,
+								() =>
+									setEditing({
+										field: "DESCRIPTION",
+										value: publicInfo.description ?? "",
+									})
+							)
+						)}
+					</FieldSection>
+
+					<FieldSection
+						item={item}
+						field="ICON"
+						title="アイコン"
+						visibility={visibility("ICON")}
+						correction={correction("ICON")}
+					>
+						<Flex justify="between" align="end" gap="2" wrap="wrap">
+							{publicInfo.iconFileId ? (
+								<UserAvatar
+									size={64}
+									name={item.name}
+									avatarFileId={publicInfo.iconFileId}
+								/>
+							) : (
+								<Text size="2" color="gray">
+									（未設定）
+								</Text>
+							)}
+							<Flex gap="2">
+								<IconChangeButton
+									onCropped={handleIconCropped}
+									disabled={isBusy}
+								/>
+								{publicInfo.iconFileId && (
+									<Button
+										intent="secondary"
+										size="1"
+										onClick={() =>
+											void correct(
+												{ iconFileId: null },
+												"アイコンを削除しました。"
+											)
 										}
-										rows={4}
-									/>
-									<Text size="1" color="gray" align="right">
-										{editing.value.length}/{PROJECT_DESCRIPTION_MAX_LENGTH}
-									</Text>
-									{editActions(true)}
+										disabled={isBusy}
+									>
+										削除
+									</Button>
+								)}
+							</Flex>
+						</Flex>
+					</FieldSection>
+
+					<FieldSection
+						item={item}
+						field="MAP_IMAGES"
+						title="掲載画像"
+						headerAction={
+							<>
+								<Button
+									intent="secondary"
+									size="1"
+									onClick={() => mapImageInputRef.current?.click()}
+									disabled={
+										isBusy ||
+										mapImageFileIds.length >= PROJECT_MAP_IMAGES_MAX_COUNT
+									}
+								>
+									<IconPlus size={14} />
+									追加
+								</Button>
+								<input
+									ref={mapImageInputRef}
+									type="file"
+									accept={imageAcceptAttribute}
+									multiple
+									hidden
+									onChange={handleMapImagesSelect}
+								/>
+							</>
+						}
+						correction={correction("MAP_IMAGES")}
+					>
+						{mapImageFileIds.length === 0 ? (
+							<Text size="2" color="gray">
+								（未設定）
+							</Text>
+						) : (
+							<MapImageGrid
+								fileIds={mapImageFileIds}
+								hiddenFileIds={item.hiddenMapImageFileIds}
+								onToggleHidden={toggleMapImage}
+								onDelete={fileId =>
+									void correct(
+										{
+											mapImageFileIds: mapImageFileIds.filter(
+												id => id !== fileId
+											),
+										},
+										"画像を削除しました。"
+									)
+								}
+								disabled={isBusy}
+							/>
+						)}
+					</FieldSection>
+
+					{SNS_FIELDS.map(({ key, field, label }) => (
+						<FieldSection
+							key={key}
+							item={item}
+							field={field}
+							title={label}
+							visibility={visibility(field)}
+							correction={correction(field)}
+						>
+							{editing && "key" in editing && editing.key === key ? (
+								<Flex direction="column" gap="2">
+									{editing.values.map((value, index) => (
+										<TextField
+											// biome-ignore lint/suspicious/noArrayIndexKey: 入力欄の数は固定
+											key={index}
+											type={key === "websiteUrls" ? "url" : "text"}
+											label={`${label} ${index + 1}つ目`}
+											value={value}
+											onChange={next =>
+												setEditing({
+													...editing,
+													values: editing.values.map((v, i) =>
+														i === index ? next.trim() : v
+													),
+												})
+											}
+											error={editingSnsErrors[index]}
+										/>
+									))}
+									{editActions(editingSnsErrors.every(e => e === undefined))}
 								</Flex>
 							) : (
 								valueWithEdit(
-									<Text size="2" className={styles.value}>
-										{publicInfo.description || "（未入力）"}
-									</Text>,
+									publicInfo[key].length > 0 ? (
+										<Flex direction="column">
+											{publicInfo[key].map(value => (
+												<Text key={value} size="2" className={styles.value}>
+													{value}
+												</Text>
+											))}
+										</Flex>
+									) : (
+										<Text size="2" color="gray">
+											（未入力）
+										</Text>
+									),
 									() =>
 										setEditing({
-											field: "DESCRIPTION",
-											value: publicInfo.description ?? "",
+											field,
+											key,
+											values: Array.from(
+												{ length: PROJECT_SNS_LINKS_MAX_COUNT },
+												(_, i) => publicInfo[key][i] ?? ""
+											),
 										})
 								)
 							)}
 						</FieldSection>
-
-						<FieldSection
-							item={item}
-							field="ICON"
-							title="アイコン"
-							visibility={visibility("ICON")}
-							correction={correction("ICON")}
-						>
-							<Flex justify="between" align="end" gap="2" wrap="wrap">
-								{publicInfo.iconFileId ? (
-									<UserAvatar
-										size={64}
-										name={item.name}
-										avatarFileId={publicInfo.iconFileId}
-									/>
-								) : (
-									<Text size="2" color="gray">
-										（未設定）
-									</Text>
-								)}
-								<Flex gap="2">
-									<IconChangeButton
-										onCropped={handleIconCropped}
-										disabled={isBusy}
-									/>
-									{publicInfo.iconFileId && (
-										<Button
-											intent="secondary"
-											size="1"
-											onClick={() =>
-												void correct(
-													{ iconFileId: null },
-													"アイコンを削除しました。"
-												)
-											}
-											disabled={isBusy}
-										>
-											削除
-										</Button>
-									)}
-								</Flex>
-							</Flex>
-						</FieldSection>
-
-						<FieldSection
-							item={item}
-							field="MAP_IMAGES"
-							title="掲載画像"
-							headerAction={
-								<>
-									<Button
-										intent="secondary"
-										size="1"
-										onClick={() => mapImageInputRef.current?.click()}
-										disabled={
-											isBusy ||
-											mapImageFileIds.length >= PROJECT_MAP_IMAGES_MAX_COUNT
-										}
-									>
-										<IconPlus size={14} />
-										追加
-									</Button>
-									<input
-										ref={mapImageInputRef}
-										type="file"
-										accept={imageAcceptAttribute}
-										multiple
-										hidden
-										onChange={handleMapImagesSelect}
-									/>
-								</>
-							}
-							correction={correction("MAP_IMAGES")}
-						>
-							{mapImageFileIds.length === 0 ? (
-								<Text size="2" color="gray">
-									（未設定）
-								</Text>
-							) : (
-								<MapImageGrid
-									fileIds={mapImageFileIds}
-									hiddenFileIds={item.hiddenMapImageFileIds}
-									onToggleHidden={toggleMapImage}
-									onDelete={fileId =>
-										void correct(
-											{
-												mapImageFileIds: mapImageFileIds.filter(
-													id => id !== fileId
-												),
-											},
-											"画像を削除しました。"
-										)
-									}
-									disabled={isBusy}
-								/>
-							)}
-						</FieldSection>
-
-						{SNS_FIELDS.map(({ key, field, label }) => (
-							<FieldSection
-								key={key}
-								item={item}
-								field={field}
-								title={label}
-								visibility={visibility(field)}
-								correction={correction(field)}
-							>
-								{editing && "key" in editing && editing.key === key ? (
-									<Flex direction="column" gap="2">
-										{editing.values.map((value, index) => (
-											<TextField
-												// biome-ignore lint/suspicious/noArrayIndexKey: 入力欄の数は固定
-												key={index}
-												type={key === "websiteUrls" ? "url" : "text"}
-												label={`${label} ${index + 1}つ目`}
-												value={value}
-												onChange={next =>
-													setEditing({
-														...editing,
-														values: editing.values.map((v, i) =>
-															i === index ? next.trim() : v
-														),
-													})
-												}
-												error={editingSnsErrors[index]}
-											/>
-										))}
-										{editActions(editingSnsErrors.every(e => e === undefined))}
-									</Flex>
-								) : (
-									valueWithEdit(
-										publicInfo[key].length > 0 ? (
-											<Flex direction="column">
-												{publicInfo[key].map(value => (
-													<Text key={value} size="2" className={styles.value}>
-														{value}
-													</Text>
-												))}
-											</Flex>
-										) : (
-											<Text size="2" color="gray">
-												（未入力）
-											</Text>
-										),
-										() =>
-											setEditing({
-												field,
-												key,
-												values: Array.from(
-													{ length: PROJECT_SNS_LINKS_MAX_COUNT },
-													(_, i) => publicInfo[key][i] ?? ""
-												),
-											})
-									)
-								)}
-							</FieldSection>
-						))}
-					</Flex>
-				)}
+					))}
+				</Flex>
 
 				<Flex justify="end" mt="5">
 					<Dialog.Close>

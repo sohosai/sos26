@@ -275,7 +275,7 @@ function ProjectCard({
 				<div className={styles.badges}>
 					{openLabel && <Badge>{openLabel}</Badge>}
 					{stockLabel && <Badge color="gray">{stockLabel}</Badge>}
-					{onEdit && info && (
+					{onEdit && (
 						<Button intent="secondary" size="1" onClick={onEdit}>
 							<IconEdit size={16} />
 							公開設定・編集

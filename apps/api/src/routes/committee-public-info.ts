@@ -67,6 +67,18 @@ export const committeeProjectPublicInfoSelect = {
 	},
 } as const satisfies Prisma.ProjectSelect;
 
+/**
+ * 修正前の値（JSON 列）を項目の値として読む。
+ * 文字列・文字列の配列以外は未入力（null）として扱う。
+ */
+function toPreviousValue(value: Prisma.JsonValue): string | string[] | null {
+	if (typeof value === "string") return value;
+	if (Array.isArray(value) && value.every(v => typeof v === "string")) {
+		return value as string[];
+	}
+	return null;
+}
+
 export function toCommitteeProjectPublicInfo({
 	publicInfo,
 	...project
@@ -90,7 +102,7 @@ export function toCommitteeProjectPublicInfo({
 		},
 		moderations: moderations.map(m => ({
 			...m,
-			previousValue: m.previousValue as string | string[] | null,
+			previousValue: toPreviousValue(m.previousValue),
 		})),
 		hiddenMapImageFileIds: mapImages
 			.filter(img => img.isHidden)
@@ -186,6 +198,9 @@ type BeforeRow = Prisma.ProjectPublicInfoGetPayload<{
 	select: typeof beforeSelect;
 }>;
 
+/** 企画情報が未登録なら id が null の空の値として扱う */
+type BeforeInfo = Omit<BeforeRow, "id"> & { id: string | null };
+
 function fileIdsOf(values: {
 	iconFileId: string | null;
 	mapImageFileIds: string[];
@@ -196,7 +211,7 @@ function fileIdsOf(values: {
 	];
 }
 
-function valuesOf(row: BeforeRow) {
+function valuesOf(row: BeforeInfo) {
 	return { ...row, mapImageFileIds: row.mapImages.map(img => img.fileId) };
 }
 
@@ -210,7 +225,7 @@ function valuesOf(row: BeforeRow) {
 async function assertCorrectionFilesUsable(
 	userId: string,
 	fileIds: string[],
-	before: BeforeRow
+	before: BeforeInfo
 ): Promise<void> {
 	if (fileIds.length === 0) return;
 
@@ -236,7 +251,7 @@ async function assertCorrectionFilesUsable(
 
 	const attached = new Set([
 		...fileIdsOf(valuesOf(before)),
-		...before.moderations.flatMap(m => m.previousValue),
+		...before.moderations.flatMap(m => toPreviousValue(m.previousValue) ?? []),
 	]);
 	if (files.some(f => !attached.has(f.id) && f.uploadedById !== userId)) {
 		throw Errors.forbidden("他の人がアップロードしたファイルは設定できません");
@@ -271,6 +286,31 @@ async function writeValues(
 	});
 }
 
+/**
+ * 修正の対象となる企画情報を返す。企画情報が未登録なら空の値を返す。
+ * 企画情報は値を書き込むときに作る（作ると公開APIの対象になる）。
+ */
+async function findBeforeOrEmpty(projectId: string): Promise<BeforeInfo> {
+	const project = await prisma.project.findFirst({
+		where: { id: projectId, deletedAt: null },
+		select: { publicInfo: { select: beforeSelect } },
+	});
+	if (!project) throw Errors.notFound("企画が見つかりません");
+	return (
+		project.publicInfo ?? {
+			id: null,
+			description: null,
+			iconFileId: null,
+			websiteUrls: [],
+			xIds: [],
+			instagramIds: [],
+			youtubeIds: [],
+			mapImages: [],
+			moderations: [],
+		}
+	);
+}
+
 async function findBefore(projectId: string): Promise<BeforeRow> {
 	const before = await prisma.projectPublicInfo.findFirst({
 		where: { projectId, project: { deletedAt: null } },
@@ -301,7 +341,7 @@ committeePublicInfoRoute.patch("/:projectId", async c => {
 		throw Errors.invalidRequest("同じ画像を複数登録することはできません");
 	}
 
-	const before = await findBefore(projectId);
+	const before = await findBeforeOrEmpty(projectId);
 	await assertCorrectionFilesUsable(
 		userId,
 		[
@@ -326,12 +366,20 @@ committeePublicInfoRoute.patch("/:projectId", async c => {
 	}
 
 	await prisma.$transaction(async tx => {
-		await writeValues(tx, before, next);
+		const id =
+			before.id ??
+			(
+				await tx.projectPublicInfo.create({
+					data: { projectId },
+					select: { id: true },
+				})
+			).id;
+		await writeValues(tx, { ...before, id }, next);
 		for (const field of changedFields) {
 			await tx.projectPublicInfoModeration.upsert({
 				where: {
 					projectPublicInfoId_field_kind: {
-						projectPublicInfoId: before.id,
+						projectPublicInfoId: id,
 						field,
 						kind: "CORRECTED",
 					},
@@ -339,7 +387,7 @@ committeePublicInfoRoute.patch("/:projectId", async c => {
 				// 再修正では修正前の値を変えず、企画の値を残し続ける
 				update: { updatedById: userId },
 				create: {
-					projectPublicInfoId: before.id,
+					projectPublicInfoId: id,
 					field,
 					kind: "CORRECTED",
 					previousValue:
@@ -379,8 +427,11 @@ committeePublicInfoRoute.delete("/:projectId/corrections/:field", async c => {
 		});
 		if (!correction) throw Errors.notFound("修正の記録がありません");
 
+		const key = projectPublicInfoFieldKeys[field];
 		const values: PublicInfoValues = {
-			[projectPublicInfoFieldKeys[field]]: correction.previousValue,
+			[key]:
+				toPreviousValue(correction.previousValue) ??
+				(key === "description" || key === "iconFileId" ? null : []),
 		};
 		await writeValues(tx, before, values);
 		await tx.projectPublicInfoModeration.delete({

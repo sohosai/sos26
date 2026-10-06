@@ -1,5 +1,5 @@
 // @ts-nocheck - テストファイルでは res.json() の unknown 型を許容
-import type { User } from "@prisma/client";
+import { Prisma, type User } from "@prisma/client";
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -22,7 +22,7 @@ vi.mock("../lib/prisma", () => {
 		user: { findFirst: vi.fn() },
 		committeeMember: { findFirst: vi.fn() },
 		project: { findMany: vi.fn(), findFirst: vi.fn() },
-		projectPublicInfo: { findFirst: vi.fn(), update: vi.fn() },
+		projectPublicInfo: { findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
 		projectPublicInfoModeration: {
 			upsert: vi.fn(),
 			deleteMany: vi.fn(),
@@ -123,7 +123,7 @@ function setupAuth(permissions: string[] = ["MAP_APP_SETTING_EDIT"]) {
 
 /** 更新系で共通して必要になる DB 応答を用意する */
 function setupUpdateMocks() {
-	mockPrisma.projectPublicInfo.findFirst.mockResolvedValue({
+	const info = {
 		id: INFO_ID,
 		description: "焼きそばを販売します",
 		iconFileId: ICON_FILE_ID,
@@ -131,10 +131,16 @@ function setupUpdateMocks() {
 		xIds: ["sohosai"],
 		instagramIds: [],
 		youtubeIds: [],
+		openStatus: "OPEN",
+		stockStatus: "IN_STOCK",
 		mapImages: [{ fileId: MAP_FILE_ID, isHidden: true }],
 		moderations: [],
+	};
+	mockPrisma.projectPublicInfo.findFirst.mockResolvedValue(info as any);
+	mockPrisma.project.findFirst.mockResolvedValue({
+		...mockRow,
+		publicInfo: info,
 	} as any);
-	mockPrisma.project.findFirst.mockResolvedValue(mockRow as any);
 	mockPrisma.$transaction.mockImplementation(async cb => cb(mockPrisma));
 }
 
@@ -297,6 +303,72 @@ describe("PATCH /committee/public-info/:projectId", () => {
 				}),
 			})
 		);
+	});
+
+	it("正常系: 企画情報が未登録なら作成し、修正前の値を未入力として記録する", async () => {
+		const app = makeApp();
+		setupAuth();
+		setupUpdateMocks();
+		mockPrisma.project.findFirst.mockResolvedValue({
+			...mockRow,
+			publicInfo: null,
+		} as any);
+		mockPrisma.projectPublicInfo.create.mockResolvedValue({
+			id: INFO_ID,
+		} as any);
+
+		const res = await request(app, "PATCH", `/${PROJECT_ID}`, {
+			description: "実委が書いた紹介文",
+		});
+
+		expect(res.status).toBe(200);
+		expect(mockPrisma.projectPublicInfo.create).toHaveBeenCalledWith({
+			data: { projectId: PROJECT_ID },
+			select: { id: true },
+		});
+		expect(mockPrisma.projectPublicInfo.update).toHaveBeenCalledWith({
+			where: { id: INFO_ID },
+			data: { description: "実委が書いた紹介文" },
+		});
+		expect(mockPrisma.projectPublicInfoModeration.upsert).toHaveBeenCalledWith(
+			expect.objectContaining({
+				create: expect.objectContaining({
+					projectPublicInfoId: INFO_ID,
+					field: "DESCRIPTION",
+					previousValue: Prisma.JsonNull,
+				}),
+			})
+		);
+	});
+
+	it("企画情報が未登録で値が変わらなければ、企画情報を作らない", async () => {
+		const app = makeApp();
+		setupAuth();
+		setupUpdateMocks();
+		mockPrisma.project.findFirst.mockResolvedValue({
+			...mockRow,
+			publicInfo: null,
+		} as any);
+
+		const res = await request(app, "PATCH", `/${PROJECT_ID}`, {
+			description: "",
+		});
+
+		expect(res.status).toBe(200);
+		expect(mockPrisma.projectPublicInfo.create).not.toHaveBeenCalled();
+	});
+
+	it("企画が存在しなければ404エラー", async () => {
+		const app = makeApp();
+		setupAuth();
+		setupUpdateMocks();
+		mockPrisma.project.findFirst.mockResolvedValue(null);
+
+		const res = await request(app, "PATCH", `/${PROJECT_ID}`, {
+			description: "紹介文",
+		});
+
+		expect(res.status).toBe(404);
 	});
 
 	it("紹介文の空文字は null として保存する", async () => {
@@ -477,6 +549,28 @@ describe("DELETE /committee/public-info/:projectId/corrections/:field", () => {
 			where: { id: "clmodddddddddddddd1" },
 		});
 		expect(getPublicApiCacheVersion()).toBe(version + 1);
+	});
+
+	it("修正前の値が文字列・配列でなければ、未入力として戻す", async () => {
+		const app = makeApp();
+		setupAuth();
+		setupUpdateMocks();
+		mockPrisma.projectPublicInfoModeration.findUnique.mockResolvedValue({
+			id: "clmodddddddddddddd1",
+			previousValue: {},
+		} as any);
+
+		const res = await request(
+			app,
+			"DELETE",
+			`/${PROJECT_ID}/corrections/DESCRIPTION`
+		);
+
+		expect(res.status).toBe(200);
+		expect(mockPrisma.projectPublicInfo.update).toHaveBeenCalledWith({
+			where: { id: INFO_ID },
+			data: { description: null },
+		});
 	});
 
 	it("修正の記録がなければ404エラー", async () => {
