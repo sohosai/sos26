@@ -16,7 +16,11 @@ import { useAuthStore } from "@/lib/auth";
 import { formatProjectNumber } from "@/lib/format";
 import { ImagePreviewModal } from "../../project/public-info/ImagePreviewModal";
 import { PublicInfoDetailDialog } from "./-components/PublicInfoDetailDialog";
-import { FieldStatusBadges, findModeration } from "./-components/shared";
+import {
+	CorrectedMark,
+	FieldStatusBadges,
+	findModeration,
+} from "./-components/shared";
 import styles from "./index.module.scss";
 
 export const Route = createFileRoute("/committee/public-info/")({
@@ -232,7 +236,7 @@ function ProjectCard({
 	const stockLabel = info && STOCK_STATUS_LABELS[info.stockStatus];
 	const links = info ? snsLinks(info) : [];
 	const isIconHidden = !!findModeration(project, "ICON", "HIDDEN");
-	const isIconCorrected = !!findModeration(project, "ICON", "CORRECTED");
+	const iconCorrection = findModeration(project, "ICON", "CORRECTED");
 
 	return (
 		<Card className={styles.card}>
@@ -254,10 +258,14 @@ function ProjectCard({
 							name={project.name}
 							avatarFileId={info?.iconFileId ?? null}
 						/>
-						{isIconHidden && info?.iconFileId ? (
+						{isIconHidden && info?.iconFileId && (
 							<StatusOverlay label="非公開" color="red" />
-						) : (
-							isIconCorrected && <StatusOverlay label="修正" color="blue" />
+						)}
+						{iconCorrection && (
+							<CorrectedMark
+								moderation={iconCorrection}
+								className={styles.iconCorrectedMark}
+							/>
 						)}
 					</span>
 				</button>
@@ -291,14 +299,10 @@ function ProjectCard({
 			) : (
 				<div className={styles.body}>
 					{info.description && (
-						<div>
-							<div className={styles.fieldBadges}>
-								<FieldStatusBadges item={project} field="DESCRIPTION" />
-							</div>
-							<Text as="p" size="2" className={styles.description}>
-								{info.description}
-							</Text>
-						</div>
+						<Text as="p" size="2" className={styles.description}>
+							{info.description}{" "}
+							<FieldStatusBadges item={project} field="DESCRIPTION" />
+						</Text>
 					)}
 
 					{links.length > 0 && (
@@ -319,11 +323,6 @@ function ProjectCard({
 						</div>
 					)}
 
-					{info.mapImageFileIds.length > 0 && (
-						<div className={styles.fieldBadges}>
-							<FieldStatusBadges item={project} field="MAP_IMAGES" />
-						</div>
-					)}
 					{info.mapImageFileIds.length > 0 && (
 						<div className={styles.thumbs}>
 							{info.mapImageFileIds.map((fileId, index) => (
@@ -350,6 +349,7 @@ function ProjectCard({
 									</span>
 								</button>
 							))}
+							<FieldStatusBadges item={project} field="MAP_IMAGES" />
 						</div>
 					)}
 				</div>

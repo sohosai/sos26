@@ -1,4 +1,4 @@
-import { Badge } from "@radix-ui/themes";
+import { Badge, Tooltip } from "@radix-ui/themes";
 import type {
 	CommitteeProjectPublicInfo,
 	CommitteePublicInfoModeration,
@@ -6,7 +6,9 @@ import type {
 	ProjectPublicInfoField,
 	ProjectSnsLinkKey,
 } from "@sos26/shared";
+import { IconPencil } from "@tabler/icons-react";
 import { formatDate } from "@/lib/format";
+import styles from "./shared.module.scss";
 
 export const SNS_FIELDS: {
 	key: ProjectSnsLinkKey;
@@ -27,7 +29,10 @@ export function findModeration(
 	return item.moderations.find(m => m.field === field && m.kind === kind);
 }
 
-/** 項目に付ける「非公開」「修正」のバッジ。操作した実委人と日時をツールチップに出す */
+/**
+ * 項目に付ける「非公開」のバッジと「修正」の印。操作した実委人と日時をツールチップに出す。
+ * 修正は補足の情報のため、行を取らない小さな印にする。
+ */
 export function FieldStatusBadges({
 	item,
 	field,
@@ -40,16 +45,36 @@ export function FieldStatusBadges({
 	return (
 		<>
 			{hidden && (
-				<Badge color="red" variant="soft" title={moderationTitle(hidden)}>
-					非公開
-				</Badge>
+				<Tooltip content={`非公開：${moderationTitle(hidden)}`}>
+					<Badge color="red" variant="soft">
+						非公開
+					</Badge>
+				</Tooltip>
 			)}
-			{corrected && (
-				<Badge color="blue" variant="soft" title={moderationTitle(corrected)}>
-					修正
-				</Badge>
-			)}
+			{corrected && <CorrectedMark moderation={corrected} />}
 		</>
+	);
+}
+
+/** 実行委員会が修正したことを示す小さな鉛筆の印 */
+export function CorrectedMark({
+	moderation,
+	className,
+}: {
+	moderation: CommitteePublicInfoModeration;
+	className?: string;
+}) {
+	const label = `実行委員会が修正：${moderationTitle(moderation)}`;
+	return (
+		<Tooltip content={label}>
+			<span
+				role="img"
+				aria-label={label}
+				className={`${styles.correctedMark}${className ? ` ${className}` : ""}`}
+			>
+				<IconPencil size={14} />
+			</span>
+		</Tooltip>
 	);
 }
 
