@@ -17,6 +17,10 @@ import {
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
+import {
+	lockProjectPublicInfo,
+	previousFileIds,
+} from "../lib/project-public-info";
 import { bumpPublicApiCacheVersion } from "../lib/public-api-cache";
 import { softDeleteUnreferencedFiles } from "../lib/storage/references";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
@@ -181,6 +185,7 @@ async function savePublicInfo(params: SavePublicInfoParams) {
 	} = params;
 
 	return prisma.$transaction(async tx => {
+		await lockProjectPublicInfo(tx, projectId);
 		const beforeRow = await tx.projectPublicInfo.findUnique({
 			where: { projectId },
 			select: {
@@ -254,8 +259,7 @@ async function savePublicInfo(params: SavePublicInfoParams) {
 					(m.field === "ICON" || m.field === "MAP_IMAGES") &&
 					changedFields.includes(m.field)
 			)
-			.flatMap(m => m.previousValue)
-			.filter(id => typeof id === "string");
+			.flatMap(m => previousFileIds(m.previousValue));
 		if (changedFields.length > 0) {
 			await tx.projectPublicInfoModeration.deleteMany({
 				where: {

@@ -1,5 +1,5 @@
-import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
+import { previousFileIds } from "../project-public-info";
 
 /**
  * 指定した fileId のうち、他の機能からまだ参照されているものの ID を返す。
@@ -76,7 +76,14 @@ export async function findReferencedFileIds(
 		}),
 		// 実委人が修正したアイコン・掲載画像は、元に戻せるよう修正前のファイルIDを JSON で持つ
 		prisma.projectPublicInfoModeration.findMany({
-			where: { kind: "CORRECTED", field: { in: ["ICON", "MAP_IMAGES"] } },
+			where: {
+				kind: "CORRECTED",
+				field: { in: ["ICON", "MAP_IMAGES"] },
+				OR: fileIds.flatMap(id => [
+					{ previousValue: { equals: id } },
+					{ previousValue: { array_contains: [id] } },
+				]),
+			},
 			select: { previousValue: true },
 		}),
 	]);
@@ -90,7 +97,7 @@ export async function findReferencedFileIds(
 	}
 	const requested = new Set(fileIds);
 	for (const id of correctedFileFields.flatMap(m =>
-		fileIdsIn(m.previousValue)
+		previousFileIds(m.previousValue)
 	)) {
 		if (requested.has(id)) referenced.add(id);
 	}
@@ -108,12 +115,6 @@ export async function findReferencedFileIds(
 	}
 
 	return referenced;
-}
-
-/** 修正前の値（ファイルID か その配列）に含まれるファイルIDを取り出す */
-function fileIdsIn(previousValue: Prisma.JsonValue): string[] {
-	const values = Array.isArray(previousValue) ? previousValue : [previousValue];
-	return values.filter(value => typeof value === "string");
 }
 
 /**

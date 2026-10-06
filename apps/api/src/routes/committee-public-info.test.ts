@@ -36,6 +36,7 @@ vi.mock("../lib/prisma", () => {
 		},
 		file: { findMany: vi.fn() },
 		$transaction: vi.fn(),
+		$executeRaw: vi.fn(),
 	};
 	return { prisma };
 });
@@ -302,6 +303,75 @@ describe("PATCH /committee/public-info/:projectId", () => {
 					previousValue: "焼きそばを販売します",
 				}),
 			})
+		);
+	});
+
+	it("企画情報を読む前に、同じ企画への保存・修正と直列にするロックを取る", async () => {
+		const app = makeApp();
+		setupAuth();
+		setupUpdateMocks();
+
+		await request(app, "PATCH", `/${PROJECT_ID}`, {
+			description: "修正後の紹介文",
+		});
+
+		expect(mockPrisma.$executeRaw).toHaveBeenCalledTimes(1);
+		expect(mockPrisma.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+			mockPrisma.project.findFirst.mock.invocationCallOrder[0]
+		);
+	});
+
+	it("正常系: 再修正で修正前の値に戻すと、修正の記録を消す", async () => {
+		const app = makeApp();
+		setupAuth();
+		setupUpdateMocks();
+		mockPrisma.project.findFirst.mockResolvedValue({
+			publicInfo: {
+				id: INFO_ID,
+				description: "実委が修正した紹介文",
+				iconFileId: null,
+				websiteUrls: [],
+				xIds: [],
+				instagramIds: [],
+				youtubeIds: [],
+				mapImages: [],
+				moderations: [
+					{ field: "DESCRIPTION", previousValue: "焼きそばを販売します" },
+				],
+			},
+		} as any);
+
+		const res = await request(app, "PATCH", `/${PROJECT_ID}`, {
+			description: "焼きそばを販売します",
+		});
+
+		expect(res.status).toBe(200);
+		expect(
+			mockPrisma.projectPublicInfoModeration.deleteMany
+		).toHaveBeenCalledWith({
+			where: {
+				projectPublicInfoId: INFO_ID,
+				field: "DESCRIPTION",
+				kind: "CORRECTED",
+			},
+		});
+		expect(
+			mockPrisma.projectPublicInfoModeration.upsert
+		).not.toHaveBeenCalled();
+	});
+
+	it("アイコンに触れない修正では、アイコンを回収対象にしない", async () => {
+		const app = makeApp();
+		setupAuth();
+		setupUpdateMocks();
+
+		await request(app, "PATCH", `/${PROJECT_ID}`, {
+			description: "修正後の紹介文",
+		});
+
+		expect(softDeleteUnreferencedFiles).toHaveBeenCalledWith(
+			[ICON_FILE_ID, MAP_FILE_ID],
+			[ICON_FILE_ID, MAP_FILE_ID]
 		);
 	});
 

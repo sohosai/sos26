@@ -47,6 +47,7 @@ vi.mock("../lib/prisma", () => {
 		mapAppSetting: { findUnique: vi.fn() },
 		file: { findMany: vi.fn(), updateMany: vi.fn() },
 		$transaction: vi.fn(),
+		$executeRaw: vi.fn(),
 	};
 	return { prisma };
 });

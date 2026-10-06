@@ -25,7 +25,6 @@ import {
 	PROJECT_DESCRIPTION_MAX_LENGTH,
 	PROJECT_MAP_IMAGES_MAX_COUNT,
 	PROJECT_SNS_LINKS_MAX_COUNT,
-	projectSnsLinkInputSchemas,
 } from "@sos26/shared";
 import { IconDotsVertical, IconPlus } from "@tabler/icons-react";
 import { type ReactNode, useRef, useState } from "react";
@@ -39,9 +38,10 @@ import {
 	unhideCommitteePublicInfoField,
 	updateCommitteePublicInfoMapImage,
 } from "@/lib/api/committee-public-info";
-import { getFileContentUrl, uploadFile } from "@/lib/api/files";
+import { deleteFile, getFileContentUrl, uploadFile } from "@/lib/api/files";
 import { reportHandledError } from "@/lib/error/report";
 import { formatDate, formatProjectNumber } from "@/lib/format";
+import { getMapImagesError, getSnsLinkError } from "@/lib/project/public-info";
 import { ImageCropperModal } from "../../../project/public-info/ImageCropperModal";
 import { ImagePreviewModal } from "../../../project/public-info/ImagePreviewModal";
 import styles from "./PublicInfoDetailDialog.module.scss";
@@ -58,23 +58,6 @@ type Props = {
 type Editing =
 	| { field: "DESCRIPTION"; value: string }
 	| { field: ProjectPublicInfoField; key: ProjectSnsLinkKey; values: string[] };
-
-function getSnsLinkError(key: ProjectSnsLinkKey, value: string) {
-	if (value === "") return undefined;
-	const result = projectSnsLinkInputSchemas[key].safeParse(value);
-	return result.success ? undefined : result.error.issues[0]?.message;
-}
-
-/** 掲載画像として追加できないファイルなら、その理由を返す */
-function getMapImagesError(files: File[], currentCount: number) {
-	if (files.some(file => !isAllowedImageFile(file))) {
-		return `画像ファイルのみアップロードできます（${allowedImageExtensions}）。`;
-	}
-	if (currentCount + files.length > PROJECT_MAP_IMAGES_MAX_COUNT) {
-		return `掲載画像は最大${PROJECT_MAP_IMAGES_MAX_COUNT}枚までです。`;
-	}
-	return undefined;
-}
 
 function operatorText(m: { updatedBy: { name: string }; updatedAt: Date }) {
 	return `${m.updatedBy.name}（${formatDate(m.updatedAt, "datetime")}）`;
@@ -409,14 +392,41 @@ export function PublicInfoDetailDialog({
 	const correct = (data: CorrectCommitteePublicInfoRequest, message: string) =>
 		run(() => correctCommitteePublicInfo(item.id, data), message);
 
+	/**
+	 * ファイルをアップロードして修正する。
+	 * アップロード直後のファイルは公開ファイルとして配信されるため、修正できなかったら削除する。
+	 */
+	const correctWithUploads = async (
+		files: File[],
+		toRequest: (fileIds: string[]) => CorrectCommitteePublicInfoRequest
+	) => {
+		const results = await Promise.allSettled(
+			files.map(file => uploadFile(file, { isPublic: true }))
+		);
+		const fileIds = results
+			.filter(r => r.status === "fulfilled")
+			.map(r => r.value.file.id);
+		try {
+			const failed = results.find(r => r.status === "rejected");
+			if (failed) throw failed.reason;
+			return await correctCommitteePublicInfo(item.id, toRequest(fileIds));
+		} catch (error) {
+			for (const fileId of fileIds) {
+				void deleteFile(fileId).catch(() => undefined);
+			}
+			throw error;
+		}
+	};
+
 	const handleIconCropped = (blob: Blob) => {
-		void run(async () => {
-			const res = await uploadFile(
-				new File([blob], "icon.png", { type: "image/png" }),
-				{ isPublic: true }
-			);
-			return correctCommitteePublicInfo(item.id, { iconFileId: res.file.id });
-		}, "アイコンを変更しました。");
+		void run(
+			() =>
+				correctWithUploads(
+					[new File([blob], "icon.png", { type: "image/png" })],
+					([iconFileId]) => ({ iconFileId })
+				),
+			"アイコンを変更しました。"
+		);
 	};
 
 	const handleMapImagesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -428,17 +438,13 @@ export function PublicInfoDetailDialog({
 			toast.error(error);
 			return;
 		}
-		void run(async () => {
-			const results = await Promise.all(
-				files.map(file => uploadFile(file, { isPublic: true }))
-			);
-			return correctCommitteePublicInfo(item.id, {
-				mapImageFileIds: [
-					...mapImageFileIds,
-					...results.map(res => res.file.id),
-				],
-			});
-		}, `${files.length}枚の画像を追加しました。`);
+		void run(
+			() =>
+				correctWithUploads(files, fileIds => ({
+					mapImageFileIds: [...mapImageFileIds, ...fileIds],
+				})),
+			`${files.length}枚の画像を追加しました。`
+		);
 	};
 
 	// 企画情報が未登録の間は、非公開にする対象がないためスイッチを出さない

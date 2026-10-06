@@ -131,6 +131,23 @@ describe("findReferencedFileIds", () => {
 		expect([...result]).toEqual([FILE_ID]);
 	});
 
+	it("修正の記録は、指定した fileId を修正前の値に持つものだけを読む", async () => {
+		await findReferencedFileIds([FILE_ID]);
+
+		expect(
+			mockPrisma.projectPublicInfoModeration.findMany
+		).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: expect.objectContaining({
+					OR: [
+						{ previousValue: { equals: FILE_ID } },
+						{ previousValue: { array_contains: [FILE_ID] } },
+					],
+				}),
+			})
+		);
+	});
+
 	it("削除済みのお知らせ添付は参照とみなさない", async () => {
 		await findReferencedFileIds([FILE_ID]);
 

@@ -218,7 +218,7 @@ const getProjectDetailRoute = createRoute({
 					schema: errorResponseSchema,
 				},
 			},
-			description: "企画が見つからない、または未公開",
+			description: "企画が見つからない、または落選・企画中止・企画辞退の企画",
 		},
 	},
 });
@@ -254,7 +254,7 @@ openApiRoute.doc("/openapi.json", c => ({
 		title: "sos26 Public API",
 		version: "1.0.0",
 		description:
-			"雙峰祭オンラインマップにデータ連携をするためのAPI。認証不要で、企画側が公開情報を登録した企画のみを返す。",
+			"雙峰祭オンラインマップにデータ連携をするためのAPI。認証不要で、有効な企画をすべて返す。企画情報が未入力の項目と、実行委員会が非表示にした項目は未入力の値で返す。",
 	},
 	// createRoute のパスはこのサブアプリ内の相対パス（例: /projects）で
 	// spec に出力される。servers を明示しないと Swagger UI の Try it out や

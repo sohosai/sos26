@@ -32,7 +32,6 @@ import {
 	PROJECT_DESCRIPTION_MAX_LENGTH,
 	PROJECT_MAP_IMAGES_MAX_COUNT,
 	PROJECT_SNS_LINKS_MAX_COUNT,
-	projectSnsLinkInputSchemas,
 	projectSnsLinkKeys,
 } from "@sos26/shared";
 import {
@@ -59,6 +58,7 @@ import { getMapAppSetting } from "@/lib/api/map-app-setting";
 import { updateProjectPublicInfo } from "@/lib/api/project-public-info";
 import { useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
+import { getMapImagesError, getSnsLinkError } from "@/lib/project/public-info";
 import { useProjectStore } from "@/lib/project/store";
 import { ImageCropperModal } from "./ImageCropperModal";
 import { ImagePreviewModal } from "./ImagePreviewModal";
@@ -112,13 +112,6 @@ const SNS_LINK_FIELDS: {
 		hint: "@ は付けずに入力。例：https://www.youtube.com/@sohosai → sohosai",
 	},
 ];
-
-/** 入力値が保存できない形式ならエラーメッセージを返す（未入力は可） */
-function getSnsLinkError(key: ProjectSnsLinkKey, value: string) {
-	if (value === "") return undefined;
-	const result = projectSnsLinkInputSchemas[key].safeParse(value);
-	return result.success ? undefined : result.error.issues[0]?.message;
-}
 
 /** 入力欄の数に合わせて未入力の欄を空文字で埋める */
 function toSnsLinkInputs(links: string[] | undefined): string[] {
@@ -515,16 +508,9 @@ function ProjectPublicInfoPage() {
 		e.target.value = "";
 		if (!files.length) return;
 
-		const invalidFile = files.find(file => !isAllowedImageFile(file));
-		if (invalidFile) {
-			toast.error(
-				`画像ファイルのみアップロードできます（${allowedImageExtensions}）。`
-			);
-			return;
-		}
-
-		if (values.mapImageFileIds.length + files.length > MAX_MAP_IMAGES) {
-			toast.error(`Map掲載画像は最大${MAX_MAP_IMAGES}枚までです。`);
+		const error = getMapImagesError(files, values.mapImageFileIds.length);
+		if (error) {
+			toast.error(error);
 			return;
 		}
 

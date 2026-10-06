@@ -14,13 +14,13 @@ import { env } from "../lib/env";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
 import { findOtherPrivilegedProject } from "../lib/project-check";
-import { sendPushToUsers } from "../lib/push";
-import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
-import type { AuthEnv } from "../types/auth-env";
 import {
 	committeeProjectPublicInfoSelect,
 	toCommitteeProjectPublicInfo,
-} from "./committee-public-info";
+} from "../lib/project-public-info";
+import { sendPushToUsers } from "../lib/push";
+import { requireAuth, requireCommitteeMember } from "../middlewares/auth";
+import type { AuthEnv } from "../types/auth-env";
 
 const committeeProjectRoute = new Hono<AuthEnv>();
 
