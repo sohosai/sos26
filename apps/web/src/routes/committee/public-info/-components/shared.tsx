@@ -27,7 +27,7 @@ export function findModeration(
 	return item.moderations.find(m => m.field === field && m.kind === kind);
 }
 
-/** 項目に付ける「非表示」「修正」のバッジ。操作した実委人と日時をツールチップに出す */
+/** 項目に付ける「非公開」「修正」のバッジ。操作した実委人と日時をツールチップに出す */
 export function FieldStatusBadges({
 	item,
 	field,
@@ -41,7 +41,7 @@ export function FieldStatusBadges({
 		<>
 			{hidden && (
 				<Badge color="red" variant="soft" title={moderationTitle(hidden)}>
-					非表示
+					非公開
 				</Badge>
 			)}
 			{corrected && (

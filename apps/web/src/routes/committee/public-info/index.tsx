@@ -147,7 +147,7 @@ function downloadPublicInfoCsv(projects: CommitteeProjectPublicInfo[]) {
 
 function PublicInfoListPage() {
 	const { projects: loadedProjects } = Route.useLoaderData();
-	// 非表示・修正の結果をそのまま一覧に反映するため、手元で持つ
+	// 非公開・修正の結果をそのまま一覧に反映するため、手元で持つ
 	const [projects, setProjects] = useState(loadedProjects);
 	const [loadedFrom, setLoadedFrom] = useState(loadedProjects);
 	if (loadedFrom !== loadedProjects) {
@@ -224,7 +224,7 @@ function ProjectCard({
 }: {
 	project: CommitteeProjectPublicInfo;
 	onPreview: (preview: Preview) => void;
-	/** 非表示・修正の権限がある場合のみ渡す */
+	/** 非公開・修正の権限がある場合のみ渡す */
 	onEdit?: () => void;
 }) {
 	const info = project.publicInfo;
@@ -255,7 +255,7 @@ function ProjectCard({
 							avatarFileId={info?.iconFileId ?? null}
 						/>
 						{isIconHidden && info?.iconFileId ? (
-							<StatusOverlay label="非表示" color="red" />
+							<StatusOverlay label="非公開" color="red" />
 						) : (
 							isIconCorrected && <StatusOverlay label="修正" color="blue" />
 						)}
@@ -278,7 +278,7 @@ function ProjectCard({
 					{onEdit && info && (
 						<Button intent="secondary" size="1" onClick={onEdit}>
 							<IconEdit size={16} />
-							非表示・修正
+							公開設定・編集
 						</Button>
 					)}
 				</div>
@@ -345,7 +345,7 @@ function ProjectCard({
 											decoding="async"
 										/>
 										{project.hiddenMapImageFileIds.includes(fileId) && (
-											<StatusOverlay label="非表示" color="red" />
+											<StatusOverlay label="非公開" color="red" />
 										)}
 									</span>
 								</button>
