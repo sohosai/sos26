@@ -341,6 +341,8 @@ function ProjectCard({
 											src={getFileContentUrl(fileId)}
 											alt={`詳細画像 ${index + 1}`}
 											className={styles.thumb}
+											loading="lazy"
+											decoding="async"
 										/>
 										{project.hiddenMapImageFileIds.includes(fileId) && (
 											<StatusOverlay label="非表示" color="red" />
