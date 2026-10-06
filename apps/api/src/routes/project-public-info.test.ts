@@ -798,6 +798,27 @@ describe("PUT /project/:projectId/public-info", () => {
 			);
 		});
 
+		it("紹介文の修正前の値は、ファイルIDと同じ文字列でも回収の対象にしない", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks({
+				before: {
+					...before,
+					moderations: [
+						{ field: "DESCRIPTION", previousValue: PREVIOUS_FILE_ID },
+					],
+				},
+			});
+
+			const res = await put(app, { description: "企画が書き直した紹介文" });
+
+			expect(res.status).toBe(200);
+			const deletedIds = mockPrisma.file.updateMany.mock.calls.flatMap(
+				([args]: any) => args.where.id.in
+			);
+			expect(deletedIds).not.toContain(PREVIOUS_FILE_ID);
+		});
+
 		it("値が変わらなければ修正の記録を残す", async () => {
 			const app = makeApp();
 			setupAuthAsOwner();

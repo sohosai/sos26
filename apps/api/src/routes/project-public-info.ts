@@ -247,8 +247,13 @@ async function savePublicInfo(params: SavePublicInfoParams) {
 			...snsLinks,
 		});
 		// 消す修正の記録が残していた修正前のファイルは、保存後に回収する
+		// （ファイルIDを持つのはアイコン・掲載画像の記録だけ）
 		const releasedFileIds = (before?.moderations ?? [])
-			.filter(m => changedFields.includes(m.field))
+			.filter(
+				m =>
+					(m.field === "ICON" || m.field === "MAP_IMAGES") &&
+					changedFields.includes(m.field)
+			)
 			.flatMap(m => m.previousValue)
 			.filter(id => typeof id === "string");
 		if (changedFields.length > 0) {

@@ -184,13 +184,13 @@ function isSameList(a: string[], b: string[]): boolean {
 }
 
 /**
- * 編集が許可され、かつ画面を開いたときの値から変更した項目だけを送信する
+ * 編集が許可され、かつ編集を始めたときの値から変更した項目だけを送信する
  * （それ以外は undefined = 変更なし）。
- * 画面を開いている間に実委人が修正した項目を、開く前の値で上書きしないため。
+ * 編集中に実委人が修正した項目を、編集を始めたときの値で上書きしないため。
  */
 function buildUpdateRequest(
 	values: FormValues,
-	serverValues: FormValues,
+	baseValues: FormValues,
 	setting: MapAppSetting,
 	projectType: Project["type"]
 ): UpdateProjectPublicInfoRequest {
@@ -199,7 +199,7 @@ function buildUpdateRequest(
 		editable && !isSame ? value : undefined;
 	const snsLinks = (key: ProjectSnsLinkKey) => {
 		const links = values[key].filter(value => value !== "");
-		const serverLinks = serverValues[key].filter(value => value !== "");
+		const serverLinks = baseValues[key].filter(value => value !== "");
 		return changed(
 			setting.isSnsLinksEditable,
 			links,
@@ -211,17 +211,17 @@ function buildUpdateRequest(
 		description: changed(
 			setting.isDescriptionEditable,
 			values.description,
-			values.description === serverValues.description
+			values.description === baseValues.description
 		),
 		iconFileId: changed(
 			setting.isIconEditable,
 			values.iconFileId,
-			values.iconFileId === serverValues.iconFileId
+			values.iconFileId === baseValues.iconFileId
 		),
 		mapImageFileIds: changed(
 			setting.isMapImagesEditable,
 			values.mapImageFileIds,
-			isSameList(values.mapImageFileIds, serverValues.mapImageFileIds)
+			isSameList(values.mapImageFileIds, baseValues.mapImageFileIds)
 		),
 		websiteUrls: snsLinks("websiteUrls"),
 		xIds: snsLinks("xIds"),
@@ -230,12 +230,12 @@ function buildUpdateRequest(
 		openStatus: changed(
 			canEditStatus && setting.isOpenStatusEditable,
 			values.openStatus,
-			values.openStatus === serverValues.openStatus
+			values.openStatus === baseValues.openStatus
 		),
 		stockStatus: changed(
 			canEditStatus && setting.isStockStatusEditable,
 			values.stockStatus,
-			values.stockStatus === serverValues.stockStatus
+			values.stockStatus === baseValues.stockStatus
 		),
 	};
 }
@@ -333,9 +333,14 @@ function ProjectPublicInfoPage() {
 	const serverValuesRef = useRef(serverValues);
 	serverValuesRef.current = serverValues;
 
-	const [draft, setDraft] = useState<FormValues | null>(null);
-	const values = draft ?? serverValues;
-	const isDirty = draft !== null && !isSameValues(draft, serverValues);
+	// 編集中の値と、編集を始めたときのサーバー上の値（保存する項目の判定に使う）。
+	// 編集中にサーバー上の値が再取得で変わっても、触っていない項目は送らない
+	const [draft, setDraft] = useState<{
+		values: FormValues;
+		base: FormValues;
+	} | null>(null);
+	const values = draft?.values ?? serverValues;
+	const isDirty = draft !== null && !isSameValues(draft.values, draft.base);
 
 	const [isSaving, setIsSaving] = useState(false);
 	const [uploadingCount, setUploadingCount] = useState(0);
@@ -360,10 +365,15 @@ function ProjectPublicInfoPage() {
 	const updateValues = useCallback(
 		(patch: Partial<FormValues> | ((current: FormValues) => FormValues)) => {
 			setDraft(prev => {
-				const base = prev ?? serverValuesRef.current;
-				return typeof patch === "function"
-					? patch(base)
-					: { ...base, ...patch };
+				const base = prev?.base ?? serverValuesRef.current;
+				const current = prev?.values ?? base;
+				return {
+					base,
+					values:
+						typeof patch === "function"
+							? patch(current)
+							: { ...current, ...patch },
+				};
 			});
 		},
 		[]
@@ -415,7 +425,12 @@ function ProjectPublicInfoPage() {
 		try {
 			await updateProjectPublicInfo(
 				project.id,
-				buildUpdateRequest(values, serverValues, setting, project.type)
+				buildUpdateRequest(
+					values,
+					draft?.base ?? serverValues,
+					setting,
+					project.type
+				)
 			);
 		} catch (error) {
 			reportHandledError({
