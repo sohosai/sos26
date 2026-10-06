@@ -6,7 +6,7 @@ import type {
 	ProjectPublicInfoField,
 	ProjectSnsLinkKey,
 } from "@sos26/shared";
-import { IconPencil } from "@tabler/icons-react";
+import { IconEyeOff, IconPencil } from "@tabler/icons-react";
 import { formatDate } from "@/lib/format";
 import styles from "./shared.module.scss";
 
@@ -53,6 +53,28 @@ export function FieldStatusBadges({
 			)}
 			{corrected && <CorrectedMark moderation={corrected} />}
 		</>
+	);
+}
+
+/** 非公開にしたことを示す小さな印。画像の上など、バッジだと場所を取る箇所に使う */
+export function HiddenMark({
+	moderation,
+	className,
+}: {
+	moderation: CommitteePublicInfoModeration;
+	className?: string;
+}) {
+	const label = `非公開：${moderationTitle(moderation)}`;
+	return (
+		<Tooltip content={label}>
+			<span
+				role="img"
+				aria-label={label}
+				className={`${styles.hiddenMark}${className ? ` ${className}` : ""}`}
+			>
+				<IconEyeOff size={14} />
+			</span>
+		</Tooltip>
 	);
 }
 

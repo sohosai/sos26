@@ -20,6 +20,7 @@ import {
 	CorrectedMark,
 	FieldStatusBadges,
 	findModeration,
+	HiddenMark,
 } from "./-components/shared";
 import styles from "./index.module.scss";
 
@@ -235,7 +236,9 @@ function ProjectCard({
 	const openLabel = info && OPEN_STATUS_LABELS[info.openStatus];
 	const stockLabel = info && STOCK_STATUS_LABELS[info.stockStatus];
 	const links = info ? snsLinks(info) : [];
-	const isIconHidden = !!findModeration(project, "ICON", "HIDDEN");
+	const iconHidden = info?.iconFileId
+		? findModeration(project, "ICON", "HIDDEN")
+		: undefined;
 	const iconCorrection = findModeration(project, "ICON", "CORRECTED");
 
 	return (
@@ -252,19 +255,24 @@ function ProjectCard({
 					disabled={!info?.iconFileId}
 					aria-label="アイコンを拡大"
 				>
-					<span className={styles.imageWrap}>
+					<span
+						className={`${styles.imageWrap} ${iconHidden ? styles.iconHidden : ""}`}
+					>
 						<UserAvatar
 							size={56}
 							name={project.name}
 							avatarFileId={info?.iconFileId ?? null}
 						/>
-						{isIconHidden && info?.iconFileId && (
-							<StatusOverlay label="非公開" color="red" />
+						{iconHidden && (
+							<HiddenMark
+								moderation={iconHidden}
+								className={`${styles.iconMark} ${styles.iconHiddenMark}`}
+							/>
 						)}
 						{iconCorrection && (
 							<CorrectedMark
 								moderation={iconCorrection}
-								className={styles.iconCorrectedMark}
+								className={`${styles.iconMark} ${styles.iconCorrectedMark}`}
 							/>
 						)}
 					</span>
