@@ -105,7 +105,7 @@ describe("GET /openapi/projects", () => {
 		});
 	});
 
-	it("公開情報を登録していない企画は取得対象に含めない", async () => {
+	it("落選・企画中止・企画辞退と論理削除された企画は取得対象に含めない", async () => {
 		const app = makeApp();
 		mockPrisma.project.findMany.mockResolvedValue([] as any);
 
@@ -113,13 +113,39 @@ describe("GET /openapi/projects", () => {
 
 		expect(mockPrisma.project.findMany).toHaveBeenCalledWith(
 			expect.objectContaining({
-				where: expect.objectContaining({
-					deletedAt: null,
-					deletionStatus: null,
-					publicInfo: { isNot: null },
-				}),
+				where: { deletedAt: null, deletionStatus: null },
 			})
 		);
+	});
+
+	it("企画情報が未入力の企画は、基本情報と未入力の値で返す", async () => {
+		const app = makeApp();
+		mockPrisma.project.findMany.mockResolvedValue([
+			{ ...mockRow, publicInfo: null },
+		] as any);
+
+		const res = await app.request("/openapi/projects");
+
+		expect(res.status).toBe(200);
+		const [project] = await res.json();
+		expect(project).toEqual({
+			id: mockRow.id,
+			name: mockRow.name,
+			organizationName: mockRow.organizationName,
+			type: mockRow.type,
+			location: mockRow.location,
+			publicInfo: {
+				description: null,
+				iconFileId: null,
+				mapImageFileIds: [],
+				websiteUrls: [],
+				xIds: [],
+				instagramIds: [],
+				youtubeIds: [],
+				openStatus: "NOT_APPLICABLE",
+				stockStatus: "NOT_APPLICABLE",
+			},
+		});
 	});
 
 	it("キャッシュが有効な間は DB に再問い合わせしない", async () => {

@@ -538,7 +538,7 @@ export function PublicInfoDetailDialog({
 				{item.publicInfo === null && (
 					<Callout.Root color="gray" mb="4">
 						<Callout.Text>
-							この企画はまだ企画情報を入力していません。ここで値を追加すると、企画検索システムに掲載されます。
+							この企画はまだ企画情報を入力していません。ここで値を追加できます。
 						</Callout.Text>
 					</Callout.Root>
 				)}

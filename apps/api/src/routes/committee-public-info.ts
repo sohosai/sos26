@@ -288,7 +288,7 @@ async function writeValues(
 
 /**
  * 修正の対象となる企画情報を返す。企画情報が未登録なら空の値を返す。
- * 企画情報は値を書き込むときに作る（作ると公開APIの対象になる）。
+ * 企画情報は値を書き込むときに作る。
  */
 async function findBeforeOrEmpty(projectId: string): Promise<BeforeInfo> {
 	const project = await prisma.project.findFirst({

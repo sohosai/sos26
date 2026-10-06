@@ -39,14 +39,11 @@ const errorResponseSchema = z.object({
 /**
  * 公開対象の企画の絞り込み条件
  *
- * 公開情報（ProjectPublicInfo）を作成した企画だけを対象にする。
- * 企画側が「企画情報」画面で保存して初めてレコードが作られるため、
- * これがオンラインマップ掲載のオプトインとして機能する。
+ * 有効な企画をすべて対象にする。落選・企画中止・企画辞退の企画は含めない。
  */
 const publicProjectWhere = {
 	deletedAt: null,
 	deletionStatus: null,
-	publicInfo: { isNot: null },
 } as const;
 
 const publicProjectSelect = {
@@ -97,24 +94,40 @@ type PublicProjectRow = {
 	} | null;
 };
 
+/** 企画情報が未入力の企画に返す値 */
+const EMPTY_PUBLIC_INFO: PublicProject["publicInfo"] = {
+	description: null,
+	iconFileId: null,
+	mapImageFileIds: [],
+	websiteUrls: [],
+	xIds: [],
+	instagramIds: [],
+	youtubeIds: [],
+	openStatus: "NOT_APPLICABLE",
+	stockStatus: "NOT_APPLICABLE",
+};
+
 /**
- * publicInfo が null の行は publicProjectWhere で除外済みのため取り除く
+ * 企画情報が未入力の企画は、すべての項目を未入力の値で返す。
  *
- * 実委人が非表示にした項目は未入力と同じ値にする。
+ * 実委人が非表示にした項目も未入力と同じ値にする。
  * 非表示にされたのか未入力なのかを、公開APIの利用者から区別できないようにするため。
  */
-function toPublicProject(row: PublicProjectRow): PublicProject | null {
-	const info = row.publicInfo;
-	if (!info) return null;
-
-	const hidden = new Set(info.moderations.map(m => m.field));
-
-	return {
+function toPublicProject(row: PublicProjectRow): PublicProject {
+	const project = {
 		id: row.id,
 		name: row.name,
 		organizationName: row.organizationName,
 		type: row.type,
 		location: row.location,
+	};
+	const info = row.publicInfo;
+	if (!info) return { ...project, publicInfo: EMPTY_PUBLIC_INFO };
+
+	const hidden = new Set(info.moderations.map(m => m.field));
+
+	return {
+		...project,
 		publicInfo: {
 			description: hidden.has("DESCRIPTION") ? null : info.description,
 			iconFileId: hidden.has("ICON") ? null : info.iconFileId,
@@ -150,9 +163,7 @@ async function getPublicProjects(): Promise<PublicProject[]> {
 		orderBy: { number: "asc" },
 	});
 
-	const value = rows
-		.map(toPublicProject)
-		.filter((p): p is PublicProject => p !== null);
+	const value = rows.map(toPublicProject);
 	listCache = { expiresAt: now + LIST_CACHE_TTL_MS, version, value };
 	return value;
 }
