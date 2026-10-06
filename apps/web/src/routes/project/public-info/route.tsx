@@ -743,6 +743,7 @@ function ProjectPublicInfoPage() {
 							枚）。ドラッグで並び替えできます。
 						</Text>
 					</div>
+					{moderationNotice("MAP_IMAGES")}
 					{isEditable && !setting.isMapImagesEditable && <RestrictedNotice />}
 					<input
 						type="file"

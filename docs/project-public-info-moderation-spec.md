@@ -19,8 +19,8 @@
 | 項目 | キー | 非表示 | 修正 | 非表示時の公開値 |
 |------|------|:---:|:---:|------|
 | 紹介文 | `description` | o | o | `null` |
-| アイコン | `iconFileId` | o | x | `null` |
-| 掲載画像 | `mapImageFileIds` | o（1枚ごと） | x | 配列から除外 |
+| アイコン | `iconFileId` | o | o（差し替え・外す） | `null` |
+| 掲載画像 | `mapImageFileIds` | o（1枚ごと） | o（追加・削除） | 配列から除外 |
 | Webサイト | `websiteUrls` | o | o | `[]` |
 | X | `xIds` | o | o | `[]` |
 | Instagram | `instagramIds` | o | o | `[]` |
@@ -31,7 +31,8 @@
 - 開店・閉店状態と在庫状態は企画が当日に随時更新する運用上の状態のため対象外とする。
 - SNSリンクは各サービス最大 `PROJECT_SNS_LINKS_MAX_COUNT`（2）件の配列で、非表示はサービス単位で行う。2件のうち1件だけを公開したくない場合は、修正でその1件を取り除く。
 - 企画名・団体名・企画区分・実施場所は `Project` の値であり、既存の企画編集（`PROJECT_EDIT`）で変更する。
-- 修正の値は、企画が登録するときと同じ検証（文字数・URL形式・ID形式）を通す。紹介文は空文字（未設定に戻す）、SNSリンクは空配列も受け付ける。
+- 修正の値は、企画が登録するときと同じ検証（文字数・枚数・URL形式・ID形式）を通す。紹介文は空文字（未設定に戻す）、アイコンは `null`（外す）、掲載画像・SNSリンクは空配列も受け付ける。
+- アイコンは企画側と同じトリミングを通してアップロードする。掲載画像の修正では並べ替えはしない。
 
 ## 4. 非表示と修正の性質
 
@@ -49,7 +50,14 @@
 - どの項目を誰がいつ修正したかを記録し、企画側・実委側の画面に「実行委員会が修正」と表示する。
 - 企画がその項目の値を変えて保存すると、修正の記録は消え、以後は企画の値として扱う。
 
-### 4.3 企画側の編集可否との関係
+### 4.3 アイコン・掲載画像のファイル
+
+- 修正で設定できるファイルは、アップロード完了済みの公開の画像で、操作した実委人がアップロードしたもの、またはすでにその企画情報に付いているもの（修正前の値を含む）に限る。
+- 企画側の保存では、実委人が修正で付けたファイルも、そのまま保存し直せる。
+- 修正前の値として残しているファイルは削除しない。修正の記録が消えた時点（修正の取り消し、企画による変更）で、どこからも参照されていなければ削除する。
+- 実委人が差し替え・削除して外れたファイルは、修正前の値として残していなければ削除する。
+
+### 4.4 企画側の編集可否との関係
 
 非表示・修正は企画側の編集可否に影響しない。企画側で項目を編集できるかどうかは、これまでどおり編集可否設定だけで決まる。修正した内容を企画に変えさせたくない場合は、編集可否設定でその項目の編集を止める。
 
@@ -98,6 +106,7 @@
 enum ProjectPublicInfoField {
   DESCRIPTION
   ICON
+  MAP_IMAGES
   WEBSITE_URLS
   X_IDS
   INSTAGRAM_IDS
@@ -117,7 +126,7 @@ model ProjectPublicInfoModeration {
   field ProjectPublicInfoField
   kind  ProjectPublicInfoModerationKind
 
-  /// CORRECTED のみ: 最初に修正する前の企画の値（紹介文は文字列または null、SNSリンクは文字列の配列）
+  /// CORRECTED のみ: 最初に修正する前の企画の値（紹介文・アイコンは文字列または null、掲載画像・SNSリンクは文字列の配列。アイコン・掲載画像はファイルID）
   previousValue Json?
 
   updatedById String
@@ -133,7 +142,7 @@ model ProjectPublicInfoModeration {
 - `HIDDEN` のレコードがあれば非表示。解除はレコードの削除。
 - `CORRECTED` のレコードは修正時に作成（再修正時は操作者と日時だけ更新）し、修正の取り消し時と、企画がその項目の値を変えて保存したときに削除する。
 - 1つの項目に `HIDDEN` と `CORRECTED` が同時にあってよい。
-- `ICON` は `HIDDEN` のみ。
+- `MAP_IMAGES` は `CORRECTED` のみ。掲載画像の非表示は 7.2 の `isHidden` で1枚ごとに持つ。
 
 ### 7.2 掲載画像の非表示
 
@@ -146,7 +155,7 @@ model ProjectPublicMapImage {
 }
 ```
 
-企画が掲載画像を保存し直す（並べ替え・追加・削除）と `ProjectPublicMapImage` は作り直されるが、保存後も残っている画像は同じファイルIDの `isHidden` を引き継ぐ。企画が削除した画像の非表示状態は画像とともに消える。
+企画の保存や実委人の修正・取り消しで掲載画像が変わると `ProjectPublicMapImage` は作り直されるが、変更後も残っている画像は同じファイルIDの `isHidden` を引き継ぐ。外れた画像の非表示状態は画像とともに消える。
 
 ### 7.3 企画情報が未登録の企画
 
@@ -187,9 +196,11 @@ model ProjectPublicMapImage {
 - 非表示・修正の状態と、操作した実委人・日時
 - 操作
   - 非表示にする / 非表示を解除する
-  - 修正する（入力欄を開き、保存で登録値を書き換える）
-  - 修正済みの項目には修正前の値を表示し、「元に戻す」で修正を取り消す
+  - 修正する（紹介文・SNSリンクは入力欄を開き、保存で登録値を書き換える）
+  - アイコンは「変更する」で画像を選んでトリミングし、そのまま差し替える。「外す」で未設定にする
+  - 掲載画像は「画像を追加」で末尾に追加し、1枚ごとの「削除」で取り除く。どちらもそのまま登録値を書き換える
   - 掲載画像は1枚ごとに非表示・解除を切り替える
+  - 修正済みの項目には修正前の値（アイコン・掲載画像は画像）を表示し、「元に戻す」で修正を取り消す
 
 ## 10. 企画側画面（`/project/public-info`）
 
@@ -215,12 +226,12 @@ model ProjectPublicMapImage {
 | GET | `/committee/projects/public-infos` | 有効な企画の一覧（企画・登録値・非表示と修正の記録・掲載画像の非表示状態） |
 | PUT | `/committee/public-info/:projectId/hidden/:field` | 項目を非表示にする |
 | DELETE | `/committee/public-info/:projectId/hidden/:field` | 項目の非表示を解除する |
-| PATCH | `/committee/public-info/:projectId` | 修正。body は `description` / `websiteUrls` / `xIds` / `instagramIds` / `youtubeIds` のうち変更する項目 |
+| PATCH | `/committee/public-info/:projectId` | 修正。body は `description` / `iconFileId` / `mapImageFileIds` / `websiteUrls` / `xIds` / `instagramIds` / `youtubeIds` のうち変更する項目 |
 | DELETE | `/committee/public-info/:projectId/corrections/:field` | 修正を取り消し、登録値を修正前の値に戻す。修正の記録がなければ 404 |
 | PUT | `/committee/public-info/:projectId/map-images/:fileId` | 掲載画像の非表示を切り替える。body: `{ isHidden: boolean }` |
 
 - 非表示・修正の操作は、操作後の企画1件分を一覧と同じ形で返す。
-- `:field` は `ProjectPublicInfoField` の値。修正の取り消しでは、修正できる項目（アイコン以外）に限る。
+- `:field` は `ProjectPublicInfoField` の値。非表示の設定・解除では `MAP_IMAGES` を指定できない。
 - 企画情報が未登録、または指定した画像がその企画の掲載画像でない場合は 404。
 
 ### 11.2 企画側
@@ -236,4 +247,4 @@ model ProjectPublicMapImage {
 }
 ```
 
-`PUT /project/:projectId/public-info` は、送られてきた項目のうち値が登録値と異なるものについて、`CORRECTED` の記録を削除する。
+`PUT /project/:projectId/public-info` は、送られてきた項目のうち値が登録値と異なるものについて、`CORRECTED` の記録を削除する。アイコン・掲載画像のファイルの検証では、すでに企画情報に付いているファイルをアップロードした人を問わない。

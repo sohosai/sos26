@@ -232,6 +232,7 @@ function ProjectCard({
 	const stockLabel = info && STOCK_STATUS_LABELS[info.stockStatus];
 	const links = info ? snsLinks(info) : [];
 	const isIconHidden = !!findModeration(project, "ICON", "HIDDEN");
+	const isIconCorrected = !!findModeration(project, "ICON", "CORRECTED");
 
 	return (
 		<Card className={styles.card}>
@@ -253,7 +254,11 @@ function ProjectCard({
 							name={project.name}
 							avatarFileId={info?.iconFileId ?? null}
 						/>
-						{isIconHidden && info?.iconFileId && <HiddenOverlay />}
+						{isIconHidden && info?.iconFileId ? (
+							<StatusOverlay label="非表示" color="red" />
+						) : (
+							isIconCorrected && <StatusOverlay label="修正" color="blue" />
+						)}
 					</span>
 				</button>
 				<div>
@@ -315,6 +320,11 @@ function ProjectCard({
 					)}
 
 					{info.mapImageFileIds.length > 0 && (
+						<div className={styles.fieldBadges}>
+							<FieldStatusBadges item={project} field="MAP_IMAGES" />
+						</div>
+					)}
+					{info.mapImageFileIds.length > 0 && (
 						<div className={styles.thumbs}>
 							{info.mapImageFileIds.map((fileId, index) => (
 								<button
@@ -333,7 +343,7 @@ function ProjectCard({
 											className={styles.thumb}
 										/>
 										{project.hiddenMapImageFileIds.includes(fileId) && (
-											<HiddenOverlay />
+											<StatusOverlay label="非表示" color="red" />
 										)}
 									</span>
 								</button>
@@ -346,10 +356,21 @@ function ProjectCard({
 	);
 }
 
-function HiddenOverlay() {
+function StatusOverlay({
+	label,
+	color,
+}: {
+	label: string;
+	color: "red" | "blue";
+}) {
 	return (
-		<Badge color="red" variant="solid" size="1" className={styles.hiddenBadge}>
-			非表示
+		<Badge
+			color={color}
+			variant="solid"
+			size="1"
+			className={styles.hiddenBadge}
+		>
+			{label}
 		</Badge>
 	);
 }

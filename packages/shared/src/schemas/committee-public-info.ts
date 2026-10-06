@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
 	committeeProjectPublicInfoSchema,
-	correctableProjectPublicInfoFields,
+	hideableProjectPublicInfoFieldSchema,
 	projectPublicInfoFieldSchema,
 	updateProjectPublicInfoRequestSchema,
 } from "./project-public-info";
@@ -17,7 +17,7 @@ export type CommitteePublicInfoItemResponse = z.infer<
 // PUT/DELETE /committee/public-info/:projectId/hidden/:field
 export const committeePublicInfoFieldPathParamsSchema = z.object({
 	projectId: z.string().min(1),
-	field: projectPublicInfoFieldSchema,
+	field: hideableProjectPublicInfoFieldSchema,
 });
 
 export const hideCommitteePublicInfoFieldRequestSchema = z.object({});
@@ -26,6 +26,8 @@ export const hideCommitteePublicInfoFieldRequestSchema = z.object({});
 export const correctCommitteePublicInfoRequestSchema =
 	updateProjectPublicInfoRequestSchema.pick({
 		description: true,
+		iconFileId: true,
+		mapImageFileIds: true,
 		websiteUrls: true,
 		xIds: true,
 		instagramIds: true,
@@ -38,7 +40,7 @@ export type CorrectCommitteePublicInfoRequest = z.infer<
 // DELETE /committee/public-info/:projectId/corrections/:field
 export const committeePublicInfoCorrectionPathParamsSchema = z.object({
 	projectId: z.string().min(1),
-	field: z.enum(correctableProjectPublicInfoFields),
+	field: projectPublicInfoFieldSchema,
 });
 
 // PUT /committee/public-info/:projectId/map-images/:fileId

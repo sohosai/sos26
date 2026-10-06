@@ -12,6 +12,7 @@ vi.mock("../prisma", () => ({
 		projectRegistrationFormAnswerFile: { findMany: vi.fn() },
 		projectPublicInfo: { findMany: vi.fn() },
 		projectPublicMapImage: { findMany: vi.fn() },
+		projectPublicInfoModeration: { findMany: vi.fn() },
 	},
 }));
 
@@ -117,6 +118,17 @@ describe("findReferencedFileIds", () => {
 		const result = await findReferencedFileIds([FILE_ID]);
 
 		expect(result.has(FILE_ID)).toBe(true);
+	});
+
+	it("実委人が修正したアイコン・掲載画像の修正前の値として残っていれば含める", async () => {
+		mockPrisma.projectPublicInfoModeration.findMany.mockResolvedValue([
+			{ previousValue: "clother" },
+			{ previousValue: ["clother2", FILE_ID] },
+		] as any);
+
+		const result = await findReferencedFileIds([FILE_ID]);
+
+		expect([...result]).toEqual([FILE_ID]);
 	});
 
 	it("削除済みのお知らせ添付は参照とみなさない", async () => {

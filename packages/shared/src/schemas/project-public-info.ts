@@ -143,10 +143,11 @@ export const projectPublicInfoSchema = z.object({
 
 export type ProjectPublicInfo = z.infer<typeof projectPublicInfoSchema>;
 
-/** 実委人が非表示・修正できる項目（掲載画像は1枚ごとに別で扱う） */
+/** 実委人が非表示・修正できる項目 */
 export const projectPublicInfoFieldSchema = z.enum([
 	"DESCRIPTION",
 	"ICON",
+	"MAP_IMAGES",
 	"WEBSITE_URLS",
 	"X_IDS",
 	"INSTAGRAM_IDS",
@@ -160,22 +161,19 @@ export type ProjectPublicInfoField = z.infer<
 export const projectPublicInfoFieldKeys = {
 	DESCRIPTION: "description",
 	ICON: "iconFileId",
+	MAP_IMAGES: "mapImageFileIds",
 	WEBSITE_URLS: "websiteUrls",
 	X_IDS: "xIds",
 	INSTAGRAM_IDS: "instagramIds",
 	YOUTUBE_IDS: "youtubeIds",
 } as const satisfies Record<ProjectPublicInfoField, keyof ProjectPublicInfo>;
 
-/** 実委人が修正できる項目（アイコンは非表示のみ） */
-export const correctableProjectPublicInfoFields = [
-	"DESCRIPTION",
-	"WEBSITE_URLS",
-	"X_IDS",
-	"INSTAGRAM_IDS",
-	"YOUTUBE_IDS",
-] as const satisfies readonly ProjectPublicInfoField[];
-export type CorrectableProjectPublicInfoField =
-	(typeof correctableProjectPublicInfoFields)[number];
+/** 項目単位で非表示にできる項目（掲載画像は1枚ごとに非表示にする） */
+export const hideableProjectPublicInfoFieldSchema =
+	projectPublicInfoFieldSchema.exclude(["MAP_IMAGES"]);
+export type HideableProjectPublicInfoField = z.infer<
+	typeof hideableProjectPublicInfoFieldSchema
+>;
 
 export const projectPublicInfoModerationKindSchema = z.enum([
 	"HIDDEN",
@@ -233,7 +231,7 @@ export type UpdateProjectPublicInfoResponse = z.infer<
 export const committeePublicInfoModerationSchema = z.object({
 	field: projectPublicInfoFieldSchema,
 	kind: projectPublicInfoModerationKindSchema,
-	// CORRECTED のみ: 最初に修正する前の企画の値
+	// CORRECTED のみ: 最初に修正する前の企画の値（アイコン・掲載画像はファイルID）
 	previousValue: z.union([z.string(), z.array(z.string())]).nullable(),
 	updatedBy: z.object({ id: z.string(), name: z.string() }),
 	updatedAt: z.coerce.date(),

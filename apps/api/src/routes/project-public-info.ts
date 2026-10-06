@@ -8,9 +8,9 @@ import type {
 } from "@sos26/shared";
 import {
 	allowedImageMimeTypes,
-	correctableProjectPublicInfoFields,
 	DEFAULT_MAP_APP_SETTING,
 	projectPublicInfoFieldKeys,
+	projectPublicInfoFieldSchema,
 	projectSnsLinkKeys,
 	updateProjectPublicInfoEndpoint,
 } from "@sos26/shared";
@@ -18,7 +18,7 @@ import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
 import { bumpPublicApiCacheVersion } from "../lib/public-api-cache";
-import { findReferencedFileIds } from "../lib/storage/references";
+import { softDeleteUnreferencedFiles } from "../lib/storage/references";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -70,6 +70,8 @@ function assertFieldsEditable(
  * ファイルIDはクライアントから任意の値を送れるため、
  * 「実在する」「アップロード完了済み」「公開ファイル」「画像」
  * 「自企画のメンバーがアップロードした」の5点をサーバー側で必ず確認する。
+ * ただし、すでに公開情報に付いているファイル（実委人が修正で設定したもの）は
+ * アップロードした人を問わない。
  *
  * isPublic を要求しないと、フォーム回答の添付など非公開ファイルのIDを
  * 直接APIで指定でき、無認証の公開APIから壊れ画像として見えてしまう。
@@ -79,7 +81,8 @@ function assertFieldsEditable(
  */
 async function assertFilesUsable(
 	projectId: string,
-	fileIds: string[]
+	fileIds: string[],
+	attachedFileIds: string[]
 ): Promise<void> {
 	if (fileIds.length === 0) return;
 
@@ -111,7 +114,10 @@ async function assertFilesUsable(
 	}
 
 	const memberUserIds = new Set(members.map(m => m.userId));
-	if (files.some(f => !memberUserIds.has(f.uploadedById))) {
+	const attached = new Set(attachedFileIds);
+	if (
+		files.some(f => !attached.has(f.id) && !memberUserIds.has(f.uploadedById))
+	) {
 		throw Errors.forbidden("他の企画のファイルは設定できません");
 	}
 }
@@ -140,13 +146,13 @@ type SavePublicInfoParams = {
 	stockStatus: StockStatus | undefined;
 };
 
-/** 保存で値が変わる、実委人が修正できる項目を返す（undefined は変更なし） */
-function findChangedCorrectableFields(
+/** 保存で値が変わる項目を返す（undefined は変更なし） */
+function findChangedFields(
 	before: Record<string, unknown> | null,
 	next: Record<string, string | string[] | null | undefined>
 ): ProjectPublicInfoField[] {
 	if (!before) return [];
-	return correctableProjectPublicInfoFields.filter(field => {
+	return projectPublicInfoFieldSchema.options.filter(field => {
 		const key = projectPublicInfoFieldKeys[field];
 		const nextValue = next[key];
 		if (nextValue === undefined) return false;
@@ -175,7 +181,7 @@ async function savePublicInfo(params: SavePublicInfoParams) {
 	} = params;
 
 	return prisma.$transaction(async tx => {
-		const before = await tx.projectPublicInfo.findUnique({
+		const beforeRow = await tx.projectPublicInfo.findUnique({
 			where: { projectId },
 			select: {
 				description: true,
@@ -184,9 +190,20 @@ async function savePublicInfo(params: SavePublicInfoParams) {
 				xIds: true,
 				instagramIds: true,
 				youtubeIds: true,
-				mapImages: { select: { fileId: true, isHidden: true } },
+				mapImages: {
+					orderBy: { sortOrder: "asc" },
+					select: { fileId: true, isHidden: true },
+				},
+				moderations: {
+					where: { kind: "CORRECTED" },
+					select: { field: true, previousValue: true },
+				},
 			},
 		});
+		const before = beforeRow && {
+			...beforeRow,
+			mapImageFileIds: beforeRow.mapImages.map(img => img.fileId),
+		};
 
 		const info = await tx.projectPublicInfo.upsert({
 			where: { projectId },
@@ -223,10 +240,17 @@ async function savePublicInfo(params: SavePublicInfoParams) {
 			});
 		}
 
-		const changedFields = findChangedCorrectableFields(before, {
+		const changedFields = findChangedFields(before, {
 			description,
+			iconFileId,
+			mapImageFileIds,
 			...snsLinks,
 		});
+		// 消す修正の記録が残していた修正前のファイルは、保存後に回収する
+		const releasedFileIds = (before?.moderations ?? [])
+			.filter(m => changedFields.includes(m.field))
+			.flatMap(m => m.previousValue)
+			.filter(id => typeof id === "string");
 		if (changedFields.length > 0) {
 			await tx.projectPublicInfoModeration.deleteMany({
 				where: {
@@ -244,37 +268,7 @@ async function savePublicInfo(params: SavePublicInfoParams) {
 			},
 		});
 
-		return { before, updated };
-	});
-}
-
-/**
- * 公開情報から外れたファイルをソフトデリートする。
- *
- * 差し替え・削除した画像をそのまま残すと、公開ファイルとして
- * URLを知る者から参照され続け、ストレージにも溜まり続けるため。
- *
- * ファイルIDは他機能（アバター等）から流用されている可能性があるため、
- * この企画の公開情報から外れたというだけでは削除してよい根拠にならない。
- * 削除前に findReferencedFileIds で他機能からの参照有無を必ず確認する。
- */
-async function softDeleteUnreferencedFiles(
-	previousFileIds: string[],
-	nextFileIds: string[]
-): Promise<void> {
-	const nextIds = new Set(nextFileIds);
-	const removedIds = [...new Set(previousFileIds)].filter(
-		id => !nextIds.has(id)
-	);
-	if (removedIds.length === 0) return;
-
-	const referenced = await findReferencedFileIds(removedIds);
-	const deletableIds = removedIds.filter(id => !referenced.has(id));
-	if (deletableIds.length === 0) return;
-
-	await prisma.file.updateMany({
-		where: { id: { in: deletableIds }, deletedAt: null },
-		data: { deletedAt: new Date() },
+		return { before, updated, releasedFileIds };
 	});
 }
 
@@ -369,14 +363,19 @@ projectPublicInfoRoute.put(
 			throw Errors.invalidRequest("同じ画像を複数登録することはできません");
 		}
 
-		await assertFilesUsable(project.id, [
-			...(iconFileId ? [iconFileId] : []),
-			...(mapImageFileIds ?? []),
-		]);
+		const current = await prisma.projectPublicInfo.findUnique({
+			where: { projectId: project.id },
+			select: { iconFileId: true, mapImages: { select: { fileId: true } } },
+		});
+		await assertFilesUsable(
+			project.id,
+			[...(iconFileId ? [iconFileId] : []), ...(mapImageFileIds ?? [])],
+			collectFileIds(current)
+		);
 
 		const isStage = project.type === "STAGE";
 
-		const { before, updated } = await savePublicInfo({
+		const { before, updated, releasedFileIds } = await savePublicInfo({
 			projectId: project.id,
 			description,
 			iconFileId,
@@ -391,7 +390,7 @@ projectPublicInfoRoute.put(
 
 		// 参照が外れた画像を回収する（保存が確定してから実行する）
 		await softDeleteUnreferencedFiles(
-			collectFileIds(before),
+			[...collectFileIds(before), ...releasedFileIds],
 			collectFileIds(updated)
 		);
 

@@ -30,7 +30,7 @@ vi.mock("../lib/prisma", () => {
 			findMany: vi.fn(),
 			upsert: vi.fn(),
 		},
-		projectPublicInfoModeration: { deleteMany: vi.fn() },
+		projectPublicInfoModeration: { deleteMany: vi.fn(), findMany: vi.fn() },
 		projectPublicMapImage: {
 			findMany: vi.fn(),
 			deleteMany: vi.fn(),
@@ -189,6 +189,7 @@ function setupUpdateMocks(
 	});
 	mockPrisma.projectPublicInfo.findMany.mockResolvedValue([]);
 	mockPrisma.projectPublicMapImage.findMany.mockResolvedValue([]);
+	mockPrisma.projectPublicInfoModeration.findMany.mockResolvedValue([]);
 	// findReferencedFileIds が確認する他機能側の参照先。既定では「どこからも参照されていない」
 	mockPrisma.user.findMany.mockResolvedValue([]);
 	mockPrisma.noticeAttachment.findMany.mockResolvedValue([]);
@@ -686,6 +687,8 @@ describe("PUT /project/:projectId/public-info", () => {
 	});
 
 	describe("実委人による非表示・修正との関係", () => {
+		const COMMITTEE_FILE_ID = "clfffffffffffffff09";
+		const PREVIOUS_FILE_ID = "clfffffffffffffff08";
 		const before = {
 			description: "修正後の紹介文",
 			iconFileId: null,
@@ -739,6 +742,60 @@ describe("PUT /project/:projectId/public-info", () => {
 					field: { in: ["DESCRIPTION"] },
 				}),
 			});
+		});
+
+		it("実委人が修正で付けた画像は、企画メンバー以外のアップロードでも保存し直せる", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks({
+				before: {
+					...before,
+					mapImages: [{ fileId: COMMITTEE_FILE_ID, isHidden: false }],
+				},
+				files: [
+					{
+						id: COMMITTEE_FILE_ID,
+						mimeType: "image/png",
+						uploadedById: "clcommitteeuser",
+					},
+					{ id: MAP_FILE_ID, mimeType: "image/png", uploadedById: OWNER_ID },
+				],
+			});
+
+			const res = await put(app, {
+				mapImageFileIds: [MAP_FILE_ID, COMMITTEE_FILE_ID],
+			});
+
+			expect(res.status).toBe(200);
+		});
+
+		it("企画が修正されたアイコンを変えると、修正の記録を消して修正前のファイルも回収する", async () => {
+			const app = makeApp();
+			setupAuthAsOwner();
+			setupUpdateMocks({
+				before: {
+					...before,
+					iconFileId: COMMITTEE_FILE_ID,
+					moderations: [{ field: "ICON", previousValue: PREVIOUS_FILE_ID }],
+				},
+				saved: { iconFileId: ICON_FILE_ID },
+			});
+
+			const res = await put(app, { iconFileId: ICON_FILE_ID });
+
+			expect(res.status).toBe(200);
+			expect(
+				mockPrisma.projectPublicInfoModeration.deleteMany
+			).toHaveBeenCalledWith({
+				where: expect.objectContaining({ field: { in: ["ICON"] } }),
+			});
+			expect(mockPrisma.file.updateMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: expect.objectContaining({
+						id: { in: [COMMITTEE_FILE_ID, MAP_FILE_ID, PREVIOUS_FILE_ID] },
+					}),
+				})
+			);
 		});
 
 		it("値が変わらなければ修正の記録を残す", async () => {

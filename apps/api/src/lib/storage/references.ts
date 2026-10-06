@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 
 /**
@@ -29,6 +30,7 @@ export async function findReferencedFileIds(
 		projectRegistrationFormAnswerFiles,
 		projectPublicInfoIcons,
 		projectPublicMapImages,
+		correctedFileFields,
 	] = await Promise.all([
 		// avatarFileId は File との Prisma リレーションを持たない素の外部キーのため、
 		// File 側の back-relation からは見えない。個別に確認する必要がある
@@ -72,6 +74,11 @@ export async function findReferencedFileIds(
 			where: byFileId,
 			select: { fileId: true },
 		}),
+		// 実委人が修正したアイコン・掲載画像は、元に戻せるよう修正前のファイルIDを JSON で持つ
+		prisma.projectPublicInfoModeration.findMany({
+			where: { kind: "CORRECTED", field: { in: ["ICON", "MAP_IMAGES"] } },
+			select: { previousValue: true },
+		}),
 	]);
 
 	const referenced = new Set<string>();
@@ -80,6 +87,12 @@ export async function findReferencedFileIds(
 	}
 	for (const { iconFileId } of projectPublicInfoIcons) {
 		if (iconFileId) referenced.add(iconFileId);
+	}
+	const requested = new Set(fileIds);
+	for (const id of correctedFileFields.flatMap(m =>
+		fileIdsIn(m.previousValue)
+	)) {
+		if (requested.has(id)) referenced.add(id);
 	}
 	for (const rows of [
 		noticeAttachments,
@@ -95,4 +108,40 @@ export async function findReferencedFileIds(
 	}
 
 	return referenced;
+}
+
+/** 修正前の値（ファイルID か その配列）に含まれるファイルIDを取り出す */
+function fileIdsIn(previousValue: Prisma.JsonValue): string[] {
+	const values = Array.isArray(previousValue) ? previousValue : [previousValue];
+	return values.filter(value => typeof value === "string");
+}
+
+/**
+ * 参照が外れたファイルをソフトデリートする。
+ *
+ * 差し替え・削除した画像をそのまま残すと、公開ファイルとして
+ * URLを知る者から参照され続け、ストレージにも溜まり続けるため。
+ *
+ * ファイルIDは他機能（アバター等）から流用されている可能性があるため、
+ * 呼び出し元から外れたというだけでは削除してよい根拠にならない。
+ * 削除前に findReferencedFileIds で他機能からの参照有無を必ず確認する。
+ */
+export async function softDeleteUnreferencedFiles(
+	previousFileIds: string[],
+	nextFileIds: string[]
+): Promise<void> {
+	const nextIds = new Set(nextFileIds);
+	const removedIds = [...new Set(previousFileIds)].filter(
+		id => !nextIds.has(id)
+	);
+	if (removedIds.length === 0) return;
+
+	const referenced = await findReferencedFileIds(removedIds);
+	const deletableIds = removedIds.filter(id => !referenced.has(id));
+	if (deletableIds.length === 0) return;
+
+	await prisma.file.updateMany({
+		where: { id: { in: deletableIds }, deletedAt: null },
+		data: { deletedAt: new Date() },
+	});
 }

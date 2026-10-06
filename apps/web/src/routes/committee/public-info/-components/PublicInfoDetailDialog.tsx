@@ -1,17 +1,21 @@
 import { Badge, Dialog, Flex, Heading, Text } from "@radix-ui/themes";
 import type {
 	CommitteeProjectPublicInfo,
-	CorrectableProjectPublicInfoField,
 	CorrectCommitteePublicInfoRequest,
+	HideableProjectPublicInfoField,
 	ProjectPublicInfoField,
 	ProjectSnsLinkKey,
 } from "@sos26/shared";
 import {
+	allowedImageExtensions,
+	imageAcceptAttribute,
+	isAllowedImageFile,
 	PROJECT_DESCRIPTION_MAX_LENGTH,
+	PROJECT_MAP_IMAGES_MAX_COUNT,
 	PROJECT_SNS_LINKS_MAX_COUNT,
 	projectSnsLinkInputSchemas,
 } from "@sos26/shared";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/common/UserAvatar";
 import { Button, TextArea, TextField } from "@/components/primitives";
@@ -22,9 +26,10 @@ import {
 	unhideCommitteePublicInfoField,
 	updateCommitteePublicInfoMapImage,
 } from "@/lib/api/committee-public-info";
-import { getFileContentUrl } from "@/lib/api/files";
+import { getFileContentUrl, uploadFile } from "@/lib/api/files";
 import { reportHandledError } from "@/lib/error/report";
 import { formatDate, formatProjectNumber } from "@/lib/format";
+import { ImageCropperModal } from "../../../project/public-info/ImageCropperModal";
 import styles from "./PublicInfoDetailDialog.module.scss";
 import { FieldStatusBadges, findModeration, SNS_FIELDS } from "./shared";
 
@@ -73,6 +78,131 @@ function ModerationMeta({
 	);
 }
 
+/** 画像を選んでトリミングし、トリミング後の画像を渡すボタン */
+function IconChangeButton({
+	onCropped,
+	disabled,
+}: {
+	onCropped: (blob: Blob) => void;
+	disabled: boolean;
+}) {
+	const inputRef = useRef<HTMLInputElement>(null);
+	const [imageSrc, setImageSrc] = useState<string | null>(null);
+
+	const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		e.target.value = "";
+		if (!file) return;
+		if (!isAllowedImageFile(file)) {
+			toast.error(
+				`画像ファイルを選択してください（${allowedImageExtensions}）。`
+			);
+			return;
+		}
+		const reader = new FileReader();
+		reader.onload = () => setImageSrc(reader.result?.toString() ?? "");
+		reader.readAsDataURL(file);
+	};
+
+	return (
+		<>
+			<Button
+				intent="secondary"
+				size="1"
+				onClick={() => inputRef.current?.click()}
+				disabled={disabled}
+			>
+				変更する
+			</Button>
+			<input
+				ref={inputRef}
+				type="file"
+				accept={imageAcceptAttribute}
+				hidden
+				onChange={handleSelect}
+			/>
+			<ImageCropperModal
+				isOpen={imageSrc !== null}
+				onOpenChange={open => {
+					if (!open) setImageSrc(null);
+				}}
+				imageSrc={imageSrc ?? ""}
+				onCropComplete={blob => {
+					setImageSrc(null);
+					onCropped(blob);
+				}}
+			/>
+		</>
+	);
+}
+
+/** 掲載画像として追加できないファイルなら、その理由を返す */
+function getMapImagesError(files: File[], currentCount: number) {
+	if (files.some(file => !isAllowedImageFile(file))) {
+		return `画像ファイルのみアップロードできます（${allowedImageExtensions}）。`;
+	}
+	if (currentCount + files.length > PROJECT_MAP_IMAGES_MAX_COUNT) {
+		return `掲載画像は最大${PROJECT_MAP_IMAGES_MAX_COUNT}枚までです。`;
+	}
+	return undefined;
+}
+
+/** 修正済みの項目に、修正前の企画の値と「元に戻す」を出す */
+function PreviousValue({
+	field,
+	value,
+	onRevert,
+	disabled,
+}: {
+	field: ProjectPublicInfoField;
+	value: string | string[] | null;
+	onRevert: () => void;
+	disabled: boolean;
+}) {
+	const values = Array.isArray(value) ? value : value ? [value] : [];
+	const isImage = field === "ICON" || field === "MAP_IMAGES";
+	return (
+		<Flex
+			justify="between"
+			align="start"
+			gap="2"
+			className={styles.previousValue}
+		>
+			<Flex direction="column" gap="1">
+				<Text size="1" color="gray">
+					修正前
+				</Text>
+				{values.length === 0 ? (
+					<Text size="2">{isImage ? "（未設定）" : "（未入力）"}</Text>
+				) : isImage ? (
+					<Flex gap="2" wrap="wrap">
+						{values.map((fileId, index) => (
+							<img
+								key={fileId}
+								src={getFileContentUrl(fileId)}
+								alt={`修正前の画像 ${index + 1}`}
+								className={styles.previousImage}
+							/>
+						))}
+					</Flex>
+				) : (
+					<Text size="2" className={styles.value}>
+						{values.join("\n")}
+					</Text>
+				)}
+			</Flex>
+			<Button
+				intent="secondary"
+				size="1"
+				onClick={onRevert}
+				disabled={disabled}
+			>
+				元に戻す
+			</Button>
+		</Flex>
+	);
+}
+
 export function PublicInfoDetailDialog({
 	open,
 	onOpenChange,
@@ -81,7 +211,9 @@ export function PublicInfoDetailDialog({
 }: Props) {
 	const [isBusy, setIsBusy] = useState(false);
 	const [editing, setEditing] = useState<Editing | null>(null);
+	const mapImageInputRef = useRef<HTMLInputElement>(null);
 	const { publicInfo } = item;
+	const mapImageFileIds = publicInfo?.mapImageFileIds ?? [];
 
 	const run = async (
 		operation: () => Promise<{ project: CommitteeProjectPublicInfo }>,
@@ -107,7 +239,42 @@ export function PublicInfoDetailDialog({
 		}
 	};
 
-	const toggleHidden = (field: ProjectPublicInfoField) => {
+	const correct = (data: CorrectCommitteePublicInfoRequest, message: string) =>
+		run(() => correctCommitteePublicInfo(item.id, data), message);
+
+	const handleIconCropped = (blob: Blob) => {
+		void run(async () => {
+			const res = await uploadFile(
+				new File([blob], "icon.png", { type: "image/png" }),
+				{ isPublic: true }
+			);
+			return correctCommitteePublicInfo(item.id, { iconFileId: res.file.id });
+		}, "アイコンを差し替えました。");
+	};
+
+	const handleMapImagesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const files = Array.from(e.target.files ?? []);
+		e.target.value = "";
+		if (files.length === 0) return;
+		const error = getMapImagesError(files, mapImageFileIds.length);
+		if (error) {
+			toast.error(error);
+			return;
+		}
+		void run(async () => {
+			const results = await Promise.all(
+				files.map(file => uploadFile(file, { isPublic: true }))
+			);
+			return correctCommitteePublicInfo(item.id, {
+				mapImageFileIds: [
+					...mapImageFileIds,
+					...results.map(res => res.file.id),
+				],
+			});
+		}, `${files.length}枚の画像を追加しました。`);
+	};
+
+	const toggleHidden = (field: HideableProjectPublicInfoField) => {
 		const isHidden = !!findModeration(item, field, "HIDDEN");
 		void run(
 			() =>
@@ -139,47 +306,27 @@ export function PublicInfoDetailDialog({
 		if (ok) setEditing(null);
 	};
 
-	const revertCorrection = (field: CorrectableProjectPublicInfoField) => {
+	const revertCorrection = (field: ProjectPublicInfoField) => {
 		void run(
 			() => revertCommitteePublicInfoCorrection(item.id, field),
 			"修正前の値に戻しました。"
 		);
 	};
 
-	/** 修正済みの項目に、修正前の企画の値と「元に戻す」を出す */
-	const previousValue = (field: CorrectableProjectPublicInfoField) => {
+	const previousValue = (field: ProjectPublicInfoField) => {
 		const correction = findModeration(item, field, "CORRECTED");
 		if (!correction) return null;
-		const value = correction.previousValue;
-		const text = Array.isArray(value) ? value.join("\n") : value;
 		return (
-			<Flex
-				justify="between"
-				align="start"
-				gap="2"
-				className={styles.previousValue}
-			>
-				<Flex direction="column" gap="1">
-					<Text size="1" color="gray">
-						修正前
-					</Text>
-					<Text size="2" className={styles.value}>
-						{text || "（未入力）"}
-					</Text>
-				</Flex>
-				<Button
-					intent="secondary"
-					size="1"
-					onClick={() => revertCorrection(field)}
-					disabled={isBusy}
-				>
-					元に戻す
-				</Button>
-			</Flex>
+			<PreviousValue
+				field={field}
+				value={correction.previousValue}
+				onRevert={() => revertCorrection(field)}
+				disabled={isBusy}
+			/>
 		);
 	};
 
-	const hideButton = (field: ProjectPublicInfoField) => {
+	const hideButton = (field: HideableProjectPublicInfoField) => {
 		const isHidden = !!findModeration(item, field, "HIDDEN");
 		return (
 			<Button
@@ -286,9 +433,31 @@ export function PublicInfoDetailDialog({
 									<Heading size="3">アイコン</Heading>
 									<FieldStatusBadges item={item} field="ICON" />
 								</Flex>
-								{hideButton("ICON")}
+								<Flex gap="2">
+									<IconChangeButton
+										onCropped={handleIconCropped}
+										disabled={isBusy}
+									/>
+									{publicInfo.iconFileId && (
+										<Button
+											intent="secondary"
+											size="1"
+											onClick={() =>
+												void correct(
+													{ iconFileId: null },
+													"アイコンを外しました。"
+												)
+											}
+											disabled={isBusy}
+										>
+											外す
+										</Button>
+									)}
+									{hideButton("ICON")}
+								</Flex>
 							</Flex>
 							<ModerationMeta item={item} field="ICON" />
+							{previousValue("ICON")}
 							{publicInfo.iconFileId ? (
 								<UserAvatar
 									size={64}
@@ -304,7 +473,33 @@ export function PublicInfoDetailDialog({
 
 						{/* 掲載画像 */}
 						<section className={styles.section}>
-							<Heading size="3">掲載画像</Heading>
+							<Flex justify="between" align="center" gap="2" wrap="wrap">
+								<Flex align="center" gap="2">
+									<Heading size="3">掲載画像</Heading>
+									<FieldStatusBadges item={item} field="MAP_IMAGES" />
+								</Flex>
+								<Button
+									intent="secondary"
+									size="1"
+									onClick={() => mapImageInputRef.current?.click()}
+									disabled={
+										isBusy ||
+										mapImageFileIds.length >= PROJECT_MAP_IMAGES_MAX_COUNT
+									}
+								>
+									画像を追加
+								</Button>
+								<input
+									ref={mapImageInputRef}
+									type="file"
+									accept={imageAcceptAttribute}
+									multiple
+									hidden
+									onChange={handleMapImagesSelect}
+								/>
+							</Flex>
+							<ModerationMeta item={item} field="MAP_IMAGES" />
+							{previousValue("MAP_IMAGES")}
 							{publicInfo.mapImageFileIds.length === 0 ? (
 								<Text size="2" color="gray">
 									（未設定）
@@ -337,14 +532,33 @@ export function PublicInfoDetailDialog({
 														</Badge>
 													)}
 												</a>
-												<Button
-													intent={isHidden ? "secondary" : "danger"}
-													size="1"
-													onClick={() => toggleMapImage(fileId)}
-													disabled={isBusy}
-												>
-													{isHidden ? "解除" : "非表示"}
-												</Button>
+												<Flex gap="1">
+													<Button
+														intent={isHidden ? "secondary" : "danger"}
+														size="1"
+														onClick={() => toggleMapImage(fileId)}
+														disabled={isBusy}
+													>
+														{isHidden ? "解除" : "非表示"}
+													</Button>
+													<Button
+														intent="secondary"
+														size="1"
+														onClick={() =>
+															void correct(
+																{
+																	mapImageFileIds: mapImageFileIds.filter(
+																		id => id !== fileId
+																	),
+																},
+																"画像を削除しました。"
+															)
+														}
+														disabled={isBusy}
+													>
+														削除
+													</Button>
+												</Flex>
 											</Flex>
 										);
 									})}

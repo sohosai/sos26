@@ -29,11 +29,20 @@ vi.mock("../lib/prisma", () => {
 			findUnique: vi.fn(),
 			delete: vi.fn(),
 		},
-		projectPublicMapImage: { updateMany: vi.fn() },
+		projectPublicMapImage: {
+			updateMany: vi.fn(),
+			deleteMany: vi.fn(),
+			createMany: vi.fn(),
+		},
+		file: { findMany: vi.fn() },
 		$transaction: vi.fn(),
 	};
 	return { prisma };
 });
+
+vi.mock("../lib/storage/references", () => ({
+	softDeleteUnreferencedFiles: vi.fn(),
+}));
 
 vi.mock("../lib/firebase", () => ({
 	auth: { verifyIdToken: vi.fn() },
@@ -43,6 +52,7 @@ import { errorHandler } from "../lib/error-handler";
 import { auth as firebaseAuth } from "../lib/firebase";
 import { prisma } from "../lib/prisma";
 import { getPublicApiCacheVersion } from "../lib/public-api-cache";
+import { softDeleteUnreferencedFiles } from "../lib/storage/references";
 import { committeePublicInfoRoute } from "./committee-public-info";
 
 const mockPrisma = vi.mocked(prisma, true);
@@ -51,6 +61,8 @@ const mockFirebaseAuth = vi.mocked(firebaseAuth, true);
 const PROJECT_ID = "clpppppppppppppppp1";
 const INFO_ID = "clinfoooooooooooo01";
 const MAP_FILE_ID = "clfffffffffffffff02";
+const ICON_FILE_ID = "clfffffffffffffff01";
+const NEW_FILE_ID = "clfffffffffffffff03";
 
 const mockUser: User = {
 	id: "clxxxxxxxxxxxxxxxxx",
@@ -114,10 +126,13 @@ function setupUpdateMocks() {
 	mockPrisma.projectPublicInfo.findFirst.mockResolvedValue({
 		id: INFO_ID,
 		description: "焼きそばを販売します",
+		iconFileId: ICON_FILE_ID,
 		websiteUrls: [],
 		xIds: ["sohosai"],
 		instagramIds: [],
 		youtubeIds: [],
+		mapImages: [{ fileId: MAP_FILE_ID, isHidden: true }],
+		moderations: [],
 	} as any);
 	mockPrisma.project.findFirst.mockResolvedValue(mockRow as any);
 	mockPrisma.$transaction.mockImplementation(async cb => cb(mockPrisma));
@@ -221,6 +236,21 @@ describe("PUT/DELETE /committee/public-info/:projectId/hidden/:field", () => {
 		expect(res.status).toBe(400);
 	});
 
+	it("掲載画像は項目全体では非表示にできない（1枚ごとに扱う）", async () => {
+		const app = makeApp();
+		setupAuth();
+		setupUpdateMocks();
+
+		const res = await request(
+			app,
+			"PUT",
+			`/${PROJECT_ID}/hidden/MAP_IMAGES`,
+			{}
+		);
+
+		expect(res.status).toBe(400);
+	});
+
 	it("企画情報が未登録なら404エラー", async () => {
 		const app = makeApp();
 		setupAuth();
@@ -297,6 +327,113 @@ describe("PATCH /committee/public-info/:projectId", () => {
 		).not.toHaveBeenCalled();
 	});
 
+	it("正常系: アイコンを差し替えると修正前のアイコンを記録し、差し替え前のファイルを回収対象にする", async () => {
+		const app = makeApp();
+		setupAuth();
+		setupUpdateMocks();
+		mockPrisma.file.findMany.mockResolvedValue([
+			{ id: NEW_FILE_ID, mimeType: "image/png", uploadedById: mockUser.id },
+		] as any);
+
+		const res = await request(app, "PATCH", `/${PROJECT_ID}`, {
+			iconFileId: NEW_FILE_ID,
+		});
+
+		expect(res.status).toBe(200);
+		expect(mockPrisma.projectPublicInfo.update).toHaveBeenCalledWith({
+			where: { id: INFO_ID },
+			data: { iconFileId: NEW_FILE_ID },
+		});
+		expect(mockPrisma.projectPublicInfoModeration.upsert).toHaveBeenCalledWith(
+			expect.objectContaining({
+				create: expect.objectContaining({
+					field: "ICON",
+					previousValue: ICON_FILE_ID,
+				}),
+			})
+		);
+		// 修正前のアイコンは findReferencedFileIds が修正の記録から参照中と判定して残す
+		expect(softDeleteUnreferencedFiles).toHaveBeenCalledWith(
+			[ICON_FILE_ID, MAP_FILE_ID],
+			[NEW_FILE_ID, MAP_FILE_ID]
+		);
+	});
+
+	it("正常系: 掲載画像を追加すると、既存の画像の非表示を引き継ぐ", async () => {
+		const app = makeApp();
+		setupAuth();
+		setupUpdateMocks();
+		mockPrisma.file.findMany.mockResolvedValue([
+			{ id: MAP_FILE_ID, mimeType: "image/png", uploadedById: "clother" },
+			{ id: NEW_FILE_ID, mimeType: "image/png", uploadedById: mockUser.id },
+		] as any);
+
+		const res = await request(app, "PATCH", `/${PROJECT_ID}`, {
+			mapImageFileIds: [MAP_FILE_ID, NEW_FILE_ID],
+		});
+
+		expect(res.status).toBe(200);
+		expect(mockPrisma.projectPublicMapImage.createMany).toHaveBeenCalledWith({
+			data: [
+				{
+					projectPublicInfoId: INFO_ID,
+					fileId: MAP_FILE_ID,
+					sortOrder: 0,
+					isHidden: true,
+				},
+				{
+					projectPublicInfoId: INFO_ID,
+					fileId: NEW_FILE_ID,
+					sortOrder: 1,
+					isHidden: false,
+				},
+			],
+		});
+		expect(mockPrisma.projectPublicInfoModeration.upsert).toHaveBeenCalledWith(
+			expect.objectContaining({
+				create: expect.objectContaining({
+					field: "MAP_IMAGES",
+					previousValue: [MAP_FILE_ID],
+				}),
+			})
+		);
+	});
+
+	it("他の人がアップロードした、企画情報に付いていないファイルは403エラー", async () => {
+		const app = makeApp();
+		setupAuth();
+		setupUpdateMocks();
+		mockPrisma.file.findMany.mockResolvedValue([
+			{ id: NEW_FILE_ID, mimeType: "image/png", uploadedById: "clother" },
+		] as any);
+
+		const res = await request(app, "PATCH", `/${PROJECT_ID}`, {
+			iconFileId: NEW_FILE_ID,
+		});
+
+		expect(res.status).toBe(403);
+		expect(mockPrisma.projectPublicInfo.update).not.toHaveBeenCalled();
+	});
+
+	it("画像でないファイルは400エラー", async () => {
+		const app = makeApp();
+		setupAuth();
+		setupUpdateMocks();
+		mockPrisma.file.findMany.mockResolvedValue([
+			{
+				id: NEW_FILE_ID,
+				mimeType: "application/pdf",
+				uploadedById: mockUser.id,
+			},
+		] as any);
+
+		const res = await request(app, "PATCH", `/${PROJECT_ID}`, {
+			iconFileId: NEW_FILE_ID,
+		});
+
+		expect(res.status).toBe(400);
+	});
+
 	it("不正な形式の値は400エラー", async () => {
 		const app = makeApp();
 		setupAuth();
@@ -358,12 +495,54 @@ describe("DELETE /committee/public-info/:projectId/corrections/:field", () => {
 		expect(mockPrisma.projectPublicInfo.update).not.toHaveBeenCalled();
 	});
 
-	it("修正できない項目は400エラー", async () => {
+	it("正常系: 掲載画像を修正前に戻すと、残る画像の非表示を引き継ぎ、外れた画像を回収する", async () => {
+		const app = makeApp();
+		setupAuth();
+		setupUpdateMocks();
+		mockPrisma.projectPublicInfoModeration.findUnique.mockResolvedValue({
+			id: "clmodddddddddddddd1",
+			previousValue: [MAP_FILE_ID, NEW_FILE_ID],
+		} as any);
+
+		const res = await request(
+			app,
+			"DELETE",
+			`/${PROJECT_ID}/corrections/MAP_IMAGES`
+		);
+
+		expect(res.status).toBe(200);
+		expect(mockPrisma.projectPublicMapImage.createMany).toHaveBeenCalledWith({
+			data: [
+				{
+					projectPublicInfoId: INFO_ID,
+					fileId: MAP_FILE_ID,
+					sortOrder: 0,
+					isHidden: true,
+				},
+				{
+					projectPublicInfoId: INFO_ID,
+					fileId: NEW_FILE_ID,
+					sortOrder: 1,
+					isHidden: false,
+				},
+			],
+		});
+		expect(softDeleteUnreferencedFiles).toHaveBeenCalledWith(
+			[ICON_FILE_ID, MAP_FILE_ID],
+			[ICON_FILE_ID, MAP_FILE_ID, NEW_FILE_ID]
+		);
+	});
+
+	it("存在しない項目は400エラー", async () => {
 		const app = makeApp();
 		setupAuth();
 		setupUpdateMocks();
 
-		const res = await request(app, "DELETE", `/${PROJECT_ID}/corrections/ICON`);
+		const res = await request(
+			app,
+			"DELETE",
+			`/${PROJECT_ID}/corrections/OPEN_STATUS`
+		);
 
 		expect(res.status).toBe(400);
 	});

@@ -1,7 +1,7 @@
 import type {
 	CommitteePublicInfoItemResponse,
-	CorrectableProjectPublicInfoField,
 	CorrectCommitteePublicInfoRequest,
+	HideableProjectPublicInfoField,
 	ProjectPublicInfoField,
 } from "@sos26/shared";
 import {
@@ -15,7 +15,7 @@ import { callBodyApi, callNoBodyApi } from "./core";
 
 export async function hideCommitteePublicInfoField(
 	projectId: string,
-	field: ProjectPublicInfoField
+	field: HideableProjectPublicInfoField
 ): Promise<CommitteePublicInfoItemResponse> {
 	return callBodyApi(
 		hideCommitteePublicInfoFieldEndpoint,
@@ -26,7 +26,7 @@ export async function hideCommitteePublicInfoField(
 
 export async function unhideCommitteePublicInfoField(
 	projectId: string,
-	field: ProjectPublicInfoField
+	field: HideableProjectPublicInfoField
 ): Promise<CommitteePublicInfoItemResponse> {
 	return callNoBodyApi(unhideCommitteePublicInfoFieldEndpoint, {
 		pathParams: { projectId, field },
@@ -44,7 +44,7 @@ export async function correctCommitteePublicInfo(
 
 export async function revertCommitteePublicInfoCorrection(
 	projectId: string,
-	field: CorrectableProjectPublicInfoField
+	field: ProjectPublicInfoField
 ): Promise<CommitteePublicInfoItemResponse> {
 	return callNoBodyApi(revertCommitteePublicInfoCorrectionEndpoint, {
 		pathParams: { projectId, field },

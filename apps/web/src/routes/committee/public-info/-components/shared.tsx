@@ -2,7 +2,7 @@ import { Badge } from "@radix-ui/themes";
 import type {
 	CommitteeProjectPublicInfo,
 	CommitteePublicInfoModeration,
-	CorrectableProjectPublicInfoField,
+	HideableProjectPublicInfoField,
 	ProjectPublicInfoField,
 	ProjectSnsLinkKey,
 } from "@sos26/shared";
@@ -10,7 +10,7 @@ import { formatDate } from "@/lib/format";
 
 export const SNS_FIELDS: {
 	key: ProjectSnsLinkKey;
-	field: CorrectableProjectPublicInfoField;
+	field: HideableProjectPublicInfoField;
 	label: string;
 }[] = [
 	{ key: "websiteUrls", field: "WEBSITE_URLS", label: "Webサイト" },

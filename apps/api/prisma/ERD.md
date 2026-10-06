@@ -1435,7 +1435,7 @@ Properties as follows:
 - `projectPublicInfoId`:
 - `field`:
 - `kind`:
-- `previousValue`: CORRECTED のみ: 最初に修正する前の企画の値（紹介文は文字列または null、SNSリンクは文字列の配列）
+- `previousValue`: CORRECTED のみ: 最初に修正する前の企画の値（紹介文・アイコンは文字列または null、掲載画像・SNSリンクは文字列の配列。アイコン・掲載画像はファイルID）
 - `updatedById`:
 - `createdAt`:
 - `updatedAt`:
