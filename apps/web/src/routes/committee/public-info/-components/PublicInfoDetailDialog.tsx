@@ -6,7 +6,9 @@ import {
 	DropdownMenu,
 	Flex,
 	Heading,
+	Link,
 	Text,
+	Tooltip,
 } from "@radix-ui/themes";
 import type {
 	CommitteeProjectPublicInfo,
@@ -680,7 +682,7 @@ export function PublicInfoDetailDialog({
 						)}
 					</FieldSection>
 
-					{SNS_FIELDS.map(({ key, field, label }) => (
+					{SNS_FIELDS.map(({ key, field, label, toHref }) => (
 						<FieldSection
 							key={key}
 							item={item}
@@ -714,11 +716,19 @@ export function PublicInfoDetailDialog({
 							) : (
 								valueWithEdit(
 									publicInfo[key].length > 0 ? (
-										<Flex direction="column">
+										<Flex direction="column" gap="1" minWidth="0">
 											{publicInfo[key].map(value => (
-												<Text key={value} size="2" className={styles.value}>
-													{value}
-												</Text>
+												<Tooltip key={value} content={value}>
+													<Link
+														href={toHref(value)}
+														target="_blank"
+														rel="noopener noreferrer"
+														size="2"
+														truncate
+													>
+														{value}
+													</Link>
+												</Tooltip>
 											))}
 										</Flex>
 									) : (

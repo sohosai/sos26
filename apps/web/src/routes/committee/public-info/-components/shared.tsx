@@ -14,11 +14,33 @@ export const SNS_FIELDS: {
 	key: ProjectSnsLinkKey;
 	field: HideableProjectPublicInfoField;
 	label: string;
+	/** 登録値から開くページのURLを作る */
+	toHref: (value: string) => string;
 }[] = [
-	{ key: "websiteUrls", field: "WEBSITE_URLS", label: "Webサイト" },
-	{ key: "xIds", field: "X_IDS", label: "X" },
-	{ key: "instagramIds", field: "INSTAGRAM_IDS", label: "Instagram" },
-	{ key: "youtubeIds", field: "YOUTUBE_IDS", label: "YouTube" },
+	{
+		key: "websiteUrls",
+		field: "WEBSITE_URLS",
+		label: "Webサイト",
+		toHref: url => url,
+	},
+	{
+		key: "xIds",
+		field: "X_IDS",
+		label: "X",
+		toHref: id => `https://x.com/${id}`,
+	},
+	{
+		key: "instagramIds",
+		field: "INSTAGRAM_IDS",
+		label: "Instagram",
+		toHref: id => `https://www.instagram.com/${id}`,
+	},
+	{
+		key: "youtubeIds",
+		field: "YOUTUBE_IDS",
+		label: "YouTube",
+		toHref: id => `https://www.youtube.com/@${id}`,
+	},
 ];
 
 export function findModeration(
