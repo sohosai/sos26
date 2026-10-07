@@ -20,8 +20,7 @@ import { type ViewState, ViewTabs } from "./-components/ViewTabs";
 import styles from "./index.module.scss";
 
 const searchSchema = z.object({
-	// ?debug=true で各カラムのヘッダーにカラムIDを表示する
-	// （公開APIの PUBLIC_API_MASTERSHEET_COLUMN_IDS に設定するIDの確認用）
+	// 公開APIの PUBLIC_API_MASTERSHEET_COLUMN_IDS に設定する列IDを確認するため
 	debug: z.boolean().optional().catch(undefined),
 });
 

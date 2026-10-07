@@ -105,8 +105,6 @@ const envSchema = z.object({
 			return parsed;
 		}),
 
-	// 公開API（/openapi/projects）に customFields として載せる
-	// マスターシートの CUSTOM 列IDをカンマ区切りで複数指定する。
 	// 指定した列の値は、実委内のカラム閲覧権限（viewers/visibility）に関わらず
 	// 認証なしで誰でも見られるようになる点に注意。
 	PUBLIC_API_MASTERSHEET_COLUMN_IDS: z

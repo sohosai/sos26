@@ -78,7 +78,6 @@ type Props = {
 	onColumnFiltersChange?: (filters: ColumnFiltersState) => void;
 	onSelectionChange?: (cells: SelectedCell[]) => void;
 	selectionIgnoreRef?: React.RefObject<HTMLElement | null>;
-	/** デバッグ用: 各カラムのヘッダーにカラムIDを表示する */
 	showColumnIds?: boolean;
 };
 

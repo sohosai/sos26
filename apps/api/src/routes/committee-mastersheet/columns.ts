@@ -473,7 +473,6 @@ columnsRoute.delete(
 
 		await prisma.mastersheetColumn.delete({ where: { id: columnId } });
 
-		// 公開API（customFields）の対象列が消えた場合はキャッシュを破棄する
 		if (isPublicMastersheetColumn(columnId)) {
 			bumpPublicApiCacheVersion();
 		}

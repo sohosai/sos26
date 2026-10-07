@@ -4,9 +4,11 @@ import {
 	type MastersheetDataType,
 	projectPublicInfoSchema,
 } from "@sos26/shared";
-import { env } from "../lib/env";
 import { prisma } from "../lib/prisma";
-import { getPublicApiCacheVersion } from "../lib/public-api-cache";
+import {
+	getPublicApiCacheVersion,
+	getPublicMastersheetColumnIds,
+} from "../lib/public-api-cache";
 
 export const openApiRoute = new OpenAPIHono();
 
@@ -19,19 +21,17 @@ export const openApiRoute = new OpenAPIHono();
 const LIST_CACHE_TTL_MS = 60_000;
 const CACHE_CONTROL = `public, max-age=${LIST_CACHE_TTL_MS / 1000}`;
 
-const customFieldSchema = z.object({
-	name: z.string().openapi({ description: "マスターシートの列名" }),
-	value: z
-		.union([z.string(), z.number(), z.array(z.string()), z.null()])
-		.openapi({
-			description:
-				"列の値。データ型により形式が異なる: " +
-				"TEXTは文字列、NUMBERは数値、SELECTは選択された選択肢名（文字列）、" +
-				"MULTI_SELECTは選択された選択肢名の配列。未入力の場合は null",
-		}),
-});
+const customFieldValueSchema = z
+	.union([z.string(), z.number(), z.array(z.string()), z.null()])
+	.openapi({
+		description:
+			"列の値。データ型により形式が異なる: " +
+			"TEXTは文字列、NUMBERは数値、SELECTは選択された選択肢名（文字列）、" +
+			"MULTI_SELECTは選択された選択肢名の配列（選択肢の表示順）。未入力の場合は null",
+	});
 
-type CustomField = z.infer<typeof customFieldSchema>;
+type CustomFieldValue = z.infer<typeof customFieldValueSchema>;
+type CustomFields = Record<string, CustomFieldValue>;
 
 const publicProjectSchema = z.object({
 	id: z.string(),
@@ -41,11 +41,12 @@ const publicProjectSchema = z.object({
 	type: z.enum(["STAGE", "FOOD", "NORMAL"]),
 	location: z.enum(["INDOOR", "OUTDOOR", "STAGE"]),
 	publicInfo: projectPublicInfoSchema,
-	customFields: z.array(customFieldSchema).openapi({
+	customFields: z.record(z.string(), customFieldValueSchema).openapi({
 		description:
 			"実委が公開対象に指定したマスターシートの列（環境変数 " +
-			"PUBLIC_API_MASTERSHEET_COLUMN_IDS で指定した列）の値。" +
-			"指定がない場合は空配列",
+			"PUBLIC_API_MASTERSHEET_COLUMN_IDS で指定した列）の値を、列名をキーとして返す。" +
+			"キーの順序は環境変数の指定順。指定がない場合は空オブジェクト",
+		example: { 出演ステージ: "メインステージ", ジャンル: ["音楽", "ダンス"] },
 	}),
 });
 
@@ -113,7 +114,7 @@ type PublicProjectRow = {
 /** publicInfo が null の行は publicProjectWhere で除外済みのため取り除く */
 function toPublicProject(
 	row: PublicProjectRow,
-	customFields: CustomField[]
+	customFields: CustomFields
 ): PublicProject | null {
 	if (!row.publicInfo) return null;
 
@@ -135,10 +136,6 @@ function toPublicProject(
 	};
 }
 
-// ─────────────────────────────────────────────────────────────
-// customFields: マスターシートの公開対象列
-// ─────────────────────────────────────────────────────────────
-
 type PublicCustomColumn = {
 	id: string;
 	name: string;
@@ -146,14 +143,12 @@ type PublicCustomColumn = {
 };
 
 /**
- * PUBLIC_API_MASTERSHEET_COLUMN_IDS で指定された列の定義を解決する。
- *
  * - 存在しない列ID、CUSTOM以外の列（FORM_ITEM / PROJECT_REGISTRATION_FORM_ITEM）は
- *   対象外として警告ログを出しスキップする（公開APIは落とさない）。
- * - 環境変数の指定順を維持する。
+ *   設定ミスでも公開APIを落とさないよう、警告ログを出してスキップする。
+ * - 列名が重複する場合はキーが衝突するため、後に指定された列をスキップする。
  */
 async function resolvePublicCustomColumns(): Promise<PublicCustomColumn[]> {
-	const ids = env.PUBLIC_API_MASTERSHEET_COLUMN_IDS;
+	const ids = getPublicMastersheetColumnIds();
 	if (ids.length === 0) return [];
 
 	const columns = await prisma.mastersheetColumn.findMany({
@@ -163,6 +158,7 @@ async function resolvePublicCustomColumns(): Promise<PublicCustomColumn[]> {
 	const byId = new Map(columns.map(c => [c.id, c]));
 
 	const resolved: PublicCustomColumn[] = [];
+	const usedNames = new Set<string>();
 	for (const id of ids) {
 		const col = byId.get(id);
 		if (!col?.dataType) {
@@ -171,6 +167,13 @@ async function resolvePublicCustomColumns(): Promise<PublicCustomColumn[]> {
 			);
 			continue;
 		}
+		if (usedNames.has(col.name)) {
+			console.warn(
+				`[openapi] PUBLIC_API_MASTERSHEET_COLUMN_IDS の列名が重複しています: ${col.name} (${id})`
+			);
+			continue;
+		}
+		usedNames.add(col.name);
 		resolved.push({ id: col.id, name: col.name, dataType: col.dataType });
 	}
 	return resolved;
@@ -185,7 +188,7 @@ type PublicCustomCell = {
 function formatCustomFieldValue(
 	dataType: MastersheetDataType,
 	cell: PublicCustomCell | undefined
-): CustomField["value"] {
+): CustomFieldValue {
 	if (!cell) return null;
 
 	switch (dataType) {
@@ -200,15 +203,14 @@ function formatCustomFieldValue(
 	}
 }
 
-/** 企画IDごとの customFields を一括取得する */
 async function getCustomFieldsByProject(
 	projectIds: string[]
-): Promise<Map<string, CustomField[]>> {
-	const map = new Map<string, CustomField[]>();
+): Promise<Map<string, CustomFields>> {
+	const map = new Map<string, CustomFields>();
 	const columns = await resolvePublicCustomColumns();
 
 	if (columns.length === 0 || projectIds.length === 0) {
-		for (const id of projectIds) map.set(id, []);
+		for (const id of projectIds) map.set(id, {});
 		return map;
 	}
 
@@ -222,7 +224,10 @@ async function getCustomFieldsByProject(
 			projectId: true,
 			textValue: true,
 			numberValue: true,
-			selectedOptions: { select: { option: { select: { label: true } } } },
+			selectedOptions: {
+				orderBy: { option: { sortOrder: "asc" } },
+				select: { option: { select: { label: true } } },
+			},
 		},
 	});
 
@@ -236,13 +241,15 @@ async function getCustomFieldsByProject(
 	for (const projectId of projectIds) {
 		map.set(
 			projectId,
-			columns.map(col => ({
-				name: col.name,
-				value: formatCustomFieldValue(
-					col.dataType,
-					cellByColProject.get(col.id)?.get(projectId)
-				),
-			}))
+			Object.fromEntries(
+				columns.map(col => [
+					col.name,
+					formatCustomFieldValue(
+						col.dataType,
+						cellByColProject.get(col.id)?.get(projectId)
+					),
+				])
+			)
 		);
 	}
 	return map;
@@ -272,7 +279,7 @@ async function getPublicProjects(): Promise<PublicProject[]> {
 	);
 
 	const value = rows
-		.map(row => toPublicProject(row, customFieldsByProject.get(row.id) ?? []))
+		.map(row => toPublicProject(row, customFieldsByProject.get(row.id) ?? {}))
 		.filter((p): p is PublicProject => p !== null);
 	listCache = { expiresAt: now + LIST_CACHE_TTL_MS, version, value };
 	return value;
@@ -335,15 +342,7 @@ const getProjectDetailRoute = createRoute({
 
 openApiRoute.openapi(getProjectDetailRoute, async c => {
 	const id = c.req.valid("param").id;
-	const row = await prisma.project.findFirst({
-		where: { ...publicProjectWhere, id },
-		select: publicProjectSelect,
-	});
-
-	const customFields = row
-		? ((await getCustomFieldsByProject([row.id])).get(row.id) ?? [])
-		: [];
-	const response = row ? toPublicProject(row, customFields) : null;
+	const response = (await getPublicProjects()).find(p => p.id === id);
 
 	if (!response) {
 		return c.json(
