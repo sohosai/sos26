@@ -7,6 +7,7 @@ import type {
 	VisibilityState,
 } from "@tanstack/react-table";
 import { useRef, useState } from "react";
+import { z } from "zod";
 import { Button } from "@/components/primitives";
 import { getMastersheetData } from "@/lib/api/committee-mastersheet";
 import { ColumnPanel } from "./-components/ColumnPanel";
@@ -18,7 +19,14 @@ import {
 import { type ViewState, ViewTabs } from "./-components/ViewTabs";
 import styles from "./index.module.scss";
 
+const searchSchema = z.object({
+	// ?debug=true で各カラムのヘッダーにカラムIDを表示する
+	// （公開APIの PUBLIC_API_MASTERSHEET_COLUMN_IDS に設定するIDの確認用）
+	debug: z.boolean().optional().catch(undefined),
+});
+
 export const Route = createFileRoute("/committee/mastersheet/")({
+	validateSearch: searchSchema,
 	loader: async () => {
 		return await getMastersheetData();
 	},
@@ -63,6 +71,7 @@ const DEFAULT_HIDDEN_FIXED_COLUMNS: Record<string, boolean> = {
 
 function MastersheetPage() {
 	const { columns, rows } = Route.useLoaderData();
+	const { debug } = Route.useSearch();
 	const router = useRouter();
 	const historyPanelRef = useRef<HTMLDivElement>(null);
 	const [columnPanelOpen, setColumnPanelOpen] = useState(false);
@@ -198,6 +207,7 @@ function MastersheetPage() {
 						onColumnFiltersChange={setColumnFilters}
 						toolbarExtra={toolbarExtra}
 						onSelectionChange={setSelectedCells}
+						showColumnIds={debug === true}
 						selectionIgnoreRef={historyPanelRef}
 					/>
 				</div>
