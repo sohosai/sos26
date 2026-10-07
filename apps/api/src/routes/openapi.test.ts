@@ -8,12 +8,24 @@ vi.mock("../lib/prisma", () => ({
 			findMany: vi.fn(),
 			findFirst: vi.fn(),
 		},
+		file: {
+			findFirst: vi.fn(),
+		},
 	},
+}));
+
+vi.mock("../lib/storage/presign", () => ({}));
+
+vi.mock("../lib/storage/image-resize", async importOriginal => ({
+	...(await importOriginal()),
+	getResizedImage: vi.fn(),
+	getOriginalImage: vi.fn(),
 }));
 
 import { errorHandler } from "../lib/error-handler";
 import { prisma } from "../lib/prisma";
 import { bumpPublicApiCacheVersion } from "../lib/public-api-cache";
+import { getOriginalImage, getResizedImage } from "../lib/storage/image-resize";
 import { clearPublicProjectsCache, openApiRoute } from "./openapi";
 
 const mockPrisma = vi.mocked(prisma, true);
@@ -141,6 +153,89 @@ describe("GET /openapi/projects/{id}", () => {
 		expect(res.status).toBe(404);
 		expect(res.headers.get("Content-Type")).toContain("application/json");
 		expect((await res.json()).error.code).toBe("NOT_FOUND");
+	});
+});
+
+describe("GET /openapi/images/{fileId}", () => {
+	const iconFileId = mockRow.publicInfo.iconFileId;
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		clearPublicProjectsCache();
+		mockPrisma.project.findMany.mockResolvedValue([mockRow] as any);
+		mockPrisma.file.findFirst.mockResolvedValue({
+			key: "user/icon.png",
+			mimeType: "image/png",
+			size: 1000,
+		} as any);
+	});
+
+	it("width を指定すると縮小した WebP を返す", async () => {
+		const app = makeApp();
+		vi.mocked(getResizedImage).mockResolvedValue(new Uint8Array([1, 2, 3]));
+
+		const res = await app.request(`/openapi/images/${iconFileId}?width=320`);
+
+		expect(res.status).toBe(200);
+		expect(res.headers.get("Content-Type")).toBe("image/webp");
+		expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
+		expect(res.headers.get("Cache-Control")).toContain("max-age=");
+		expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
+		expect(vi.mocked(getResizedImage)).toHaveBeenCalledWith(
+			iconFileId,
+			"320",
+			expect.any(Function)
+		);
+	});
+
+	it("width を省略すると元画像を元の Content-Type で返す", async () => {
+		const app = makeApp();
+		vi.mocked(getOriginalImage).mockResolvedValue(new Uint8Array([1, 2, 3]));
+
+		const res = await app.request("/openapi/images/clfffffffffffffff02");
+
+		expect(res.status).toBe(200);
+		expect(res.headers.get("Content-Type")).toBe("image/png");
+		expect(vi.mocked(getOriginalImage)).toHaveBeenCalledWith("user/icon.png");
+	});
+
+	it("width を省略して S3 に元画像がない場合は404を返す", async () => {
+		const app = makeApp();
+		vi.mocked(getOriginalImage).mockResolvedValue(null);
+
+		const res = await app.request(`/openapi/images/${iconFileId}`);
+
+		expect(res.status).toBe(404);
+	});
+
+	it("公開中の企画の画像でなければ404を返し、ファイルを引かない", async () => {
+		const app = makeApp();
+
+		const res = await app.request("/openapi/images/other-file?width=320");
+
+		expect(res.status).toBe(404);
+		expect((await res.json()).error.code).toBe("NOT_FOUND");
+		expect(vi.mocked(getResizedImage)).not.toHaveBeenCalled();
+		expect(mockPrisma.file.findFirst).not.toHaveBeenCalled();
+	});
+
+	it("元画像が見つからない場合は404を返す", async () => {
+		const app = makeApp();
+		vi.mocked(getResizedImage).mockResolvedValue(null);
+
+		const res = await app.request(`/openapi/images/${iconFileId}?width=320`);
+
+		expect(res.status).toBe(404);
+	});
+
+	it("候補にない width は400を返す", async () => {
+		const app = makeApp();
+
+		const res = await app.request(`/openapi/images/${iconFileId}?width=333`);
+
+		expect(res.status).toBe(400);
+		expect((await res.json()).error.code).toBe("VALIDATION_ERROR");
+		expect(vi.mocked(getResizedImage)).not.toHaveBeenCalled();
 	});
 });
 
