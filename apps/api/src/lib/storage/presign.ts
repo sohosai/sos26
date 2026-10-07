@@ -1,4 +1,5 @@
 import {
+	DeleteObjectCommand,
 	GetObjectCommand,
 	HeadObjectCommand,
 	PutObjectCommand,
@@ -119,6 +120,18 @@ export async function putObject(
 		Key: key,
 		Body: body,
 		ContentType: contentType,
+	});
+	await client.send(command);
+}
+
+/**
+ * S3からオブジェクトを削除する。存在しないキーを指定してもエラーにならない。
+ */
+export async function deleteObject(key: string): Promise<void> {
+	const client = getStorageClient();
+	const command = new DeleteObjectCommand({
+		Bucket: env.S3_BUCKET,
+		Key: key,
 	});
 	await client.send(command);
 }

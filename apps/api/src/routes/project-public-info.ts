@@ -15,6 +15,7 @@ import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
 import { bumpPublicApiCacheVersion } from "../lib/public-api-cache";
+import { deleteResizedImages } from "../lib/storage/image-resize";
 import { findReferencedFileIds } from "../lib/storage/references";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -222,6 +223,7 @@ async function softDeleteUnreferencedFiles(
 		where: { id: { in: deletableIds }, deletedAt: null },
 		data: { deletedAt: new Date() },
 	});
+	await deleteResizedImages(deletableIds);
 }
 
 projectPublicInfoRoute.get(

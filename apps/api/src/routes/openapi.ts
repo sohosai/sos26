@@ -7,7 +7,6 @@ import {
 	getOriginalImage,
 	getResizedImage,
 	IMAGE_RESIZE_WIDTHS,
-	RESIZED_IMAGE_MIME_TYPE,
 } from "../lib/storage/image-resize";
 
 export const openApiRoute = new OpenAPIHono({
@@ -242,7 +241,8 @@ const getImageRoute = createRoute({
 	description:
 		"企画のアイコン・掲載画像（publicInfo.iconFileId / mapImageFileIds）を取得する。" +
 		"width を指定すると、縦横比を保ってその幅に縮小した WebP を返す（元画像より大きくはしない）。" +
-		"アニメーション GIF は1フレーム目のみになる。width を省略すると元画像をそのまま返す。",
+		"アニメーション GIF は1フレーム目のみになる。" +
+		"width を省略した場合と、縮小できない画像（巨大な画像など）の場合は元画像をそのまま返す。",
 	request: {
 		params: z.object({
 			fileId: z.string().openapi({ param: { name: "fileId", in: "path" } }),
@@ -269,8 +269,7 @@ const getImageRoute = createRoute({
 					schema: errorResponseSchema,
 				},
 			},
-			description:
-				"width が候補にない、または縮小できない画像（巨大な画像など）。width を省略すれば元画像を取得できる",
+			description: "width が候補にない",
 		},
 		404: {
 			content: {
@@ -311,23 +310,14 @@ openApiRoute.openapi(getImageRoute, async c => {
 
 	if (!(await isPublicImage(fileId))) return notFound();
 
-	if (width === undefined) {
-		const file = await findImageFile(fileId);
-		const body = file && (await getOriginalImage(file.key));
-		if (!file || !body) return notFound();
-		return c.body(body, 200, {
-			...IMAGE_HEADERS,
-			"Content-Type": file.mimeType,
-		});
-	}
-
-	const body = await getResizedImage(fileId, width, () =>
-		findImageFile(fileId)
-	);
-	if (!body) return notFound();
-	return c.body(body, 200, {
+	const image =
+		width === undefined
+			? await findImageFile(fileId).then(file => file && getOriginalImage(file))
+			: await getResizedImage(fileId, width, () => findImageFile(fileId));
+	if (!image) return notFound();
+	return c.body(image.body, 200, {
 		...IMAGE_HEADERS,
-		"Content-Type": RESIZED_IMAGE_MIME_TYPE,
+		"Content-Type": image.contentType,
 	});
 });
 

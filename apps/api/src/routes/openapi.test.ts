@@ -172,7 +172,10 @@ describe("GET /openapi/images/{fileId}", () => {
 
 	it("width を指定すると縮小した WebP を返す", async () => {
 		const app = makeApp();
-		vi.mocked(getResizedImage).mockResolvedValue(new Uint8Array([1, 2, 3]));
+		vi.mocked(getResizedImage).mockResolvedValue({
+			body: new Uint8Array([1, 2, 3]),
+			contentType: "image/webp",
+		});
 
 		const res = await app.request(`/openapi/images/${iconFileId}?width=320`);
 
@@ -180,7 +183,6 @@ describe("GET /openapi/images/{fileId}", () => {
 		expect(res.headers.get("Content-Type")).toBe("image/webp");
 		expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
 		expect(res.headers.get("Cache-Control")).toContain("max-age=");
-		expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
 		expect(vi.mocked(getResizedImage)).toHaveBeenCalledWith(
 			iconFileId,
 			"320",
@@ -190,13 +192,20 @@ describe("GET /openapi/images/{fileId}", () => {
 
 	it("width を省略すると元画像を元の Content-Type で返す", async () => {
 		const app = makeApp();
-		vi.mocked(getOriginalImage).mockResolvedValue(new Uint8Array([1, 2, 3]));
+		vi.mocked(getOriginalImage).mockResolvedValue({
+			body: new Uint8Array([1, 2, 3]),
+			contentType: "image/png",
+		});
 
 		const res = await app.request("/openapi/images/clfffffffffffffff02");
 
 		expect(res.status).toBe(200);
 		expect(res.headers.get("Content-Type")).toBe("image/png");
-		expect(vi.mocked(getOriginalImage)).toHaveBeenCalledWith("user/icon.png");
+		expect(vi.mocked(getOriginalImage)).toHaveBeenCalledWith({
+			key: "user/icon.png",
+			mimeType: "image/png",
+			size: 1000,
+		});
 	});
 
 	it("width を省略して S3 に元画像がない場合は404を返す", async () => {

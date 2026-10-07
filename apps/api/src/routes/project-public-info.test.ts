@@ -54,9 +54,14 @@ vi.mock("../lib/firebase", () => ({
 	auth: { verifyIdToken: vi.fn() },
 }));
 
+vi.mock("../lib/storage/image-resize", () => ({
+	deleteResizedImages: vi.fn(),
+}));
+
 import { errorHandler } from "../lib/error-handler";
 import { auth as firebaseAuth } from "../lib/firebase";
 import { prisma } from "../lib/prisma";
+import { deleteResizedImages } from "../lib/storage/image-resize";
 import { projectPublicInfoRoute } from "./project-public-info";
 
 const mockPrisma = vi.mocked(prisma, true);
@@ -503,6 +508,9 @@ describe("PUT /project/:projectId/public-info", () => {
 					}),
 				})
 			);
+			expect(vi.mocked(deleteResizedImages)).toHaveBeenCalledWith([
+				"clffffffffffffffold",
+			]);
 		});
 
 		it("他企画から参照されているファイルは削除しない", async () => {
@@ -520,6 +528,7 @@ describe("PUT /project/:projectId/public-info", () => {
 
 			expect(res.status).toBe(200);
 			expect(mockPrisma.file.updateMany).not.toHaveBeenCalled();
+			expect(vi.mocked(deleteResizedImages)).not.toHaveBeenCalled();
 		});
 
 		it("ユーザーのアバターとして使われているファイルは削除しない", async () => {
