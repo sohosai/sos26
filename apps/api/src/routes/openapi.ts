@@ -9,8 +9,18 @@ import {
 	getPublicApiCacheVersion,
 	getPublicMastersheetColumnIds,
 } from "../lib/public-api-cache";
+import {
+	getOriginalImage,
+	getResizedImage,
+	IMAGE_RESIZE_WIDTHS,
+} from "../lib/storage/image-resize";
 
-export const openApiRoute = new OpenAPIHono();
+export const openApiRoute = new OpenAPIHono({
+	// 既定ではバリデーションエラーを独自形式で返すため、errorHandler に渡して他のエラーと形式を揃える
+	defaultHook: result => {
+		if (!result.success) throw result.error;
+	},
+});
 
 /**
  * 一覧レスポンスのキャッシュ保持時間（ミリ秒）
@@ -20,6 +30,10 @@ export const openApiRoute = new OpenAPIHono();
  */
 const LIST_CACHE_TTL_MS = 60_000;
 const CACHE_CONTROL = `public, max-age=${LIST_CACHE_TTL_MS / 1000}`;
+const IMAGE_HEADERS = {
+	"Cache-Control": "public, max-age=86400",
+	"X-Content-Type-Options": "nosniff",
+};
 
 const customFieldValueSchema = z
 	.union([z.string(), z.number(), z.array(z.string()), z.null()])
@@ -370,6 +384,92 @@ openApiRoute.openapi(getProjectDetailRoute, async c => {
 
 	c.header("Cache-Control", CACHE_CONTROL);
 	return c.json(response, 200);
+});
+
+const getImageRoute = createRoute({
+	method: "get",
+	path: "/images/{fileId}",
+	description:
+		"企画のアイコン・掲載画像（publicInfo.iconFileId / mapImageFileIds）を取得する。" +
+		"width を指定すると、縦横比を保ってその幅に縮小した WebP を返す（元画像より大きくはしない）。" +
+		"アニメーション GIF は1フレーム目のみになる。" +
+		"width を省略した場合と、縮小できない画像（巨大な画像など）の場合は元画像をそのまま返す。",
+	request: {
+		params: z.object({
+			fileId: z.string().openapi({ param: { name: "fileId", in: "path" } }),
+		}),
+		query: z.object({
+			width: z
+				.enum(IMAGE_RESIZE_WIDTHS)
+				.optional()
+				.openapi({ description: "縮小後の幅（px）" }),
+		}),
+	},
+	responses: {
+		200: {
+			content: {
+				"image/*": {
+					schema: z.string().openapi({ format: "binary" }),
+				},
+			},
+			description: "画像データ",
+		},
+		400: {
+			content: {
+				"application/json": {
+					schema: errorResponseSchema,
+				},
+			},
+			description: "width が候補にない",
+		},
+		404: {
+			content: {
+				"application/json": {
+					schema: errorResponseSchema,
+				},
+			},
+			description: "公開中の企画の画像ではない",
+		},
+	},
+});
+
+async function isPublicImage(fileId: string): Promise<boolean> {
+	const projects = await getPublicProjects();
+	return projects.some(
+		p =>
+			p.publicInfo.iconFileId === fileId ||
+			p.publicInfo.mapImageFileIds.includes(fileId)
+	);
+}
+
+function findImageFile(fileId: string) {
+	return prisma.file.findFirst({
+		where: { id: fileId, status: "CONFIRMED", deletedAt: null, isPublic: true },
+		select: { key: true, mimeType: true, size: true },
+	});
+}
+
+openApiRoute.openapi(getImageRoute, async c => {
+	const { fileId } = c.req.valid("param");
+	const { width } = c.req.valid("query");
+
+	const notFound = () =>
+		c.json(
+			{ error: { code: "NOT_FOUND", message: "画像が見つかりません" } },
+			404
+		);
+
+	if (!(await isPublicImage(fileId))) return notFound();
+
+	const image =
+		width === undefined
+			? await findImageFile(fileId).then(file => file && getOriginalImage(file))
+			: await getResizedImage(fileId, width, () => findImageFile(fileId));
+	if (!image) return notFound();
+	return c.body(image.body, 200, {
+		...IMAGE_HEADERS,
+		"Content-Type": image.contentType,
+	});
 });
 
 openApiRoute.doc("/openapi.json", c => ({

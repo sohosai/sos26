@@ -11,6 +11,7 @@ import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
 import { canAccessFile } from "../lib/storage/access";
 import { generateFileToken, verifyFileToken } from "../lib/storage/file-token";
+import { deleteResizedImages } from "../lib/storage/image-resize";
 import { generateObjectKey } from "../lib/storage/key";
 import {
 	abortMultipartUpload,
@@ -455,6 +456,7 @@ fileRoute.delete("/:id", requireAuth, async c => {
 		where: { id: fileId },
 		data: { deletedAt: new Date() },
 	});
+	await deleteResizedImages([fileId]);
 
 	return c.json({ success: true as const });
 });
