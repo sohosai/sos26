@@ -506,15 +506,46 @@ export async function syncColumnViewers(
 	}
 }
 
+/**
+ * 選択肢を全削除して作り直すと、Cascade で全企画のセルの選択が消えてしまうため、
+ * id で既存の選択肢と突き合わせて差分更新する。
+ */
 export async function syncColumnOptions(
 	tx: TxClient,
 	columnId: string,
-	options: { label: string; sortOrder: number }[]
+	options: { id?: string; label: string; sortOrder: number }[]
 ) {
-	await tx.mastersheetColumnOption.deleteMany({ where: { columnId } });
-	if (options.length > 0) {
+	const existing = await tx.mastersheetColumnOption.findMany({
+		where: { columnId },
+		select: { id: true },
+	});
+	const existingIds = new Set(existing.map(o => o.id));
+
+	const keptIds = new Set<string>();
+	for (const o of options) {
+		if (o.id === undefined) continue;
+		if (!existingIds.has(o.id)) {
+			throw Errors.invalidRequest(`選択肢 ${o.id} はこのカラムに存在しません`);
+		}
+		keptIds.add(o.id);
+	}
+
+	await tx.mastersheetColumnOption.deleteMany({
+		where: { columnId, id: { notIn: [...keptIds] } },
+	});
+
+	for (const o of options) {
+		if (o.id === undefined) continue;
+		await tx.mastersheetColumnOption.update({
+			where: { id: o.id },
+			data: { label: o.label, sortOrder: o.sortOrder },
+		});
+	}
+
+	const created = options.filter(o => o.id === undefined);
+	if (created.length > 0) {
 		await tx.mastersheetColumnOption.createMany({
-			data: options.map(o => ({
+			data: created.map(o => ({
 				columnId,
 				label: o.label,
 				sortOrder: o.sortOrder,

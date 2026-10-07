@@ -163,6 +163,28 @@ describe("getResizedImage", () => {
 		expect(mockGetObject).toHaveBeenCalledWith(ORIGINAL.key);
 	});
 
+	it("変換中に想定外のエラーが起きた場合は元画像を返し、次回は再変換を試みる", async () => {
+		const png = await makePng(800, 400);
+		// ヘッダーは読めるが展開に失敗する、途中で切れた画像
+		const truncated = png.slice(0, png.length / 2);
+		mockStorage(truncated);
+		const consoleError = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => {});
+
+		const image = await getResizedImage("file-truncated", "320", findOriginal);
+
+		expect(image?.contentType).toBe("image/png");
+		expect(Buffer.compare(image?.body as Uint8Array, truncated)).toBe(0);
+		expect(consoleError).toHaveBeenCalled();
+
+		mockGetObject.mockClear();
+		await getResizedImage("file-truncated", "320", findOriginal);
+		expect(mockGetObject).toHaveBeenCalledWith(
+			"resized/file-truncated/w320.webp"
+		);
+	});
+
 	it("同じ画像・幅への同時リクエストでは変換を1回にまとめる", async () => {
 		mockStorage(await makePng(800, 400));
 		const [a, b] = await Promise.all([

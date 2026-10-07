@@ -1,5 +1,7 @@
+import * as Sentry from "@sentry/bun";
 import pLimit from "p-limit";
 import sharp from "sharp";
+import { logUnexpectedApiError } from "../error-logging";
 import { deleteObject, getObject, putObject } from "./presign";
 
 /**
@@ -74,26 +76,29 @@ async function getObjectStream(key: string): Promise<ImageBody | null> {
 	return (res?.Body?.transformToWebStream() ?? null) as ReadableStream | null;
 }
 
-/** 縮小できない画像なら null を返す */
+/**
+ * 縮小できない画像（画像として読めない・非対応形式・画素数超過）なら null を返す。
+ * 変換中の想定外のエラーはそのまま投げる。
+ */
 async function resize(
 	input: Uint8Array,
 	width: ImageResizeWidth
 ): Promise<Uint8Array<ArrayBuffer> | null> {
 	const image = sharp(input, { limitInputPixels: MAX_INPUT_PIXELS });
-	try {
-		const { format } = await image.metadata();
-		if (!format || !RESIZABLE_FORMATS.has(format)) return null;
-
-		const resized = await image
-			// スマートフォンで撮影した写真は EXIF の向き情報で回転させないと横倒しになる
-			.rotate()
-			.resize({ width: Number(width), withoutEnlargement: true })
-			.webp({ quality: 80 })
-			.toBuffer();
-		return new Uint8Array(resized);
-	} catch {
+	// metadata はヘッダーだけを読むため、展開する前に縮小できるかを判定できる
+	const metadata = await image.metadata().catch(() => null);
+	if (!metadata?.format || !RESIZABLE_FORMATS.has(metadata.format)) {
 		return null;
 	}
+	if (metadata.width * metadata.height > MAX_INPUT_PIXELS) return null;
+
+	const resized = await image
+		// スマートフォンで撮影した写真は EXIF の向き情報で回転させないと横倒しになる
+		.rotate()
+		.resize({ width: Number(width), withoutEnlargement: true })
+		.webp({ quality: 80 })
+		.toBuffer();
+	return new Uint8Array(resized);
 }
 
 async function resizeAndStore(
@@ -105,10 +110,23 @@ async function resizeAndStore(
 	const input = await res?.Body?.transformToByteArray();
 	if (!input) return null;
 
-	const output = await resize(input, width);
+	const asOriginal = (): Image => ({
+		body: new Uint8Array(input),
+		contentType: original.mimeType,
+	});
+
+	let output: Uint8Array<ArrayBuffer> | null;
+	try {
+		output = await resize(input, width);
+	} catch (error) {
+		// メモリ不足などの一時的な失敗かもしれないため、unresizableFileIds には入れずに次回再変換させる
+		Sentry.captureException(error);
+		logUnexpectedApiError("image-resize", error, { fileId, width });
+		return asOriginal();
+	}
 	if (!output) {
 		unresizableFileIds.add(fileId);
-		return { body: new Uint8Array(input), contentType: original.mimeType };
+		return asOriginal();
 	}
 
 	const key = resizedKey(fileId, width);
