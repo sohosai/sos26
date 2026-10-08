@@ -39,6 +39,10 @@ function isZoomable(ext: string) {
 	return ext === "pdf";
 }
 
+function isAudioExt(ext: string) {
+	return ["wav"].includes(ext);
+}
+
 function StreamViewer({
 	streamingUrl,
 	fileName,
@@ -54,6 +58,16 @@ function StreamViewer({
 				src={streamingUrl}
 				controls
 				className={styles.video}
+				preload="metadata"
+			/>
+		);
+	if (isAudioExt(ext))
+		return (
+			// biome-ignore lint/a11y/useMediaCaption: ユーザーアップロード音声のプレビュー
+			<audio
+				src={streamingUrl}
+				controls
+				className={styles.audio}
 				preload="metadata"
 			/>
 		);
@@ -89,6 +103,9 @@ function StreamableBlobViewer({ file }: { file: File }) {
 	const ext = getExt(file.name);
 	if (ext === "mp4") {
 		return <VideoFilePlayer file={file} />;
+	}
+	if (isAudioExt(ext)) {
+		return <AudioFilePlayer file={file} />;
 	}
 
 	// 画像は URL.createObjectURL を使う（img は srcObject 非対応）
@@ -136,6 +153,37 @@ function VideoFilePlayer({ file }: { file: File }) {
 			ref={videoRef}
 			controls
 			className={styles.video}
+			preload="metadata"
+		/>
+	);
+}
+
+function AudioFilePlayer({ file }: { file: File }) {
+	const audioRef = useRef<HTMLAudioElement>(null);
+	const urlRef = useRef<string>("");
+
+	useEffect(() => {
+		const el = audioRef.current;
+		if (!el) return;
+		const url = URL.createObjectURL(file);
+		urlRef.current = url;
+		el.src = url;
+		return () => {
+			el.pause();
+			el.src = "";
+			if (urlRef.current) {
+				URL.revokeObjectURL(urlRef.current);
+				urlRef.current = "";
+			}
+		};
+	}, [file]);
+
+	return (
+		// biome-ignore lint/a11y/useMediaCaption: ユーザーアップロード音声のプレビュー
+		<audio
+			ref={audioRef}
+			controls
+			className={styles.audio}
 			preload="metadata"
 		/>
 	);

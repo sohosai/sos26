@@ -214,18 +214,9 @@ export function isAllowedImageFile(file: {
 
 /** 拡張子がブラウザストリーミング対応か判定（プレビュー用） */
 export function isStreamable(ext: string): boolean {
-	return [
-		"mp4",
-		"png",
-		"jpg",
-		"jpeg",
-		"gif",
-		"webp",
-		"svg",
-		"wav",
-		"aiff",
-		"aif",
-	].includes(ext.toLowerCase());
+	return ["mp4", "png", "jpg", "jpeg", "gif", "webp", "svg", "wav"].includes(
+		ext.toLowerCase()
+	);
 }
 
 /** 指定MIMEタイプ配列から表示用ラベルを生成（未指定時は全形式） */
