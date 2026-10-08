@@ -2,11 +2,16 @@
 import { Radio, Checkbox as RadixCheckbox, Text } from "@radix-ui/themes";
 import type {
 	AllowedMimeType,
+	DisplayAllowedMimeType,
 	FileConstraints,
 	FormItemConstraints,
 	TextConstraints,
 } from "@sos26/shared";
-import { allowedMimeTypes, mimeTypeLabels } from "@sos26/shared";
+import {
+	allowedMimeTypesForDisplay,
+	mimeTypeAliases,
+	mimeTypeLabels,
+} from "@sos26/shared";
 import {
 	IconChevronDown,
 	IconChevronUp,
@@ -218,14 +223,16 @@ function FileConstraintEditor({
 	const selectedMimeTypes = new Set(fileConstraints?.allowedMimeTypes ?? []);
 
 	const handleMimeTypeToggle = (
-		mimeType: AllowedMimeType,
+		mimeType: DisplayAllowedMimeType,
 		checked: boolean
 	) => {
 		const current = new Set(selectedMimeTypes);
-		if (checked) {
-			current.add(mimeType);
-		} else {
-			current.delete(mimeType);
+		for (const alias of mimeTypeAliases[mimeType]) {
+			if (checked) {
+				current.add(alias);
+			} else {
+				current.delete(alias);
+			}
 		}
 		update({
 			allowedMimeTypes:
@@ -281,7 +288,7 @@ function FileConstraintEditor({
 								未選択の場合はすべての形式が許可されます
 							</Text>
 							<div className={styles.constraintRow}>
-								{allowedMimeTypes.map(mimeType => (
+								{allowedMimeTypesForDisplay.map(mimeType => (
 									<Text
 										as="span"
 										size="2"
@@ -295,12 +302,16 @@ function FileConstraintEditor({
 										onClick={() =>
 											handleMimeTypeToggle(
 												mimeType,
-												!selectedMimeTypes.has(mimeType)
+												!mimeTypeAliases[mimeType].some(alias =>
+													selectedMimeTypes.has(alias)
+												)
 											)
 										}
 									>
 										<RadixCheckbox
-											checked={selectedMimeTypes.has(mimeType)}
+											checked={mimeTypeAliases[mimeType].some(alias =>
+												selectedMimeTypes.has(alias)
+											)}
 											onCheckedChange={checked =>
 												handleMimeTypeToggle(mimeType, checked === true)
 											}

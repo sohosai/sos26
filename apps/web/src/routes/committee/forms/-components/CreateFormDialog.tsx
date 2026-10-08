@@ -1,5 +1,5 @@
 import { Text } from "@radix-ui/themes";
-import { allowedMimeTypes } from "@sos26/shared";
+import { fileAcceptAttribute } from "@sos26/shared";
 import { IconPaperclip, IconX } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { FormEditDialog } from "@/components/form/Builder/EditDialog";
@@ -144,7 +144,7 @@ export function CreateFormDialog({ open, onOpenChange, onSuccess }: Props) {
 					ref={fileInputRef}
 					type="file"
 					multiple
-					accept={allowedMimeTypes.join(",")}
+					accept={fileAcceptAttribute}
 					onChange={handleFileSelect}
 					className={styles.fileInput}
 				/>

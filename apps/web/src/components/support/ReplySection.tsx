@@ -1,7 +1,7 @@
 import { Heading, Text } from "@radix-ui/themes";
 import {
 	type AllowedMimeType,
-	allowedFileExtensions,
+	allowedFileTypesLabel,
 	allowedMimeTypes,
 	fileAcceptAttribute,
 	resolveFileMimeType,
@@ -195,7 +195,7 @@ export function ReplySection({
 			);
 			if (invalid.length > 0) {
 				setReplyFileError(
-					`対応していないファイル形式です（${allowedFileExtensions}）`
+					`対応していないファイル形式です（${allowedFileTypesLabel}）`
 				);
 			} else {
 				setReplyFileError(null);
