@@ -39,7 +39,7 @@ function isZoomable(ext: string) {
 	return ext === "pdf";
 }
 
-function isAudioExt(ext: string) {
+function isPreviewableAudioExt(ext: string) {
 	return ["wav"].includes(ext);
 }
 
@@ -61,7 +61,7 @@ function StreamViewer({
 				preload="metadata"
 			/>
 		);
-	if (isAudioExt(ext))
+	if (isPreviewableAudioExt(ext))
 		return (
 			// biome-ignore lint/a11y/useMediaCaption: ユーザーアップロード音声のプレビュー
 			<audio
@@ -104,7 +104,7 @@ function StreamableBlobViewer({ file }: { file: File }) {
 	if (ext === "mp4") {
 		return <VideoFilePlayer file={file} />;
 	}
-	if (isAudioExt(ext)) {
+	if (isPreviewableAudioExt(ext)) {
 		return <AudioFilePlayer file={file} />;
 	}
 
