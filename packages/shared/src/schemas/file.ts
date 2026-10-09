@@ -84,7 +84,7 @@ export const allowedMimeTypes = [
 export const mimeTypeSchema = z.enum(allowedMimeTypes);
 export type AllowedMimeType = z.infer<typeof mimeTypeSchema>;
 
-/** 画像として扱える MIME タイプ（用途上の分類） */
+/** 画像として扱える MIME タイプ */
 export const allowedImageMimeTypes = [
 	"image/jpeg",
 	"image/png",
