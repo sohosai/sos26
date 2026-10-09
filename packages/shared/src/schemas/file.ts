@@ -126,13 +126,12 @@ export function isAllowedImageFile(file: {
 export function buildFileAcceptAttribute(
 	mimeTypes?: readonly AllowedMimeType[]
 ): string {
-	if (!mimeTypes || mimeTypes.length === 0) {
-		mimeTypes = allowedMimeTypes;
-	}
+	const targetMimeTypes =
+		mimeTypes && mimeTypes.length > 0 ? mimeTypes : allowedMimeTypes;
 
 	const canonicalMimeTypes = [
 		...new Set(
-			mimeTypes.map(mime => {
+			targetMimeTypes.map(mime => {
 				const entry = fileTypeRegistry.find(entry =>
 					entry.mimeTypes.some(type => type === mime)
 				);
