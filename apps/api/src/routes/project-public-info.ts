@@ -7,7 +7,7 @@ import type {
 } from "@sos26/shared";
 import {
 	DEFAULT_MAP_APP_SETTING,
-	fileTypeRegistry,
+	isImageMimeType,
 	projectSnsLinkKeys,
 	updateProjectPublicInfoEndpoint,
 } from "@sos26/shared";
@@ -102,12 +102,7 @@ async function assertFilesUsable(
 		);
 	}
 
-	const imageMimeTypes = new Set<string>(
-		fileTypeRegistry
-			.filter(entry => entry.mimeTypes[0].startsWith("image/"))
-			.map(entry => entry.mimeTypes[0])
-	);
-	if (files.some(f => !imageMimeTypes.has(f.mimeType))) {
+	if (files.some(f => !isImageMimeType(f.mimeType))) {
 		throw Errors.invalidRequest("画像ファイルのみ設定できます");
 	}
 

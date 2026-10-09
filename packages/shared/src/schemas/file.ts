@@ -109,16 +109,17 @@ export function isAllowedFileType(file: {
 	return allowedMimeTypes.includes(effectiveType as AllowedMimeType);
 }
 
+/** MIME タイプが画像か判定 */
+export function isImageMimeType(mimeType: string): boolean {
+	return mimeType.startsWith("image/");
+}
+
 /** ファイルが画像として扱える MIME タイプか判定 */
 export function isAllowedImageFile(file: {
 	name: string;
 	type: string;
 }): boolean {
-	const effectiveType = resolveFileMimeType(file);
-	const entry = fileTypeRegistry.find(entry =>
-		entry.mimeTypes.some(type => type === effectiveType)
-	);
-	return entry?.mimeTypes[0].startsWith("image/") ?? false;
+	return isImageMimeType(resolveFileMimeType(file));
 }
 
 /** 指定MIMEタイプ配列から accept 属性文字列を生成（未指定時は全許可） */

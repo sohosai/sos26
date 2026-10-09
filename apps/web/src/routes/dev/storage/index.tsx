@@ -1,5 +1,5 @@
 import type { FileInfo } from "@sos26/shared";
-import { buildFileAcceptAttribute } from "@sos26/shared";
+import { buildFileAcceptAttribute, isImageMimeType } from "@sos26/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -235,7 +235,7 @@ function AccessVerificationSection() {
 					{result.type === "success" && result.url ? (
 						<div>
 							<p style={{ color: "#2e7d32", marginBottom: 8 }}>アクセス成功</p>
-							{result.mimeType?.startsWith("image/") ? (
+							{result.mimeType && isImageMimeType(result.mimeType) ? (
 								<img
 									src={result.url}
 									alt="プレビュー"
@@ -266,7 +266,7 @@ function FileRow({
 	onDelete: (fileId: string) => void;
 }) {
 	const url = useStorageUrl(file.id, file.isPublic);
-	const isImage = file.mimeType.startsWith("image/");
+	const isImage = isImageMimeType(file.mimeType);
 
 	return (
 		<tr>

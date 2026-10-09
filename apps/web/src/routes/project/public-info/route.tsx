@@ -28,6 +28,7 @@ import {
 	buildFileAcceptAttribute,
 	fileTypeRegistry,
 	isAllowedImageFile,
+	isImageMimeType,
 	PROJECT_DESCRIPTION_MAX_LENGTH,
 	PROJECT_MAP_IMAGES_MAX_COUNT,
 	PROJECT_SNS_LINKS_MAX_COUNT,
@@ -69,7 +70,7 @@ const MAX_MAP_IMAGES = PROJECT_MAP_IMAGES_MAX_COUNT;
 const DESCRIPTION_MAX_LENGTH = PROJECT_DESCRIPTION_MAX_LENGTH;
 
 const imageFileEntries = fileTypeRegistry.filter(entry =>
-	entry.mimeTypes[0].startsWith("image/")
+	isImageMimeType(entry.mimeTypes[0])
 );
 const allowedImageExtensions = imageFileEntries
 	.map(entry => entry.label)
