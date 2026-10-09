@@ -7,90 +7,84 @@ export const fileStatusSchema = z.enum(["PENDING", "CONFIRMED"]);
 export type FileStatus = z.infer<typeof fileStatusSchema>;
 
 /**
+ * ファイル形式の一元定義
+ *
+ * mimeTypes[0] を canonical MIME タイプとし、残りをエイリアスとして扱う。
+ * 新しいファイル形式を追加する際は、この配列に追加する。
+ */
+export const fileTypeRegistry = [
+	{
+		mimeTypes: ["image/jpeg"] as const,
+		extensions: [".jpg", ".jpeg"] as const,
+		label: "JPEG (JPG)",
+	},
+	{
+		mimeTypes: ["image/png"] as const,
+		extensions: [".png"] as const,
+		label: "PNG",
+	},
+	{
+		mimeTypes: ["image/gif"] as const,
+		extensions: [".gif"] as const,
+		label: "GIF",
+	},
+	{
+		mimeTypes: ["image/webp"] as const,
+		extensions: [".webp"] as const,
+		label: "WebP",
+	},
+	{
+		mimeTypes: ["application/pdf"] as const,
+		extensions: [".pdf"] as const,
+		label: "PDF",
+	},
+	{
+		mimeTypes: [
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		] as const,
+		extensions: [".docx"] as const,
+		label: "DOCX",
+	},
+	{
+		mimeTypes: [
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		] as const,
+		extensions: [".xlsx"] as const,
+		label: "XLSX",
+	},
+	{
+		mimeTypes: ["video/mp4"] as const,
+		extensions: [".mp4"] as const,
+		label: "MP4",
+	},
+	{
+		mimeTypes: ["video/quicktime"] as const,
+		extensions: [".mov"] as const,
+		label: "MOV",
+	},
+	{
+		mimeTypes: ["audio/wav", "audio/x-wav"] as const,
+		extensions: [".wav"] as const,
+		label: "WAV",
+	},
+	{
+		mimeTypes: ["audio/aiff", "audio/x-aiff"] as const,
+		extensions: [".aiff", ".aif"] as const,
+		label: "AIFF (AIF)",
+	},
+] as const;
+
+export type FileTypeRegistryEntry = (typeof fileTypeRegistry)[number];
+
+/**
  * 許可されたMIMEタイプ
  */
 export const allowedMimeTypes = [
-	// 画像
-	"image/jpeg",
-	"image/png",
-	"image/gif",
-	"image/webp",
-	// 文書
-	"application/pdf",
-	"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-	// 動画
-	"video/mp4",
-	"video/quicktime",
+	...fileTypeRegistry.flatMap(f => f.mimeTypes),
 ] as const;
 
 export const mimeTypeSchema = z.enum(allowedMimeTypes);
 export type AllowedMimeType = z.infer<typeof mimeTypeSchema>;
-
-/** 画像として扱える MIME タイプ */
-export const allowedImageMimeTypes = [
-	"image/jpeg",
-	"image/png",
-	"image/gif",
-	"image/webp",
-] as const satisfies readonly AllowedMimeType[];
-
-/** 画像用 input accept 属性の文字列 */
-export const imageAcceptAttribute = allowedImageMimeTypes.join(",");
-
-/** 人間が読める画像形式一覧 */
-export const allowedImageExtensions = "JPEG, PNG, GIF, WebP";
-
-/** MIMEタイプ → 表示名のマップ */
-export const mimeTypeLabels: Record<AllowedMimeType, string> = {
-	"image/jpeg": "JPEG",
-	"image/png": "PNG",
-	"image/gif": "GIF",
-	"image/webp": "WebP",
-	"application/pdf": "PDF",
-	"application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-		"DOCX",
-	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "XLSX",
-	"video/mp4": "MP4",
-	"video/quicktime": "MOV",
-};
-
-/** HTML input accept 属性用の文字列 */
-export const fileAcceptAttribute = allowedMimeTypes.join(",");
-
-/** 人間が読めるファイル形式一覧 */
-export const allowedFileExtensions =
-	"JPEG, PNG, GIF, WebP, PDF, DOCX, XLSX, MP4, MOV";
-
-/** 拡張子から許可された MIME タイプを推定するフォールバック */
-export function inferMimeTypeFromFileName(
-	fileName: string
-): AllowedMimeType | null {
-	const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
-	switch (ext) {
-		case "jpg":
-		case "jpeg":
-			return "image/jpeg";
-		case "png":
-			return "image/png";
-		case "gif":
-			return "image/gif";
-		case "webp":
-			return "image/webp";
-		case "pdf":
-			return "application/pdf";
-		case "docx":
-			return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-		case "xlsx":
-			return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-		case "mp4":
-			return "video/mp4";
-		case "mov":
-			return "video/quicktime";
-		default:
-			return null;
-	}
-}
 
 /** ファイルの実効 MIME タイプを取得（ブラウザ type 空文字時は拡張子でフォールバック） */
 export function resolveFileMimeType(file: {
@@ -98,7 +92,12 @@ export function resolveFileMimeType(file: {
 	type: string;
 }): string {
 	if (file.type && file.type !== "") return file.type;
-	return inferMimeTypeFromFileName(file.name) ?? file.type;
+
+	const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+	const entry = fileTypeRegistry.find(entry =>
+		entry.extensions.some(e => e.slice(1) === ext)
+	);
+	return (entry?.mimeTypes[0] as AllowedMimeType) ?? file.type;
 }
 
 /** ファイルが許可された MIME タイプか判定 */
@@ -110,38 +109,75 @@ export function isAllowedFileType(file: {
 	return allowedMimeTypes.includes(effectiveType as AllowedMimeType);
 }
 
+/** MIME タイプが画像か判定 */
+export function isImageMimeType(mimeType: string): boolean {
+	return mimeType.startsWith("image/");
+}
+
 /** ファイルが画像として扱える MIME タイプか判定 */
 export function isAllowedImageFile(file: {
 	name: string;
 	type: string;
 }): boolean {
-	const effectiveType = resolveFileMimeType(file);
-	return allowedImageMimeTypes.includes(
-		effectiveType as (typeof allowedImageMimeTypes)[number]
-	);
-}
-
-/** 拡張子がブラウザストリーミング対応か判定（プレビュー用） */
-export function isStreamable(ext: string): boolean {
-	return ["mp4", "png", "jpg", "jpeg", "gif", "webp", "svg"].includes(
-		ext.toLowerCase()
-	);
+	return isImageMimeType(resolveFileMimeType(file));
 }
 
 /** 指定MIMEタイプ配列から accept 属性文字列を生成（未指定時は全許可） */
 export function buildFileAcceptAttribute(
-	mimeTypes?: AllowedMimeType[]
+	mimeTypes?: readonly AllowedMimeType[]
 ): string {
-	if (!mimeTypes || mimeTypes.length === 0) return fileAcceptAttribute;
-	return mimeTypes.join(",");
+	const targetMimeTypes =
+		mimeTypes && mimeTypes.length > 0 ? mimeTypes : allowedMimeTypes;
+
+	const canonicalMimeTypes = [
+		...new Set(
+			targetMimeTypes.map(mime => {
+				const entry = fileTypeRegistry.find(entry =>
+					entry.mimeTypes.some(type => type === mime)
+				);
+				return (entry?.mimeTypes[0] ?? mime) as AllowedMimeType;
+			})
+		),
+	];
+
+	return canonicalMimeTypes
+		.flatMap(mime => {
+			const entry = fileTypeRegistry.find(entry => entry.mimeTypes[0] === mime);
+			return entry ? [mime, ...entry.extensions] : [mime];
+		})
+		.join(",");
 }
 
 /** 指定MIMEタイプ配列から表示用ラベルを生成（未指定時は全形式） */
-export function buildFileExtensionsLabel(
-	mimeTypes?: AllowedMimeType[]
-): string {
-	if (!mimeTypes || mimeTypes.length === 0) return allowedFileExtensions;
-	return mimeTypes.map(m => mimeTypeLabels[m]).join(", ");
+export function buildFileTypesLabel(mimeTypes?: AllowedMimeType[]): string {
+	if (!mimeTypes || mimeTypes.length === 0) {
+		return fileTypeRegistry.map(f => f.label).join(", ");
+	}
+
+	const canonicalMimeTypes = [
+		...new Set(
+			mimeTypes.map(mime => {
+				const entry = fileTypeRegistry.find(entry =>
+					entry.mimeTypes.some(type => type === mime)
+				);
+				return (entry?.mimeTypes[0] ?? mime) as AllowedMimeType;
+			})
+		),
+	];
+
+	return canonicalMimeTypes
+		.map(mime => {
+			const entry = fileTypeRegistry.find(entry => entry.mimeTypes[0] === mime);
+			return entry?.label ?? mime;
+		})
+		.join(", ");
+}
+
+/** 拡張子がブラウザストリーミング対応か判定（プレビュー用） */
+export function isStreamable(ext: string): boolean {
+	return ["mp4", "png", "jpg", "jpeg", "gif", "webp", "svg", "wav"].includes(
+		ext.toLowerCase()
+	);
 }
 
 /**

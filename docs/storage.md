@@ -379,6 +379,10 @@ const url = await getAuthenticatedFileUrl(fileId);
 
 | 動画 | `video/mp4` | mp4 |
 | 動画 | `video/quicktime` | mov |
+| 音声 | `audio/wav` | wav |
+| 音声 | `audio/x-wav` | wav |
+| 音声 | `audio/aiff` | aiff, aif |
+| 音声 | `audio/x-aiff` | aiff, aif |
 
 ファイルサイズ上限: `S3_MAX_FILE_SIZE`（デフォルト 1GB）
 

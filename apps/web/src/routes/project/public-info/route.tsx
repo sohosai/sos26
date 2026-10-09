@@ -25,9 +25,10 @@ import type {
 	UpdateProjectPublicInfoRequest,
 } from "@sos26/shared";
 import {
-	allowedImageExtensions,
-	imageAcceptAttribute,
+	buildFileAcceptAttribute,
+	fileTypeRegistry,
 	isAllowedImageFile,
+	isImageMimeType,
 	PROJECT_DESCRIPTION_MAX_LENGTH,
 	PROJECT_MAP_IMAGES_MAX_COUNT,
 	PROJECT_SNS_LINKS_MAX_COUNT,
@@ -67,6 +68,16 @@ import { SortableMapImageItem } from "./SortableMapImageItem";
 // 上限は shared のスキーマと共通（サーバー側の検証と必ず一致させる）
 const MAX_MAP_IMAGES = PROJECT_MAP_IMAGES_MAX_COUNT;
 const DESCRIPTION_MAX_LENGTH = PROJECT_DESCRIPTION_MAX_LENGTH;
+
+const imageFileEntries = fileTypeRegistry.filter(entry =>
+	isImageMimeType(entry.mimeTypes[0])
+);
+const allowedImageExtensions = imageFileEntries
+	.map(entry => entry.label)
+	.join(", ");
+const imageAcceptAttribute = buildFileAcceptAttribute(
+	imageFileEntries.map(entry => entry.mimeTypes[0])
+);
 
 const projectRoute = getRouteApi("/project");
 

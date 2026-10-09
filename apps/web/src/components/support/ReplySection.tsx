@@ -1,9 +1,9 @@
 import { Heading, Text } from "@radix-ui/themes";
 import {
 	type AllowedMimeType,
-	allowedFileExtensions,
 	allowedMimeTypes,
-	fileAcceptAttribute,
+	buildFileAcceptAttribute,
+	buildFileTypesLabel,
 	resolveFileMimeType,
 } from "@sos26/shared";
 import { IconPaperclip, IconX } from "@tabler/icons-react";
@@ -85,7 +85,7 @@ function ReplyFilePicker({
 				ref={inputRef}
 				type="file"
 				multiple
-				accept={fileAcceptAttribute}
+				accept={buildFileAcceptAttribute()}
 				className={styles.fileInput}
 				onChange={onChange}
 			/>
@@ -195,7 +195,7 @@ export function ReplySection({
 			);
 			if (invalid.length > 0) {
 				setReplyFileError(
-					`対応していないファイル形式です（${allowedFileExtensions}）`
+					`対応していないファイル形式です（${buildFileTypesLabel()}）`
 				);
 			} else {
 				setReplyFileError(null);
