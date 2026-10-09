@@ -86,24 +86,18 @@ export const allowedMimeTypes = [
 export const mimeTypeSchema = z.enum(allowedMimeTypes);
 export type AllowedMimeType = z.infer<typeof mimeTypeSchema>;
 
-/** 拡張子から許可された MIME タイプを推定するフォールバック */
-export function inferMimeTypeFromFileName(
-	fileName: string
-): AllowedMimeType | null {
-	const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
-	const entry = fileTypeRegistry.find(entry =>
-		entry.extensions.some(e => e.slice(1) === ext)
-	);
-	return (entry?.mimeTypes[0] as AllowedMimeType) ?? null;
-}
-
 /** ファイルの実効 MIME タイプを取得（ブラウザ type 空文字時は拡張子でフォールバック） */
 export function resolveFileMimeType(file: {
 	name: string;
 	type: string;
 }): string {
 	if (file.type && file.type !== "") return file.type;
-	return inferMimeTypeFromFileName(file.name) ?? file.type;
+
+	const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+	const entry = fileTypeRegistry.find(entry =>
+		entry.extensions.some(e => e.slice(1) === ext)
+	);
+	return (entry?.mimeTypes[0] as AllowedMimeType) ?? file.type;
 }
 
 /** ファイルが許可された MIME タイプか判定 */
