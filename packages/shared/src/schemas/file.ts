@@ -12,7 +12,7 @@ export type FileStatus = z.infer<typeof fileStatusSchema>;
  * mimeTypes[0] を canonical MIME タイプとし、残りをエイリアスとして扱う。
  * 新しいファイル形式を追加する際は、この配列に追加する。
  */
-const fileTypeRegistry = [
+export const fileTypeRegistry = [
 	{
 		mimeTypes: ["image/jpeg"] as const,
 		extensions: [".jpg", ".jpeg"] as const,
@@ -74,6 +74,8 @@ const fileTypeRegistry = [
 	},
 ] as const;
 
+export type FileTypeRegistryEntry = (typeof fileTypeRegistry)[number];
+
 /**
  * 許可されたMIMEタイプ
  */
@@ -84,103 +86,15 @@ export const allowedMimeTypes = [
 export const mimeTypeSchema = z.enum(allowedMimeTypes);
 export type AllowedMimeType = z.infer<typeof mimeTypeSchema>;
 
-/** 画像として扱える MIME タイプ */
-export const allowedImageMimeTypes = [
-	"image/jpeg",
-	"image/png",
-	"image/gif",
-	"image/webp",
-] as const satisfies readonly AllowedMimeType[];
-
-/** MIMEタイプ → 表示名のマップ */
-export const mimeTypeLabels: Record<AllowedMimeType, string> =
-	Object.fromEntries(
-		fileTypeRegistry.flatMap(f => f.mimeTypes.map(mime => [mime, f.label]))
-	) as Record<AllowedMimeType, string>;
-
-/** 人間が読める画像形式一覧 */
-export const allowedImageExtensions = allowedImageMimeTypes
-	.map(mime => mimeTypeLabels[mime])
-	.join(", ");
-
-/** MIMEタイプ → accept 属性用拡張子リストのマップ */
-const mimeTypeToAcceptExtensions: Record<AllowedMimeType, string[]> =
-	Object.fromEntries(
-		fileTypeRegistry.flatMap(f =>
-			f.mimeTypes.map(mime => [mime, [...f.extensions]])
-		)
-	) as Record<AllowedMimeType, string[]>;
-
-/**
- * accept 属性用の正規 MIME タイプへのマップ
- * （x- プレフィックスのエイリアスを標準 MIME タイプに統一し、選択欄の重複を防ぐ）
- */
-const mimeTypeToCanonicalMimeType: Record<AllowedMimeType, AllowedMimeType> =
-	Object.fromEntries(
-		fileTypeRegistry.flatMap(f =>
-			f.mimeTypes.map(mime => [mime, f.mimeTypes[0]])
-		)
-	) as Record<AllowedMimeType, AllowedMimeType>;
-
-/** 表示・選択用の正規化済み MIME タイプリスト（エイリアスを統一） */
-export const allowedMimeTypesForDisplay = fileTypeRegistry.map(
-	f => f.mimeTypes[0]
-) satisfies readonly AllowedMimeType[];
-
-export type DisplayAllowedMimeType =
-	(typeof allowedMimeTypesForDisplay)[number];
-
-/** 正規化 MIME タイプ → 対応するエイリアスを含む MIME タイプリスト */
-export const mimeTypeAliases: Record<
-	DisplayAllowedMimeType,
-	AllowedMimeType[]
-> = Object.fromEntries(
-	fileTypeRegistry.map(f => [f.mimeTypes[0], [...f.mimeTypes]])
-) as Record<DisplayAllowedMimeType, AllowedMimeType[]>;
-
-/** 指定MIMEタイプ配列から accept 属性文字列を生成（未指定時は全許可） */
-export function buildFileAcceptAttribute(
-	mimeTypes?: readonly AllowedMimeType[]
-): string {
-	if (!mimeTypes || mimeTypes.length === 0) {
-		mimeTypes = allowedMimeTypes;
-	}
-
-	const canonicalMimeTypes = [
-		...new Set(mimeTypes.map(mime => mimeTypeToCanonicalMimeType[mime])),
-	];
-
-	return canonicalMimeTypes
-		.flatMap(mime => [mime, ...mimeTypeToAcceptExtensions[mime]])
-		.join(",");
-}
-
-/** 画像用 input accept 属性の文字列 */
-export const imageAcceptAttribute = buildFileAcceptAttribute(
-	allowedImageMimeTypes
-);
-
-/** HTML input accept 属性用の文字列 */
-export const fileAcceptAttribute = buildFileAcceptAttribute(allowedMimeTypes);
-
-/** 人間が読めるファイル形式一覧 */
-export const allowedFileTypesLabel = fileTypeRegistry
-	.map(f => f.label)
-	.join(", ");
-
-/** 拡張子 → canonical MIME タイプのマップ */
-const extensionToMimeType: Record<string, AllowedMimeType> = Object.fromEntries(
-	fileTypeRegistry.flatMap(f =>
-		f.extensions.map(ext => [ext.slice(1), f.mimeTypes[0]])
-	)
-) as Record<string, AllowedMimeType>;
-
 /** 拡張子から許可された MIME タイプを推定するフォールバック */
 export function inferMimeTypeFromFileName(
 	fileName: string
 ): AllowedMimeType | null {
 	const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
-	return extensionToMimeType[ext] ?? null;
+	const entry = fileTypeRegistry.find(entry =>
+		entry.extensions.some(e => e.slice(1) === ext)
+	);
+	return (entry?.mimeTypes[0] as AllowedMimeType) ?? null;
 }
 
 /** ファイルの実効 MIME タイプを取得（ブラウザ type 空文字時は拡張子でフォールバック） */
@@ -207,9 +121,62 @@ export function isAllowedImageFile(file: {
 	type: string;
 }): boolean {
 	const effectiveType = resolveFileMimeType(file);
-	return allowedImageMimeTypes.includes(
-		effectiveType as (typeof allowedImageMimeTypes)[number]
+	const entry = fileTypeRegistry.find(entry =>
+		entry.mimeTypes.some(type => type === effectiveType)
 	);
+	return entry?.mimeTypes[0].startsWith("image/") ?? false;
+}
+
+/** 指定MIMEタイプ配列から accept 属性文字列を生成（未指定時は全許可） */
+export function buildFileAcceptAttribute(
+	mimeTypes?: readonly AllowedMimeType[]
+): string {
+	if (!mimeTypes || mimeTypes.length === 0) {
+		mimeTypes = allowedMimeTypes;
+	}
+
+	const canonicalMimeTypes = [
+		...new Set(
+			mimeTypes.map(mime => {
+				const entry = fileTypeRegistry.find(entry =>
+					entry.mimeTypes.some(type => type === mime)
+				);
+				return (entry?.mimeTypes[0] ?? mime) as AllowedMimeType;
+			})
+		),
+	];
+
+	return canonicalMimeTypes
+		.flatMap(mime => {
+			const entry = fileTypeRegistry.find(entry => entry.mimeTypes[0] === mime);
+			return entry ? [mime, ...entry.extensions] : [mime];
+		})
+		.join(",");
+}
+
+/** 指定MIMEタイプ配列から表示用ラベルを生成（未指定時は全形式） */
+export function buildFileTypesLabel(mimeTypes?: AllowedMimeType[]): string {
+	if (!mimeTypes || mimeTypes.length === 0) {
+		return fileTypeRegistry.map(f => f.label).join(", ");
+	}
+
+	const canonicalMimeTypes = [
+		...new Set(
+			mimeTypes.map(mime => {
+				const entry = fileTypeRegistry.find(entry =>
+					entry.mimeTypes.some(type => type === mime)
+				);
+				return (entry?.mimeTypes[0] ?? mime) as AllowedMimeType;
+			})
+		),
+	];
+
+	return canonicalMimeTypes
+		.map(mime => {
+			const entry = fileTypeRegistry.find(entry => entry.mimeTypes[0] === mime);
+			return entry?.label ?? mime;
+		})
+		.join(", ");
 }
 
 /** 拡張子がブラウザストリーミング対応か判定（プレビュー用） */
@@ -217,15 +184,6 @@ export function isStreamable(ext: string): boolean {
 	return ["mp4", "png", "jpg", "jpeg", "gif", "webp", "svg", "wav"].includes(
 		ext.toLowerCase()
 	);
-}
-
-/** 指定MIMEタイプ配列から表示用ラベルを生成（未指定時は全形式） */
-export function buildFileTypesLabel(mimeTypes?: AllowedMimeType[]): string {
-	if (!mimeTypes || mimeTypes.length === 0) return allowedFileTypesLabel;
-	const canonicalMimeTypes = [
-		...new Set(mimeTypes.map(mime => mimeTypeToCanonicalMimeType[mime])),
-	];
-	return canonicalMimeTypes.map(m => mimeTypeLabels[m]).join(", ");
 }
 
 /**

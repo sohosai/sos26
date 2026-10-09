@@ -2,16 +2,11 @@
 import { Radio, Checkbox as RadixCheckbox, Text } from "@radix-ui/themes";
 import type {
 	AllowedMimeType,
-	DisplayAllowedMimeType,
 	FileConstraints,
 	FormItemConstraints,
 	TextConstraints,
 } from "@sos26/shared";
-import {
-	allowedMimeTypesForDisplay,
-	mimeTypeAliases,
-	mimeTypeLabels,
-} from "@sos26/shared";
+import { fileTypeRegistry } from "@sos26/shared";
 import {
 	IconChevronDown,
 	IconChevronUp,
@@ -223,11 +218,14 @@ function FileConstraintEditor({
 	const selectedMimeTypes = new Set(fileConstraints?.allowedMimeTypes ?? []);
 
 	const handleMimeTypeToggle = (
-		mimeType: DisplayAllowedMimeType,
+		mimeType: AllowedMimeType,
 		checked: boolean
 	) => {
 		const current = new Set(selectedMimeTypes);
-		for (const alias of mimeTypeAliases[mimeType]) {
+		const aliases = fileTypeRegistry.find(
+			entry => entry.mimeTypes[0] === mimeType
+		)?.mimeTypes ?? [mimeType];
+		for (const alias of aliases as AllowedMimeType[]) {
 			if (checked) {
 				current.add(alias);
 			} else {
@@ -288,37 +286,35 @@ function FileConstraintEditor({
 								未選択の場合はすべての形式が許可されます
 							</Text>
 							<div className={styles.constraintRow}>
-								{allowedMimeTypesForDisplay.map(mimeType => (
-									<Text
-										as="span"
-										size="2"
-										key={mimeType}
-										style={{
-											display: "inline-flex",
-											alignItems: "center",
-											gap: "4px",
-											cursor: "pointer",
-										}}
-										onClick={() =>
-											handleMimeTypeToggle(
-												mimeType,
-												!mimeTypeAliases[mimeType].some(alias =>
-													selectedMimeTypes.has(alias)
-												)
-											)
-										}
-									>
-										<RadixCheckbox
-											checked={mimeTypeAliases[mimeType].some(alias =>
-												selectedMimeTypes.has(alias)
-											)}
-											onCheckedChange={checked =>
-												handleMimeTypeToggle(mimeType, checked === true)
-											}
-										/>
-										{mimeTypeLabels[mimeType]}
-									</Text>
-								))}
+								{fileTypeRegistry.map(entry => {
+									const mimeType = entry.mimeTypes[0];
+									const aliases = [...entry.mimeTypes] as AllowedMimeType[];
+									const isChecked = aliases.some(alias =>
+										selectedMimeTypes.has(alias)
+									);
+									return (
+										<Text
+											as="span"
+											size="2"
+											key={mimeType}
+											style={{
+												display: "inline-flex",
+												alignItems: "center",
+												gap: "4px",
+												cursor: "pointer",
+											}}
+											onClick={() => handleMimeTypeToggle(mimeType, !isChecked)}
+										>
+											<RadixCheckbox
+												checked={isChecked}
+												onCheckedChange={checked =>
+													handleMimeTypeToggle(mimeType, checked === true)
+												}
+											/>
+											{entry.label}
+										</Text>
+									);
+								})}
 							</div>
 						</div>
 					</div>

@@ -7,8 +7,8 @@ import type {
 } from "@sos26/shared";
 import {
 	abortMultipartUploadEndpoint,
-	allowedFileTypesLabel,
 	allowedMimeTypes,
+	buildFileTypesLabel,
 	completeMultipartUploadEndpoint,
 	confirmUploadEndpoint,
 	deleteFileEndpoint,
@@ -453,7 +453,7 @@ export async function uploadFile(
 	const fileMimeType = resolveFileMimeType(file);
 	if (!allowedMimeTypes.includes(fileMimeType as AllowedMimeType)) {
 		throw new Error(
-			`対応していないファイル形式です。アップロードできるファイル形式: ${allowedFileTypesLabel}`
+			`対応していないファイル形式です。アップロードできるファイル形式: ${buildFileTypesLabel()}`
 		);
 	}
 
