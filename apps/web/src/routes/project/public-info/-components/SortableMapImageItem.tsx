@@ -2,7 +2,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { IconGripVertical, IconTrash, IconZoomIn } from "@tabler/icons-react";
 import { getFileContentUrl } from "@/lib/api/files";
-import styles from "./route.module.scss";
+import styles from "./SortableMapImageItem.module.scss";
 
 type Props = {
 	id: string;

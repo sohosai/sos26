@@ -45,8 +45,8 @@ import {
 	getSnsLinkError,
 	imageAcceptAttribute,
 } from "@/lib/project/public-info";
-import { ImageCropperModal } from "../../../project/public-info/ImageCropperModal";
-import { ImagePreviewModal } from "../../../project/public-info/ImagePreviewModal";
+import { ImageCropperModal } from "../../../project/public-info/-components/ImageCropperModal";
+import { ImagePreviewModal } from "../../../project/public-info/-components/ImagePreviewModal";
 import styles from "./PublicInfoDetailDialog.module.scss";
 import { findModeration, SNS_FIELDS } from "./shared";
 

@@ -1,0 +1,57 @@
+.previewModalContent {
+	max-width: min(90vw, 900px) !important;
+	padding: var(--space-4) !important;
+}
+
+.previewImageWrap {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 200px;
+	margin-bottom: var(--space-4);
+}
+
+.previewImage {
+	max-width: 100%;
+	max-height: 70vh;
+	object-fit: contain;
+	border-radius: var(--radius-3);
+	animation: previewFadeIn 0.2s ease;
+}
+
+@keyframes previewFadeIn {
+	from { opacity: 0; transform: scale(0.97); }
+	to   { opacity: 1; transform: scale(1); }
+}
+
+.previewCloseBtn {
+	position: absolute;
+	top: var(--space-3);
+	right: var(--space-3);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: var(--radius-round);
+	background: var(--gray-4);
+	border: none;
+	cursor: pointer;
+	color: var(--gray-11);
+	transition: background 0.15s;
+	z-index: 1;
+}
+
+.previewCloseBtn:hover {
+	background: var(--gray-6);
+}
+
+.previewNav {
+	width: 100%;
+}
+
+.previewCounter {
+	font-size: var(--font-size-2);
+	color: var(--gray-11);
+	font-variant-numeric: tabular-nums;
+}

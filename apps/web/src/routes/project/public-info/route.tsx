@@ -63,10 +63,10 @@ import {
 	imageAcceptAttribute,
 } from "@/lib/project/public-info";
 import { useProjectStore } from "@/lib/project/store";
-import { ImageCropperModal } from "./ImageCropperModal";
-import { ImagePreviewModal } from "./ImagePreviewModal";
+import { ImageCropperModal } from "./-components/ImageCropperModal";
+import { ImagePreviewModal } from "./-components/ImagePreviewModal";
+import { SortableMapImageItem } from "./-components/SortableMapImageItem";
 import styles from "./route.module.scss";
-import { SortableMapImageItem } from "./SortableMapImageItem";
 
 // 上限は shared のスキーマと共通（サーバー側の検証と必ず一致させる）
 const MAX_MAP_IMAGES = PROJECT_MAP_IMAGES_MAX_COUNT;

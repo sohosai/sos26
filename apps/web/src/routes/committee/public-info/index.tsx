@@ -14,7 +14,7 @@ import { getFileContentUrl } from "@/lib/api/files";
 import { listCommitteeProjectPublicInfos } from "@/lib/api/project-public-info";
 import { useAuthStore } from "@/lib/auth";
 import { formatProjectNumber } from "@/lib/format";
-import { ImagePreviewModal } from "../../project/public-info/ImagePreviewModal";
+import { ImagePreviewModal } from "../../project/public-info/-components/ImagePreviewModal";
 import { PublicInfoDetailDialog } from "./-components/PublicInfoDetailDialog";
 import {
 	CorrectedMark,
