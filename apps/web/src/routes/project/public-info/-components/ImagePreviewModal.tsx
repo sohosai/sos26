@@ -3,7 +3,7 @@ import { IconChevronLeft, IconChevronRight, IconX } from "@tabler/icons-react";
 import { useEffect } from "react";
 import { Button } from "@/components/primitives";
 import { getFileContentUrl } from "@/lib/api/files";
-import styles from "./route.module.scss";
+import styles from "./ImagePreviewModal.module.scss";
 
 type Props = {
 	isOpen: boolean;

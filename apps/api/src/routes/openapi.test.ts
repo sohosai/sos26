@@ -58,7 +58,8 @@ const mockRow = {
 		xIds: ["sohosai"],
 		instagramIds: [],
 		youtubeIds: [],
-		mapImages: [{ fileId: "clfffffffffffffff02" }],
+		mapImages: [{ fileId: "clfffffffffffffff02", isHidden: false }],
+		moderations: [],
 	},
 };
 
@@ -95,7 +96,43 @@ describe("GET /openapi/projects", () => {
 		});
 	});
 
-	it("公開情報を登録していない企画は取得対象に含めない", async () => {
+	it("実委人が非表示にした項目は未入力と同じ値で返す", async () => {
+		const app = makeApp();
+		mockPrisma.project.findMany.mockResolvedValue([
+			{
+				...mockRow,
+				publicInfo: {
+					...mockRow.publicInfo,
+					mapImages: [
+						{ fileId: "clfffffffffffffff02", isHidden: true },
+						{ fileId: "clfffffffffffffff03", isHidden: false },
+					],
+					moderations: [
+						{ field: "DESCRIPTION" },
+						{ field: "ICON" },
+						{ field: "WEBSITE_URLS" },
+					],
+				},
+			},
+		] as any);
+
+		const res = await app.request("/openapi/projects");
+
+		const body = await res.json();
+		expect(body[0].publicInfo).toEqual({
+			description: null,
+			iconFileId: null,
+			mapImageFileIds: ["clfffffffffffffff03"],
+			websiteUrls: [],
+			xIds: ["sohosai"],
+			instagramIds: [],
+			youtubeIds: [],
+			openStatus: "OPEN",
+			stockStatus: "IN_STOCK",
+		});
+	});
+
+	it("落選・企画中止・企画辞退と論理削除された企画は取得対象に含めない", async () => {
 		const app = makeApp();
 		mockPrisma.project.findMany.mockResolvedValue([] as any);
 
@@ -103,13 +140,41 @@ describe("GET /openapi/projects", () => {
 
 		expect(mockPrisma.project.findMany).toHaveBeenCalledWith(
 			expect.objectContaining({
-				where: expect.objectContaining({
-					deletedAt: null,
-					deletionStatus: null,
-					publicInfo: { isNot: null },
-				}),
+				where: { deletedAt: null, deletionStatus: null },
 			})
 		);
+	});
+
+	it("企画情報が未入力の企画は、基本情報と未入力の値で返す", async () => {
+		const app = makeApp();
+		mockPrisma.project.findMany.mockResolvedValue([
+			{ ...mockRow, publicInfo: null },
+		] as any);
+
+		const res = await app.request("/openapi/projects");
+
+		expect(res.status).toBe(200);
+		const [project] = await res.json();
+		expect(project).toEqual({
+			id: mockRow.id,
+			number: mockRow.number,
+			name: mockRow.name,
+			organizationName: mockRow.organizationName,
+			type: mockRow.type,
+			location: mockRow.location,
+			publicInfo: {
+				description: null,
+				iconFileId: null,
+				mapImageFileIds: [],
+				websiteUrls: [],
+				xIds: [],
+				instagramIds: [],
+				youtubeIds: [],
+				openStatus: "NOT_APPLICABLE",
+				stockStatus: "NOT_APPLICABLE",
+			},
+			customFields: {},
+		});
 	});
 
 	it("キャッシュが有効な間は DB に再問い合わせしない", async () => {

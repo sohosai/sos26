@@ -62,6 +62,7 @@
 .thumbs {
 	display: flex;
 	flex-wrap: wrap;
+	align-items: flex-end;
 	gap: var(--space-2);
 }
 
@@ -71,4 +72,38 @@
 	height: 120px;
 	object-fit: cover;
 	border-radius: var(--radius-2);
+}
+
+.imageWrap {
+	position: relative;
+	display: block;
+}
+
+.hiddenBadge {
+	position: absolute;
+	bottom: 4px;
+	left: 4px;
+}
+
+.iconMark {
+	position: absolute;
+	bottom: -2px;
+	padding: 2px;
+	border-radius: 50%;
+	background: var(--color-panel-solid);
+	box-shadow: 0 0 0 1px var(--gray-a5);
+}
+
+.iconHiddenMark {
+	left: -2px;
+}
+
+.iconCorrectedMark {
+	right: -2px;
+}
+
+// 非公開のアイコンは薄く表示する（印は薄くしない）
+.iconHidden > img,
+.iconHidden > svg {
+	opacity: 0.4;
 }

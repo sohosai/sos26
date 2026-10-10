@@ -1,5 +1,9 @@
 import { Callout, Heading, Text } from "@radix-ui/themes";
-import type { MyProject, Project } from "@sos26/shared";
+import type {
+	GetProjectPublicInfoResponse,
+	MyProject,
+	Project,
+} from "@sos26/shared";
 import {
 	createFileRoute,
 	Outlet,
@@ -96,6 +100,15 @@ function EmptyProjectState({
 	);
 }
 
+/** 企画情報に対する実委人の非表示・修正の状態 */
+type PublicInfoModeration = Omit<GetProjectPublicInfoResponse, "publicInfo">;
+
+const EMPTY_PUBLIC_INFO_MODERATION: PublicInfoModeration = {
+	hiddenFields: [],
+	correctedFields: [],
+	hiddenMapImageFileIds: [],
+};
+
 export const Route = createFileRoute("/project")({
 	beforeLoad: async ({ location }) => {
 		await requireAuth(location.href);
@@ -124,6 +137,7 @@ export const Route = createFileRoute("/project")({
 				hasUnreadInquiryComments: false,
 				publicInfoProjectId: null,
 				publicInfo: null,
+				publicInfoModeration: EMPTY_PUBLIC_INFO_MODERATION,
 				publicInfoLoadFailed: false,
 			};
 		}
@@ -142,6 +156,14 @@ export const Route = createFileRoute("/project")({
 			publicInfoResult.status === "fulfilled"
 				? publicInfoResult.value.publicInfo
 				: null;
+		const publicInfoModeration =
+			publicInfoResult.status === "fulfilled"
+				? {
+						hiddenFields: publicInfoResult.value.hiddenFields,
+						correctedFields: publicInfoResult.value.correctedFields,
+						hiddenMapImageFileIds: publicInfoResult.value.hiddenMapImageFileIds,
+					}
+				: EMPTY_PUBLIC_INFO_MODERATION;
 
 		const forms =
 			formsResult.status === "fulfilled" ? formsResult.value.forms : [];
@@ -176,6 +198,7 @@ export const Route = createFileRoute("/project")({
 			hasUnreadInquiryComments,
 			publicInfoProjectId: selectedProjectId,
 			publicInfo,
+			publicInfoModeration,
 			publicInfoLoadFailed: publicInfoResult.status === "rejected",
 		};
 	},

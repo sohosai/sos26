@@ -18,6 +18,8 @@ export function UserAvatar({ name, avatarFileId, size = 28 }: UserAvatarProps) {
 				alt={name}
 				width={size}
 				height={size}
+				loading="lazy"
+				decoding="async"
 				className={styles.image}
 				style={{ width: size, height: size }}
 			/>

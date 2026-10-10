@@ -1,18 +1,27 @@
 import { Badge, Card, Heading, Link, Text } from "@radix-ui/themes";
 import type {
-	ListCommitteeProjectPublicInfosResponse,
+	CommitteeProjectPublicInfo,
 	OpenStatus,
+	ProjectPublicInfoField,
 	StockStatus,
 } from "@sos26/shared";
-import { IconDownload } from "@tabler/icons-react";
+import { IconDownload, IconEdit } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { UserAvatar } from "@/components/common/UserAvatar";
 import { Button } from "@/components/primitives";
 import { getFileContentUrl } from "@/lib/api/files";
 import { listCommitteeProjectPublicInfos } from "@/lib/api/project-public-info";
+import { useAuthStore } from "@/lib/auth";
 import { formatProjectNumber } from "@/lib/format";
-import { ImagePreviewModal } from "../../project/public-info/ImagePreviewModal";
+import { ImagePreviewModal } from "../../project/public-info/-components/ImagePreviewModal";
+import { PublicInfoDetailDialog } from "./-components/PublicInfoDetailDialog";
+import {
+	CorrectedMark,
+	FieldStatusBadges,
+	findModeration,
+	HiddenMark,
+} from "./-components/shared";
 import styles from "./index.module.scss";
 
 export const Route = createFileRoute("/committee/public-info/")({
@@ -26,9 +35,7 @@ export const Route = createFileRoute("/committee/public-info/")({
 	}),
 });
 
-type PublicInfo = NonNullable<
-	ListCommitteeProjectPublicInfosResponse["projects"][number]["publicInfo"]
->;
+type PublicInfo = NonNullable<CommitteeProjectPublicInfo["publicInfo"]>;
 
 type Preview = { fileIds: string[]; index: number };
 
@@ -44,27 +51,34 @@ const STOCK_STATUS_LABELS: Record<StockStatus, string | null> = {
 	NOT_APPLICABLE: null,
 };
 
-function snsLinks(
-	info: PublicInfo
-): { service: string; text: string; href: string }[] {
+function snsLinks(info: PublicInfo): {
+	service: string;
+	field: ProjectPublicInfoField;
+	text: string;
+	href: string;
+}[] {
 	return [
 		...info.websiteUrls.map(url => ({
 			service: "Website",
+			field: "WEBSITE_URLS" as const,
 			text: url,
 			href: url,
 		})),
 		...info.xIds.map(id => ({
 			service: "X",
+			field: "X_IDS" as const,
 			text: `@${id}`,
 			href: `https://x.com/${id}`,
 		})),
 		...info.instagramIds.map(id => ({
 			service: "Instagram",
+			field: "INSTAGRAM_IDS" as const,
 			text: id,
 			href: `https://www.instagram.com/${id}`,
 		})),
 		...info.youtubeIds.map(id => ({
 			service: "YouTube",
+			field: "YOUTUBE_IDS" as const,
 			text: `@${id}`,
 			href: `https://www.youtube.com/@${id}`,
 		})),
@@ -80,9 +94,7 @@ function escapeCsvField(str: string): string {
 	return value;
 }
 
-function downloadPublicInfoCsv(
-	projects: ListCommitteeProjectPublicInfosResponse["projects"]
-) {
+function downloadPublicInfoCsv(projects: CommitteeProjectPublicInfo[]) {
 	const headers = [
 		"企画番号",
 		"企画名",
@@ -139,8 +151,19 @@ function downloadPublicInfoCsv(
 }
 
 function PublicInfoListPage() {
-	const { projects } = Route.useLoaderData();
+	const { projects: loadedProjects } = Route.useLoaderData();
+	// 非公開・修正の結果をそのまま一覧に反映するため、手元で持つ
+	const [projects, setProjects] = useState(loadedProjects);
+	const [loadedFrom, setLoadedFrom] = useState(loadedProjects);
+	if (loadedFrom !== loadedProjects) {
+		setLoadedFrom(loadedProjects);
+		setProjects(loadedProjects);
+	}
 	const [preview, setPreview] = useState<Preview | null>(null);
+	const [editingId, setEditingId] = useState<string | null>(null);
+	const editingProject = projects.find(p => p.id === editingId) ?? null;
+	const { permissions } = useAuthStore();
+	const canEdit = permissions?.has("MAP_APP_SETTING_EDIT") ?? false;
 
 	return (
 		<div>
@@ -166,6 +189,7 @@ function PublicInfoListPage() {
 						key={project.id}
 						project={project}
 						onPreview={setPreview}
+						onEdit={canEdit ? () => setEditingId(project.id) : undefined}
 					/>
 				))}
 			</div>
@@ -179,6 +203,21 @@ function PublicInfoListPage() {
 				currentIndex={preview?.index ?? 0}
 				onChangeIndex={index => setPreview(prev => prev && { ...prev, index })}
 			/>
+
+			{editingProject && (
+				<PublicInfoDetailDialog
+					open
+					onOpenChange={open => {
+						if (!open) setEditingId(null);
+					}}
+					item={editingProject}
+					onItemChange={updated =>
+						setProjects(current =>
+							current.map(p => (p.id === updated.id ? updated : p))
+						)
+					}
+				/>
+			)}
 		</div>
 	);
 }
@@ -186,14 +225,21 @@ function PublicInfoListPage() {
 function ProjectCard({
 	project,
 	onPreview,
+	onEdit,
 }: {
-	project: ListCommitteeProjectPublicInfosResponse["projects"][number];
+	project: CommitteeProjectPublicInfo;
 	onPreview: (preview: Preview) => void;
+	/** 非公開・修正の権限がある場合のみ渡す */
+	onEdit?: () => void;
 }) {
 	const info = project.publicInfo;
 	const openLabel = info && OPEN_STATUS_LABELS[info.openStatus];
 	const stockLabel = info && STOCK_STATUS_LABELS[info.stockStatus];
 	const links = info ? snsLinks(info) : [];
+	const iconHidden = info?.iconFileId
+		? findModeration(project, "ICON", "HIDDEN")
+		: undefined;
+	const iconCorrection = findModeration(project, "ICON", "CORRECTED");
 
 	return (
 		<Card className={styles.card}>
@@ -209,11 +255,27 @@ function ProjectCard({
 					disabled={!info?.iconFileId}
 					aria-label="アイコンを拡大"
 				>
-					<UserAvatar
-						size={56}
-						name={project.name}
-						avatarFileId={info?.iconFileId ?? null}
-					/>
+					<span
+						className={`${styles.imageWrap} ${iconHidden ? styles.iconHidden : ""}`}
+					>
+						<UserAvatar
+							size={56}
+							name={project.name}
+							avatarFileId={info?.iconFileId ?? null}
+						/>
+						{iconHidden && (
+							<HiddenMark
+								moderation={iconHidden}
+								className={`${styles.iconMark} ${styles.iconHiddenMark}`}
+							/>
+						)}
+						{iconCorrection && (
+							<CorrectedMark
+								moderation={iconCorrection}
+								className={`${styles.iconMark} ${styles.iconCorrectedMark}`}
+							/>
+						)}
+					</span>
 				</button>
 				<div>
 					<Text as="div" size="1" color="gray">
@@ -229,6 +291,12 @@ function ProjectCard({
 				<div className={styles.badges}>
 					{openLabel && <Badge>{openLabel}</Badge>}
 					{stockLabel && <Badge color="gray">{stockLabel}</Badge>}
+					{onEdit && (
+						<Button intent="secondary" size="1" onClick={onEdit}>
+							<IconEdit size={16} />
+							公開設定・編集
+						</Button>
+					)}
 				</div>
 			</div>
 
@@ -240,7 +308,8 @@ function ProjectCard({
 				<div className={styles.body}>
 					{info.description && (
 						<Text as="p" size="2" className={styles.description}>
-							{info.description}
+							{info.description}{" "}
+							<FieldStatusBadges item={project} field="DESCRIPTION" />
 						</Text>
 					)}
 
@@ -255,7 +324,8 @@ function ProjectCard({
 										rel="noopener noreferrer"
 									>
 										{link.text}
-									</Link>
+									</Link>{" "}
+									<FieldStatusBadges item={project} field={link.field} />
 								</Text>
 							))}
 						</div>
@@ -273,17 +343,44 @@ function ProjectCard({
 									}
 									aria-label={`詳細画像 ${index + 1} を拡大`}
 								>
-									<img
-										src={getFileContentUrl(fileId)}
-										alt={`詳細画像 ${index + 1}`}
-										className={styles.thumb}
-									/>
+									<span className={styles.imageWrap}>
+										<img
+											src={getFileContentUrl(fileId)}
+											alt={`詳細画像 ${index + 1}`}
+											className={styles.thumb}
+											loading="lazy"
+											decoding="async"
+										/>
+										{project.hiddenMapImageFileIds.includes(fileId) && (
+											<StatusOverlay label="非公開" color="red" />
+										)}
+									</span>
 								</button>
 							))}
+							<FieldStatusBadges item={project} field="MAP_IMAGES" />
 						</div>
 					)}
 				</div>
 			)}
 		</Card>
+	);
+}
+
+function StatusOverlay({
+	label,
+	color,
+}: {
+	label: string;
+	color: "red" | "blue";
+}) {
+	return (
+		<Badge
+			color={color}
+			variant="solid"
+			size="1"
+			className={styles.hiddenBadge}
+		>
+			{label}
+		</Badge>
 	);
 }
