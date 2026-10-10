@@ -1,11 +1,27 @@
 import { swaggerUI } from "@hono/swagger-ui";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import type { ProjectPublicInfoField } from "@sos26/shared";
-import { projectPublicInfoSchema } from "@sos26/shared";
+import {
+	type MastersheetDataType,
+	type ProjectPublicInfoField,
+	projectPublicInfoSchema,
+} from "@sos26/shared";
 import { prisma } from "../lib/prisma";
-import { getPublicApiCacheVersion } from "../lib/public-api-cache";
+import {
+	getPublicApiCacheVersion,
+	getPublicMastersheetColumnIds,
+} from "../lib/public-api-cache";
+import {
+	getOriginalImage,
+	getResizedImage,
+	IMAGE_RESIZE_WIDTHS,
+} from "../lib/storage/image-resize";
 
-export const openApiRoute = new OpenAPIHono();
+export const openApiRoute = new OpenAPIHono({
+	// 既定ではバリデーションエラーを独自形式で返すため、errorHandler に渡して他のエラーと形式を揃える
+	defaultHook: result => {
+		if (!result.success) throw result.error;
+	},
+});
 
 /**
  * 一覧レスポンスのキャッシュ保持時間（ミリ秒）
@@ -15,14 +31,38 @@ export const openApiRoute = new OpenAPIHono();
  */
 const LIST_CACHE_TTL_MS = 60_000;
 const CACHE_CONTROL = `public, max-age=${LIST_CACHE_TTL_MS / 1000}`;
+const IMAGE_HEADERS = {
+	"Cache-Control": "public, max-age=86400",
+	"X-Content-Type-Options": "nosniff",
+};
+
+const customFieldValueSchema = z
+	.union([z.string(), z.number(), z.array(z.string()), z.null()])
+	.openapi({
+		description:
+			"列の値。データ型により形式が異なる: " +
+			"TEXTは文字列、NUMBERは数値、SELECTは選択された選択肢名（文字列）、" +
+			"MULTI_SELECTは選択された選択肢名の配列（選択肢の表示順）。未入力の場合は null",
+	});
+
+type CustomFieldValue = z.infer<typeof customFieldValueSchema>;
+type CustomFields = Record<string, CustomFieldValue>;
 
 const publicProjectSchema = z.object({
 	id: z.string(),
+	number: z.number().openapi({ description: "企画番号" }),
 	name: z.string(),
 	organizationName: z.string(),
 	type: z.enum(["STAGE", "FOOD", "NORMAL"]),
 	location: z.enum(["INDOOR", "OUTDOOR", "STAGE"]),
 	publicInfo: projectPublicInfoSchema,
+	customFields: z.record(z.string(), customFieldValueSchema).openapi({
+		description:
+			"実委が公開対象に指定したマスターシートの列（環境変数 " +
+			"PUBLIC_API_MASTERSHEET_COLUMN_IDS で指定した列）の値を、列名をキーとして返す。" +
+			"キーの順序は環境変数の指定順。指定がない場合は空オブジェクト",
+		example: { 出演ステージ: "メインステージ", ジャンル: ["音楽", "ダンス"] },
+	}),
 });
 
 type PublicProject = z.infer<typeof publicProjectSchema>;
@@ -48,6 +88,7 @@ const publicProjectWhere = {
 
 const publicProjectSelect = {
 	id: true,
+	number: true,
 	name: true,
 	organizationName: true,
 	type: true,
@@ -76,6 +117,7 @@ const publicProjectSelect = {
 
 type PublicProjectRow = {
 	id: string;
+	number: number;
 	name: string;
 	organizationName: string;
 	type: PublicProject["type"];
@@ -113,16 +155,20 @@ const EMPTY_PUBLIC_INFO: PublicProject["publicInfo"] = {
  * 実委人が非表示にした項目も未入力と同じ値にする。
  * 非表示にされたのか未入力なのかを、公開APIの利用者から区別できないようにするため。
  */
-function toPublicProject(row: PublicProjectRow): PublicProject {
+function toPublicProject(
+	row: PublicProjectRow,
+	customFields: CustomFields
+): PublicProject {
 	const project = {
 		id: row.id,
+		number: row.number,
 		name: row.name,
 		organizationName: row.organizationName,
 		type: row.type,
 		location: row.location,
 	};
 	const info = row.publicInfo;
-	if (!info) return { ...project, publicInfo: EMPTY_PUBLIC_INFO };
+	if (!info) return { ...project, publicInfo: EMPTY_PUBLIC_INFO, customFields };
 
 	const hidden = new Set(info.moderations.map(m => m.field));
 
@@ -141,7 +187,127 @@ function toPublicProject(row: PublicProjectRow): PublicProject {
 			openStatus: info.openStatus,
 			stockStatus: info.stockStatus,
 		},
+		customFields,
 	};
+}
+
+type PublicCustomColumn = {
+	id: string;
+	name: string;
+	dataType: MastersheetDataType;
+};
+
+/**
+ * - 存在しない列ID、CUSTOM以外の列（FORM_ITEM / PROJECT_REGISTRATION_FORM_ITEM）は
+ *   設定ミスでも公開APIを落とさないよう、警告ログを出してスキップする。
+ * - 列名が重複する場合はキーが衝突するため、後に指定された列をスキップする。
+ */
+async function resolvePublicCustomColumns(): Promise<PublicCustomColumn[]> {
+	const ids = getPublicMastersheetColumnIds();
+	if (ids.length === 0) return [];
+
+	const columns = await prisma.mastersheetColumn.findMany({
+		where: { id: { in: ids }, type: "CUSTOM" },
+		select: { id: true, name: true, dataType: true },
+	});
+	const byId = new Map(columns.map(c => [c.id, c]));
+
+	const resolved: PublicCustomColumn[] = [];
+	const usedNames = new Set<string>();
+	for (const id of ids) {
+		const col = byId.get(id);
+		if (!col?.dataType) {
+			console.warn(
+				`[openapi] PUBLIC_API_MASTERSHEET_COLUMN_IDS の列が見つからないか CUSTOM 列ではありません: ${id}`
+			);
+			continue;
+		}
+		if (usedNames.has(col.name)) {
+			console.warn(
+				`[openapi] PUBLIC_API_MASTERSHEET_COLUMN_IDS の列名が重複しています: ${col.name} (${id})`
+			);
+			continue;
+		}
+		usedNames.add(col.name);
+		resolved.push({ id: col.id, name: col.name, dataType: col.dataType });
+	}
+	return resolved;
+}
+
+type PublicCustomCell = {
+	textValue: string | null;
+	numberValue: number | null;
+	selectedOptions: { option: { label: string } }[];
+};
+
+function formatCustomFieldValue(
+	dataType: MastersheetDataType,
+	cell: PublicCustomCell | undefined
+): CustomFieldValue {
+	if (!cell) return null;
+
+	switch (dataType) {
+		case "TEXT":
+			return cell.textValue;
+		case "NUMBER":
+			return cell.numberValue;
+		case "SELECT":
+			return cell.selectedOptions[0]?.option.label ?? null;
+		case "MULTI_SELECT":
+			return cell.selectedOptions.map(s => s.option.label);
+	}
+}
+
+async function getCustomFieldsByProject(
+	projectIds: string[]
+): Promise<Map<string, CustomFields>> {
+	const map = new Map<string, CustomFields>();
+	const columns = await resolvePublicCustomColumns();
+
+	if (columns.length === 0 || projectIds.length === 0) {
+		for (const id of projectIds) map.set(id, {});
+		return map;
+	}
+
+	const cells = await prisma.mastersheetCellValue.findMany({
+		where: {
+			columnId: { in: columns.map(c => c.id) },
+			projectId: { in: projectIds },
+		},
+		select: {
+			columnId: true,
+			projectId: true,
+			textValue: true,
+			numberValue: true,
+			selectedOptions: {
+				orderBy: { option: { sortOrder: "asc" } },
+				select: { option: { select: { label: true } } },
+			},
+		},
+	});
+
+	const cellByColProject = new Map<string, Map<string, PublicCustomCell>>();
+	for (const cell of cells) {
+		if (!cellByColProject.has(cell.columnId))
+			cellByColProject.set(cell.columnId, new Map());
+		cellByColProject.get(cell.columnId)?.set(cell.projectId, cell);
+	}
+
+	for (const projectId of projectIds) {
+		map.set(
+			projectId,
+			Object.fromEntries(
+				columns.map(col => [
+					col.name,
+					formatCustomFieldValue(
+						col.dataType,
+						cellByColProject.get(col.id)?.get(projectId)
+					),
+				])
+			)
+		);
+	}
+	return map;
 }
 
 let listCache: {
@@ -163,7 +329,13 @@ async function getPublicProjects(): Promise<PublicProject[]> {
 		orderBy: { number: "asc" },
 	});
 
-	const value = rows.map(toPublicProject);
+	const customFieldsByProject = await getCustomFieldsByProject(
+		rows.map(r => r.id)
+	);
+
+	const value = rows.map(row =>
+		toPublicProject(row, customFieldsByProject.get(row.id) ?? {})
+	);
 	listCache = { expiresAt: now + LIST_CACHE_TTL_MS, version, value };
 	return value;
 }
@@ -225,12 +397,7 @@ const getProjectDetailRoute = createRoute({
 
 openApiRoute.openapi(getProjectDetailRoute, async c => {
 	const id = c.req.valid("param").id;
-	const row = await prisma.project.findFirst({
-		where: { ...publicProjectWhere, id },
-		select: publicProjectSelect,
-	});
-
-	const response = row ? toPublicProject(row) : null;
+	const response = (await getPublicProjects()).find(p => p.id === id);
 
 	if (!response) {
 		return c.json(
@@ -246,6 +413,92 @@ openApiRoute.openapi(getProjectDetailRoute, async c => {
 
 	c.header("Cache-Control", CACHE_CONTROL);
 	return c.json(response, 200);
+});
+
+const getImageRoute = createRoute({
+	method: "get",
+	path: "/images/{fileId}",
+	description:
+		"企画のアイコン・掲載画像（publicInfo.iconFileId / mapImageFileIds）を取得する。" +
+		"width を指定すると、縦横比を保ってその幅に縮小した WebP を返す（元画像より大きくはしない）。" +
+		"アニメーション GIF は1フレーム目のみになる。" +
+		"width を省略した場合と、縮小できない画像（巨大な画像など）の場合は元画像をそのまま返す。",
+	request: {
+		params: z.object({
+			fileId: z.string().openapi({ param: { name: "fileId", in: "path" } }),
+		}),
+		query: z.object({
+			width: z
+				.enum(IMAGE_RESIZE_WIDTHS)
+				.optional()
+				.openapi({ description: "縮小後の幅（px）" }),
+		}),
+	},
+	responses: {
+		200: {
+			content: {
+				"image/*": {
+					schema: z.string().openapi({ format: "binary" }),
+				},
+			},
+			description: "画像データ",
+		},
+		400: {
+			content: {
+				"application/json": {
+					schema: errorResponseSchema,
+				},
+			},
+			description: "width が候補にない",
+		},
+		404: {
+			content: {
+				"application/json": {
+					schema: errorResponseSchema,
+				},
+			},
+			description: "公開中の企画の画像ではない",
+		},
+	},
+});
+
+async function isPublicImage(fileId: string): Promise<boolean> {
+	const projects = await getPublicProjects();
+	return projects.some(
+		p =>
+			p.publicInfo.iconFileId === fileId ||
+			p.publicInfo.mapImageFileIds.includes(fileId)
+	);
+}
+
+function findImageFile(fileId: string) {
+	return prisma.file.findFirst({
+		where: { id: fileId, status: "CONFIRMED", deletedAt: null, isPublic: true },
+		select: { key: true, mimeType: true, size: true },
+	});
+}
+
+openApiRoute.openapi(getImageRoute, async c => {
+	const { fileId } = c.req.valid("param");
+	const { width } = c.req.valid("query");
+
+	const notFound = () =>
+		c.json(
+			{ error: { code: "NOT_FOUND", message: "画像が見つかりません" } },
+			404
+		);
+
+	if (!(await isPublicImage(fileId))) return notFound();
+
+	const image =
+		width === undefined
+			? await findImageFile(fileId).then(file => file && getOriginalImage(file))
+			: await getResizedImage(fileId, width, () => findImageFile(fileId));
+	if (!image) return notFound();
+	return c.body(image.body, 200, {
+		...IMAGE_HEADERS,
+		"Content-Type": image.contentType,
+	});
 });
 
 openApiRoute.doc("/openapi.json", c => ({

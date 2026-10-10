@@ -46,6 +46,14 @@ apps/apiで使用する環境変数の設定方法とリファレンスです。
 | `S3_PRESIGNED_URL_EXPIRES` | Presigned URL の有効期限（秒） | `3600` | ❌ |
 | `S3_MAX_FILE_SIZE` | 最大ファイルサイズ（バイト） | `1000000000` | ❌ |
 | `FILE_TOKEN_SECRET` | ファイルトークン署名用秘密鍵（32文字以上） | なし | ✅ |
+| `PUBLIC_API_MASTERSHEET_COLUMN_IDS` | 公開API（`/openapi/projects`）の `customFields` に載せるマスターシートの CUSTOM 列ID（カンマ区切り） | `""` | ❌ |
+
+> [!WARNING]
+> `PUBLIC_API_MASTERSHEET_COLUMN_IDS` に指定した列の値は、マスターシート上の閲覧権限（viewers / visibility）に関わらず、認証なしで誰でも取得できるようになります。
+>
+> - 列IDはマスターシートを `?debug=true` 付きで開くと各列のヘッダーに表示されます。
+> - CUSTOM 以外の列や存在しない列IDは警告ログを出して無視されます。列名が重複する場合は後に指定した列が無視されます。
+> - `customFields` は列名をキーとしたオブジェクトで、キーの順序は指定順です。
 
 ## 設定方法
 

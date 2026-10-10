@@ -1,4 +1,5 @@
 import { Card, Flex, Heading, Text } from "@radix-ui/themes";
+import { isAllowedImageFile } from "@sos26/shared";
 import { IconUpload } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -62,7 +63,7 @@ function SettingsPage() {
 		if (!file) return;
 
 		// 画像ファイル以外は拒否
-		if (!file.type.startsWith("image/")) {
+		if (!isAllowedImageFile(file)) {
 			toast.error("画像ファイルを選択してください");
 			return;
 		}

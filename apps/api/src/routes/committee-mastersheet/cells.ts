@@ -13,6 +13,10 @@ import {
 } from "../../lib/form-answer-files";
 import { prisma } from "../../lib/prisma";
 import {
+	bumpPublicApiCacheVersion,
+	isPublicMastersheetColumn,
+} from "../../lib/public-api-cache";
+import {
 	getCommitteeMember,
 	requireAuth,
 	requireCommitteeMember,
@@ -253,6 +257,10 @@ cellsRoute.put(
 			},
 			{ isolationLevel: "Serializable" }
 		);
+
+		if (isPublicMastersheetColumn(columnId)) {
+			bumpPublicApiCacheVersion();
+		}
 
 		return c.json({
 			cell: {

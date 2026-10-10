@@ -125,8 +125,18 @@ function snsLinksSchema<T extends z.ZodType>(schema: T) {
 
 export const projectPublicInfoSchema = z.object({
 	description: z.string().max(PROJECT_DESCRIPTION_MAX_LENGTH).nullable(),
-	iconFileId: z.string().nullable(),
-	mapImageFileIds: z.array(z.string()).max(PROJECT_MAP_IMAGES_MAX_COUNT),
+	iconFileId: z
+		.string()
+		.nullable()
+		.describe(
+			"アイコン画像のファイルID。画像は /openapi/images/{fileId} で取得できる"
+		),
+	mapImageFileIds: z
+		.array(z.string())
+		.max(PROJECT_MAP_IMAGES_MAX_COUNT)
+		.describe(
+			"掲載画像のファイルID（表示順）。画像は /openapi/images/{fileId} で取得できる"
+		),
 	websiteUrls: snsLinksSchema(projectSnsUrlSchema).describe("WebサイトのURL"),
 	xIds: snsLinksSchema(projectXIdSchema).describe(
 		"XのユーザーID（@ を除く）。URL は https://x.com/{xId}"

@@ -1,5 +1,6 @@
 import { prisma } from "../prisma";
 import { previousFileIds } from "../project-public-info";
+import { deleteResizedImages } from "./image-resize";
 
 /**
  * 指定した fileId のうち、他の機能からまだ参照されているものの ID を返す。
@@ -145,4 +146,5 @@ export async function softDeleteUnreferencedFiles(
 		where: { id: { in: deletableIds }, deletedAt: null },
 		data: { deletedAt: new Date() },
 	});
+	await deleteResizedImages(deletableIds);
 }

@@ -19,8 +19,6 @@ import type {
 	ProjectSnsLinkKey,
 } from "@sos26/shared";
 import {
-	allowedImageExtensions,
-	imageAcceptAttribute,
 	isAllowedImageFile,
 	PROJECT_DESCRIPTION_MAX_LENGTH,
 	PROJECT_MAP_IMAGES_MAX_COUNT,
@@ -41,7 +39,12 @@ import {
 import { deleteFile, getFileContentUrl, uploadFile } from "@/lib/api/files";
 import { reportHandledError } from "@/lib/error/report";
 import { formatDate, formatProjectNumber } from "@/lib/format";
-import { getMapImagesError, getSnsLinkError } from "@/lib/project/public-info";
+import {
+	allowedImageExtensions,
+	getMapImagesError,
+	getSnsLinkError,
+	imageAcceptAttribute,
+} from "@/lib/project/public-info";
 import { ImageCropperModal } from "../../../project/public-info/ImageCropperModal";
 import { ImagePreviewModal } from "../../../project/public-info/ImagePreviewModal";
 import styles from "./PublicInfoDetailDialog.module.scss";

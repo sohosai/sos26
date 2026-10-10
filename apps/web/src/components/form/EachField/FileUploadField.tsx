@@ -3,7 +3,7 @@ import {
 	type AllowedMimeType,
 	allowedMimeTypes,
 	buildFileAcceptAttribute,
-	buildFileExtensionsLabel,
+	buildFileTypesLabel,
 	isStreamable,
 	resolveFileMimeType,
 } from "@sos26/shared";
@@ -68,14 +68,14 @@ function buildHelperText(
 	allowedTypes?: AllowedMimeType[]
 ): string | null {
 	const countPart = buildCountPart(selectedCount, minFiles, maxFiles);
-	const extensionsLabel = allowedTypes
-		? buildFileExtensionsLabel(allowedTypes)
+	const fileTypesLabel = allowedTypes
+		? buildFileTypesLabel(allowedTypes)
 		: null;
 
-	if (countPart && extensionsLabel) {
-		return `${countPart} / ${extensionsLabel}`;
+	if (countPart && fileTypesLabel) {
+		return `${countPart} / ${fileTypesLabel}`;
 	}
-	return countPart ?? extensionsLabel ?? null;
+	return countPart ?? fileTypesLabel ?? null;
 }
 
 function processFileSelection(
@@ -87,12 +87,12 @@ function processFileSelection(
 	const acceptedSet = new Set<string>(allowedTypes ?? allowedMimeTypes);
 	const valid = addedFiles.filter(f => acceptedSet.has(resolveFileMimeType(f)));
 	const hasInvalid = valid.length < addedFiles.length;
-	const extensionsLabel = buildFileExtensionsLabel(allowedTypes);
+	const fileTypesLabel = buildFileTypesLabel(allowedTypes);
 
 	if (hasInvalid && valid.length === 0) {
 		return {
 			filesToSet: null,
-			error: `対応していないファイル形式です（${extensionsLabel}）`,
+			error: `対応していないファイル形式です（${fileTypesLabel}）`,
 		};
 	}
 
@@ -101,7 +101,7 @@ function processFileSelection(
 		return {
 			filesToSet: merged.slice(0, maxFiles),
 			error: hasInvalid
-				? `対応していないファイル形式です（${extensionsLabel}）`
+				? `対応していないファイル形式です（${fileTypesLabel}）`
 				: `${maxFiles}個以内で添付してください`,
 		};
 	}
@@ -109,7 +109,7 @@ function processFileSelection(
 	return {
 		filesToSet: merged,
 		error: hasInvalid
-			? `対応していないファイル形式です（${extensionsLabel}）`
+			? `対応していないファイル形式です（${fileTypesLabel}）`
 			: null,
 	};
 }

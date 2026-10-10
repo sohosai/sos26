@@ -1,5 +1,5 @@
 import { Text } from "@radix-ui/themes";
-import { fileAcceptAttribute } from "@sos26/shared";
+import { buildFileAcceptAttribute } from "@sos26/shared";
 import { IconPaperclip, IconX } from "@tabler/icons-react";
 import { formatFileSize } from "@/lib/format";
 import styles from "./NewInquiryForm.module.scss";
@@ -37,7 +37,7 @@ export function FileAttachmentArea({
 				ref={fileInputRef}
 				type="file"
 				multiple
-				accept={fileAcceptAttribute}
+				accept={buildFileAcceptAttribute()}
 				className={styles.fileInput}
 				onChange={onFileSelect}
 			/>

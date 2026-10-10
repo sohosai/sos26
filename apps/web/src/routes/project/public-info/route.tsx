@@ -26,8 +26,6 @@ import type {
 	UpdateProjectPublicInfoRequest,
 } from "@sos26/shared";
 import {
-	allowedImageExtensions,
-	imageAcceptAttribute,
 	isAllowedImageFile,
 	PROJECT_DESCRIPTION_MAX_LENGTH,
 	PROJECT_MAP_IMAGES_MAX_COUNT,
@@ -58,7 +56,12 @@ import { getMapAppSetting } from "@/lib/api/map-app-setting";
 import { updateProjectPublicInfo } from "@/lib/api/project-public-info";
 import { useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
-import { getMapImagesError, getSnsLinkError } from "@/lib/project/public-info";
+import {
+	allowedImageExtensions,
+	getMapImagesError,
+	getSnsLinkError,
+	imageAcceptAttribute,
+} from "@/lib/project/public-info";
 import { useProjectStore } from "@/lib/project/store";
 import { ImageCropperModal } from "./ImageCropperModal";
 import { ImagePreviewModal } from "./ImagePreviewModal";

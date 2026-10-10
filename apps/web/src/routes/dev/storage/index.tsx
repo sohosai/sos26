@@ -1,5 +1,5 @@
 import type { FileInfo } from "@sos26/shared";
-import { fileAcceptAttribute } from "@sos26/shared";
+import { buildFileAcceptAttribute, isImageMimeType } from "@sos26/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -85,7 +85,11 @@ function StorageDevPage() {
 			<section>
 				<h2>ファイルアップロード</h2>
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<input ref={fileInputRef} type="file" accept={fileAcceptAttribute} />
+					<input
+						ref={fileInputRef}
+						type="file"
+						accept={buildFileAcceptAttribute()}
+					/>
 					<label>
 						<input
 							type="checkbox"
@@ -231,7 +235,7 @@ function AccessVerificationSection() {
 					{result.type === "success" && result.url ? (
 						<div>
 							<p style={{ color: "#2e7d32", marginBottom: 8 }}>アクセス成功</p>
-							{result.mimeType?.startsWith("image/") ? (
+							{result.mimeType && isImageMimeType(result.mimeType) ? (
 								<img
 									src={result.url}
 									alt="プレビュー"
@@ -262,7 +266,7 @@ function FileRow({
 	onDelete: (fileId: string) => void;
 }) {
 	const url = useStorageUrl(file.id, file.isPublic);
-	const isImage = file.mimeType.startsWith("image/");
+	const isImage = isImageMimeType(file.mimeType);
 
 	return (
 		<tr>

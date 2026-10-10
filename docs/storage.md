@@ -140,6 +140,15 @@ User.avatarId    ProjectDocument.fileId
 
 例: `cm1abc2d3e000/550e8400-e29b-41d4-a716-446655440000.jpg`
 
+公開API（`/openapi/images/{fileId}?width=...`）で縮小した画像は、次のキーに保存して使い回す。
+変換済みの画像には File レコードがない。元のファイルをソフトデリートしたとき
+（企画の公開情報からの差し替え・削除、`DELETE /files/:id`）に S3 から削除する。
+縮小できない画像（巨大・非対応形式など）は変換済みの画像を作らず、元画像をそのまま返す。
+
+```
+resized/{fileId}/w{width}.webp
+```
+
 ---
 
 ## 3. アクセス制御
@@ -245,6 +254,7 @@ const hasAccess = await canAccessFile(fileId, user);
 | `/files/:id/token` | GET | 必須（アクセス制御あり） | 非公開ファイル用の署名付きトークン発行 |
 | `/files` | GET | 必須 | 自分のファイル一覧（CONFIRMED のみ） |
 | `/files/:id` | DELETE | 必須（本人のみ） | ソフトデリート |
+| `/openapi/images/:fileId` | GET | 不要 | 公開中の企画のアイコン・掲載画像を配信。`?width=160\|320\|640\|1280` で縮小した WebP を返す（縮小できない画像は元画像） |
 
 ---
 
@@ -322,8 +332,9 @@ const url = await getAuthenticatedFileUrl(fileId);
 |---------|------|
 | `routes/files.ts` | エンドポイント |
 | `lib/storage/client.ts` | S3Client の初期化・取得 |
-| `lib/storage/presign.ts` | Presigned URL 生成、オブジェクト取得・存在確認 |
+| `lib/storage/presign.ts` | Presigned URL 生成、オブジェクト取得・保存・削除・存在確認 |
 | `lib/storage/key.ts` | S3 キー生成、MIME → 拡張子マッピング |
+| `lib/storage/image-resize.ts` | 画像の縮小と変換済み画像の保存・取得・削除 |
 | `lib/storage/file-token.ts` | 署名付きトークンの生成・検証 |
 | `lib/storage/access.ts` | アクセスチェッカーレジストリ |
 | `lib/storage/checkers/index.ts` | チェッカー一括登録 |
@@ -368,6 +379,10 @@ const url = await getAuthenticatedFileUrl(fileId);
 
 | 動画 | `video/mp4` | mp4 |
 | 動画 | `video/quicktime` | mov |
+| 音声 | `audio/wav` | wav |
+| 音声 | `audio/x-wav` | wav |
+| 音声 | `audio/aiff` | aiff, aif |
+| 音声 | `audio/x-aiff` | aiff, aif |
 
 ファイルサイズ上限: `S3_MAX_FILE_SIZE`（デフォルト 1GB）
 

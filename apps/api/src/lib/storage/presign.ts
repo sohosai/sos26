@@ -1,4 +1,5 @@
 import {
+	DeleteObjectCommand,
 	GetObjectCommand,
 	HeadObjectCommand,
 	PutObjectCommand,
@@ -103,4 +104,34 @@ export async function getObjectSize(key: string): Promise<number | null> {
  */
 export async function objectExists(key: string): Promise<boolean> {
 	return (await getObjectSize(key)) !== null;
+}
+
+/**
+ * サーバー側で生成したデータをS3に保存する。
+ */
+export async function putObject(
+	key: string,
+	body: Uint8Array,
+	contentType: string
+): Promise<void> {
+	const client = getStorageClient();
+	const command = new PutObjectCommand({
+		Bucket: env.S3_BUCKET,
+		Key: key,
+		Body: body,
+		ContentType: contentType,
+	});
+	await client.send(command);
+}
+
+/**
+ * S3からオブジェクトを削除する。存在しないキーを指定してもエラーにならない。
+ */
+export async function deleteObject(key: string): Promise<void> {
+	const client = getStorageClient();
+	const command = new DeleteObjectCommand({
+		Bucket: env.S3_BUCKET,
+		Key: key,
+	});
+	await client.send(command);
 }

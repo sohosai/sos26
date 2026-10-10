@@ -1,10 +1,22 @@
 import type { ProjectSnsLinkKey } from "@sos26/shared";
 import {
-	allowedImageExtensions,
+	buildFileAcceptAttribute,
+	fileTypeRegistry,
 	isAllowedImageFile,
+	isImageMimeType,
 	PROJECT_MAP_IMAGES_MAX_COUNT,
 	projectSnsLinkInputSchemas,
 } from "@sos26/shared";
+
+const imageFileEntries = fileTypeRegistry.filter(entry =>
+	isImageMimeType(entry.mimeTypes[0])
+);
+export const allowedImageExtensions = imageFileEntries
+	.map(entry => entry.label)
+	.join(", ");
+export const imageAcceptAttribute = buildFileAcceptAttribute(
+	imageFileEntries.map(entry => entry.mimeTypes[0])
+);
 
 /** 入力値が保存できない形式ならエラーメッセージを返す（未入力は可） */
 export function getSnsLinkError(key: ProjectSnsLinkKey, value: string) {

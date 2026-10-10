@@ -4,9 +4,9 @@ import type {
 	ProjectPublicInfoField,
 } from "@sos26/shared";
 import {
-	allowedImageMimeTypes,
 	correctCommitteePublicInfoEndpoint,
 	hideCommitteePublicInfoFieldEndpoint,
+	isImageMimeType,
 	projectPublicInfoFieldKeys,
 	projectPublicInfoFieldSchema,
 	revertCommitteePublicInfoCorrectionEndpoint,
@@ -189,8 +189,7 @@ async function assertCorrectionFilesUsable(
 		);
 	}
 
-	const imageMimeTypes = new Set<string>(allowedImageMimeTypes);
-	if (files.some(f => !imageMimeTypes.has(f.mimeType))) {
+	if (files.some(f => !isImageMimeType(f.mimeType))) {
 		throw Errors.invalidRequest("画像ファイルのみ設定できます");
 	}
 
