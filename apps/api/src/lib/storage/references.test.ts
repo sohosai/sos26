@@ -16,6 +16,10 @@ vi.mock("../prisma", () => ({
 	},
 }));
 
+vi.mock("./image-resize", () => ({
+	deleteResizedImages: vi.fn(),
+}));
+
 import { prisma } from "../prisma";
 import { findReferencedFileIds } from "./references";
 
