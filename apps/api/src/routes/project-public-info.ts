@@ -1,6 +1,7 @@
 import type {
 	MapAppSetting,
 	OpenStatus,
+	ProjectPublicInfoField,
 	ProjectSnsLinkKey,
 	StockStatus,
 	UpdateProjectPublicInfoRequest,
@@ -8,15 +9,20 @@ import type {
 import {
 	DEFAULT_MAP_APP_SETTING,
 	isImageMimeType,
+	projectPublicInfoFieldKeys,
+	projectPublicInfoFieldSchema,
 	projectSnsLinkKeys,
 	updateProjectPublicInfoEndpoint,
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
+import {
+	lockProjectPublicInfo,
+	previousFileIds,
+} from "../lib/project-public-info";
 import { bumpPublicApiCacheVersion } from "../lib/public-api-cache";
-import { deleteResizedImages } from "../lib/storage/image-resize";
-import { findReferencedFileIds } from "../lib/storage/references";
+import { softDeleteUnreferencedFiles } from "../lib/storage/references";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -68,6 +74,8 @@ function assertFieldsEditable(
  * ファイルIDはクライアントから任意の値を送れるため、
  * 「実在する」「アップロード完了済み」「公開ファイル」「画像」
  * 「自企画のメンバーがアップロードした」の5点をサーバー側で必ず確認する。
+ * ただし、すでに公開情報に付いているファイル（実委人が修正で設定したもの）は
+ * アップロードした人を問わない。
  *
  * isPublic を要求しないと、フォーム回答の添付など非公開ファイルのIDを
  * 直接APIで指定でき、無認証の公開APIから壊れ画像として見えてしまう。
@@ -77,7 +85,8 @@ function assertFieldsEditable(
  */
 async function assertFilesUsable(
 	projectId: string,
-	fileIds: string[]
+	fileIds: string[],
+	attachedFileIds: string[]
 ): Promise<void> {
 	if (fileIds.length === 0) return;
 
@@ -108,7 +117,10 @@ async function assertFilesUsable(
 	}
 
 	const memberUserIds = new Set(members.map(m => m.userId));
-	if (files.some(f => !memberUserIds.has(f.uploadedById))) {
+	const attached = new Set(attachedFileIds);
+	if (
+		files.some(f => !attached.has(f.id) && !memberUserIds.has(f.uploadedById))
+	) {
 		throw Errors.forbidden("他の企画のファイルは設定できません");
 	}
 }
@@ -137,11 +149,27 @@ type SavePublicInfoParams = {
 	stockStatus: StockStatus | undefined;
 };
 
+/** 保存で値が変わる項目を返す（undefined は変更なし） */
+function findChangedFields(
+	before: Record<string, unknown> | null,
+	next: Record<string, string | string[] | null | undefined>
+): ProjectPublicInfoField[] {
+	if (!before) return [];
+	return projectPublicInfoFieldSchema.options.filter(field => {
+		const key = projectPublicInfoFieldKeys[field];
+		const nextValue = next[key];
+		if (nextValue === undefined) return false;
+		return JSON.stringify(before[key] ?? null) !== JSON.stringify(nextValue);
+	});
+}
+
 /**
  * 公開情報を作成／更新する。
  *
  * 掲載画像は「全削除 → 並び順どおりに再作成」で置き換えるため、
  * sortOrder のユニーク制約に引っかからないよう1トランザクションで順序を保証する。
+ * 実委人による非表示は、保存後も残る画像にファイルIDで引き継ぐ。
+ * 実委人が修正した項目を企画が変えた場合は、修正の記録を消す。
  * undefined のフィールドは「変更なし」を意味する。
  */
 async function savePublicInfo(params: SavePublicInfoParams) {
@@ -156,6 +184,31 @@ async function savePublicInfo(params: SavePublicInfoParams) {
 	} = params;
 
 	return prisma.$transaction(async tx => {
+		await lockProjectPublicInfo(tx, projectId);
+		const beforeRow = await tx.projectPublicInfo.findUnique({
+			where: { projectId },
+			select: {
+				description: true,
+				iconFileId: true,
+				websiteUrls: true,
+				xIds: true,
+				instagramIds: true,
+				youtubeIds: true,
+				mapImages: {
+					orderBy: { sortOrder: "asc" },
+					select: { fileId: true, isHidden: true },
+				},
+				moderations: {
+					where: { kind: "CORRECTED" },
+					select: { field: true, previousValue: true },
+				},
+			},
+		});
+		const before = beforeRow && {
+			...beforeRow,
+			mapImageFileIds: beforeRow.mapImages.map(img => img.fileId),
+		};
+
 		const info = await tx.projectPublicInfo.upsert({
 			where: { projectId },
 			update: { description, iconFileId, ...snsLinks, openStatus, stockStatus },
@@ -173,6 +226,11 @@ async function savePublicInfo(params: SavePublicInfoParams) {
 		});
 
 		if (mapImageFileIds) {
+			const hiddenFileIds = new Set(
+				(before?.mapImages ?? [])
+					.filter(img => img.isHidden)
+					.map(img => img.fileId)
+			);
 			await tx.projectPublicMapImage.deleteMany({
 				where: { projectPublicInfoId: info.id },
 			});
@@ -181,48 +239,45 @@ async function savePublicInfo(params: SavePublicInfoParams) {
 					projectPublicInfoId: info.id,
 					fileId,
 					sortOrder,
+					isHidden: hiddenFileIds.has(fileId),
 				})),
 			});
 		}
 
-		return tx.projectPublicInfo.findUniqueOrThrow({
+		const changedFields = findChangedFields(before, {
+			description,
+			iconFileId,
+			mapImageFileIds,
+			...snsLinks,
+		});
+		// 消す修正の記録が残していた修正前のファイルは、保存後に回収する
+		// （ファイルIDを持つのはアイコン・掲載画像の記録だけ）
+		const releasedFileIds = (before?.moderations ?? [])
+			.filter(
+				m =>
+					(m.field === "ICON" || m.field === "MAP_IMAGES") &&
+					changedFields.includes(m.field)
+			)
+			.flatMap(m => previousFileIds(m.previousValue));
+		if (changedFields.length > 0) {
+			await tx.projectPublicInfoModeration.deleteMany({
+				where: {
+					projectPublicInfoId: info.id,
+					kind: "CORRECTED",
+					field: { in: changedFields },
+				},
+			});
+		}
+
+		const updated = await tx.projectPublicInfo.findUniqueOrThrow({
 			where: { id: info.id },
 			include: {
 				mapImages: { orderBy: { sortOrder: "asc" } },
 			},
 		});
+
+		return { before, updated, releasedFileIds };
 	});
-}
-
-/**
- * 公開情報から外れたファイルをソフトデリートする。
- *
- * 差し替え・削除した画像をそのまま残すと、公開ファイルとして
- * URLを知る者から参照され続け、ストレージにも溜まり続けるため。
- *
- * ファイルIDは他機能（アバター等）から流用されている可能性があるため、
- * この企画の公開情報から外れたというだけでは削除してよい根拠にならない。
- * 削除前に findReferencedFileIds で他機能からの参照有無を必ず確認する。
- */
-async function softDeleteUnreferencedFiles(
-	previousFileIds: string[],
-	nextFileIds: string[]
-): Promise<void> {
-	const nextIds = new Set(nextFileIds);
-	const removedIds = [...new Set(previousFileIds)].filter(
-		id => !nextIds.has(id)
-	);
-	if (removedIds.length === 0) return;
-
-	const referenced = await findReferencedFileIds(removedIds);
-	const deletableIds = removedIds.filter(id => !referenced.has(id));
-	if (deletableIds.length === 0) return;
-
-	await prisma.file.updateMany({
-		where: { id: { in: deletableIds }, deletedAt: null },
-		data: { deletedAt: new Date() },
-	});
-	await deleteResizedImages(deletableIds);
 }
 
 projectPublicInfoRoute.get(
@@ -238,14 +293,28 @@ projectPublicInfoRoute.get(
 				mapImages: {
 					orderBy: { sortOrder: "asc" },
 				},
+				moderations: { select: { field: true, kind: true } },
 			},
 		});
 
 		if (!info) {
-			return c.json({ publicInfo: null });
+			return c.json({
+				publicInfo: null,
+				hiddenFields: [],
+				correctedFields: [],
+				hiddenMapImageFileIds: [],
+			});
 		}
 
+		const fieldsOf = (kind: "HIDDEN" | "CORRECTED") =>
+			info.moderations.filter(m => m.kind === kind).map(m => m.field);
+
 		return c.json({
+			hiddenFields: fieldsOf("HIDDEN"),
+			correctedFields: fieldsOf("CORRECTED"),
+			hiddenMapImageFileIds: info.mapImages
+				.filter(img => img.isHidden)
+				.map(img => img.fileId),
 			publicInfo: {
 				description: info.description,
 				iconFileId: info.iconFileId,
@@ -302,22 +371,19 @@ projectPublicInfoRoute.put(
 			throw Errors.invalidRequest("同じ画像を複数登録することはできません");
 		}
 
-		await assertFilesUsable(project.id, [
-			...(iconFileId ? [iconFileId] : []),
-			...(mapImageFileIds ?? []),
-		]);
+		const current = await prisma.projectPublicInfo.findUnique({
+			where: { projectId: project.id },
+			select: { iconFileId: true, mapImages: { select: { fileId: true } } },
+		});
+		await assertFilesUsable(
+			project.id,
+			[...(iconFileId ? [iconFileId] : []), ...(mapImageFileIds ?? [])],
+			collectFileIds(current)
+		);
 
 		const isStage = project.type === "STAGE";
 
-		const before = await prisma.projectPublicInfo.findUnique({
-			where: { projectId: project.id },
-			select: {
-				iconFileId: true,
-				mapImages: { select: { fileId: true } },
-			},
-		});
-
-		const updated = await savePublicInfo({
+		const { before, updated, releasedFileIds } = await savePublicInfo({
 			projectId: project.id,
 			description,
 			iconFileId,
@@ -332,7 +398,7 @@ projectPublicInfoRoute.put(
 
 		// 参照が外れた画像を回収する（保存が確定してから実行する）
 		await softDeleteUnreferencedFiles(
-			collectFileIds(before),
+			[...collectFileIds(before), ...releasedFileIds],
 			collectFileIds(updated)
 		);
 

@@ -14,25 +14,22 @@ import {
 	SortableContext,
 	sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
-import { Callout, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import { Badge, Callout, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import type {
 	MapAppSetting,
 	OpenStatus,
 	Project,
 	ProjectPublicInfo,
+	ProjectPublicInfoField,
 	ProjectSnsLinkKey,
 	StockStatus,
 	UpdateProjectPublicInfoRequest,
 } from "@sos26/shared";
 import {
-	buildFileAcceptAttribute,
-	fileTypeRegistry,
 	isAllowedImageFile,
-	isImageMimeType,
 	PROJECT_DESCRIPTION_MAX_LENGTH,
 	PROJECT_MAP_IMAGES_MAX_COUNT,
 	PROJECT_SNS_LINKS_MAX_COUNT,
-	projectSnsLinkInputSchemas,
 	projectSnsLinkKeys,
 } from "@sos26/shared";
 import {
@@ -59,30 +56,27 @@ import { getMapAppSetting } from "@/lib/api/map-app-setting";
 import { updateProjectPublicInfo } from "@/lib/api/project-public-info";
 import { useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
+import {
+	allowedImageExtensions,
+	getMapImagesError,
+	getSnsLinkError,
+	imageAcceptAttribute,
+} from "@/lib/project/public-info";
 import { useProjectStore } from "@/lib/project/store";
-import { ImageCropperModal } from "./ImageCropperModal";
-import { ImagePreviewModal } from "./ImagePreviewModal";
+import { ImageCropperModal } from "./-components/ImageCropperModal";
+import { ImagePreviewModal } from "./-components/ImagePreviewModal";
+import { SortableMapImageItem } from "./-components/SortableMapImageItem";
 import styles from "./route.module.scss";
-import { SortableMapImageItem } from "./SortableMapImageItem";
 
 // 上限は shared のスキーマと共通（サーバー側の検証と必ず一致させる）
 const MAX_MAP_IMAGES = PROJECT_MAP_IMAGES_MAX_COUNT;
 const DESCRIPTION_MAX_LENGTH = PROJECT_DESCRIPTION_MAX_LENGTH;
 
-const imageFileEntries = fileTypeRegistry.filter(entry =>
-	isImageMimeType(entry.mimeTypes[0])
-);
-const allowedImageExtensions = imageFileEntries
-	.map(entry => entry.label)
-	.join(", ");
-const imageAcceptAttribute = buildFileAcceptAttribute(
-	imageFileEntries.map(entry => entry.mimeTypes[0])
-);
-
 const projectRoute = getRouteApi("/project");
 
 const SNS_LINK_FIELDS: {
 	key: ProjectSnsLinkKey;
+	field: ProjectPublicInfoField;
 	label: string;
 	type: "url" | "text";
 	placeholder: string;
@@ -90,6 +84,7 @@ const SNS_LINK_FIELDS: {
 }[] = [
 	{
 		key: "websiteUrls",
+		field: "WEBSITE_URLS",
 		label: "Webサイト（URL）",
 		type: "url",
 		placeholder: "https://sohosai.com/",
@@ -97,6 +92,7 @@ const SNS_LINK_FIELDS: {
 	},
 	{
 		key: "xIds",
+		field: "X_IDS",
 		label: "X（ユーザーID）",
 		type: "text",
 		placeholder: "sohosai",
@@ -104,6 +100,7 @@ const SNS_LINK_FIELDS: {
 	},
 	{
 		key: "instagramIds",
+		field: "INSTAGRAM_IDS",
 		label: "Instagram（ユーザーネーム）",
 		type: "text",
 		placeholder: "sohosai",
@@ -111,19 +108,13 @@ const SNS_LINK_FIELDS: {
 	},
 	{
 		key: "youtubeIds",
+		field: "YOUTUBE_IDS",
 		label: "YouTube（ハンドル）",
 		type: "text",
 		placeholder: "sohosai",
 		hint: "@ は付けずに入力。例：https://www.youtube.com/@sohosai → sohosai",
 	},
 ];
-
-/** 入力値が保存できない形式ならエラーメッセージを返す（未入力は可） */
-function getSnsLinkError(key: ProjectSnsLinkKey, value: string) {
-	if (value === "") return undefined;
-	const result = projectSnsLinkInputSchemas[key].safeParse(value);
-	return result.success ? undefined : result.error.issues[0]?.message;
-}
 
 /** 入力欄の数に合わせて未入力の欄を空文字で埋める */
 function toSnsLinkInputs(links: string[] | undefined): string[] {
@@ -184,37 +175,100 @@ function isSameValues(a: FormValues, b: FormValues): boolean {
 	);
 }
 
-/** 実委人が編集を許可している項目だけを送信する（禁止項目は undefined = 変更なし） */
+function isSameList(a: string[], b: string[]): boolean {
+	return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
+/**
+ * 編集が許可され、かつ編集を始めたときの値から変更した項目だけを送信する
+ * （それ以外は undefined = 変更なし）。
+ * 編集中に実委人が修正した項目を、編集を始めたときの値で上書きしないため。
+ */
 function buildUpdateRequest(
 	values: FormValues,
+	baseValues: FormValues,
 	setting: MapAppSetting,
 	projectType: Project["type"]
 ): UpdateProjectPublicInfoRequest {
 	const canEditStatus = projectType !== "STAGE";
-	const snsLinks = (key: ProjectSnsLinkKey) =>
-		setting.isSnsLinksEditable
-			? values[key].filter(value => value !== "")
-			: undefined;
+	const changed = <T,>(editable: boolean, value: T, isSame: boolean) =>
+		editable && !isSame ? value : undefined;
+	const snsLinks = (key: ProjectSnsLinkKey) => {
+		const links = values[key].filter(value => value !== "");
+		const serverLinks = baseValues[key].filter(value => value !== "");
+		return changed(
+			setting.isSnsLinksEditable,
+			links,
+			isSameList(links, serverLinks)
+		);
+	};
 
 	return {
-		description: setting.isDescriptionEditable ? values.description : undefined,
-		iconFileId: setting.isIconEditable ? values.iconFileId : undefined,
-		mapImageFileIds: setting.isMapImagesEditable
-			? values.mapImageFileIds
-			: undefined,
+		description: changed(
+			setting.isDescriptionEditable,
+			values.description,
+			values.description === baseValues.description
+		),
+		iconFileId: changed(
+			setting.isIconEditable,
+			values.iconFileId,
+			values.iconFileId === baseValues.iconFileId
+		),
+		mapImageFileIds: changed(
+			setting.isMapImagesEditable,
+			values.mapImageFileIds,
+			isSameList(values.mapImageFileIds, baseValues.mapImageFileIds)
+		),
 		websiteUrls: snsLinks("websiteUrls"),
 		xIds: snsLinks("xIds"),
 		instagramIds: snsLinks("instagramIds"),
 		youtubeIds: snsLinks("youtubeIds"),
-		openStatus:
-			canEditStatus && setting.isOpenStatusEditable
-				? values.openStatus
-				: undefined,
-		stockStatus:
-			canEditStatus && setting.isStockStatusEditable
-				? values.stockStatus
-				: undefined,
+		openStatus: changed(
+			canEditStatus && setting.isOpenStatusEditable,
+			values.openStatus,
+			values.openStatus === baseValues.openStatus
+		),
+		stockStatus: changed(
+			canEditStatus && setting.isStockStatusEditable,
+			values.stockStatus,
+			values.stockStatus === baseValues.stockStatus
+		),
 	};
+}
+
+/** 実行委員会が非表示・修正した項目に表示する注記 */
+function ModerationNotice({
+	isHidden,
+	isCorrected,
+}: {
+	isHidden: boolean;
+	isCorrected: boolean;
+}) {
+	if (!isHidden && !isCorrected) return null;
+	return (
+		<Flex direction="column" gap="1">
+			{isHidden && (
+				<Flex align="center" gap="2" wrap="wrap">
+					<Badge color="red" variant="soft">
+						非公開
+					</Badge>
+					<Text size="1" color="gray">
+						この項目は実行委員会により非公開になっています。変更しても公開されません。詳しくはお問い合わせからご連絡ください。
+					</Text>
+				</Flex>
+			)}
+			{isCorrected && (
+				<Flex align="center" gap="2" wrap="wrap">
+					<Badge color="blue" variant="soft">
+						実行委員会が修正
+					</Badge>
+					<Text size="1" color="gray">
+						この項目は実行委員会が修正しました。
+					</Text>
+				</Flex>
+			)}
+		</Flex>
+	);
 }
 
 /** 実委人により編集が制限されている項目に表示する注記 */
@@ -235,8 +289,12 @@ function ProjectPublicInfoPage() {
 	const setProjectIconFileId = useProjectStore(state => state.setIconFileId);
 	const project = projects.find(p => p.id === selectedProjectId);
 
-	const { publicInfo, publicInfoProjectId, publicInfoLoadFailed } =
-		projectRoute.useLoaderData();
+	const {
+		publicInfo,
+		publicInfoModeration,
+		publicInfoProjectId,
+		publicInfoLoadFailed,
+	} = projectRoute.useLoaderData();
 	const { setting } = Route.useLoaderData();
 
 	// 親ローダーの再取得が終わるまでは、前の企画の情報を表示しない
@@ -248,6 +306,21 @@ function ProjectPublicInfoPage() {
 		project.deletionStatus === null &&
 		(project.ownerId === user.id || project.subOwnerId === user.id);
 
+	const moderationNotice = (field: ProjectPublicInfoField) => (
+		<ModerationNotice
+			isHidden={
+				!isPublicInfoStale && publicInfoModeration.hiddenFields.includes(field)
+			}
+			isCorrected={
+				!isPublicInfoStale &&
+				publicInfoModeration.correctedFields.includes(field)
+			}
+		/>
+	);
+	const hiddenMapImageFileIds = new Set(
+		isPublicInfoStale ? [] : publicInfoModeration.hiddenMapImageFileIds
+	);
+
 	// サーバー上の値。編集中（draft !== null）でなければ、そのまま画面に反映する
 	const serverValues = useMemo(
 		() => toFormValues(isPublicInfoStale ? null : publicInfo),
@@ -256,9 +329,14 @@ function ProjectPublicInfoPage() {
 	const serverValuesRef = useRef(serverValues);
 	serverValuesRef.current = serverValues;
 
-	const [draft, setDraft] = useState<FormValues | null>(null);
-	const values = draft ?? serverValues;
-	const isDirty = draft !== null && !isSameValues(draft, serverValues);
+	// 編集中の値と、編集を始めたときのサーバー上の値（保存する項目の判定に使う）。
+	// 編集中にサーバー上の値が再取得で変わっても、触っていない項目は送らない
+	const [draft, setDraft] = useState<{
+		values: FormValues;
+		base: FormValues;
+	} | null>(null);
+	const values = draft?.values ?? serverValues;
+	const isDirty = draft !== null && !isSameValues(draft.values, draft.base);
 
 	const [isSaving, setIsSaving] = useState(false);
 	const [uploadingCount, setUploadingCount] = useState(0);
@@ -283,10 +361,15 @@ function ProjectPublicInfoPage() {
 	const updateValues = useCallback(
 		(patch: Partial<FormValues> | ((current: FormValues) => FormValues)) => {
 			setDraft(prev => {
-				const base = prev ?? serverValuesRef.current;
-				return typeof patch === "function"
-					? patch(base)
-					: { ...base, ...patch };
+				const base = prev?.base ?? serverValuesRef.current;
+				const current = prev?.values ?? base;
+				return {
+					base,
+					values:
+						typeof patch === "function"
+							? patch(current)
+							: { ...current, ...patch },
+				};
 			});
 		},
 		[]
@@ -338,7 +421,12 @@ function ProjectPublicInfoPage() {
 		try {
 			await updateProjectPublicInfo(
 				project.id,
-				buildUpdateRequest(values, setting, project.type)
+				buildUpdateRequest(
+					values,
+					draft?.base ?? serverValues,
+					setting,
+					project.type
+				)
 			);
 		} catch (error) {
 			reportHandledError({
@@ -423,16 +511,9 @@ function ProjectPublicInfoPage() {
 		e.target.value = "";
 		if (!files.length) return;
 
-		const invalidFile = files.find(file => !isAllowedImageFile(file));
-		if (invalidFile) {
-			toast.error(
-				`画像ファイルのみアップロードできます（${allowedImageExtensions}）。`
-			);
-			return;
-		}
-
-		if (values.mapImageFileIds.length + files.length > MAX_MAP_IMAGES) {
-			toast.error(`Map掲載画像は最大${MAX_MAP_IMAGES}枚までです。`);
+		const error = getMapImagesError(files, values.mapImageFileIds.length);
+		if (error) {
+			toast.error(error);
 			return;
 		}
 
@@ -564,6 +645,7 @@ function ProjectPublicInfoPage() {
 							企画検索システムに表示される企画の紹介文です。
 						</Text>
 					</div>
+					{moderationNotice("DESCRIPTION")}
 					{isEditable && !setting.isDescriptionEditable && <RestrictedNotice />}
 					<Flex direction="column" gap="2">
 						<TextArea
@@ -593,6 +675,7 @@ function ProjectPublicInfoPage() {
 							正方形にトリミングされて表示されます。
 						</Text>
 					</div>
+					{moderationNotice("ICON")}
 					{isEditable && !setting.isIconEditable && <RestrictedNotice />}
 					<input
 						type="file"
@@ -664,6 +747,7 @@ function ProjectPublicInfoPage() {
 							枚）。ドラッグで並び替えできます。
 						</Text>
 					</div>
+					{moderationNotice("MAP_IMAGES")}
 					{isEditable && !setting.isMapImagesEditable && <RestrictedNotice />}
 					<input
 						type="file"
@@ -691,6 +775,7 @@ function ProjectPublicInfoPage() {
 										id={fileId}
 										index={index}
 										isEditable={canEditMapImages}
+										isHidden={hiddenMapImageFileIds.has(fileId)}
 										onRemove={() => removeMapImage(index)}
 										onPreview={() => {
 											setPreviewIndex(index);
@@ -749,37 +834,40 @@ function ProjectPublicInfoPage() {
 						</Text>
 					</div>
 					{isEditable && !setting.isSnsLinksEditable && <RestrictedNotice />}
-					{SNS_LINK_FIELDS.map(({ key, label, type, placeholder, hint }) => (
-						<Flex key={key} direction="column" gap="1">
-							{values[key].map((linkValue, index) => (
-								<TextField
-									// biome-ignore lint/suspicious/noArrayIndexKey: 入力欄の数は固定
-									key={index}
-									type={type}
-									label={index === 0 ? label : `${label} ${index + 1}つ目`}
-									value={linkValue}
-									onChange={value =>
-										updateValues(current => ({
-											...current,
-											[key]: current[key].map((v, i) =>
-												i === index ? value.trim() : v
-											),
-										}))
-									}
-									error={
-										canEditSnsLinks
-											? getSnsLinkError(key, linkValue)
-											: undefined
-									}
-									disabled={!canEditSnsLinks}
-									placeholder={placeholder}
-								/>
-							))}
-							<Text size="1" color="gray">
-								{hint}
-							</Text>
-						</Flex>
-					))}
+					{SNS_LINK_FIELDS.map(
+						({ key, field, label, type, placeholder, hint }) => (
+							<Flex key={key} direction="column" gap="1">
+								{moderationNotice(field)}
+								{values[key].map((linkValue, index) => (
+									<TextField
+										// biome-ignore lint/suspicious/noArrayIndexKey: 入力欄の数は固定
+										key={index}
+										type={type}
+										label={index === 0 ? label : `${label} ${index + 1}つ目`}
+										value={linkValue}
+										onChange={value =>
+											updateValues(current => ({
+												...current,
+												[key]: current[key].map((v, i) =>
+													i === index ? value.trim() : v
+												),
+											}))
+										}
+										error={
+											canEditSnsLinks
+												? getSnsLinkError(key, linkValue)
+												: undefined
+										}
+										disabled={!canEditSnsLinks}
+										placeholder={placeholder}
+									/>
+								))}
+								<Text size="1" color="gray">
+									{hint}
+								</Text>
+							</Flex>
+						)
+					)}
 				</Flex>
 			</Card>
 

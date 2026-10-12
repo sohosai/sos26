@@ -153,9 +153,52 @@ export const projectPublicInfoSchema = z.object({
 
 export type ProjectPublicInfo = z.infer<typeof projectPublicInfoSchema>;
 
+/** 実委人が非表示・修正できる項目 */
+export const projectPublicInfoFieldSchema = z.enum([
+	"DESCRIPTION",
+	"ICON",
+	"MAP_IMAGES",
+	"WEBSITE_URLS",
+	"X_IDS",
+	"INSTAGRAM_IDS",
+	"YOUTUBE_IDS",
+]);
+export type ProjectPublicInfoField = z.infer<
+	typeof projectPublicInfoFieldSchema
+>;
+
+/** 項目と ProjectPublicInfo のキーの対応 */
+export const projectPublicInfoFieldKeys = {
+	DESCRIPTION: "description",
+	ICON: "iconFileId",
+	MAP_IMAGES: "mapImageFileIds",
+	WEBSITE_URLS: "websiteUrls",
+	X_IDS: "xIds",
+	INSTAGRAM_IDS: "instagramIds",
+	YOUTUBE_IDS: "youtubeIds",
+} as const satisfies Record<ProjectPublicInfoField, keyof ProjectPublicInfo>;
+
+/** 項目単位で非表示にできる項目（掲載画像は1枚ごとに非表示にする） */
+export const hideableProjectPublicInfoFieldSchema =
+	projectPublicInfoFieldSchema.exclude(["MAP_IMAGES"]);
+export type HideableProjectPublicInfoField = z.infer<
+	typeof hideableProjectPublicInfoFieldSchema
+>;
+
+export const projectPublicInfoModerationKindSchema = z.enum([
+	"HIDDEN",
+	"CORRECTED",
+]);
+export type ProjectPublicInfoModerationKind = z.infer<
+	typeof projectPublicInfoModerationKindSchema
+>;
+
 // GET /project/:projectId/public-info
 export const getProjectPublicInfoResponseSchema = z.object({
 	publicInfo: projectPublicInfoSchema.nullable(),
+	hiddenFields: z.array(projectPublicInfoFieldSchema),
+	correctedFields: z.array(projectPublicInfoFieldSchema),
+	hiddenMapImageFileIds: z.array(z.string()),
 });
 export type GetProjectPublicInfoResponse = z.infer<
 	typeof getProjectPublicInfoResponseSchema
@@ -195,17 +238,36 @@ export type UpdateProjectPublicInfoResponse = z.infer<
 	typeof updateProjectPublicInfoResponseSchema
 >;
 
+export const committeePublicInfoModerationSchema = z.object({
+	field: projectPublicInfoFieldSchema,
+	kind: projectPublicInfoModerationKindSchema,
+	// CORRECTED のみ: 最初に修正する前の企画の値（アイコン・掲載画像はファイルID）
+	previousValue: z.union([z.string(), z.array(z.string())]).nullable(),
+	updatedBy: z.object({ id: z.string(), name: z.string() }),
+	updatedAt: z.coerce.date(),
+});
+export type CommitteePublicInfoModeration = z.infer<
+	typeof committeePublicInfoModerationSchema
+>;
+
+/** 実委側で扱う企画ごとの企画情報 */
+export const committeeProjectPublicInfoSchema = z.object({
+	id: z.string(),
+	number: z.number().int(),
+	name: z.string(),
+	organizationName: z.string(),
+	// 登録値（企画情報が未登録なら null）
+	publicInfo: projectPublicInfoSchema.nullable(),
+	moderations: z.array(committeePublicInfoModerationSchema),
+	hiddenMapImageFileIds: z.array(z.string()),
+});
+export type CommitteeProjectPublicInfo = z.infer<
+	typeof committeeProjectPublicInfoSchema
+>;
+
 // GET /committee/projects/public-infos
 export const listCommitteeProjectPublicInfosResponseSchema = z.object({
-	projects: z.array(
-		z.object({
-			id: z.string(),
-			number: z.number().int(),
-			name: z.string(),
-			organizationName: z.string(),
-			publicInfo: projectPublicInfoSchema.nullable(),
-		})
-	),
+	projects: z.array(committeeProjectPublicInfoSchema),
 });
 export type ListCommitteeProjectPublicInfosResponse = z.infer<
 	typeof listCommitteeProjectPublicInfosResponseSchema

@@ -558,11 +558,22 @@ erDiagram
   DateTime createdAt
   DateTime updatedAt
 }
+"ProjectPublicInfoModeration" {
+  String id PK
+  String projectPublicInfoId FK
+  ProjectPublicInfoField field
+  ProjectPublicInfoModerationKind kind
+  Json previousValue "nullable"
+  String updatedById FK
+  DateTime createdAt
+  DateTime updatedAt
+}
 "ProjectPublicMapImage" {
   String id PK
   String projectPublicInfoId FK
   String fileId FK
   Int sortOrder
+  Boolean isHidden
   DateTime createdAt
 }
 "MapAppSetting" {
@@ -683,6 +694,8 @@ erDiagram
 "ProjectRegistrationFormAnswerSelectedOption" }o--|| "ProjectRegistrationFormItemOption" : formItemOption
 "ProjectPublicInfo" |o--|| "Project" : project
 "ProjectPublicInfo" }o--o| "File" : iconFile
+"ProjectPublicInfoModeration" }o--|| "ProjectPublicInfo" : projectPublicInfo
+"ProjectPublicInfoModeration" }o--|| "User" : updatedBy
 "ProjectPublicMapImage" }o--|| "ProjectPublicInfo" : projectPublicInfo
 "ProjectPublicMapImage" }o--|| "File" : file
 ```
@@ -1414,6 +1427,19 @@ Properties as follows:
 - `createdAt`:
 - `updatedAt`:
 
+### `ProjectPublicInfoModeration`
+
+Properties as follows:
+
+- `id`:
+- `projectPublicInfoId`:
+- `field`:
+- `kind`:
+- `previousValue`: CORRECTED のみ: 最初に修正する前の企画の値（紹介文・アイコンは文字列または null、掲載画像・SNSリンクは文字列の配列。アイコン・掲載画像はファイルID）
+- `updatedById`:
+- `createdAt`:
+- `updatedAt`:
+
 ### `ProjectPublicMapImage`
 
 Properties as follows:
@@ -1422,6 +1448,7 @@ Properties as follows:
 - `projectPublicInfoId`:
 - `fileId`:
 - `sortOrder`:
+- `isHidden`:
 - `createdAt`:
 
 ### `MapAppSetting`

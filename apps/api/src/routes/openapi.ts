@@ -2,6 +2,7 @@ import { swaggerUI } from "@hono/swagger-ui";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import {
 	type MastersheetDataType,
+	type ProjectPublicInfoField,
 	projectPublicInfoSchema,
 } from "@sos26/shared";
 import { prisma } from "../lib/prisma";
@@ -78,14 +79,11 @@ const errorResponseSchema = z.object({
 /**
  * 公開対象の企画の絞り込み条件
  *
- * 公開情報（ProjectPublicInfo）を作成した企画だけを対象にする。
- * 企画側が「企画情報」画面で保存して初めてレコードが作られるため、
- * これがオンラインマップ掲載のオプトインとして機能する。
+ * 有効な企画をすべて対象にする。落選・企画中止・企画辞退の企画は含めない。
  */
 const publicProjectWhere = {
 	deletedAt: null,
 	deletionStatus: null,
-	publicInfo: { isNot: null },
 } as const;
 
 const publicProjectSelect = {
@@ -107,7 +105,11 @@ const publicProjectSelect = {
 			stockStatus: true,
 			mapImages: {
 				orderBy: { sortOrder: "asc" },
-				select: { fileId: true },
+				select: { fileId: true, isHidden: true },
+			},
+			moderations: {
+				where: { kind: "HIDDEN" },
+				select: { field: true },
 			},
 		},
 	},
@@ -129,34 +131,61 @@ type PublicProjectRow = {
 		youtubeIds: string[];
 		openStatus: PublicProject["publicInfo"]["openStatus"];
 		stockStatus: PublicProject["publicInfo"]["stockStatus"];
-		mapImages: { fileId: string }[];
+		mapImages: { fileId: string; isHidden: boolean }[];
+		moderations: { field: ProjectPublicInfoField }[];
 	} | null;
 };
 
-/** publicInfo が null の行は publicProjectWhere で除外済みのため取り除く */
+/** 企画情報が未入力の企画に返す値 */
+const EMPTY_PUBLIC_INFO: PublicProject["publicInfo"] = {
+	description: null,
+	iconFileId: null,
+	mapImageFileIds: [],
+	websiteUrls: [],
+	xIds: [],
+	instagramIds: [],
+	youtubeIds: [],
+	openStatus: "NOT_APPLICABLE",
+	stockStatus: "NOT_APPLICABLE",
+};
+
+/**
+ * 企画情報が未入力の企画は、すべての項目を未入力の値で返す。
+ *
+ * 実委人が非表示にした項目も未入力と同じ値にする。
+ * 非表示にされたのか未入力なのかを、公開APIの利用者から区別できないようにするため。
+ */
 function toPublicProject(
 	row: PublicProjectRow,
 	customFields: CustomFields
-): PublicProject | null {
-	if (!row.publicInfo) return null;
-
-	return {
+): PublicProject {
+	const project = {
 		id: row.id,
 		number: row.number,
 		name: row.name,
 		organizationName: row.organizationName,
 		type: row.type,
 		location: row.location,
+	};
+	const info = row.publicInfo;
+	if (!info) return { ...project, publicInfo: EMPTY_PUBLIC_INFO, customFields };
+
+	const hidden = new Set(info.moderations.map(m => m.field));
+
+	return {
+		...project,
 		publicInfo: {
-			description: row.publicInfo.description,
-			iconFileId: row.publicInfo.iconFileId,
-			mapImageFileIds: row.publicInfo.mapImages.map(img => img.fileId),
-			websiteUrls: row.publicInfo.websiteUrls,
-			xIds: row.publicInfo.xIds,
-			instagramIds: row.publicInfo.instagramIds,
-			youtubeIds: row.publicInfo.youtubeIds,
-			openStatus: row.publicInfo.openStatus,
-			stockStatus: row.publicInfo.stockStatus,
+			description: hidden.has("DESCRIPTION") ? null : info.description,
+			iconFileId: hidden.has("ICON") ? null : info.iconFileId,
+			mapImageFileIds: info.mapImages
+				.filter(img => !img.isHidden)
+				.map(img => img.fileId),
+			websiteUrls: hidden.has("WEBSITE_URLS") ? [] : info.websiteUrls,
+			xIds: hidden.has("X_IDS") ? [] : info.xIds,
+			instagramIds: hidden.has("INSTAGRAM_IDS") ? [] : info.instagramIds,
+			youtubeIds: hidden.has("YOUTUBE_IDS") ? [] : info.youtubeIds,
+			openStatus: info.openStatus,
+			stockStatus: info.stockStatus,
 		},
 		customFields,
 	};
@@ -304,9 +333,9 @@ async function getPublicProjects(): Promise<PublicProject[]> {
 		rows.map(r => r.id)
 	);
 
-	const value = rows
-		.map(row => toPublicProject(row, customFieldsByProject.get(row.id) ?? {}))
-		.filter((p): p is PublicProject => p !== null);
+	const value = rows.map(row =>
+		toPublicProject(row, customFieldsByProject.get(row.id) ?? {})
+	);
 	listCache = { expiresAt: now + LIST_CACHE_TTL_MS, version, value };
 	return value;
 }
@@ -361,7 +390,7 @@ const getProjectDetailRoute = createRoute({
 					schema: errorResponseSchema,
 				},
 			},
-			description: "企画が見つからない、または未公開",
+			description: "企画が見つからない、または落選・企画中止・企画辞退の企画",
 		},
 	},
 });
@@ -478,7 +507,7 @@ openApiRoute.doc("/openapi.json", c => ({
 		title: "sos26 Public API",
 		version: "1.0.0",
 		description:
-			"雙峰祭オンラインマップにデータ連携をするためのAPI。認証不要で、企画側が公開情報を登録した企画のみを返す。",
+			"雙峰祭オンラインマップにデータ連携をするためのAPI。認証不要で、有効な企画をすべて返す。企画情報が未入力の項目と、実行委員会が非表示にした項目は未入力の値で返す。",
 	},
 	// createRoute のパスはこのサブアプリ内の相対パス（例: /projects）で
 	// spec に出力される。servers を明示しないと Swagger UI の Try it out や

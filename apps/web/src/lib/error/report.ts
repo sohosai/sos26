@@ -23,6 +23,7 @@ const IMPORTANT_ERROR_OPERATIONS = [
 	"download_files_zip",
 	"update_map_setting",
 	"update_project_public_info",
+	"update_committee_public_info",
 ] as const;
 
 type ImportantErrorOperation = (typeof IMPORTANT_ERROR_OPERATIONS)[number];

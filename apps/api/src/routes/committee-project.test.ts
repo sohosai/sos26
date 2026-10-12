@@ -297,6 +297,78 @@ describe("GET /committee/projects", () => {
 	});
 });
 
+describe("GET /committee/projects/public-infos", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("正常系: 登録値と非表示・修正の記録を返す", async () => {
+		const app = makeApp();
+		setupAuth();
+		mockPrisma.project.findMany.mockResolvedValue([
+			{
+				id: mockProject.id,
+				number: 1,
+				name: mockProject.name,
+				organizationName: mockProject.organizationName,
+				publicInfo: {
+					description: "紹介文",
+					iconFileId: null,
+					websiteUrls: [],
+					xIds: [],
+					instagramIds: [],
+					youtubeIds: [],
+					openStatus: "OPEN",
+					stockStatus: "IN_STOCK",
+					mapImages: [
+						{ fileId: "file-1", isHidden: false },
+						{ fileId: "file-2", isHidden: true },
+					],
+					moderations: [
+						{
+							field: "DESCRIPTION",
+							kind: "HIDDEN",
+							updatedAt: new Date(),
+							updatedBy: { id: mockUser.id, name: mockUser.name },
+						},
+					],
+				},
+			},
+			{
+				id: "clppppppppppppppppq",
+				number: 2,
+				name: "未登録企画",
+				organizationName: "テスト団体",
+				publicInfo: null,
+			},
+		] as any);
+
+		const res = await app.request("/committee/projects/public-infos", {
+			method: "GET",
+			headers: { Authorization: "Bearer valid-token" },
+		});
+
+		expect(res.status).toBe(200);
+		const { projects } = await res.json();
+		// 非表示でも登録値はそのまま返す
+		expect(projects[0].publicInfo.description).toBe("紹介文");
+		expect(projects[0].publicInfo.mapImageFileIds).toEqual([
+			"file-1",
+			"file-2",
+		]);
+		expect(projects[0].hiddenMapImageFileIds).toEqual(["file-2"]);
+		expect(projects[0].moderations[0]).toMatchObject({
+			field: "DESCRIPTION",
+			kind: "HIDDEN",
+		});
+		expect(projects[1]).toMatchObject({
+			publicInfo: null,
+			moderations: [],
+			hiddenMapImageFileIds: [],
+		});
+	});
+});
+
 describe("GET /committee/projects/:projectId", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
