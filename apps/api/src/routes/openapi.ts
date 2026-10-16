@@ -52,7 +52,11 @@ const publicProjectSchema = z.object({
 	id: z.string(),
 	number: z.number().openapi({ description: "企画番号" }),
 	name: z.string(),
+	namePhonetic: z.string().openapi({ description: "企画名のふりがな" }),
 	organizationName: z.string(),
+	organizationNamePhonetic: z
+		.string()
+		.openapi({ description: "団体名のふりがな" }),
 	type: z.enum(["STAGE", "FOOD", "NORMAL"]),
 	location: z.enum(["INDOOR", "OUTDOOR", "STAGE"]),
 	publicInfo: projectPublicInfoSchema,
@@ -90,7 +94,9 @@ const publicProjectSelect = {
 	id: true,
 	number: true,
 	name: true,
+	namePhonetic: true,
 	organizationName: true,
+	organizationNamePhonetic: true,
 	type: true,
 	location: true,
 	publicInfo: {
@@ -119,7 +125,9 @@ type PublicProjectRow = {
 	id: string;
 	number: number;
 	name: string;
+	namePhonetic: string;
 	organizationName: string;
+	organizationNamePhonetic: string;
 	type: PublicProject["type"];
 	location: PublicProject["location"];
 	publicInfo: {
@@ -163,7 +171,9 @@ function toPublicProject(
 		id: row.id,
 		number: row.number,
 		name: row.name,
+		namePhonetic: row.namePhonetic,
 		organizationName: row.organizationName,
+		organizationNamePhonetic: row.organizationNamePhonetic,
 		type: row.type,
 		location: row.location,
 	};

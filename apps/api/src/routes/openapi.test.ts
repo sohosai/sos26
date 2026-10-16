@@ -46,7 +46,9 @@ const mockRow = {
 	id: "clpppppppppppppppp1",
 	number: 12,
 	name: "焼きそば屋",
+	namePhonetic: "やきそばや",
 	organizationName: "サークルA",
+	organizationNamePhonetic: "さーくるえー",
 	type: "FOOD",
 	location: "OUTDOOR",
 	publicInfo: {
@@ -86,6 +88,8 @@ describe("GET /openapi/projects", () => {
 		const body = await res.json();
 		expect(body).toHaveLength(1);
 		expect(body[0].number).toBe(12);
+		expect(body[0].namePhonetic).toBe("やきそばや");
+		expect(body[0].organizationNamePhonetic).toBe("さーくるえー");
 		expect(body[0].customFields).toEqual({});
 		expect(body[0].publicInfo.mapImageFileIds).toEqual(["clfffffffffffffff02"]);
 		expect(body[0].publicInfo).toMatchObject({
@@ -159,7 +163,9 @@ describe("GET /openapi/projects", () => {
 			id: mockRow.id,
 			number: mockRow.number,
 			name: mockRow.name,
+			namePhonetic: mockRow.namePhonetic,
 			organizationName: mockRow.organizationName,
+			organizationNamePhonetic: mockRow.organizationNamePhonetic,
 			type: mockRow.type,
 			location: mockRow.location,
 			publicInfo: {
