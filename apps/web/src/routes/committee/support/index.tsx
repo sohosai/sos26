@@ -92,6 +92,7 @@ function CommitteeSupportListPage() {
 		return res.members.map(m => ({
 			id: m.userId,
 			name: m.name,
+			role: m.role,
 			avatarFileId: m.avatarFileId,
 		}));
 	};

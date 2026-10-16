@@ -32,7 +32,12 @@ type ViewerInput = {
 	userId?: string;
 };
 
-type UserSummary = { id: string; name: string; avatarFileId?: string | null };
+type UserSummary = {
+	id: string;
+	name: string;
+	role?: "OWNER" | "SUB_OWNER" | "MEMBER";
+	avatarFileId?: string | null;
+};
 type FormSummary = { id: string; title: string };
 type SubmitParams = Parameters<NewInquiryFormProps["onSubmit"]>[0];
 
@@ -372,6 +377,7 @@ function CommitteeContent({
 	selectedViewers: ViewerInput[];
 	onChangeViewers: (viewers: ViewerInput[]) => void;
 }) {
+	//console.log("loadedProjectMembers", loadedProjectMembers);
 	return (
 		<>
 			{projects && (
