@@ -19,7 +19,7 @@ SEED_FIREBASE_UIDS=uid-aaa,uid-bbb,uid-ccc
 
 ```bash
 # プロジェクトルートから実行
-bun run db:seed
+docker compose exec app bun run db:seed
 ```
 
 ### 想定する使い方
