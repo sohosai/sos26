@@ -14,6 +14,7 @@ import { env } from "../lib/env";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
 import { findOtherPrivilegedProject } from "../lib/project-check";
+import { ensureDeliveriesForProject } from "../lib/project-delivery-targets";
 import {
 	committeeProjectPublicInfoSelect,
 	toCommitteeProjectPublicInfo,
@@ -937,9 +938,20 @@ committeeProjectRoute.patch(
 		// 責任者情報のバリデーション
 		await validateProjectOwnerUpdates(projectId, data);
 
-		const updated = await prisma.project.updateMany({
-			where: { id: projectId, deletedAt: null },
-			data,
+		const shouldEnsureDeliveries =
+			data.type !== undefined || data.location !== undefined;
+
+		const updated = await prisma.$transaction(async tx => {
+			const updated = await tx.project.updateMany({
+				where: { id: projectId, deletedAt: null },
+				data,
+			});
+
+			if (updated.count > 0 && shouldEnsureDeliveries) {
+				await ensureDeliveriesForProject(tx, projectId);
+			}
+
+			return updated;
 		});
 
 		if (updated.count === 0) {

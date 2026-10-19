@@ -10,7 +10,7 @@ import {
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { Button } from "@/components/primitives";
@@ -18,12 +18,10 @@ import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
 import { ProjectJoinDialog } from "@/components/project/ProjectJoinDialog";
 import {
 	getApplicationPeriod,
+	getProjectNotificationStatus,
 	joinProject,
 	listMyProjects,
 } from "@/lib/api/project";
-import { listProjectForms } from "@/lib/api/project-form";
-import { listProjectInquiries } from "@/lib/api/project-inquiry";
-import { listProjectNotices } from "@/lib/api/project-notice";
 import { getProjectPublicInfo } from "@/lib/api/project-public-info";
 import { requireAuth, useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
@@ -132,9 +130,11 @@ export const Route = createFileRoute("/project")({
 
 		if (!selectedProjectId) {
 			return {
-				hasUnansweredForms: false,
-				hasUncheckedNotices: false,
-				hasUnreadInquiryComments: false,
+				notificationStatus: {
+					hasUnansweredForms: false,
+					hasUncheckedNotices: false,
+					hasUnreadInquiryComments: false,
+				},
 				publicInfoProjectId: null,
 				publicInfo: null,
 				publicInfoModeration: EMPTY_PUBLIC_INFO_MODERATION,
@@ -142,13 +142,20 @@ export const Route = createFileRoute("/project")({
 			};
 		}
 
-		const [formsResult, noticesResult, inquiriesResult, publicInfoResult] =
+		const [notificationStatusResult, publicInfoResult] =
 			await Promise.allSettled([
-				listProjectForms(selectedProjectId),
-				listProjectNotices(selectedProjectId),
-				listProjectInquiries(selectedProjectId),
+				getProjectNotificationStatus(selectedProjectId),
 				getProjectPublicInfo(selectedProjectId),
 			]);
+
+		const notificationStatus =
+			notificationStatusResult.status === "fulfilled"
+				? notificationStatusResult.value
+				: {
+						hasUnansweredForms: false,
+						hasUncheckedNotices: false,
+						hasUnreadInquiryComments: true,
+					};
 
 		// 企画公開情報は企画情報ページと共用する（重複取得を避ける）
 		// サイドバーのアイコンは /project/list が返す iconFileId を使う
@@ -165,37 +172,8 @@ export const Route = createFileRoute("/project")({
 					}
 				: EMPTY_PUBLIC_INFO_MODERATION;
 
-		const forms =
-			formsResult.status === "fulfilled" ? formsResult.value.forms : [];
-		const notices =
-			noticesResult.status === "fulfilled" ? noticesResult.value.notices : [];
-		const inquiries =
-			inquiriesResult.status === "fulfilled"
-				? inquiriesResult.value.inquiries
-				: [];
-
-		const now = new Date();
-		const hasUnansweredForms = forms.some(form => {
-			if (form.restricted) return false;
-			if (form.response?.submittedAt) return false;
-
-			const isExpired =
-				form.deadlineAt && !form.allowLateResponse && now > form.deadlineAt;
-			if (isExpired) return false;
-
-			return !form.response?.submittedAt;
-		});
-
-		const hasUncheckedNotices = notices.some(notice => !notice.isRead);
-		const hasUnreadInquiryComments =
-			inquiriesResult.status === "rejected"
-				? true
-				: inquiries.some(inquiry => inquiry.hasUnreadComments);
-
 		return {
-			hasUnansweredForms,
-			hasUncheckedNotices,
-			hasUnreadInquiryComments,
+			notificationStatus,
 			publicInfoProjectId: selectedProjectId,
 			publicInfo,
 			publicInfoModeration,
@@ -206,7 +184,7 @@ export const Route = createFileRoute("/project")({
 });
 
 function ProjectLayout() {
-	const { hasUnansweredForms, hasUncheckedNotices, hasUnreadInquiryComments } =
+	const { notificationStatus: initialNotificationStatus } =
 		Route.useLoaderData();
 	const navigate = useNavigate();
 	const router = useRouter();
@@ -222,6 +200,13 @@ function ProjectLayout() {
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 	const [joinDialogOpen, setJoinDialogOpen] = useState(false);
 	const { user } = useAuthStore();
+	const [notificationStatus, setNotificationStatus] = useState(
+		initialNotificationStatus
+	);
+
+	useEffect(() => {
+		setNotificationStatus(initialNotificationStatus);
+	}, [initialNotificationStatus]);
 
 	useEffect(() => {
 		const fetchApplicationPeriod = async () => {
@@ -244,32 +229,63 @@ function ProjectLayout() {
 	const projectMenuItemsWithDot = projectMenuItems.map(item => ({
 		...item,
 		showNotificationDot:
-			(item.to === "/project/forms" && hasUnansweredForms) ||
-			(item.to === "/project/notice" && hasUncheckedNotices) ||
-			(item.to === "/project/support" && hasUnreadInquiryComments),
+			(item.to === "/project/forms" && notificationStatus.hasUnansweredForms) ||
+			(item.to === "/project/notice" &&
+				notificationStatus.hasUncheckedNotices) ||
+			(item.to === "/project/support" &&
+				notificationStatus.hasUnreadInquiryComments),
 	}));
 
-	useEffect(() => {
-		const intervalId = window.setInterval(() => {
-			void router.invalidate();
-		}, 60_000);
+	const refreshNotificationStatus = useCallback(async () => {
+		if (!selectedProjectId) {
+			setNotificationStatus({
+				hasUnansweredForms: false,
+				hasUncheckedNotices: false,
+				hasUnreadInquiryComments: false,
+			});
+			return;
+		}
 
-		const handleFocus = () => {
-			void router.invalidate();
+		try {
+			const next = await getProjectNotificationStatus(selectedProjectId);
+			setNotificationStatus(next);
+		} catch {
+			// Keep the current indicators when a background refresh fails.
+		}
+	}, [selectedProjectId]);
+
+	useEffect(() => {
+		let lastRefreshAt = 0;
+		const refreshIfNeeded = () => {
+			const now = Date.now();
+			if (now - lastRefreshAt < 5_000) return;
+			lastRefreshAt = now;
+			void refreshNotificationStatus();
 		};
 
-		window.addEventListener("focus", handleFocus);
-		document.addEventListener("visibilitychange", handleFocus);
+		const intervalId = window.setInterval(refreshIfNeeded, 60_000);
+
+		window.addEventListener("focus", refreshIfNeeded);
+		document.addEventListener("visibilitychange", refreshIfNeeded);
 
 		return () => {
 			window.clearInterval(intervalId);
-			window.removeEventListener("focus", handleFocus);
-			document.removeEventListener("visibilitychange", handleFocus);
+			window.removeEventListener("focus", refreshIfNeeded);
+			document.removeEventListener("visibilitychange", refreshIfNeeded);
 		};
-	}, [router]);
+	}, [refreshNotificationStatus]);
 
 	const handleSelectProject = (projectId: string) => {
 		setSelectedProjectId(projectId);
+		void getProjectNotificationStatus(projectId)
+			.then(setNotificationStatus)
+			.catch(() => {
+				setNotificationStatus({
+					hasUnansweredForms: false,
+					hasUncheckedNotices: false,
+					hasUnreadInquiryComments: true,
+				});
+			});
 		navigate({ to: "/project" });
 	};
 

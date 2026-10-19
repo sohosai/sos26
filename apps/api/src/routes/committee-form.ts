@@ -43,6 +43,7 @@ import {
 	notifyFormAuthorizationRequested,
 } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
+import { ensureFormDeliveriesForAuthorization } from "../lib/project-delivery-targets";
 import { getObject, objectExists } from "../lib/storage/presign";
 import {
 	getCommitteeMember,
@@ -1062,6 +1063,14 @@ committeeFormRoute.patch(
 					where: { id: authorizationId, status: "PENDING" },
 					data: { status, decidedAt: now },
 				});
+
+				if (
+					status === "APPROVED" &&
+					authorization.deliveryMode === "CATEGORY"
+				) {
+					// 読み取りAPIで補完していたカテゴリ指定 delivery を承認時に確定する。
+					await ensureFormDeliveriesForAuthorization(tx, authorization.id);
+				}
 
 				return { updated, authorization };
 			}
