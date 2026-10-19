@@ -544,6 +544,48 @@ erDiagram
   String formItemOptionId FK
   DateTime createdAt
 }
+"ProjectPublicInfo" {
+  String id PK
+  String projectId FK,UK
+  String(200) description "nullable"
+  String iconFileId FK "nullable"
+  String(2048) websiteUrls
+  String(15) xIds
+  String(30) instagramIds
+  String(30) youtubeIds
+  OpenStatus openStatus
+  StockStatus stockStatus
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectPublicInfoModeration" {
+  String id PK
+  String projectPublicInfoId FK
+  ProjectPublicInfoField field
+  ProjectPublicInfoModerationKind kind
+  Json previousValue "nullable"
+  String updatedById FK
+  DateTime createdAt
+  DateTime updatedAt
+}
+"ProjectPublicMapImage" {
+  String id PK
+  String projectPublicInfoId FK
+  String fileId FK
+  Int sortOrder
+  Boolean isHidden
+  DateTime createdAt
+}
+"MapAppSetting" {
+  String id PK
+  Boolean isDescriptionEditable
+  Boolean isIconEditable
+  Boolean isMapImagesEditable
+  Boolean isSnsLinksEditable
+  Boolean isOpenStatusEditable
+  Boolean isStockStatusEditable
+  DateTime updatedAt
+}
 "Project" }o--|| "User" : owner
 "Project" }o--o| "User" : subOwner
 "ProjectMember" }o--|| "Project" : project
@@ -650,6 +692,12 @@ erDiagram
 "ProjectRegistrationFormAnswerFile" }o--|| "File" : file
 "ProjectRegistrationFormAnswerSelectedOption" }o--|| "ProjectRegistrationFormAnswer" : answer
 "ProjectRegistrationFormAnswerSelectedOption" }o--|| "ProjectRegistrationFormItemOption" : formItemOption
+"ProjectPublicInfo" |o--|| "Project" : project
+"ProjectPublicInfo" }o--o| "File" : iconFile
+"ProjectPublicInfoModeration" }o--|| "ProjectPublicInfo" : projectPublicInfo
+"ProjectPublicInfoModeration" }o--|| "User" : updatedBy
+"ProjectPublicMapImage" }o--|| "ProjectPublicInfo" : projectPublicInfo
+"ProjectPublicMapImage" }o--|| "File" : file
 ```
 
 ### `EmailVerification`
@@ -1361,3 +1409,57 @@ Properties as follows:
 - `answerId`:
 - `formItemOptionId`:
 - `createdAt`:
+
+### `ProjectPublicInfo`
+
+Properties as follows:
+
+- `id`:
+- `projectId`:
+- `description`:
+- `iconFileId`:
+- `websiteUrls`:
+- `xIds`:
+- `instagramIds`:
+- `youtubeIds`:
+- `openStatus`:
+- `stockStatus`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectPublicInfoModeration`
+
+Properties as follows:
+
+- `id`:
+- `projectPublicInfoId`:
+- `field`:
+- `kind`:
+- `previousValue`: CORRECTED のみ: 最初に修正する前の企画の値（紹介文・アイコンは文字列または null、掲載画像・SNSリンクは文字列の配列。アイコン・掲載画像はファイルID）
+- `updatedById`:
+- `createdAt`:
+- `updatedAt`:
+
+### `ProjectPublicMapImage`
+
+Properties as follows:
+
+- `id`:
+- `projectPublicInfoId`:
+- `fileId`:
+- `sortOrder`:
+- `isHidden`:
+- `createdAt`:
+
+### `MapAppSetting`
+
+Properties as follows:
+
+- `id`:
+- `isDescriptionEditable`:
+- `isIconEditable`:
+- `isMapImagesEditable`:
+- `isSnsLinksEditable`:
+- `isOpenStatusEditable`:
+- `isStockStatusEditable`:
+- `updatedAt`:

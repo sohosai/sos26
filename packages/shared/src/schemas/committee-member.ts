@@ -63,6 +63,7 @@ export const committeePermissionSchema = z.enum([
 	"PROJECT_VIEW",
 	"PROJECT_REGISTRATION_FORM_CREATE",
 	"PROJECT_REGISTRATION_FORM_DELIVER",
+	"MAP_APP_SETTING_EDIT",
 ]);
 export type CommitteePermission = z.infer<typeof committeePermissionSchema>;
 

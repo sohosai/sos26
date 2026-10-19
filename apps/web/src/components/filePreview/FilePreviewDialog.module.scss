@@ -80,6 +80,13 @@
 	background: var(--gray-3);
 }
 
+.audio {
+	display: block;
+	width: 100%;
+	max-width: 600px;
+	margin: auto;
+}
+
 .unsupported {
 	display: flex;
 	align-items: center;

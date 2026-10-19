@@ -9,13 +9,13 @@ export const statusConfig: Record<
 	InquiryStatus,
 	{
 		label: string;
-		color: "orange" | "blue" | "green";
+		color: "red" | "blue" | "green";
 		icon: typeof IconAlertCircle;
 	}
 > = {
 	UNASSIGNED: {
 		label: "担当者未割り当て",
-		color: "orange",
+		color: "red",
 		icon: IconAlertCircle,
 	},
 	IN_PROGRESS: { label: "対応中", color: "blue", icon: IconMessageDots },

@@ -46,6 +46,14 @@ apps/apiで使用する環境変数の設定方法とリファレンスです。
 | `S3_PRESIGNED_URL_EXPIRES` | Presigned URL の有効期限（秒） | `3600` | ❌ |
 | `S3_MAX_FILE_SIZE` | 最大ファイルサイズ（バイト） | `1000000000` | ❌ |
 | `FILE_TOKEN_SECRET` | ファイルトークン署名用秘密鍵（32文字以上） | なし | ✅ |
+| `PUBLIC_API_MASTERSHEET_COLUMN_IDS` | 公開API（`/openapi/projects`）の `customFields` に載せるマスターシートの CUSTOM 列ID（カンマ区切り） | `""` | ❌ |
+
+> [!WARNING]
+> `PUBLIC_API_MASTERSHEET_COLUMN_IDS` に指定した列の値は、マスターシート上の閲覧権限（viewers / visibility）に関わらず、認証なしで誰でも取得できるようになります。
+>
+> - 列IDはマスターシートを `?debug=true` 付きで開くと各列のヘッダーに表示されます。
+> - CUSTOM 以外の列や存在しない列IDは警告ログを出して無視されます。列名が重複する場合は後に指定した列が無視されます。
+> - `customFields` は列名をキーとしたオブジェクトで、キーの順序は指定順です。
 
 ## 設定方法
 
@@ -157,6 +165,8 @@ FILE_TOKEN_SECRET=your-file-token-secret-at-least-32-chars
 
 **S3_ENDPOINT:**
 - 空であってはならない必須文字列
+- スキーム（`http://` / `https://`）は省略可。省略した場合は `https://` を補完する
+- ローカルの MinIO 等を http で動かす場合は `http://` を明示すること
 
 **S3_REGION:**
 - 既定は `jp-north-1`

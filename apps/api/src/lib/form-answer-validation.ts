@@ -3,7 +3,7 @@ import type {
 	FormAnswerInput,
 	FormAnswerValidationItem,
 } from "@sos26/shared";
-import { buildFileExtensionsLabel } from "@sos26/shared";
+import { buildFileTypesLabel } from "@sos26/shared";
 import { Errors } from "./error";
 
 // ─────────────────────────────────────────────────────────────
@@ -185,7 +185,7 @@ export function assertFileMimeTypeConstraints(
 			if (!file) continue;
 			if (!allowedSet.has(file.mimeType as never)) {
 				throw Errors.invalidRequest(
-					`対応していないファイル形式です（${buildFileExtensionsLabel(allowedTypes)}）`
+					`対応していないファイル形式です（${buildFileTypesLabel(allowedTypes)}）`
 				);
 			}
 		}

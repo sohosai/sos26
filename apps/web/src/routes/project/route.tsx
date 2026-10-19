@@ -1,5 +1,9 @@
 import { Callout, Heading, Text } from "@radix-ui/themes";
-import type { Project } from "@sos26/shared";
+import type {
+	GetProjectPublicInfoResponse,
+	MyProject,
+	Project,
+} from "@sos26/shared";
 import {
 	createFileRoute,
 	Outlet,
@@ -18,6 +22,7 @@ import {
 	joinProject,
 	listMyProjects,
 } from "@/lib/api/project";
+import { getProjectPublicInfo } from "@/lib/api/project-public-info";
 import { requireAuth, useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
 import { useProjectStore } from "@/lib/project/store";
@@ -93,6 +98,15 @@ function EmptyProjectState({
 	);
 }
 
+/** 企画情報に対する実委人の非表示・修正の状態 */
+type PublicInfoModeration = Omit<GetProjectPublicInfoResponse, "publicInfo">;
+
+const EMPTY_PUBLIC_INFO_MODERATION: PublicInfoModeration = {
+	hiddenFields: [],
+	correctedFields: [],
+	hiddenMapImageFileIds: [],
+};
+
 export const Route = createFileRoute("/project")({
 	beforeLoad: async ({ location }) => {
 		await requireAuth(location.href);
@@ -111,27 +125,67 @@ export const Route = createFileRoute("/project")({
 		}
 	},
 	loader: async () => {
-		const { selectedProjectId } = useProjectStore.getState();
+		const store = useProjectStore.getState();
+		const { selectedProjectId } = store;
 
 		if (!selectedProjectId) {
 			return {
-				hasUnansweredForms: false,
-				hasUncheckedNotices: false,
-				hasUnreadInquiryComments: false,
+				notificationStatus: {
+					hasUnansweredForms: false,
+					hasUncheckedNotices: false,
+					hasUnreadInquiryComments: false,
+				},
+				publicInfoProjectId: null,
+				publicInfo: null,
+				publicInfoModeration: EMPTY_PUBLIC_INFO_MODERATION,
+				publicInfoLoadFailed: false,
 			};
 		}
 
-		return await getProjectNotificationStatus(selectedProjectId).catch(() => ({
-			hasUnansweredForms: false,
-			hasUncheckedNotices: false,
-			hasUnreadInquiryComments: true,
-		}));
+		const [notificationStatusResult, publicInfoResult] =
+			await Promise.allSettled([
+				getProjectNotificationStatus(selectedProjectId),
+				getProjectPublicInfo(selectedProjectId),
+			]);
+
+		const notificationStatus =
+			notificationStatusResult.status === "fulfilled"
+				? notificationStatusResult.value
+				: {
+						hasUnansweredForms: false,
+						hasUncheckedNotices: false,
+						hasUnreadInquiryComments: true,
+					};
+
+		// 企画公開情報は企画情報ページと共用する（重複取得を避ける）
+		// サイドバーのアイコンは /project/list が返す iconFileId を使う
+		const publicInfo =
+			publicInfoResult.status === "fulfilled"
+				? publicInfoResult.value.publicInfo
+				: null;
+		const publicInfoModeration =
+			publicInfoResult.status === "fulfilled"
+				? {
+						hiddenFields: publicInfoResult.value.hiddenFields,
+						correctedFields: publicInfoResult.value.correctedFields,
+						hiddenMapImageFileIds: publicInfoResult.value.hiddenMapImageFileIds,
+					}
+				: EMPTY_PUBLIC_INFO_MODERATION;
+
+		return {
+			notificationStatus,
+			publicInfoProjectId: selectedProjectId,
+			publicInfo,
+			publicInfoModeration,
+			publicInfoLoadFailed: publicInfoResult.status === "rejected",
+		};
 	},
 	component: ProjectLayout,
 });
 
 function ProjectLayout() {
-	const initialNotificationStatus = Route.useLoaderData();
+	const { notificationStatus: initialNotificationStatus } =
+		Route.useLoaderData();
 	const navigate = useNavigate();
 	const router = useRouter();
 	const { projects, selectedProjectId, setSelectedProjectId, setProjects } =
@@ -168,7 +222,9 @@ function ProjectLayout() {
 	}, []);
 
 	const hasPrivilegedProject = projects.some(
-		project => project.ownerId === user?.id || project.subOwnerId === user?.id
+		project =>
+			project.deletionStatus === null &&
+			(project.ownerId === user?.id || project.subOwnerId === user?.id)
 	);
 	const projectMenuItemsWithDot = projectMenuItems.map(item => ({
 		...item,
@@ -238,7 +294,8 @@ function ProjectLayout() {
 			const { project } = await joinProject({ inviteCode });
 
 			if (!projects.some(p => p.id === project.id)) {
-				setProjects([...projects, project]);
+				// アイコンは直後の invalidate による一覧再取得で反映される
+				setProjects([...projects, { ...project, iconFileId: null }]);
 			}
 
 			setSelectedProjectId(project.id);
@@ -267,12 +324,11 @@ function ProjectLayout() {
 				projectId={selectedProjectId}
 				projectSelector={
 					<ProjectSelector
-						projects={projects.map((project: Project) => {
-							return {
-								id: project.id,
-								name: project.name,
-							};
-						})}
+						projects={projects.map((project: MyProject) => ({
+							id: project.id,
+							name: project.name,
+							iconFileId: project.iconFileId,
+						}))}
 						selectedProjectId={selectedProjectId}
 						collapsed={sidebarCollapsed}
 						onSelectProject={handleSelectProject}
@@ -319,7 +375,8 @@ function ProjectLayout() {
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}
 				onCreated={project => {
-					setProjects([...projects, project]);
+					// アイコンは直後の invalidate による一覧再取得で反映される
+					setProjects([...projects, { ...project, iconFileId: null }]);
 					setSelectedProjectId(project.id);
 					router.invalidate();
 				}}

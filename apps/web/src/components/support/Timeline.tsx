@@ -1,5 +1,6 @@
 import { Badge, Text } from "@radix-ui/themes";
 import type { InquiryAttachment } from "@sos26/shared";
+import { isImageMimeType } from "@sos26/shared";
 import { IconTrash } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { UserAvatar } from "@/components/common/UserAvatar";
@@ -309,7 +310,7 @@ export function TimelineItem({
 				{attachments && attachments.length > 0 && (
 					<div className={styles.attachmentSection}>
 						{attachments.map(att =>
-							att.mimeType.startsWith("image/") ? (
+							isImageMimeType(att.mimeType) ? (
 								<AttachmentImage key={att.id} attachment={att} />
 							) : (
 								<AttachmentPreviewButton key={att.id} attachment={att} />

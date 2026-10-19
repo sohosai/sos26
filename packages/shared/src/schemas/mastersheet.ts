@@ -289,7 +289,10 @@ export const updateMastersheetColumnRequestSchema = z.object({
 	description: z.string().nullable().optional(),
 	sortOrder: z.number().int().optional(),
 	viewers: z.array(mastersheetViewerInputSchema).optional(),
-	options: z.array(columnOptionInputSchema).optional(),
+	/** 既存の選択肢は id を指定する。id のない要素は新規作成、含まれない既存の選択肢は削除される */
+	options: z
+		.array(columnOptionInputSchema.extend({ id: z.string().optional() }))
+		.optional(),
 });
 export type UpdateMastersheetColumnRequest = z.infer<
 	typeof updateMastersheetColumnRequestSchema

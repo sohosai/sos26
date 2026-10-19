@@ -195,7 +195,7 @@ type EditColumnFormProps = {
 	onCancel: () => void;
 };
 
-type OptionEntry = { id: number; label: string };
+type OptionEntry = { id: number; optionId?: string; label: string };
 
 function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 	const [name, setName] = useState(col.name);
@@ -217,7 +217,7 @@ function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 		(col.dataType === "SELECT" || col.dataType === "MULTI_SELECT");
 
 	const [options, setOptions] = useState<OptionEntry[]>(() =>
-		col.options.map((o, i) => ({ id: i, label: o.label }))
+		col.options.map((o, i) => ({ id: i, optionId: o.id, label: o.label }))
 	);
 	const nextOptionId = useRef(col.options.length);
 
@@ -249,7 +249,7 @@ function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 		if (!showOptions) return undefined;
 		return options
 			.filter(o => o.label.trim())
-			.map((o, i) => ({ label: o.label, sortOrder: i }));
+			.map((o, i) => ({ id: o.optionId, label: o.label, sortOrder: i }));
 	}
 
 	async function handleSubmit() {
@@ -978,9 +978,18 @@ export function ColumnPanel({
 	return (
 		<>
 			<Dialog.Root open={open} onOpenChange={onOpenChange}>
-				<Dialog.Content maxWidth="800px" minHeight="560px">
+				<Dialog.Content maxWidth="800px" minHeight="560px" width="90vw">
 					<div className={styles.header}>
-						<Dialog.Title mb="0">カラム</Dialog.Title>
+						<div className={styles.headerTitle}>
+							<Dialog.Title mb="0">カラム</Dialog.Title>
+							<IconButton
+								aria-label="閉じる"
+								onClick={() => onOpenChange(false)}
+								className={styles.columnCloseButtonMobile}
+							>
+								<IconX size={16} />
+							</IconButton>
+						</div>
 						<div className={styles.headerActions}>
 							<Button
 								intent="secondary"
@@ -997,8 +1006,9 @@ export function ColumnPanel({
 								<IconPlus size={16} /> カスタム追加
 							</Button>
 							<IconButton
-								aria-label="閉じる"
+								aria-label="閉じる"
 								onClick={() => onOpenChange(false)}
+								className={styles.columnCloseButton}
 							>
 								<IconX size={16} />
 							</IconButton>

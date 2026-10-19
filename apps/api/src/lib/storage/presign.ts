@@ -1,4 +1,5 @@
 import {
+	DeleteObjectCommand,
 	GetObjectCommand,
 	HeadObjectCommand,
 	PutObjectCommand,
@@ -81,18 +82,56 @@ export async function getObject(key: string) {
 }
 
 /**
- * S3上にオブジェクトが存在するか確認する。
+ * S3上のオブジェクトの実サイズ（バイト）を取得する。
+ * 存在しない場合やサイズを取得できない場合は null。
  */
-export async function objectExists(key: string): Promise<boolean> {
+export async function getObjectSize(key: string): Promise<number | null> {
 	const client = getStorageClient();
 	const command = new HeadObjectCommand({
 		Bucket: env.S3_BUCKET,
 		Key: key,
 	});
 	try {
-		await client.send(command);
-		return true;
+		const res = await client.send(command);
+		return res.ContentLength ?? null;
 	} catch {
-		return false;
+		return null;
 	}
+}
+
+/**
+ * S3上にオブジェクトが存在するか確認する。
+ */
+export async function objectExists(key: string): Promise<boolean> {
+	return (await getObjectSize(key)) !== null;
+}
+
+/**
+ * サーバー側で生成したデータをS3に保存する。
+ */
+export async function putObject(
+	key: string,
+	body: Uint8Array,
+	contentType: string
+): Promise<void> {
+	const client = getStorageClient();
+	const command = new PutObjectCommand({
+		Bucket: env.S3_BUCKET,
+		Key: key,
+		Body: body,
+		ContentType: contentType,
+	});
+	await client.send(command);
+}
+
+/**
+ * S3からオブジェクトを削除する。存在しないキーを指定してもエラーにならない。
+ */
+export async function deleteObject(key: string): Promise<void> {
+	const client = getStorageClient();
+	const command = new DeleteObjectCommand({
+		Bucket: env.S3_BUCKET,
+		Key: key,
+	});
+	await client.send(command);
 }

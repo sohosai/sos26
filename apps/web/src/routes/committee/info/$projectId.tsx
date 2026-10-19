@@ -14,6 +14,7 @@ import type {
 	CommitteeProjectDetail,
 	ProjectDeletionStatus,
 } from "@sos26/shared";
+import { ErrorCode } from "@sos26/shared";
 import { IconChevronRight } from "@tabler/icons-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
@@ -22,7 +23,9 @@ import {
 	getCommitteeProjectDetail,
 	updateCommitteeProjectDeletionStatus,
 } from "@/lib/api/committee-project";
+import { reportHandledError } from "@/lib/error/report";
 import { formatDate, formatProjectNumber } from "@/lib/format";
+import { isClientError } from "@/lib/http/error";
 import {
 	PROJECT_LOCATION_LABELS,
 	PROJECT_TYPE_LABELS,
@@ -245,8 +248,21 @@ function CommitteeProjectInfoPage() {
 					? `企画を「${statusLabel(status)}」に設定しました`
 					: "企画の削除状態を取り消しました"
 			);
-		} catch {
-			toast.error("企画状態の更新に失敗しました");
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "update_deletion_status",
+				userMessage: "企画状態の更新に失敗しました",
+				ui: { type: "toast" },
+				context: { projectId: project.id },
+				// このエンドポイントでは INVALID_REQUEST のみ業務上のメッセージ（トーストに載せても問題ない内容）を返す。
+				resolveMessage: ({ error: e, fallbackMessage }) => {
+					if (isClientError(e) && e.code === ErrorCode.INVALID_REQUEST) {
+						return e.message;
+					}
+					return fallbackMessage;
+				},
+			});
 		} finally {
 			setSaving(false);
 		}

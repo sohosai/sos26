@@ -24,6 +24,8 @@ import { Route as ForbiddenIndexRouteImport } from './routes/forbidden/index'
 import { Route as DocsIndexRouteImport } from './routes/docs/index'
 import { Route as CommitteeIndexRouteImport } from './routes/committee/index'
 import { Route as DocsSlugRouteImport } from './routes/docs/$slug'
+import { Route as ProjectPublicInfoRouteRouteImport } from './routes/project/public-info/route'
+import { Route as CommitteeMapSettingsRouteRouteImport } from './routes/committee/map-settings/route'
 import { Route as ProjectSupportIndexRouteImport } from './routes/project/support/index'
 import { Route as ProjectNoticeIndexRouteImport } from './routes/project/notice/index'
 import { Route as ProjectMembersIndexRouteImport } from './routes/project/members/index'
@@ -34,6 +36,7 @@ import { Route as DevSearchIndexRouteImport } from './routes/dev/search/index'
 import { Route as DevFilePreviewIndexRouteImport } from './routes/dev/filePreview/index'
 import { Route as DevCommitteeMemberIndexRouteImport } from './routes/dev/committeeMember/index'
 import { Route as CommitteeSupportIndexRouteImport } from './routes/committee/support/index'
+import { Route as CommitteePublicInfoIndexRouteImport } from './routes/committee/public-info/index'
 import { Route as CommitteeProjectRegistrationIndexRouteImport } from './routes/committee/project-registration/index'
 import { Route as CommitteeNoticeIndexRouteImport } from './routes/committee/notice/index'
 import { Route as CommitteeMembersIndexRouteImport } from './routes/committee/members/index'
@@ -127,6 +130,17 @@ const DocsSlugRoute = DocsSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => DocsRouteRoute,
 } as any)
+const ProjectPublicInfoRouteRoute = ProjectPublicInfoRouteRouteImport.update({
+  id: '/public-info',
+  path: '/public-info',
+  getParentRoute: () => ProjectRouteRoute,
+} as any)
+const CommitteeMapSettingsRouteRoute =
+  CommitteeMapSettingsRouteRouteImport.update({
+    id: '/map-settings',
+    path: '/map-settings',
+    getParentRoute: () => CommitteeRouteRoute,
+  } as any)
 const ProjectSupportIndexRoute = ProjectSupportIndexRouteImport.update({
   id: '/support/',
   path: '/support/',
@@ -177,6 +191,12 @@ const CommitteeSupportIndexRoute = CommitteeSupportIndexRouteImport.update({
   path: '/support/',
   getParentRoute: () => CommitteeRouteRoute,
 } as any)
+const CommitteePublicInfoIndexRoute =
+  CommitteePublicInfoIndexRouteImport.update({
+    id: '/public-info/',
+    path: '/public-info/',
+    getParentRoute: () => CommitteeRouteRoute,
+  } as any)
 const CommitteeProjectRegistrationIndexRoute =
   CommitteeProjectRegistrationIndexRouteImport.update({
     id: '/project-registration/',
@@ -278,6 +298,8 @@ export interface FileRoutesByFullPath {
   '/project': typeof ProjectRouteRouteWithChildren
   '/settings': typeof SettingsRouteRouteWithChildren
   '/support': typeof SupportRouteRouteWithChildren
+  '/committee/map-settings': typeof CommitteeMapSettingsRouteRoute
+  '/project/public-info': typeof ProjectPublicInfoRouteRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/committee/': typeof CommitteeIndexRoute
   '/docs/': typeof DocsIndexRoute
@@ -296,6 +318,7 @@ export interface FileRoutesByFullPath {
   '/committee/members/': typeof CommitteeMembersIndexRoute
   '/committee/notice/': typeof CommitteeNoticeIndexRoute
   '/committee/project-registration/': typeof CommitteeProjectRegistrationIndexRoute
+  '/committee/public-info/': typeof CommitteePublicInfoIndexRoute
   '/committee/support/': typeof CommitteeSupportIndexRoute
   '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
   '/dev/filePreview/': typeof DevFilePreviewIndexRoute
@@ -317,6 +340,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteRouteWithChildren
   '/dev': typeof DevRouteRouteWithChildren
+  '/committee/map-settings': typeof CommitteeMapSettingsRouteRoute
+  '/project/public-info': typeof ProjectPublicInfoRouteRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/committee': typeof CommitteeIndexRoute
   '/docs': typeof DocsIndexRoute
@@ -335,6 +360,7 @@ export interface FileRoutesByTo {
   '/committee/members': typeof CommitteeMembersIndexRoute
   '/committee/notice': typeof CommitteeNoticeIndexRoute
   '/committee/project-registration': typeof CommitteeProjectRegistrationIndexRoute
+  '/committee/public-info': typeof CommitteePublicInfoIndexRoute
   '/committee/support': typeof CommitteeSupportIndexRoute
   '/dev/committeeMember': typeof DevCommitteeMemberIndexRoute
   '/dev/filePreview': typeof DevFilePreviewIndexRoute
@@ -362,6 +388,8 @@ export interface FileRoutesById {
   '/project': typeof ProjectRouteRouteWithChildren
   '/settings': typeof SettingsRouteRouteWithChildren
   '/support': typeof SupportRouteRouteWithChildren
+  '/committee/map-settings': typeof CommitteeMapSettingsRouteRoute
+  '/project/public-info': typeof ProjectPublicInfoRouteRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/committee/': typeof CommitteeIndexRoute
   '/docs/': typeof DocsIndexRoute
@@ -380,6 +408,7 @@ export interface FileRoutesById {
   '/committee/members/': typeof CommitteeMembersIndexRoute
   '/committee/notice/': typeof CommitteeNoticeIndexRoute
   '/committee/project-registration/': typeof CommitteeProjectRegistrationIndexRoute
+  '/committee/public-info/': typeof CommitteePublicInfoIndexRoute
   '/committee/support/': typeof CommitteeSupportIndexRoute
   '/dev/committeeMember/': typeof DevCommitteeMemberIndexRoute
   '/dev/filePreview/': typeof DevFilePreviewIndexRoute
@@ -408,6 +437,8 @@ export interface FileRouteTypes {
     | '/project'
     | '/settings'
     | '/support'
+    | '/committee/map-settings'
+    | '/project/public-info'
     | '/docs/$slug'
     | '/committee/'
     | '/docs/'
@@ -426,6 +457,7 @@ export interface FileRouteTypes {
     | '/committee/members/'
     | '/committee/notice/'
     | '/committee/project-registration/'
+    | '/committee/public-info/'
     | '/committee/support/'
     | '/dev/committeeMember/'
     | '/dev/filePreview/'
@@ -447,6 +479,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dev'
+    | '/committee/map-settings'
+    | '/project/public-info'
     | '/docs/$slug'
     | '/committee'
     | '/docs'
@@ -465,6 +499,7 @@ export interface FileRouteTypes {
     | '/committee/members'
     | '/committee/notice'
     | '/committee/project-registration'
+    | '/committee/public-info'
     | '/committee/support'
     | '/dev/committeeMember'
     | '/dev/filePreview'
@@ -491,6 +526,8 @@ export interface FileRouteTypes {
     | '/project'
     | '/settings'
     | '/support'
+    | '/committee/map-settings'
+    | '/project/public-info'
     | '/docs/$slug'
     | '/committee/'
     | '/docs/'
@@ -509,6 +546,7 @@ export interface FileRouteTypes {
     | '/committee/members/'
     | '/committee/notice/'
     | '/committee/project-registration/'
+    | '/committee/public-info/'
     | '/committee/support/'
     | '/dev/committeeMember/'
     | '/dev/filePreview/'
@@ -646,6 +684,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsSlugRouteImport
       parentRoute: typeof DocsRouteRoute
     }
+    '/project/public-info': {
+      id: '/project/public-info'
+      path: '/public-info'
+      fullPath: '/project/public-info'
+      preLoaderRoute: typeof ProjectPublicInfoRouteRouteImport
+      parentRoute: typeof ProjectRouteRoute
+    }
+    '/committee/map-settings': {
+      id: '/committee/map-settings'
+      path: '/map-settings'
+      fullPath: '/committee/map-settings'
+      preLoaderRoute: typeof CommitteeMapSettingsRouteRouteImport
+      parentRoute: typeof CommitteeRouteRoute
+    }
     '/project/support/': {
       id: '/project/support/'
       path: '/support'
@@ -714,6 +766,13 @@ declare module '@tanstack/react-router' {
       path: '/support'
       fullPath: '/committee/support/'
       preLoaderRoute: typeof CommitteeSupportIndexRouteImport
+      parentRoute: typeof CommitteeRouteRoute
+    }
+    '/committee/public-info/': {
+      id: '/committee/public-info/'
+      path: '/public-info'
+      fullPath: '/committee/public-info/'
+      preLoaderRoute: typeof CommitteePublicInfoIndexRouteImport
       parentRoute: typeof CommitteeRouteRoute
     }
     '/committee/project-registration/': {
@@ -859,6 +918,7 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
 )
 
 interface CommitteeRouteRouteChildren {
+  CommitteeMapSettingsRouteRoute: typeof CommitteeMapSettingsRouteRoute
   CommitteeIndexRoute: typeof CommitteeIndexRoute
   CommitteeInfoProjectIdRoute: typeof CommitteeInfoProjectIdRoute
   CommitteeSupportInquiryIdRoute: typeof CommitteeSupportInquiryIdRoute
@@ -867,6 +927,7 @@ interface CommitteeRouteRouteChildren {
   CommitteeMembersIndexRoute: typeof CommitteeMembersIndexRoute
   CommitteeNoticeIndexRoute: typeof CommitteeNoticeIndexRoute
   CommitteeProjectRegistrationIndexRoute: typeof CommitteeProjectRegistrationIndexRoute
+  CommitteePublicInfoIndexRoute: typeof CommitteePublicInfoIndexRoute
   CommitteeSupportIndexRoute: typeof CommitteeSupportIndexRoute
   CommitteeFormsFormIdIndexRoute: typeof CommitteeFormsFormIdIndexRoute
   CommitteeNoticeNoticeIdIndexRoute: typeof CommitteeNoticeNoticeIdIndexRoute
@@ -874,6 +935,7 @@ interface CommitteeRouteRouteChildren {
 }
 
 const CommitteeRouteRouteChildren: CommitteeRouteRouteChildren = {
+  CommitteeMapSettingsRouteRoute: CommitteeMapSettingsRouteRoute,
   CommitteeIndexRoute: CommitteeIndexRoute,
   CommitteeInfoProjectIdRoute: CommitteeInfoProjectIdRoute,
   CommitteeSupportInquiryIdRoute: CommitteeSupportInquiryIdRoute,
@@ -883,6 +945,7 @@ const CommitteeRouteRouteChildren: CommitteeRouteRouteChildren = {
   CommitteeNoticeIndexRoute: CommitteeNoticeIndexRoute,
   CommitteeProjectRegistrationIndexRoute:
     CommitteeProjectRegistrationIndexRoute,
+  CommitteePublicInfoIndexRoute: CommitteePublicInfoIndexRoute,
   CommitteeSupportIndexRoute: CommitteeSupportIndexRoute,
   CommitteeFormsFormIdIndexRoute: CommitteeFormsFormIdIndexRoute,
   CommitteeNoticeNoticeIdIndexRoute: CommitteeNoticeNoticeIdIndexRoute,
@@ -931,6 +994,7 @@ const DocsRouteRouteWithChildren = DocsRouteRoute._addFileChildren(
 )
 
 interface ProjectRouteRouteChildren {
+  ProjectPublicInfoRouteRoute: typeof ProjectPublicInfoRouteRoute
   ProjectIndexRoute: typeof ProjectIndexRoute
   ProjectSupportInquiryIdRoute: typeof ProjectSupportInquiryIdRoute
   ProjectFormsIndexRoute: typeof ProjectFormsIndexRoute
@@ -940,6 +1004,7 @@ interface ProjectRouteRouteChildren {
 }
 
 const ProjectRouteRouteChildren: ProjectRouteRouteChildren = {
+  ProjectPublicInfoRouteRoute: ProjectPublicInfoRouteRoute,
   ProjectIndexRoute: ProjectIndexRoute,
   ProjectSupportInquiryIdRoute: ProjectSupportInquiryIdRoute,
   ProjectFormsIndexRoute: ProjectFormsIndexRoute,
