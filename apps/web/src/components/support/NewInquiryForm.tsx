@@ -9,6 +9,7 @@ import {
 	allowedFileExtensions,
 	allowedMimeTypes,
 	type Bureau,
+	type ProjectMemberRole,
 	resolveFileMimeType,
 	type ViewerScope,
 } from "@sos26/shared";
@@ -35,7 +36,7 @@ type ViewerInput = {
 type UserSummary = {
 	id: string;
 	name: string;
-	role?: "OWNER" | "SUB_OWNER" | "MEMBER";
+	role?: ProjectMemberRole;
 	avatarFileId?: string | null;
 };
 type FormSummary = { id: string; title: string };
@@ -377,7 +378,6 @@ function CommitteeContent({
 	selectedViewers: ViewerInput[];
 	onChangeViewers: (viewers: ViewerInput[]) => void;
 }) {
-	//console.log("loadedProjectMembers", loadedProjectMembers);
 	return (
 		<>
 			{projects && (

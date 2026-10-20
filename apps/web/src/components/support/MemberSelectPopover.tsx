@@ -1,4 +1,5 @@
 import { Popover, TextField as RadixTextField, Text } from "@radix-ui/themes";
+import type { ProjectMemberRole } from "@sos26/shared";
 import {
 	IconCheck,
 	IconChevronDown,
@@ -12,7 +13,7 @@ import styles from "./NewInquiryForm.module.scss";
 type UserSummary = {
 	id: string;
 	name: string;
-	role?: "OWNER" | "SUB_OWNER" | "MEMBER";
+	role?: ProjectMemberRole;
 	avatarFileId?: string | null;
 };
 
@@ -29,8 +30,6 @@ export function MemberSelectPopover({
 }) {
 	const [open, setOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
-
-	//console.log("members", members);
 
 	return (
 		<Popover.Root
