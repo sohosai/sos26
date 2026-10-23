@@ -1,3 +1,4 @@
+import { fileTypeRegistry } from "@sos26/shared";
 import ExcelJS from "exceljs";
 import { type CSSProperties, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -305,16 +306,15 @@ function getImageDataUrl(imgData: ExcelJS.Image): string | null {
 	if (!imgData?.buffer) return null;
 
 	const ext = (imgData.extension ?? "png").toLowerCase();
-	const mimeMap: Record<string, string> = {
-		png: "image/png",
-		jpg: "image/jpeg",
-		jpeg: "image/jpeg",
-		gif: "image/gif",
+	const entry = fileTypeRegistry.find(entry =>
+		entry.extensions.some(e => e === `.${ext}`)
+	);
+	const fallbackMap: Record<string, string> = {
 		bmp: "image/bmp",
 		tiff: "image/tiff",
 		svg: "image/svg+xml",
 	};
-	const mime = mimeMap[ext] ?? "image/png";
+	const mime = entry?.mimeTypes[0] ?? fallbackMap[ext] ?? "image/png";
 	const bytes = new Uint8Array(imgData.buffer as ArrayBuffer);
 	let binary = "";
 	for (const byte of bytes) {

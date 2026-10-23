@@ -1,0 +1,231 @@
+.page {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-5);
+	max-width: 900px;
+}
+
+.header {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.card {
+	max-width: 720px;
+}
+
+.callout {
+	max-width: 720px;
+}
+
+.settingRow {
+	flex-wrap: wrap;
+}
+
+/* 実委人により編集が制限されている項目の注記 */
+.restrictedNotice {
+	color: var(--amber-11);
+}
+
+/* ─── 保存バー（スクロールしても常に見える） ─── */
+
+.actionBar {
+	position: sticky;
+	bottom: 0;
+	z-index: 5;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
+	flex-wrap: wrap;
+	max-width: 720px;
+	margin-top: auto;
+	padding: var(--space-3);
+	border: 1px solid var(--gray-a5);
+	border-radius: var(--radius-3);
+	background: var(--color-panel-solid);
+	box-shadow: var(--shadow-4);
+}
+
+/* ─── アイコン画像 ─── */
+
+.iconWrapper {
+	position: relative;
+	flex-shrink: 0;
+}
+
+.iconButton {
+	display: block;
+	width: 96px;
+	height: 96px;
+	padding: 0;
+	margin: 0;
+	border: none;
+	background: none;
+	border-radius: 50%;
+	overflow: hidden;
+	cursor: pointer;
+	position: relative;
+	transition: opacity 0.15s;
+}
+
+.iconButton:disabled {
+	cursor: default;
+}
+
+.iconButton img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+	border-radius: 50%;
+}
+
+/* ホバーオーバーレイ */
+.iconOverlay {
+	position: absolute;
+	inset: 0;
+	border-radius: 50%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	background: rgba(0, 0, 0, 0.45);
+	opacity: 0;
+	transition: opacity 0.15s;
+	pointer-events: none;
+}
+
+.iconButton:not(:disabled):hover .iconOverlay,
+.iconButton:not(:disabled):focus-visible .iconOverlay {
+	opacity: 1;
+}
+
+.iconOverlayLabel {
+	font-size: 11px;
+	font-weight: 600;
+	color: white;
+	line-height: 1;
+}
+
+/* 削除バッジ（右上） */
+.iconDeleteBtn {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 24px;
+	height: 24px;
+	border-radius: 100%;
+	background: var(--red-9);
+	color: white;
+	border: 2px solid var(--color-background);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	padding: 0;
+	transition: background 0.15s, transform 0.1s;
+}
+
+.iconDeleteBtn:hover {
+	background: var(--red-11);
+	transform: scale(1.1);
+}
+
+/* ─── Map掲載画像グリッド ─── */
+
+.mapImageGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+	gap: var(--space-3);
+}
+
+/* 追加ボタンカード */
+.mapImageAddCard {
+	aspect-ratio: 1;
+	border-radius: var(--radius-3);
+	border: 2px dashed var(--gray-6);
+	background: var(--gray-2);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-1);
+	cursor: pointer;
+	color: var(--gray-11);
+	font-size: var(--font-size-2);
+	transition: border-color 0.15s, background 0.15s, color 0.15s;
+	padding: var(--space-3);
+}
+
+.mapImageAddCard:hover:not(:disabled) {
+	border-color: var(--accent-8);
+	background: var(--accent-2);
+	color: var(--accent-11);
+}
+
+.mapImageAddCard:disabled {
+	cursor: default;
+	opacity: 0.5;
+}
+
+.mapImageAddHint {
+	font-size: var(--font-size-1);
+	color: var(--gray-9);
+}
+
+/* アップロード中スケルトン */
+.mapImageSkeleton {
+	aspect-ratio: 1;
+	border-radius: var(--radius-3);
+	background: linear-gradient(
+		90deg,
+		var(--gray-3) 25%,
+		var(--gray-4) 50%,
+		var(--gray-3) 75%
+	);
+	background-size: 200% 100%;
+	animation: skeletonShimmer 1.4s ease-in-out infinite;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.skeletonIcon {
+	color: var(--gray-7);
+	animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+	0% { background-position: 200% 0; }
+	100% { background-position: -200% 0; }
+}
+
+@keyframes skeletonPulse {
+	0%, 100% { opacity: 0.5; }
+	50% { opacity: 1; }
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 900px) {
+	.page {
+		gap: var(--space-4);
+	}
+
+	.card,
+	.callout,
+	.actionBar {
+		max-width: 100%;
+	}
+
+	.settingRow {
+		align-items: flex-start;
+	}
+
+	.mapImageGrid {
+		grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+	}
+}

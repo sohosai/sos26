@@ -87,6 +87,9 @@ model User {
   // リレーション: ファイル
   files File[]
 
+  // 企画情報の非表示・修正
+  projectPublicInfoModerations ProjectPublicInfoModeration[]
+
   // Inquiry関連
   createdInquiries           Inquiry[]                  @relation("InquiryCreatedBy")
   inquiryAssignments         InquiryAssignee[]          @relation("InquiryAssignee")
@@ -201,6 +204,8 @@ model Project {
   formItemEditHistory                    FormItemEditHistory[]
   projectRegistrationFormItemEditHistory ProjectRegistrationFormItemEditHistory[]
 
+  publicInfo ProjectPublicInfo?
+
   @@index([ownerId])
   @@index([subOwnerId])
   @@index([deletedAt])
@@ -304,6 +309,7 @@ enum CommitteePermission {
   PROJECT_VIEW // 企画詳細閲覧（企画責任者・副企画責任者連絡先を含む）
   PROJECT_REGISTRATION_FORM_CREATE // 企画登録フォーム作成・編集・公開申請
   PROJECT_REGISTRATION_FORM_DELIVER // 企画登録フォーム承認
+  MAP_APP_SETTING_EDIT // マップアプリ設定変更
 }
 
 //実委人の権限管理Table
@@ -385,6 +391,9 @@ model File {
   formItemEditHistoryFiles                    FormItemEditHistoryFile[]
   projectRegistrationFormItemEditHistoryFiles ProjectRegistrationFormItemEditHistoryFile[]
   projectRegistrationFormAnswerFiles          ProjectRegistrationFormAnswerFile[]
+
+  projectPublicInfoIcons ProjectPublicInfo[]     @relation("ProjectPublicInfoIcon")
+  projectPublicMapImages ProjectPublicMapImage[]
 
   @@index([uploadedById])
   @@index([status])
@@ -1643,4 +1652,114 @@ model ProjectRegistrationFormAnswerSelectedOption {
   createdAt DateTime @default(now())
 
   @@unique([answerId, formItemOptionId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// オンラインマップ・企画公開情報
+// ─────────────────────────────────────────────────────────────
+
+enum OpenStatus {
+  OPEN
+  CLOSED
+  NOT_APPLICABLE
+}
+
+enum StockStatus {
+  IN_STOCK
+  OUT_OF_STOCK
+  NOT_APPLICABLE
+}
+
+model ProjectPublicInfo {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  description String? @db.VarChar(200)
+
+  iconFileId String?
+  iconFile   File?   @relation("ProjectPublicInfoIcon", fields: [iconFileId], references: [id])
+
+  websiteUrls  String[] @default([]) @db.VarChar(2048)
+  xIds         String[] @default([]) @db.VarChar(15)
+  instagramIds String[] @default([]) @db.VarChar(30)
+  youtubeIds   String[] @default([]) @db.VarChar(30)
+
+  openStatus  OpenStatus  @default(NOT_APPLICABLE)
+  stockStatus StockStatus @default(NOT_APPLICABLE)
+
+  mapImages   ProjectPublicMapImage[]
+  moderations ProjectPublicInfoModeration[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// 実委人が非表示・修正できる企画情報の項目
+enum ProjectPublicInfoField {
+  DESCRIPTION
+  ICON
+  MAP_IMAGES // 掲載画像の修正の記録にだけ使う（非表示は ProjectPublicMapImage.isHidden で1枚ごとに持つ）
+  WEBSITE_URLS
+  X_IDS
+  INSTAGRAM_IDS
+  YOUTUBE_IDS
+}
+
+enum ProjectPublicInfoModerationKind {
+  HIDDEN // 非表示（公開APIに出さない）
+  CORRECTED // 実委人が値を修正した記録（企画が値を変えて保存すると消える）
+}
+
+model ProjectPublicInfoModeration {
+  id                  String            @id @default(cuid())
+  projectPublicInfoId String
+  projectPublicInfo   ProjectPublicInfo @relation(fields: [projectPublicInfoId], references: [id], onDelete: Cascade)
+
+  field ProjectPublicInfoField
+  kind  ProjectPublicInfoModerationKind
+
+  /// CORRECTED のみ: 最初に修正する前の企画の値（紹介文・アイコンは文字列または null、掲載画像・SNSリンクは文字列の配列。アイコン・掲載画像はファイルID）
+  previousValue Json?
+
+  updatedById String
+  updatedBy   User   @relation(fields: [updatedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectPublicInfoId, field, kind])
+}
+
+model ProjectPublicMapImage {
+  id                  String            @id @default(cuid())
+  projectPublicInfoId String
+  projectPublicInfo   ProjectPublicInfo @relation(fields: [projectPublicInfoId], references: [id], onDelete: Cascade)
+
+  fileId String
+  file   File   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  sortOrder Int
+
+  // 実委人による非表示
+  isHidden Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([projectPublicInfoId, fileId])
+  @@unique([projectPublicInfoId, sortOrder])
+  @@index([fileId])
+}
+
+model MapAppSetting {
+  id String @id @default("GLOBAL")
+
+  isDescriptionEditable Boolean @default(true)
+  isIconEditable        Boolean @default(true)
+  isMapImagesEditable   Boolean @default(true)
+  isSnsLinksEditable    Boolean @default(true)
+  isOpenStatusEditable  Boolean @default(false)
+  isStockStatusEditable Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
 }

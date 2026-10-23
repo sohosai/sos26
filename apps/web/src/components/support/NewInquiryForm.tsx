@@ -6,9 +6,9 @@ import {
 } from "@radix-ui/themes";
 import {
 	type AllowedMimeType,
-	allowedFileExtensions,
 	allowedMimeTypes,
 	type Bureau,
+	buildFileTypesLabel,
 	type ProjectMemberRole,
 	resolveFileMimeType,
 	type ViewerScope,
@@ -710,7 +710,7 @@ export function NewInquiryForm({
 			const { valid, invalid } = partitionFiles(Array.from(files));
 			setFileError(
 				invalid.length > 0
-					? `対応していないファイル形式です（${allowedFileExtensions}）`
+					? `対応していないファイル形式です（${buildFileTypesLabel()}）`
 					: null
 			);
 			if (valid.length > 0) setSelectedFiles(prev => [...prev, ...valid]);

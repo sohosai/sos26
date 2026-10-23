@@ -1,6 +1,6 @@
 import { Dialog, Text } from "@radix-ui/themes";
 import type { NoticeAttachment } from "@sos26/shared";
-import { allowedMimeTypes } from "@sos26/shared";
+import { buildFileAcceptAttribute } from "@sos26/shared";
 import { IconPaperclip, IconTrash, IconX } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { DiscardChangesDialog, RichTextEditor } from "@/components/patterns";
@@ -249,7 +249,7 @@ export function CreateNoticeDialog({
 							ref={fileInputRef}
 							type="file"
 							multiple
-							accept={allowedMimeTypes.join(",")}
+							accept={buildFileAcceptAttribute()}
 							onChange={handleFileSelect}
 							className={styles.fileInput}
 						/>

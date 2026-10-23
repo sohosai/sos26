@@ -1,23 +1,15 @@
 import { randomUUID } from "node:crypto";
+import { fileTypeRegistry } from "@sos26/shared";
 
 /**
  * MIMEタイプから拡張子を取得する。
  * 対応するMIMEタイプがない場合は "bin" を返す。
  */
 export function getExtension(mimeType: string): string {
-	const map: Record<string, string> = {
-		"image/jpeg": "jpg",
-		"image/png": "png",
-		"image/gif": "gif",
-		"image/webp": "webp",
-		"application/pdf": "pdf",
-		"application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-			"docx",
-		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
-		"video/mp4": "mp4",
-		"video/quicktime": "mov",
-	};
-	return map[mimeType] ?? "bin";
+	const entry = fileTypeRegistry.find(entry =>
+		entry.mimeTypes.some(type => type === mimeType)
+	);
+	return entry?.extensions[0].slice(1) ?? "bin";
 }
 
 /**

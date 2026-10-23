@@ -3,3 +3,11 @@
 	align-items: center;
 	gap: var(--space-1);
 }
+
+.columnId {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1);
+	margin-left: var(--space-1);
+	font-family: var(--code-font-family, monospace);
+}

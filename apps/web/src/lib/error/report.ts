@@ -18,8 +18,12 @@ const IMPORTANT_ERROR_OPERATIONS = [
 	"comment_submit",
 	"assignee_update",
 	"update_base_info",
+	"update_deletion_status",
 	"api_response_validation",
 	"download_files_zip",
+	"update_map_setting",
+	"update_project_public_info",
+	"update_committee_public_info",
 ] as const;
 
 type ImportantErrorOperation = (typeof IMPORTANT_ERROR_OPERATIONS)[number];

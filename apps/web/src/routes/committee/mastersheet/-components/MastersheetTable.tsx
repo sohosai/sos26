@@ -1,4 +1,4 @@
-import { Badge, Link, Text, Tooltip } from "@radix-ui/themes";
+import { Badge, IconButton, Link, Text, Tooltip } from "@radix-ui/themes";
 import type {
 	EditFormItemCellRequest,
 	GetMastersheetDataResponse,
@@ -13,6 +13,7 @@ import {
 } from "@sos26/shared";
 import {
 	IconClipboardText,
+	IconCopy,
 	IconEye,
 	IconFileText,
 	IconPencil,
@@ -25,7 +26,13 @@ import {
 	type SortingState,
 	type VisibilityState,
 } from "@tanstack/react-table";
-import { type ReactNode, useCallback, useMemo } from "react";
+import {
+	createContext,
+	type ReactNode,
+	useCallback,
+	useContext,
+	useMemo,
+} from "react";
 import { toast } from "sonner";
 import {
 	DataTable,
@@ -71,7 +78,10 @@ type Props = {
 	onColumnFiltersChange?: (filters: ColumnFiltersState) => void;
 	onSelectionChange?: (cells: SelectedCell[]) => void;
 	selectionIgnoreRef?: React.RefObject<HTMLElement | null>;
+	showColumnIds?: boolean;
 };
+
+const ShowColumnIdsContext = createContext(false);
 
 const PROJECT_TYPE_LABEL = {
 	STAGE: "ステージ企画",
@@ -135,6 +145,35 @@ function ColHeader({ col }: { col: ApiColumn }) {
 		<span className={styles.colHeader}>
 			{icon}
 			{col.name}
+			<ColumnIdBadge columnId={col.id} />
+		</span>
+	);
+}
+
+function ColumnIdBadge({ columnId }: { columnId: string }) {
+	const showColumnIds = useContext(ShowColumnIdsContext);
+	if (!showColumnIds) return null;
+
+	return (
+		<span className={styles.columnId}>
+			<Text size="1" color="gray">
+				{columnId}
+			</Text>
+			<IconButton
+				aria-label="カラムIDをコピー"
+				size="1"
+				variant="ghost"
+				onClick={e => {
+					// ヘッダークリックによるソートを発火させない
+					e.stopPropagation();
+					navigator.clipboard
+						.writeText(columnId)
+						.then(() => toast.success("カラムIDをコピーしました"))
+						.catch(() => toast.error("コピーに失敗しました"));
+				}}
+			>
+				<IconCopy size={12} />
+			</IconButton>
 		</span>
 	);
 }
@@ -822,6 +861,7 @@ export function MastersheetTable({
 	onColumnFiltersChange,
 	onSelectionChange,
 	selectionIgnoreRef,
+	showColumnIds = false,
 }: Props) {
 	const router = useRouter();
 
@@ -882,29 +922,31 @@ export function MastersheetTable({
 	}
 
 	return (
-		<DataTable<MastersheetRow>
-			data={tableData}
-			columns={tableColumns}
-			pinnedColumnIds={effectivePinnedColumnIds}
-			features={{
-				sorting: true,
-				globalFilter: true,
-				columnVisibility: false,
-				columnFilter: true,
-				selection: true,
-				copy: true,
-				csvExport: true,
-			}}
-			initialSorting={initialSorting}
-			initialColumnVisibility={initialColumnVisibility}
-			initialColumnFilters={initialColumnFilters}
-			onCellEdit={handleCellEdit}
-			onSortingChange={onSortingChange}
-			onColumnVisibilityChange={onColumnVisibilityChange}
-			onColumnFiltersChange={onColumnFiltersChange}
-			toolbarExtra={toolbarExtra}
-			onSelectionChange={handleSelectionChange}
-			selectionIgnoreRef={selectionIgnoreRef}
-		/>
+		<ShowColumnIdsContext.Provider value={showColumnIds}>
+			<DataTable<MastersheetRow>
+				data={tableData}
+				columns={tableColumns}
+				pinnedColumnIds={effectivePinnedColumnIds}
+				features={{
+					sorting: true,
+					globalFilter: true,
+					columnVisibility: false,
+					columnFilter: true,
+					selection: true,
+					copy: true,
+					csvExport: true,
+				}}
+				initialSorting={initialSorting}
+				initialColumnVisibility={initialColumnVisibility}
+				initialColumnFilters={initialColumnFilters}
+				onCellEdit={handleCellEdit}
+				onSortingChange={onSortingChange}
+				onColumnVisibilityChange={onColumnVisibilityChange}
+				onColumnFiltersChange={onColumnFiltersChange}
+				toolbarExtra={toolbarExtra}
+				onSelectionChange={handleSelectionChange}
+				selectionIgnoreRef={selectionIgnoreRef}
+			/>
+		</ShowColumnIdsContext.Provider>
 	);
 }

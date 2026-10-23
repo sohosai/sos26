@@ -1,0 +1,991 @@
+import {
+	closestCenter,
+	DndContext,
+	type DragEndEvent,
+	KeyboardSensor,
+	PointerSensor,
+	useSensor,
+	useSensors,
+} from "@dnd-kit/core";
+import { restrictToParentElement } from "@dnd-kit/modifiers";
+import {
+	arrayMove,
+	rectSortingStrategy,
+	SortableContext,
+	sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { Badge, Callout, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import type {
+	MapAppSetting,
+	OpenStatus,
+	Project,
+	ProjectPublicInfo,
+	ProjectPublicInfoField,
+	ProjectSnsLinkKey,
+	StockStatus,
+	UpdateProjectPublicInfoRequest,
+} from "@sos26/shared";
+import {
+	isAllowedImageFile,
+	PROJECT_DESCRIPTION_MAX_LENGTH,
+	PROJECT_MAP_IMAGES_MAX_COUNT,
+	PROJECT_SNS_LINKS_MAX_COUNT,
+	projectSnsLinkKeys,
+} from "@sos26/shared";
+import {
+	IconInfoCircle,
+	IconLock,
+	IconPhoto,
+	IconUpload,
+	IconX,
+} from "@tabler/icons-react";
+import {
+	createFileRoute,
+	getRouteApi,
+	useBlocker,
+	useRouter,
+} from "@tanstack/react-router";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+
+import { UserAvatar } from "@/components/common/UserAvatar";
+import { DiscardChangesDialog } from "@/components/patterns";
+import { Button, Select, TextArea, TextField } from "@/components/primitives";
+import { deleteFile, uploadFile } from "@/lib/api/files";
+import { getMapAppSetting } from "@/lib/api/map-app-setting";
+import { updateProjectPublicInfo } from "@/lib/api/project-public-info";
+import { useAuthStore } from "@/lib/auth";
+import { reportHandledError } from "@/lib/error/report";
+import {
+	allowedImageExtensions,
+	getMapImagesError,
+	getSnsLinkError,
+	imageAcceptAttribute,
+} from "@/lib/project/public-info";
+import { useProjectStore } from "@/lib/project/store";
+import { ImageCropperModal } from "./-components/ImageCropperModal";
+import { ImagePreviewModal } from "./-components/ImagePreviewModal";
+import { SortableMapImageItem } from "./-components/SortableMapImageItem";
+import styles from "./route.module.scss";
+
+// 上限は shared のスキーマと共通（サーバー側の検証と必ず一致させる）
+const MAX_MAP_IMAGES = PROJECT_MAP_IMAGES_MAX_COUNT;
+const DESCRIPTION_MAX_LENGTH = PROJECT_DESCRIPTION_MAX_LENGTH;
+
+const projectRoute = getRouteApi("/project");
+
+const SNS_LINK_FIELDS: {
+	key: ProjectSnsLinkKey;
+	field: ProjectPublicInfoField;
+	label: string;
+	type: "url" | "text";
+	placeholder: string;
+	hint: string;
+}[] = [
+	{
+		key: "websiteUrls",
+		field: "WEBSITE_URLS",
+		label: "Webサイト（URL）",
+		type: "url",
+		placeholder: "https://sohosai.com/",
+		hint: "例：https://sohosai.com/",
+	},
+	{
+		key: "xIds",
+		field: "X_IDS",
+		label: "X（ユーザーID）",
+		type: "text",
+		placeholder: "sohosai",
+		hint: "@ は付けずに入力。例：https://x.com/sohosai → sohosai",
+	},
+	{
+		key: "instagramIds",
+		field: "INSTAGRAM_IDS",
+		label: "Instagram（ユーザーネーム）",
+		type: "text",
+		placeholder: "sohosai",
+		hint: "例：https://www.instagram.com/sohosai/ → sohosai",
+	},
+	{
+		key: "youtubeIds",
+		field: "YOUTUBE_IDS",
+		label: "YouTube（ハンドル）",
+		type: "text",
+		placeholder: "sohosai",
+		hint: "@ は付けずに入力。例：https://www.youtube.com/@sohosai → sohosai",
+	},
+];
+
+/** 入力欄の数に合わせて未入力の欄を空文字で埋める */
+function toSnsLinkInputs(links: string[] | undefined): string[] {
+	return Array.from(
+		{ length: PROJECT_SNS_LINKS_MAX_COUNT },
+		(_, i) => links?.[i] ?? ""
+	);
+}
+
+export const Route = createFileRoute("/project/public-info")({
+	// 企画公開情報は親（/project）ローダーの取得結果を共用する
+	loader: async () => {
+		const { setting } = await getMapAppSetting();
+		return { setting };
+	},
+	component: ProjectPublicInfoPage,
+	head: () => ({
+		meta: [
+			{ title: "企画情報 | 雙峰祭オンラインシステム" },
+			{ name: "description", content: "企画情報の入力" },
+		],
+	}),
+});
+
+type FormValues = {
+	description: string;
+	iconFileId: string;
+	mapImageFileIds: string[];
+	openStatus: OpenStatus;
+	stockStatus: StockStatus;
+} & Record<ProjectSnsLinkKey, string[]>;
+
+function toFormValues(info: ProjectPublicInfo | null): FormValues {
+	return {
+		description: info?.description ?? "",
+		iconFileId: info?.iconFileId ?? "",
+		mapImageFileIds: info?.mapImageFileIds ?? [],
+		websiteUrls: toSnsLinkInputs(info?.websiteUrls),
+		xIds: toSnsLinkInputs(info?.xIds),
+		instagramIds: toSnsLinkInputs(info?.instagramIds),
+		youtubeIds: toSnsLinkInputs(info?.youtubeIds),
+		openStatus: info?.openStatus ?? "NOT_APPLICABLE",
+		stockStatus: info?.stockStatus ?? "NOT_APPLICABLE",
+	};
+}
+
+function isSameValues(a: FormValues, b: FormValues): boolean {
+	return (
+		a.description === b.description &&
+		a.iconFileId === b.iconFileId &&
+		a.openStatus === b.openStatus &&
+		a.stockStatus === b.stockStatus &&
+		projectSnsLinkKeys.every(key =>
+			a[key].every((value, i) => value === b[key][i])
+		) &&
+		a.mapImageFileIds.length === b.mapImageFileIds.length &&
+		a.mapImageFileIds.every((id, i) => id === b.mapImageFileIds[i])
+	);
+}
+
+function isSameList(a: string[], b: string[]): boolean {
+	return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
+/**
+ * 編集が許可され、かつ編集を始めたときの値から変更した項目だけを送信する
+ * （それ以外は undefined = 変更なし）。
+ * 編集中に実委人が修正した項目を、編集を始めたときの値で上書きしないため。
+ */
+function buildUpdateRequest(
+	values: FormValues,
+	baseValues: FormValues,
+	setting: MapAppSetting,
+	projectType: Project["type"]
+): UpdateProjectPublicInfoRequest {
+	const canEditStatus = projectType !== "STAGE";
+	const changed = <T,>(editable: boolean, value: T, isSame: boolean) =>
+		editable && !isSame ? value : undefined;
+	const snsLinks = (key: ProjectSnsLinkKey) => {
+		const links = values[key].filter(value => value !== "");
+		const serverLinks = baseValues[key].filter(value => value !== "");
+		return changed(
+			setting.isSnsLinksEditable,
+			links,
+			isSameList(links, serverLinks)
+		);
+	};
+
+	return {
+		description: changed(
+			setting.isDescriptionEditable,
+			values.description,
+			values.description === baseValues.description
+		),
+		iconFileId: changed(
+			setting.isIconEditable,
+			values.iconFileId,
+			values.iconFileId === baseValues.iconFileId
+		),
+		mapImageFileIds: changed(
+			setting.isMapImagesEditable,
+			values.mapImageFileIds,
+			isSameList(values.mapImageFileIds, baseValues.mapImageFileIds)
+		),
+		websiteUrls: snsLinks("websiteUrls"),
+		xIds: snsLinks("xIds"),
+		instagramIds: snsLinks("instagramIds"),
+		youtubeIds: snsLinks("youtubeIds"),
+		openStatus: changed(
+			canEditStatus && setting.isOpenStatusEditable,
+			values.openStatus,
+			values.openStatus === baseValues.openStatus
+		),
+		stockStatus: changed(
+			canEditStatus && setting.isStockStatusEditable,
+			values.stockStatus,
+			values.stockStatus === baseValues.stockStatus
+		),
+	};
+}
+
+/** 実行委員会が非表示・修正した項目に表示する注記 */
+function ModerationNotice({
+	isHidden,
+	isCorrected,
+}: {
+	isHidden: boolean;
+	isCorrected: boolean;
+}) {
+	if (!isHidden && !isCorrected) return null;
+	return (
+		<Flex direction="column" gap="1">
+			{isHidden && (
+				<Flex align="center" gap="2" wrap="wrap">
+					<Badge color="red" variant="soft">
+						非公開
+					</Badge>
+					<Text size="1" color="gray">
+						この項目は実行委員会により非公開になっています。変更しても公開されません。詳しくはお問い合わせからご連絡ください。
+					</Text>
+				</Flex>
+			)}
+			{isCorrected && (
+				<Flex align="center" gap="2" wrap="wrap">
+					<Badge color="blue" variant="soft">
+						実行委員会が修正
+					</Badge>
+					<Text size="1" color="gray">
+						この項目は実行委員会が修正しました。
+					</Text>
+				</Flex>
+			)}
+		</Flex>
+	);
+}
+
+/** 実委人により編集が制限されている項目に表示する注記 */
+function RestrictedNotice() {
+	return (
+		<Flex align="center" gap="1" className={styles.restrictedNotice}>
+			<IconLock size={14} />
+			<Text size="1">この項目は現在編集できません</Text>
+		</Flex>
+	);
+}
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: 1画面に複数の編集セクションを持つページのため
+function ProjectPublicInfoPage() {
+	const router = useRouter();
+	const { user } = useAuthStore();
+	const { projects, selectedProjectId } = useProjectStore();
+	const setProjectIconFileId = useProjectStore(state => state.setIconFileId);
+	const project = projects.find(p => p.id === selectedProjectId);
+
+	const {
+		publicInfo,
+		publicInfoModeration,
+		publicInfoProjectId,
+		publicInfoLoadFailed,
+	} = projectRoute.useLoaderData();
+	const { setting } = Route.useLoaderData();
+
+	// 親ローダーの再取得が終わるまでは、前の企画の情報を表示しない
+	const isPublicInfoStale = publicInfoProjectId !== selectedProjectId;
+
+	const isEditable =
+		!!project &&
+		!!user &&
+		project.deletionStatus === null &&
+		(project.ownerId === user.id || project.subOwnerId === user.id);
+
+	const moderationNotice = (field: ProjectPublicInfoField) => (
+		<ModerationNotice
+			isHidden={
+				!isPublicInfoStale && publicInfoModeration.hiddenFields.includes(field)
+			}
+			isCorrected={
+				!isPublicInfoStale &&
+				publicInfoModeration.correctedFields.includes(field)
+			}
+		/>
+	);
+	const hiddenMapImageFileIds = new Set(
+		isPublicInfoStale ? [] : publicInfoModeration.hiddenMapImageFileIds
+	);
+
+	// サーバー上の値。編集中（draft !== null）でなければ、そのまま画面に反映する
+	const serverValues = useMemo(
+		() => toFormValues(isPublicInfoStale ? null : publicInfo),
+		[publicInfo, isPublicInfoStale]
+	);
+	const serverValuesRef = useRef(serverValues);
+	serverValuesRef.current = serverValues;
+
+	// 編集中の値と、編集を始めたときのサーバー上の値（保存する項目の判定に使う）。
+	// 編集中にサーバー上の値が再取得で変わっても、触っていない項目は送らない
+	const [draft, setDraft] = useState<{
+		values: FormValues;
+		base: FormValues;
+	} | null>(null);
+	const values = draft?.values ?? serverValues;
+	const isDirty = draft !== null && !isSameValues(draft.values, draft.base);
+
+	const [isSaving, setIsSaving] = useState(false);
+	const [uploadingCount, setUploadingCount] = useState(0);
+	const [isUploadingIcon, setIsUploadingIcon] = useState(false);
+	const isUploading = uploadingCount > 0 || isUploadingIcon;
+
+	const [cropImageSrc, setCropImageSrc] = useState("");
+	const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+	const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+	const [previewIndex, setPreviewIndex] = useState(0);
+
+	const iconInputRef = useRef<HTMLInputElement>(null);
+	const mapImagesInputRef = useRef<HTMLInputElement>(null);
+
+	// 企画を切り替えたら編集内容を破棄する（前の企画の内容が残らないように）
+	const [draftProjectId, setDraftProjectId] = useState(selectedProjectId);
+	if (draftProjectId !== selectedProjectId) {
+		setDraftProjectId(selectedProjectId);
+		setDraft(null);
+	}
+
+	const updateValues = useCallback(
+		(patch: Partial<FormValues> | ((current: FormValues) => FormValues)) => {
+			setDraft(prev => {
+				const base = prev?.base ?? serverValuesRef.current;
+				const current = prev?.values ?? base;
+				return {
+					base,
+					values:
+						typeof patch === "function"
+							? patch(current)
+							: { ...current, ...patch },
+				};
+			});
+		},
+		[]
+	);
+
+	/**
+	 * この画面でアップロードしたが、まだ保存されていないファイルID。
+	 * アップロード直後のファイルは公開ファイルとして配信されてしまうため、
+	 * 保存されないまま画面から外れたものはサーバーから削除する。
+	 */
+	const unsavedFileIdsRef = useRef<Set<string>>(new Set());
+
+	const discardUnsavedFile = useCallback(
+		(fileId: string | null | undefined) => {
+			if (!fileId || !unsavedFileIdsRef.current.has(fileId)) return;
+			unsavedFileIdsRef.current.delete(fileId);
+
+			// サーバー側に保存済みのファイルは消さない
+			const server = serverValuesRef.current;
+			if (
+				server.iconFileId === fileId ||
+				server.mapImageFileIds.includes(fileId)
+			) {
+				return;
+			}
+			// 失敗しても画面上の操作は継続させる（残っても実害は保存容量のみ）
+			void deleteFile(fileId).catch(() => undefined);
+		},
+		[]
+	);
+
+	/** 未保存のアップロードをまとめて破棄する */
+	const discardAllUnsavedFiles = useCallback(() => {
+		for (const fileId of [...unsavedFileIdsRef.current]) {
+			discardUnsavedFile(fileId);
+		}
+	}, [discardUnsavedFile]);
+
+	const blocker = useBlocker({
+		shouldBlockFn: () => isDirty,
+		enableBeforeUnload: () => isDirty,
+		withResolver: true,
+	});
+
+	const handleSave = async () => {
+		if (!project?.id || !isEditable) return;
+
+		setIsSaving(true);
+		try {
+			await updateProjectPublicInfo(
+				project.id,
+				buildUpdateRequest(
+					values,
+					draft?.base ?? serverValues,
+					setting,
+					project.type
+				)
+			);
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "update_project_public_info",
+				userMessage: "保存に失敗しました。",
+				ui: { type: "toast" },
+				context: { projectId: project.id },
+			});
+			return;
+		} finally {
+			setIsSaving(false);
+		}
+
+		toast.success("企画情報を保存しました。");
+		// 保存できたファイルは削除対象から外す
+		// （公開情報から外れたファイルはサーバー側で回収される）
+		unsavedFileIdsRef.current.clear();
+		// サイドバーのアイコンにも即時反映
+		if (setting.isIconEditable) {
+			setProjectIconFileId(project.id, values.iconFileId || null);
+		}
+		// 保存は成功しているため、再取得の成否にかかわらず編集状態は解除する
+		await router.invalidate().catch(() => undefined);
+		setDraft(null);
+	};
+
+	const handleCancel = () => {
+		discardAllUnsavedFiles();
+		setDraft(null);
+	};
+
+	const handleIconSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		e.target.value = "";
+		if (!file) return;
+
+		if (!isAllowedImageFile(file)) {
+			toast.error(
+				`画像ファイルを選択してください（${allowedImageExtensions}）。`
+			);
+			return;
+		}
+
+		const reader = new FileReader();
+		reader.onload = () => {
+			setCropImageSrc(reader.result?.toString() ?? "");
+			setIsCropModalOpen(true);
+		};
+		reader.readAsDataURL(file);
+	};
+
+	const handleCropComplete = async (blob: Blob) => {
+		setIsUploadingIcon(true);
+		try {
+			const previousIconFileId = values.iconFileId;
+			const res = await uploadFile(
+				new File([blob], "icon.png", { type: "image/png" }),
+				{ isPublic: true }
+			);
+			unsavedFileIdsRef.current.add(res.file.id);
+			updateValues({ iconFileId: res.file.id });
+			// 差し替え前のアイコンが未保存なら削除する
+			discardUnsavedFile(previousIconFileId);
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "update_project_public_info",
+				userMessage: "アイコンのアップロードに失敗しました。",
+				ui: { type: "toast" },
+				context: { projectId: project?.id ?? null },
+			});
+		} finally {
+			setIsUploadingIcon(false);
+		}
+	};
+
+	const handleMapImagesUpload = async (
+		e: React.ChangeEvent<HTMLInputElement>
+	) => {
+		const files = Array.from(e.target.files ?? []);
+		e.target.value = "";
+		if (!files.length) return;
+
+		const error = getMapImagesError(files, values.mapImageFileIds.length);
+		if (error) {
+			toast.error(error);
+			return;
+		}
+
+		setUploadingCount(files.length);
+		try {
+			// 1枚失敗しても、成功した画像は取りこぼさない
+			const results = await Promise.allSettled(
+				files.map(file => uploadFile(file, { isPublic: true }))
+			);
+			const newIds = results
+				.filter(r => r.status === "fulfilled")
+				.map(r => r.value.file.id);
+			for (const id of newIds) {
+				unsavedFileIdsRef.current.add(id);
+			}
+
+			if (newIds.length > 0) {
+				updateValues(current => ({
+					...current,
+					mapImageFileIds: [
+						...current.mapImageFileIds,
+						// 同じ画像を続けてアップロードした場合の重複を防ぐ
+						...newIds.filter(id => !current.mapImageFileIds.includes(id)),
+					].slice(0, MAX_MAP_IMAGES),
+				}));
+				toast.success(
+					`${newIds.length}枚の画像をアップロードしました。「保存する」を押すと反映されます。`
+				);
+			}
+
+			const failed = results.find(r => r.status === "rejected");
+			if (failed) {
+				reportHandledError({
+					error: failed.reason,
+					operation: "update_project_public_info",
+					userMessage: `${results.length - newIds.length}枚の画像のアップロードに失敗しました。`,
+					ui: { type: "toast" },
+					context: { projectId: project?.id ?? null },
+				});
+			}
+		} finally {
+			setUploadingCount(0);
+		}
+	};
+
+	const removeMapImage = (index: number) => {
+		const removedFileId = values.mapImageFileIds[index];
+		updateValues(current => ({
+			...current,
+			mapImageFileIds: current.mapImageFileIds.filter((_, i) => i !== index),
+		}));
+		discardUnsavedFile(removedFileId);
+	};
+
+	const handleDragEnd = (event: DragEndEvent) => {
+		const { active, over } = event;
+		if (!over || active.id === over.id) return;
+
+		updateValues(current => {
+			const oldIndex = current.mapImageFileIds.indexOf(active.id as string);
+			const newIndex = current.mapImageFileIds.indexOf(over.id as string);
+			if (oldIndex < 0 || newIndex < 0) return current;
+
+			return {
+				...current,
+				mapImageFileIds: arrayMove(current.mapImageFileIds, oldIndex, newIndex),
+			};
+		});
+	};
+
+	const sensors = useSensors(
+		useSensor(PointerSensor),
+		useSensor(KeyboardSensor, {
+			coordinateGetter: sortableKeyboardCoordinates,
+		})
+	);
+
+	const canEditDescription = isEditable && setting.isDescriptionEditable;
+	const canEditIcon = isEditable && setting.isIconEditable;
+	const canEditMapImages = isEditable && setting.isMapImagesEditable;
+	const canEditOpenStatus = isEditable && setting.isOpenStatusEditable;
+	const canEditStockStatus = isEditable && setting.isStockStatusEditable;
+	const canEditSnsLinks = isEditable && setting.isSnsLinksEditable;
+	const hasSnsLinkError =
+		canEditSnsLinks &&
+		projectSnsLinkKeys.some(key =>
+			values[key].some(value => getSnsLinkError(key, value) !== undefined)
+		);
+	const canAddMore =
+		canEditMapImages &&
+		values.mapImageFileIds.length + uploadingCount < MAX_MAP_IMAGES;
+
+	return (
+		<div className={styles.page}>
+			<div className={styles.header}>
+				<Heading size="6">企画情報</Heading>
+				<Text size="2" color="gray">
+					設定した情報は「企画検索システム」に公開されます。
+				</Text>
+			</div>
+
+			{publicInfoLoadFailed && (
+				<Callout.Root color="red" className={styles.callout}>
+					<Callout.Icon>
+						<IconInfoCircle size={16} />
+					</Callout.Icon>
+					<Callout.Text>
+						企画情報の取得に失敗しました。ページを再読み込みしてください。
+					</Callout.Text>
+				</Callout.Root>
+			)}
+
+			{!isEditable && (
+				<Callout.Root color="gray" className={styles.callout}>
+					<Callout.Icon>
+						<IconInfoCircle size={16} />
+					</Callout.Icon>
+					<Callout.Text>
+						企画情報を編集できるのは企画責任者・副企画責任者のみです。閲覧のみ可能です。
+					</Callout.Text>
+				</Callout.Root>
+			)}
+
+			<Card className={styles.card}>
+				<Flex direction="column" gap="4">
+					<div>
+						<Heading size="4">紹介文</Heading>
+						<Text color="gray" size="2">
+							企画検索システムに表示される企画の紹介文です。
+						</Text>
+					</div>
+					{moderationNotice("DESCRIPTION")}
+					{isEditable && !setting.isDescriptionEditable && <RestrictedNotice />}
+					<Flex direction="column" gap="2">
+						<TextArea
+							label={`紹介文（${DESCRIPTION_MAX_LENGTH}文字以内）`}
+							value={values.description}
+							onChange={description =>
+								updateValues({
+									description: description.slice(0, DESCRIPTION_MAX_LENGTH),
+								})
+							}
+							disabled={!canEditDescription}
+							placeholder={`${DESCRIPTION_MAX_LENGTH}文字以内で入力してください`}
+							rows={4}
+						/>
+						<Text size="1" color="gray" align="right">
+							{values.description.length}/{DESCRIPTION_MAX_LENGTH}
+						</Text>
+					</Flex>
+				</Flex>
+			</Card>
+
+			<Card className={styles.card}>
+				<Flex direction="column" gap="4">
+					<div>
+						<Heading size="4">アイコン画像</Heading>
+						<Text size="2" color="gray">
+							正方形にトリミングされて表示されます。
+						</Text>
+					</div>
+					{moderationNotice("ICON")}
+					{isEditable && !setting.isIconEditable && <RestrictedNotice />}
+					<input
+						type="file"
+						ref={iconInputRef}
+						style={{ display: "none" }}
+						accept={imageAcceptAttribute}
+						onChange={handleIconSelect}
+					/>
+					<Flex gap="4" align="center">
+						{/* クリックで変更できるアバター */}
+						<div className={styles.iconWrapper}>
+							<button
+								type="button"
+								className={styles.iconButton}
+								onClick={() => iconInputRef.current?.click()}
+								disabled={!canEditIcon || isUploadingIcon}
+								aria-label="アイコン画像を変更"
+							>
+								<UserAvatar
+									size={96}
+									name={project?.name ?? ""}
+									avatarFileId={values.iconFileId || null}
+								/>
+								{canEditIcon && (
+									<span className={styles.iconOverlay}>
+										<IconUpload size={20} color="white" />
+										<span className={styles.iconOverlayLabel}>変更</span>
+									</span>
+								)}
+							</button>
+							{/* 削除バッジ */}
+							{values.iconFileId && canEditIcon && (
+								<button
+									type="button"
+									className={styles.iconDeleteBtn}
+									onClick={() => {
+										const removed = values.iconFileId;
+										updateValues({ iconFileId: "" });
+										discardUnsavedFile(removed);
+									}}
+									aria-label="アイコンをデフォルトに戻す"
+								>
+									<IconX size={12} />
+								</button>
+							)}
+						</div>
+						<Flex direction="column" gap="1">
+							<Text size="2" weight="medium">
+								{values.iconFileId
+									? "アイコンを変更する"
+									: "アイコンを設定する"}
+							</Text>
+							<Text size="1" color="gray">
+								{values.iconFileId
+									? "画像をクリックするか、右上の × でデフォルトに戻せます"
+									: "クリックして画像をアップロードしてください"}
+							</Text>
+						</Flex>
+					</Flex>
+				</Flex>
+			</Card>
+
+			<Card className={styles.card}>
+				<Flex direction="column" gap="4">
+					<div>
+						<Heading size="4">詳細画像</Heading>
+						<Text size="2" color="gray">
+							企画検索システムに掲載される画像です（最大{MAX_MAP_IMAGES}
+							枚）。ドラッグで並び替えできます。
+						</Text>
+					</div>
+					{moderationNotice("MAP_IMAGES")}
+					{isEditable && !setting.isMapImagesEditable && <RestrictedNotice />}
+					<input
+						type="file"
+						multiple
+						ref={mapImagesInputRef}
+						style={{ display: "none" }}
+						accept={imageAcceptAttribute}
+						onChange={handleMapImagesUpload}
+					/>
+
+					<DndContext
+						sensors={sensors}
+						collisionDetection={closestCenter}
+						onDragEnd={handleDragEnd}
+						modifiers={[restrictToParentElement]}
+					>
+						<SortableContext
+							items={values.mapImageFileIds}
+							strategy={rectSortingStrategy}
+						>
+							<div className={styles.mapImageGrid}>
+								{values.mapImageFileIds.map((fileId, index) => (
+									<SortableMapImageItem
+										key={fileId}
+										id={fileId}
+										index={index}
+										isEditable={canEditMapImages}
+										isHidden={hiddenMapImageFileIds.has(fileId)}
+										onRemove={() => removeMapImage(index)}
+										onPreview={() => {
+											setPreviewIndex(index);
+											setIsPreviewOpen(true);
+										}}
+									/>
+								))}
+
+								{/* アップロード中のスケルトン */}
+								{Array.from({ length: uploadingCount }).map((_, i) => (
+									<div
+										// biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholder
+										key={`skeleton-${i}`}
+										className={styles.mapImageSkeleton}
+									>
+										<IconPhoto size={24} className={styles.skeletonIcon} />
+									</div>
+								))}
+
+								{/* 追加ボタン（グリッドの末尾） */}
+								{canAddMore && (
+									<button
+										type="button"
+										className={styles.mapImageAddCard}
+										onClick={() => mapImagesInputRef.current?.click()}
+										disabled={uploadingCount > 0}
+										aria-label="画像を追加"
+									>
+										<IconUpload size={20} />
+										<span>追加</span>
+										<span className={styles.mapImageAddHint}>
+											{MAX_MAP_IMAGES - values.mapImageFileIds.length}
+											枚まで追加可
+										</span>
+									</button>
+								)}
+							</div>
+						</SortableContext>
+					</DndContext>
+
+					{/* 枚数インジケーター */}
+					<Text size="1" color="gray">
+						{values.mapImageFileIds.length} / {MAX_MAP_IMAGES} 枚
+					</Text>
+				</Flex>
+			</Card>
+
+			<Card className={styles.card}>
+				<Flex direction="column" gap="4">
+					<div>
+						<Heading size="4">SNSリンク</Heading>
+						<Text size="2" color="gray">
+							企画や実施団体を広報するものがあれば入力してください（各
+							{PROJECT_SNS_LINKS_MAX_COUNT}
+							つまで登録できます）。企画検索システムに掲載されます。
+						</Text>
+					</div>
+					{isEditable && !setting.isSnsLinksEditable && <RestrictedNotice />}
+					{SNS_LINK_FIELDS.map(
+						({ key, field, label, type, placeholder, hint }) => (
+							<Flex key={key} direction="column" gap="1">
+								{moderationNotice(field)}
+								{values[key].map((linkValue, index) => (
+									<TextField
+										// biome-ignore lint/suspicious/noArrayIndexKey: 入力欄の数は固定
+										key={index}
+										type={type}
+										label={index === 0 ? label : `${label} ${index + 1}つ目`}
+										value={linkValue}
+										onChange={value =>
+											updateValues(current => ({
+												...current,
+												[key]: current[key].map((v, i) =>
+													i === index ? value.trim() : v
+												),
+											}))
+										}
+										error={
+											canEditSnsLinks
+												? getSnsLinkError(key, linkValue)
+												: undefined
+										}
+										disabled={!canEditSnsLinks}
+										placeholder={placeholder}
+									/>
+								))}
+								<Text size="1" color="gray">
+									{hint}
+								</Text>
+							</Flex>
+						)
+					)}
+				</Flex>
+			</Card>
+
+			{project?.type !== "STAGE" && (
+				<>
+					<Card className={styles.card}>
+						<Flex direction="column" gap="4">
+							<div>
+								<Heading size="4">開店状態</Heading>
+								<Text size="2" color="gray">
+									現在の営業状態を設定します。
+								</Text>
+							</div>
+							{isEditable && !setting.isOpenStatusEditable && (
+								<RestrictedNotice />
+							)}
+							<Select
+								aria-label="開店状態"
+								value={values.openStatus}
+								onValueChange={value =>
+									updateValues({ openStatus: value as OpenStatus })
+								}
+								disabled={!canEditOpenStatus}
+								options={[
+									{ value: "OPEN", label: "営業中" },
+									{ value: "CLOSED", label: "準備中・閉店" },
+									{ value: "NOT_APPLICABLE", label: "設定なし" },
+								]}
+							/>
+						</Flex>
+					</Card>
+
+					<Card className={styles.card}>
+						<Flex direction="column" gap="4">
+							<div>
+								<Heading size="4">在庫状態</Heading>
+								<Text size="2" color="gray">
+									現在の在庫状況を設定します。
+								</Text>
+							</div>
+							{isEditable && !setting.isStockStatusEditable && (
+								<RestrictedNotice />
+							)}
+							<Select
+								aria-label="在庫状態"
+								value={values.stockStatus}
+								onValueChange={value =>
+									updateValues({ stockStatus: value as StockStatus })
+								}
+								disabled={!canEditStockStatus}
+								options={[
+									{ value: "IN_STOCK", label: "在庫あり" },
+									{ value: "OUT_OF_STOCK", label: "在庫なし（完売）" },
+									{ value: "NOT_APPLICABLE", label: "設定なし" },
+								]}
+							/>
+						</Flex>
+					</Card>
+				</>
+			)}
+
+			{isEditable && (
+				<div className={styles.actionBar}>
+					<Text size="2" color="gray">
+						{isUploading
+							? "画像をアップロード中です…"
+							: isDirty
+								? "未保存の変更があります"
+								: "変更はありません"}
+					</Text>
+					<Flex gap="3">
+						<Button
+							intent="secondary"
+							onClick={handleCancel}
+							disabled={!isDirty || isSaving || isUploading}
+						>
+							変更を破棄
+						</Button>
+						<Button
+							onClick={handleSave}
+							loading={isSaving}
+							disabled={!isDirty || isSaving || isUploading || hasSnsLinkError}
+						>
+							保存する
+						</Button>
+					</Flex>
+				</div>
+			)}
+
+			<ImageCropperModal
+				isOpen={isCropModalOpen}
+				onOpenChange={setIsCropModalOpen}
+				imageSrc={cropImageSrc}
+				onCropComplete={handleCropComplete}
+			/>
+
+			<ImagePreviewModal
+				isOpen={isPreviewOpen}
+				onOpenChange={setIsPreviewOpen}
+				fileIds={values.mapImageFileIds}
+				currentIndex={previewIndex}
+				onChangeIndex={setPreviewIndex}
+			/>
+
+			<DiscardChangesDialog
+				open={blocker.status === "blocked"}
+				onOpenChange={open => {
+					if (!open) blocker.reset?.();
+				}}
+				onConfirm={() => {
+					discardAllUnsavedFiles();
+					blocker.proceed?.();
+				}}
+				title="保存していない変更があります"
+				description="このページを離れると、保存していない変更は失われます。"
+				cancelLabel="編集を続ける"
+				confirmLabel="破棄して移動"
+			/>
+		</div>
+	);
+}

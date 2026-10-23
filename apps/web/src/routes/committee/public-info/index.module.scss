@@ -1,0 +1,109 @@
+.header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--space-4);
+	max-width: 880px;
+	margin-bottom: var(--space-5);
+}
+
+.list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+	max-width: 880px;
+}
+
+.cardHeader {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	margin-bottom: var(--space-3);
+}
+
+.badges {
+	display: flex;
+	gap: var(--space-2);
+	margin-left: auto;
+}
+
+.body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.description {
+	white-space: pre-wrap;
+}
+
+.links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-1) var(--space-4);
+}
+
+.link {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.imageButton {
+	padding: 0;
+	border: none;
+	background: none;
+	cursor: pointer;
+
+	&:disabled {
+		cursor: default;
+	}
+}
+
+.thumbs {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: var(--space-2);
+}
+
+.thumb {
+	display: block;
+	width: 120px;
+	height: 120px;
+	object-fit: cover;
+	border-radius: var(--radius-2);
+}
+
+.imageWrap {
+	position: relative;
+	display: block;
+}
+
+.hiddenBadge {
+	position: absolute;
+	bottom: 4px;
+	left: 4px;
+}
+
+.iconMark {
+	position: absolute;
+	bottom: -2px;
+	padding: 2px;
+	border-radius: 50%;
+	background: var(--color-panel-solid);
+	box-shadow: 0 0 0 1px var(--gray-a5);
+}
+
+.iconHiddenMark {
+	left: -2px;
+}
+
+.iconCorrectedMark {
+	right: -2px;
+}
+
+// 非公開のアイコンは薄く表示する（印は薄くしない）
+.iconHidden > img,
+.iconHidden > svg {
+	opacity: 0.4;
+}

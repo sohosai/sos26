@@ -46,7 +46,16 @@ const envSchema = z.object({
 	NOTIFICATION_SYNC_PASSWORD: z.string().min(1),
 
 	// S3互換オブジェクトストレージ
-	S3_ENDPOINT: z.string().min(1),
+	// スキームは省略可。省略時は https を補う。
+	// ローカルの MinIO 等 http で動かす場合は http:// を明示すること。
+	// 補完はここだけで行い、env.S3_ENDPOINT は常に完全なURLとして扱えるようにする。
+	S3_ENDPOINT: z
+		.string()
+		.min(1)
+		.transform(v => {
+			const trimmed = v.trim();
+			return /^https?:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`;
+		}),
 	S3_REGION: z.string().default("jp-north-1"),
 	S3_BUCKET: z.string().min(1),
 	S3_ACCESS_KEY_ID: z.string().min(1),
@@ -95,6 +104,18 @@ const envSchema = z.object({
 			});
 			return parsed;
 		}),
+
+	// 指定した列の値は、実委内のカラム閲覧権限（viewers/visibility）に関わらず
+	// 認証なしで誰でも見られるようになる点に注意。
+	PUBLIC_API_MASTERSHEET_COLUMN_IDS: z
+		.string()
+		.default("")
+		.transform(val =>
+			val
+				.split(",")
+				.map(v => v.trim())
+				.filter(Boolean)
+		),
 });
 
 export const env = envSchema.parse({
@@ -123,6 +144,8 @@ export const env = envSchema.parse({
 	SENTRY_DSN: process.env.SENTRY_DSN,
 	SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT,
 	PROJECT_APPLICATION_PERIODS: process.env.PROJECT_APPLICATION_PERIODS,
+	PUBLIC_API_MASTERSHEET_COLUMN_IDS:
+		process.env.PUBLIC_API_MASTERSHEET_COLUMN_IDS,
 });
 
 export type Env = z.infer<typeof envSchema>;
