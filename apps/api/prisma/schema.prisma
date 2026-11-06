@@ -359,6 +359,7 @@ model UserPushSubscription {
 
   @@unique([userId, pushSubscriptionId])
   @@index([userId])
+  @@index([pushSubscriptionId])
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -821,6 +822,7 @@ model FormDelivery {
   createdAt DateTime @default(now())
 
   @@unique([formAuthorizationId, projectId])
+  @@index([projectId, createdAt])
 }
 
 //申請への回答（1配信につき最大1件）
@@ -1043,6 +1045,7 @@ model InquiryAssignee {
 
   @@unique([inquiryId, userId, deletedAt])
   @@index([inquiryId])
+  @@index([userId, side, deletedAt])
 }
 
 model InquiryViewer {
@@ -1240,6 +1243,7 @@ model MastersheetCellSelectedOption {
   option   MastersheetColumnOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
   @@unique([cellId, optionId])
+  @@index([optionId])
 }
 
 // ─── 申請設問の編集履歴（append-only）───
@@ -1268,6 +1272,7 @@ model FormItemEditHistory {
 
   @@index([formItemId, projectId, createdAt(sort: Desc)])
   @@index([actorId])
+  @@index([projectId, trigger, createdAt])
 }
 
 model FormItemEditHistoryFile {
