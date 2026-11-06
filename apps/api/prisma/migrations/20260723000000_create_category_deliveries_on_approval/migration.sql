@@ -1,6 +1,3 @@
--- Add a projectId index for project-side form delivery lookups.
-CREATE INDEX "FormDelivery_projectId_idx" ON "FormDelivery"("projectId");
-
 -- Backfill deliveries for already-approved category form authorizations.
 INSERT INTO "FormDelivery" ("id", "formAuthorizationId", "projectId", "createdAt")
 SELECT
