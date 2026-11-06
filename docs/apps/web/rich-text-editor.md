@@ -19,10 +19,14 @@ apps/web/src/components/patterns/RichTextEditor/
 └── RichTextEditor.module.scss
 ```
 
-`@/components/patterns` から re-export されているため、他の patterns と同様にインポートできる。
+tiptap を初期チャンクに含めないため、`@/components/patterns` のバレルからは re-export しない。使う側で `React.lazy` で読み込み、`Suspense` で囲む。
 
 ```tsx
-import { RichTextEditor } from "@/components/patterns";
+const RichTextEditor = lazy(() =>
+	import("@/components/patterns/RichTextEditor").then(module => ({
+		default: module.RichTextEditor,
+	}))
+);
 ```
 
 ## Props

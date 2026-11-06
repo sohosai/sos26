@@ -16,4 +16,3 @@ export {
 } from "./DataTable";
 export { DiscardChangesDialog } from "./DiscardChangesDialog";
 export { RadioGroup, RadioGroupItem } from "./RadioGroup";
-export { RichTextEditor } from "./RichTextEditor";
