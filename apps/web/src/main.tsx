@@ -17,6 +17,11 @@ declare module "@tanstack/react-router" {
 	}
 }
 
+// デプロイで消えた古いチャンクを、開いたままのタブが取得しようとしたときに最新の版へ切り替える
+window.addEventListener("vite:preloadError", () => {
+	window.location.reload();
+});
+
 const rootElement = document.getElementById("root");
 if (!rootElement) {
 	throw new Error("Root element not found");
