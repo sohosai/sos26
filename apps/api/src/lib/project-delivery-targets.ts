@@ -167,7 +167,6 @@ export async function createNoticeDeliveriesForProjects(
 }
 
 // 承認時点で存在する対象企画に delivery を作成する。
-// ここで作っておくことで、フォーム一覧取得時に delivery を補完する副作用を持たせない。
 export async function ensureFormDeliveriesForAuthorization(
 	tx: Prisma.TransactionClient,
 	formAuthorizationId: string
@@ -201,7 +200,6 @@ export async function ensureFormDeliveriesForAuthorization(
 }
 
 // 承認時点で存在する対象企画に delivery を作成する。
-// ここで作っておくことで、お知らせ一覧取得時に delivery を補完する副作用を持たせない。
 export async function ensureNoticeDeliveriesForAuthorization(
 	tx: Prisma.TransactionClient,
 	noticeAuthorizationId: string
@@ -234,10 +232,33 @@ export async function ensureNoticeDeliveriesForAuthorization(
 	);
 }
 
-// 承認後に作成された企画、または種別/場所が変更された企画を対象に、
-// 現在の企画属性に一致するカテゴリ指定配信の delivery を補完する。
-// 一度作成された delivery は、後から対象外になっても削除しない。
-export async function ensureDeliveriesForProject(
+// カテゴリ指定配信の filterTypes/filterLocations が企画に一致する条件。
+function categoryMatchesProjectWhere(project: {
+	type: ProjectType;
+	location: ProjectLocation;
+}) {
+	return {
+		AND: [
+			{
+				OR: [
+					{ filterTypes: { isEmpty: true } },
+					{ filterTypes: { has: project.type } },
+				],
+			},
+			{
+				OR: [
+					{ filterLocations: { isEmpty: true } },
+					{ filterLocations: { has: project.location } },
+				],
+			},
+		],
+	};
+}
+
+// 企画の作成時と種別/場所の変更時に、カテゴリ指定配信の delivery を現在の企画属性に合わせる。
+// 配信時刻を過ぎた delivery は、後から対象外になっても削除しない。
+// 配信前に対象外になった delivery は、配信通知の対象からも外れるため削除する。
+export async function syncCategoryDeliveriesForProject(
 	tx: Prisma.TransactionClient,
 	projectId: string
 ): Promise<void> {
@@ -247,24 +268,37 @@ export async function ensureDeliveriesForProject(
 	});
 	if (!project) return;
 
+	const now = new Date();
+	const matchesProject = categoryMatchesProjectWhere(project);
+
+	await tx.formDelivery.deleteMany({
+		where: {
+			projectId: project.id,
+			formAuthorization: {
+				deliveryMode: "CATEGORY",
+				scheduledSendAt: { gt: now },
+				NOT: matchesProject,
+			},
+		},
+	});
+	await tx.noticeDelivery.deleteMany({
+		where: {
+			projectId: project.id,
+			noticeAuthorization: {
+				deliveryMode: "CATEGORY",
+				deliveredAt: { gt: now },
+				NOT: matchesProject,
+			},
+		},
+	});
+
 	const [formAuthorizations, noticeAuthorizations] = await Promise.all([
 		tx.formAuthorization.findMany({
 			where: {
 				deliveryMode: "CATEGORY",
 				status: "APPROVED",
 				form: { deletedAt: null },
-				OR: [
-					{ filterTypes: { isEmpty: true } },
-					{ filterTypes: { has: project.type } },
-				],
-				AND: [
-					{
-						OR: [
-							{ filterLocations: { isEmpty: true } },
-							{ filterLocations: { has: project.location } },
-						],
-					},
-				],
+				...matchesProject,
 			},
 			select: { id: true },
 		}),
@@ -273,18 +307,7 @@ export async function ensureDeliveriesForProject(
 				deliveryMode: "CATEGORY",
 				status: "APPROVED",
 				notice: { deletedAt: null },
-				OR: [
-					{ filterTypes: { isEmpty: true } },
-					{ filterTypes: { has: project.type } },
-				],
-				AND: [
-					{
-						OR: [
-							{ filterLocations: { isEmpty: true } },
-							{ filterLocations: { has: project.location } },
-						],
-					},
-				],
+				...matchesProject,
 			},
 			select: { id: true },
 		}),

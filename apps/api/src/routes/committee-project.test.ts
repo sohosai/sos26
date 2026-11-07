@@ -67,13 +67,13 @@ vi.mock("../lib/firebase", () => ({
 }));
 
 vi.mock("../lib/project-delivery-targets", () => ({
-	ensureDeliveriesForProject: vi.fn(),
+	syncCategoryDeliveriesForProject: vi.fn(),
 }));
 
 import { errorHandler } from "../lib/error-handler";
 import { auth as firebaseAuth } from "../lib/firebase";
 import { prisma } from "../lib/prisma";
-import { ensureDeliveriesForProject } from "../lib/project-delivery-targets";
+import { syncCategoryDeliveriesForProject } from "../lib/project-delivery-targets";
 import { committeeProjectRoute } from "./committee-project";
 
 const mockPrisma = vi.mocked(prisma, true);
@@ -525,7 +525,7 @@ describe("PATCH /committee/projects/:projectId/base-info", () => {
 		const res = await patchBaseInfo({ type: "FOOD" });
 
 		expect(res.status).toBe(200);
-		expect(ensureDeliveriesForProject).toHaveBeenCalledWith(
+		expect(syncCategoryDeliveriesForProject).toHaveBeenCalledWith(
 			mockPrisma,
 			mockProject.id
 		);
@@ -535,7 +535,7 @@ describe("PATCH /committee/projects/:projectId/base-info", () => {
 		const res = await patchBaseInfo({ location: "OUTDOOR" });
 
 		expect(res.status).toBe(200);
-		expect(ensureDeliveriesForProject).toHaveBeenCalledWith(
+		expect(syncCategoryDeliveriesForProject).toHaveBeenCalledWith(
 			mockPrisma,
 			mockProject.id
 		);
@@ -545,7 +545,7 @@ describe("PATCH /committee/projects/:projectId/base-info", () => {
 		const res = await patchBaseInfo({ organizationName: "別の団体" });
 
 		expect(res.status).toBe(200);
-		expect(ensureDeliveriesForProject).not.toHaveBeenCalled();
+		expect(syncCategoryDeliveriesForProject).not.toHaveBeenCalled();
 	});
 });
 

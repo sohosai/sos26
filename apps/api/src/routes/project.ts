@@ -29,6 +29,7 @@ import {
 	assertRequiredAnswered,
 } from "../lib/form-answer-validation";
 import { mapItemToApiShape } from "../lib/form-constraints";
+import { getLatestCommitteeActivityAt } from "../lib/inquiry-activity";
 import {
 	notifySubOwnerRequestApproved,
 	notifySubOwnerRequestCancelled,
@@ -37,7 +38,7 @@ import {
 } from "../lib/notifications";
 import { handlePrismaError, prisma } from "../lib/prisma";
 import { findOtherPrivilegedProject } from "../lib/project-check";
-import { ensureDeliveriesForProject } from "../lib/project-delivery-targets";
+import { syncCategoryDeliveriesForProject } from "../lib/project-delivery-targets";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -52,34 +53,6 @@ const generateInviteCode = () =>
 		const idx = randomInt(0, INVITE_CODE_CHARS.length);
 		return INVITE_CODE_CHARS[idx];
 	}).join("");
-
-function getCommentSentAt(comment: { sentAt: Date | null; createdAt: Date }) {
-	return comment.sentAt ?? comment.createdAt;
-}
-
-function getLatestCommitteeActivityAt(inquiry: {
-	sentAt: Date | null;
-	creatorRole: "PROJECT" | "COMMITTEE";
-	createdAt: Date;
-	comments: Array<{ createdAt: Date; sentAt: Date | null }>;
-}) {
-	const latestCommitteeComment = inquiry.comments[0] ?? null;
-	const latestCommitteeCommentAt = latestCommitteeComment
-		? getCommentSentAt(latestCommitteeComment)
-		: null;
-	const committeeCreatedAt =
-		inquiry.creatorRole === "COMMITTEE"
-			? (inquiry.sentAt ?? inquiry.createdAt)
-			: null;
-
-	if (latestCommitteeCommentAt && committeeCreatedAt) {
-		return latestCommitteeCommentAt.getTime() > committeeCreatedAt.getTime()
-			? latestCommitteeCommentAt
-			: committeeCreatedAt;
-	}
-
-	return latestCommitteeCommentAt ?? committeeCreatedAt;
-}
 
 // 企画登録フォーム回答をPrisma用データに変換
 const buildPrismaAnswerData = (
@@ -308,7 +281,7 @@ projectRoute.post("/create", requireAuth, async c => {
 			}
 		}
 
-		await ensureDeliveriesForProject(tx, created.id);
+		await syncCategoryDeliveriesForProject(tx, created.id);
 
 		return created;
 	});
@@ -937,7 +910,7 @@ projectRoute.patch(
 			});
 
 			if (shouldEnsureDeliveries) {
-				await ensureDeliveriesForProject(tx, updated.id);
+				await syncCategoryDeliveriesForProject(tx, updated.id);
 			}
 
 			return updated;

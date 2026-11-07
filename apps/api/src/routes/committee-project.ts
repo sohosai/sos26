@@ -14,7 +14,7 @@ import { env } from "../lib/env";
 import { Errors } from "../lib/error";
 import { prisma } from "../lib/prisma";
 import { findOtherPrivilegedProject } from "../lib/project-check";
-import { ensureDeliveriesForProject } from "../lib/project-delivery-targets";
+import { syncCategoryDeliveriesForProject } from "../lib/project-delivery-targets";
 import {
 	committeeProjectPublicInfoSelect,
 	toCommitteeProjectPublicInfo,
@@ -956,7 +956,7 @@ committeeProjectRoute.patch(
 			});
 
 			if (updated.count > 0 && shouldEnsureDeliveries) {
-				await ensureDeliveriesForProject(tx, projectId);
+				await syncCategoryDeliveriesForProject(tx, projectId);
 			}
 
 			return updated;

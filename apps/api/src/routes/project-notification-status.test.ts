@@ -45,13 +45,13 @@ vi.mock("../lib/project-check", () => ({
 }));
 
 vi.mock("../lib/project-delivery-targets", () => ({
-	ensureDeliveriesForProject: vi.fn(),
+	syncCategoryDeliveriesForProject: vi.fn(),
 }));
 
 import { errorHandler } from "../lib/error-handler";
 import { auth as firebaseAuth } from "../lib/firebase";
 import { prisma } from "../lib/prisma";
-import { ensureDeliveriesForProject } from "../lib/project-delivery-targets";
+import { syncCategoryDeliveriesForProject } from "../lib/project-delivery-targets";
 import { projectRoute } from "./project";
 import { projectFormRoute } from "./project-form";
 import { projectNoticeRoute } from "./project-notice";
@@ -127,6 +127,55 @@ describe("GET /project/:projectId/notification-status", () => {
 		expect(body.hasUncheckedNotices).toBe(true);
 	});
 
+	it("配信済みで未回答の申請と、配信済みで未読のお知らせだけを数える", async () => {
+		await request();
+
+		const formWhere = prisma.formDelivery.count.mock.calls[0][0].where;
+		expect(formWhere.projectId).toBe(project.id);
+		expect(formWhere.responses).toEqual({
+			none: { submittedAt: { not: null } },
+		});
+		expect(formWhere.formAuthorization).toMatchObject({
+			status: "APPROVED",
+			form: { deletedAt: null },
+		});
+		expect(formWhere.formAuthorization.scheduledSendAt.lte).toBeInstanceOf(
+			Date
+		);
+		const [noDeadline, lateAllowed, beforeDeadline] =
+			formWhere.formAuthorization.OR;
+		expect(noDeadline).toEqual({ deadlineAt: null });
+		expect(lateAllowed).toEqual({ allowLateResponse: true });
+		expect(beforeDeadline.deadlineAt.gte).toBeInstanceOf(Date);
+
+		const noticeWhere = prisma.noticeDelivery.count.mock.calls[0][0].where;
+		expect(noticeWhere.projectId).toBe(project.id);
+		expect(noticeWhere.readStatuses).toEqual({
+			none: { userId: user.id },
+		});
+		expect(noticeWhere.noticeAuthorization).toMatchObject({
+			status: "APPROVED",
+			notice: { deletedAt: null },
+		});
+		expect(noticeWhere.noticeAuthorization.deliveredAt.lte).toBeInstanceOf(
+			Date
+		);
+	});
+
+	it("自分が担当する送信済みの問い合わせだけを見る", async () => {
+		await request();
+
+		const { where } = prisma.inquiry.findMany.mock.calls[0][0];
+		expect(where).toMatchObject({
+			projectId: project.id,
+			deletedAt: null,
+			isDraft: false,
+			assignees: {
+				some: { userId: user.id, side: "PROJECT", deletedAt: null },
+			},
+		});
+	});
+
 	it("一般メンバーには責任者限定の申請を数えない", async () => {
 		await request();
 
@@ -162,6 +211,18 @@ describe("GET /project/:projectId/notification-status", () => {
 		prisma.inquiry.findMany.mockResolvedValue([
 			inquiry({
 				commentReadStatuses: [{ lastReadAt: new Date("2026-01-03T00:00:00Z") }],
+			}),
+		]);
+
+		const body = await (await request()).json();
+
+		expect(body.hasUnreadInquiryComments).toBe(false);
+	});
+
+	it("最新のコメントと同時刻に読んでいれば既読にする", async () => {
+		prisma.inquiry.findMany.mockResolvedValue([
+			inquiry({
+				commentReadStatuses: [{ lastReadAt: new Date("2026-01-02T00:00:00Z") }],
 			}),
 		]);
 
@@ -209,7 +270,7 @@ describe("カテゴリ配信の delivery の補完", () => {
 		});
 
 		expect(res.status).toBe(200);
-		expect(ensureDeliveriesForProject).toHaveBeenCalledWith(
+		expect(syncCategoryDeliveriesForProject).toHaveBeenCalledWith(
 			prisma,
 			"new-project"
 		);
@@ -233,21 +294,27 @@ describe("カテゴリ配信の delivery の補完", () => {
 		const res = await patchDetail({ type: "FOOD" });
 
 		expect(res.status).toBe(200);
-		expect(ensureDeliveriesForProject).toHaveBeenCalledWith(prisma, project.id);
+		expect(syncCategoryDeliveriesForProject).toHaveBeenCalledWith(
+			prisma,
+			project.id
+		);
 	});
 
 	it("場所の変更時に delivery を補完する", async () => {
 		const res = await patchDetail({ location: "OUTDOOR" });
 
 		expect(res.status).toBe(200);
-		expect(ensureDeliveriesForProject).toHaveBeenCalledWith(prisma, project.id);
+		expect(syncCategoryDeliveriesForProject).toHaveBeenCalledWith(
+			prisma,
+			project.id
+		);
 	});
 
 	it("区分・場所を変えない更新では delivery を補完しない", async () => {
 		const res = await patchDetail({ organizationName: "別の団体" });
 
 		expect(res.status).toBe(200);
-		expect(ensureDeliveriesForProject).not.toHaveBeenCalled();
+		expect(syncCategoryDeliveriesForProject).not.toHaveBeenCalled();
 	});
 });
 
