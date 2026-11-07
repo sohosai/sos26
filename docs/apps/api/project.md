@@ -107,8 +107,8 @@
 - `requireProjectMember` により、対象企画メンバーのみ取得可能
 - `hasUnansweredForms`: 配信済みで未提出の申請のうち、回答できるものがあるか。一般メンバーには `ownerOnly` の申請を含めない
 - `hasUncheckedNotices`: 配信済みのお知らせのうち、実行ユーザーが未読のものがあるか
-- `hasUnreadInquiryComments`: 実行ユーザーが担当する問い合わせに、未読の実委の活動があるか
-- `latestActivityAt`: 申請・お知らせの最新の配信時刻と、担当する問い合わせの最新の実委の活動時刻のうち、最も新しい時刻。無ければ `null`。web はこの値の変化で画面のデータを取り直す
+- `hasUnreadInquiryComments`: 実行ユーザーが担当する問い合わせに、未読の実委からの返信があるか。実委が作成した問い合わせは、それ自体も未読の判定に含める
+- `latestActivityAt`: 申請・お知らせの最新の配信時刻、担当する問い合わせへの実委からの最新の返信の時刻、実委が作成した問い合わせの作成時刻のうち、最も新しい時刻。無ければ `null`。web はこの値の変化で画面のデータを取り直す
 
 ### POST `/project/:projectId/invite-code/regenerate`
 

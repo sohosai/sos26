@@ -169,7 +169,7 @@ describe("getProjectNotificationStatus", () => {
 		expect(status.hasUnreadInquiryComments).toBe(true);
 	});
 
-	it("配信と実委の活動のうち最新の時刻を latestActivityAt で返す", async () => {
+	it("配信と実委からの返信のうち最新の時刻を latestActivityAt で返す", async () => {
 		const latest = new Date("2026-01-05T00:00:00Z");
 		prisma.formDelivery.findFirst.mockResolvedValue({
 			formAuthorization: { scheduledSendAt: new Date("2026-01-03T00:00:00Z") },

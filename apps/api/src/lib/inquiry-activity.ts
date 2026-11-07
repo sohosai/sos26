@@ -31,8 +31,8 @@ export function committeeActivitySelect(userId: string) {
 	} satisfies Prisma.InquirySelect;
 }
 
-// 実委が最後に活動した時刻。comments には実委の最新コメントだけを渡す。
-// 実委が作成した問い合わせは作成時刻も活動に含める。
+// 実委からの最新の返信の時刻を返す。comments には実委の最新コメントだけを渡す。
+// 実委が作成した問い合わせは、その作成時刻も比較の対象にする。
 export function getLatestCommitteeActivityAt(inquiry: {
 	sentAt: Date | null;
 	creatorRole: "PROJECT" | "COMMITTEE";
