@@ -27,33 +27,9 @@ type NoticeDeliveryProject = {
 	projectId: string;
 };
 
-function uniqueFormDeliveryProjects(
-	deliveries: FormDeliveryProject[]
-): FormDeliveryProject[] {
-	const seen = new Set<string>();
-	return deliveries.filter(delivery => {
-		const key = `${delivery.formAuthorizationId}:${delivery.projectId}`;
-		if (seen.has(key)) return false;
-		seen.add(key);
-		return true;
-	});
-}
-
-function uniqueNoticeDeliveryProjects(
-	deliveries: NoticeDeliveryProject[]
-): NoticeDeliveryProject[] {
-	const seen = new Set<string>();
-	return deliveries.filter(delivery => {
-		const key = `${delivery.noticeAuthorizationId}:${delivery.projectId}`;
-		if (seen.has(key)) return false;
-		seen.add(key);
-		return true;
-	});
-}
-
 // カテゴリ指定配信の対象企画を解決する。
 // filterTypes/filterLocations の空配列は「全種別/全場所」を表す。
-export async function findCategoryDeliveryTargetProjects(
+async function findCategoryDeliveryTargetProjects(
 	db: ProjectDeliveryDb,
 	{ filterTypes, filterLocations }: CategoryTargetFilters
 ): Promise<ProjectDeliveryTarget[]> {
@@ -92,78 +68,28 @@ export async function resolveDeliveryTargetProjectIds(
 	return projects.map(project => project.id);
 }
 
-// authorization と project の組み合わせを一括作成する低水準 helper。
-// 呼び出し元が複数 authorization 分をまとめて渡せるよう、重複排除はペア単位で行う。
-export async function createFormDeliveryProjects(
+export async function createFormDeliveries(
 	db: ProjectDeliveryDb,
 	deliveries: FormDeliveryProject[]
 ): Promise<void> {
-	const uniqueDeliveries = uniqueFormDeliveryProjects(deliveries);
-	if (uniqueDeliveries.length === 0) return;
+	if (deliveries.length === 0) return;
 
 	await db.formDelivery.createMany({
-		data: uniqueDeliveries,
+		data: deliveries,
 		skipDuplicates: true,
 	});
 }
 
-// authorization と project の組み合わせを一括作成する低水準 helper。
-// 呼び出し元が複数 authorization 分をまとめて渡せるよう、重複排除はペア単位で行う。
-export async function createNoticeDeliveryProjects(
+export async function createNoticeDeliveries(
 	db: ProjectDeliveryDb,
 	deliveries: NoticeDeliveryProject[]
 ): Promise<void> {
-	const uniqueDeliveries = uniqueNoticeDeliveryProjects(deliveries);
-	if (uniqueDeliveries.length === 0) return;
+	if (deliveries.length === 0) return;
 
 	await db.noticeDelivery.createMany({
-		data: uniqueDeliveries,
+		data: deliveries,
 		skipDuplicates: true,
 	});
-}
-
-// 1つの authorization に対して複数 project の delivery を作成し、
-// 通知同期側が同じ projectIds を通知送信に使えるように返す。
-export async function createFormDeliveriesForProjects(
-	db: ProjectDeliveryDb,
-	formAuthorizationId: string,
-	projectIds: string[]
-): Promise<string[]> {
-	if (projectIds.length === 0) return [];
-
-	const uniqueProjectIds = [...new Set(projectIds)];
-
-	await createFormDeliveryProjects(
-		db,
-		uniqueProjectIds.map(projectId => ({
-			formAuthorizationId,
-			projectId,
-		}))
-	);
-
-	return uniqueProjectIds;
-}
-
-// 1つの authorization に対して複数 project の delivery を作成し、
-// 通知同期側が同じ projectIds を通知送信に使えるように返す。
-export async function createNoticeDeliveriesForProjects(
-	db: ProjectDeliveryDb,
-	noticeAuthorizationId: string,
-	projectIds: string[]
-): Promise<string[]> {
-	if (projectIds.length === 0) return [];
-
-	const uniqueProjectIds = [...new Set(projectIds)];
-
-	await createNoticeDeliveryProjects(
-		db,
-		uniqueProjectIds.map(projectId => ({
-			noticeAuthorizationId,
-			projectId,
-		}))
-	);
-
-	return uniqueProjectIds;
 }
 
 // 承認時点で存在する対象企画に delivery を作成する。
@@ -190,12 +116,12 @@ export async function ensureFormDeliveriesForAuthorization(
 		filterTypes: authorization.filterTypes,
 		filterLocations: authorization.filterLocations,
 	});
-	if (targetProjects.length === 0) return;
-
-	await createFormDeliveriesForProjects(
+	await createFormDeliveries(
 		tx,
-		authorization.id,
-		targetProjects.map(project => project.id)
+		targetProjects.map(project => ({
+			formAuthorizationId: authorization.id,
+			projectId: project.id,
+		}))
 	);
 }
 
@@ -223,12 +149,12 @@ export async function ensureNoticeDeliveriesForAuthorization(
 		filterTypes: authorization.filterTypes,
 		filterLocations: authorization.filterLocations,
 	});
-	if (targetProjects.length === 0) return;
-
-	await createNoticeDeliveriesForProjects(
+	await createNoticeDeliveries(
 		tx,
-		authorization.id,
-		targetProjects.map(project => project.id)
+		targetProjects.map(project => ({
+			noticeAuthorizationId: authorization.id,
+			projectId: project.id,
+		}))
 	);
 }
 
@@ -313,23 +239,18 @@ export async function syncCategoryDeliveriesForProject(
 		}),
 	]);
 
-	if (formAuthorizations.length > 0) {
-		await createFormDeliveryProjects(
-			tx,
-			formAuthorizations.map(authorization => ({
-				formAuthorizationId: authorization.id,
-				projectId: project.id,
-			}))
-		);
-	}
-
-	if (noticeAuthorizations.length > 0) {
-		await createNoticeDeliveryProjects(
-			tx,
-			noticeAuthorizations.map(authorization => ({
-				noticeAuthorizationId: authorization.id,
-				projectId: project.id,
-			}))
-		);
-	}
+	await createFormDeliveries(
+		tx,
+		formAuthorizations.map(authorization => ({
+			formAuthorizationId: authorization.id,
+			projectId: project.id,
+		}))
+	);
+	await createNoticeDeliveries(
+		tx,
+		noticeAuthorizations.map(authorization => ({
+			noticeAuthorizationId: authorization.id,
+			projectId: project.id,
+		}))
+	);
 }

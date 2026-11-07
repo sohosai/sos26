@@ -521,7 +521,7 @@ describe("PATCH /committee/projects/:projectId/base-info", () => {
 		} as any);
 	});
 
-	it("区分の変更時に delivery を補完する", async () => {
+	it("区分の変更時に delivery を同期する", async () => {
 		const res = await patchBaseInfo({ type: "FOOD" });
 
 		expect(res.status).toBe(200);
@@ -531,7 +531,7 @@ describe("PATCH /committee/projects/:projectId/base-info", () => {
 		);
 	});
 
-	it("場所の変更時に delivery を補完する", async () => {
+	it("場所の変更時に delivery を同期する", async () => {
 		const res = await patchBaseInfo({ location: "OUTDOOR" });
 
 		expect(res.status).toBe(200);
@@ -541,7 +541,7 @@ describe("PATCH /committee/projects/:projectId/base-info", () => {
 		);
 	});
 
-	it("区分・場所を変えない更新では delivery を補完しない", async () => {
+	it("区分・場所を変えない更新では delivery を同期しない", async () => {
 		const res = await patchBaseInfo({ organizationName: "別の団体" });
 
 		expect(res.status).toBe(200);

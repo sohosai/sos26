@@ -8,8 +8,8 @@ import {
 } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
 import {
-	createFormDeliveriesForProjects,
-	createNoticeDeliveriesForProjects,
+	createFormDeliveries,
+	createNoticeDeliveries,
 	resolveDeliveryTargetProjectIds,
 } from "../lib/project-delivery-targets";
 
@@ -63,21 +63,20 @@ async function processFormAuthorizations(
 		if (auth.scheduledSendAt > now) continue;
 		if (!auth.form || auth.form.deletedAt) continue;
 
-		const targetProjectIds = await resolveDeliveryTargetProjectIds(prisma, {
+		const projectIds = await resolveDeliveryTargetProjectIds(prisma, {
 			deliveryMode: auth.deliveryMode,
 			filterTypes: auth.filterTypes,
 			filterLocations: auth.filterLocations,
 			deliveryProjectIds: auth.deliveries.map(delivery => delivery.projectId),
 		});
-
-		const projectIds = await createFormDeliveriesForProjects(
-			prisma,
-			auth.id,
-			targetProjectIds
-		);
 		if (projectIds.length === 0) {
 			continue;
 		}
+
+		await createFormDeliveries(
+			prisma,
+			projectIds.map(projectId => ({ formAuthorizationId: auth.id, projectId }))
+		);
 
 		// Reserve this authorization for notification by setting deliveryNotifiedAt,
 		// guarding against concurrent workers processing the same record.
@@ -147,21 +146,23 @@ async function processNoticeAuthorizations(
 		if (auth.deliveredAt > now) continue;
 		if (auth.notice.deletedAt) continue;
 
-		const targetProjectIds = await resolveDeliveryTargetProjectIds(prisma, {
+		const projectIds = await resolveDeliveryTargetProjectIds(prisma, {
 			deliveryMode: auth.deliveryMode,
 			filterTypes: auth.filterTypes,
 			filterLocations: auth.filterLocations,
 			deliveryProjectIds: auth.deliveries.map(delivery => delivery.projectId),
 		});
-
-		const projectIds = await createNoticeDeliveriesForProjects(
-			prisma,
-			auth.id,
-			targetProjectIds
-		);
 		if (projectIds.length === 0) {
 			continue;
 		}
+
+		await createNoticeDeliveries(
+			prisma,
+			projectIds.map(projectId => ({
+				noticeAuthorizationId: auth.id,
+				projectId,
+			}))
+		);
 
 		// Claim this authorization for processing to avoid duplicate notifications
 		const claimResult = await prisma.$queryRaw<
