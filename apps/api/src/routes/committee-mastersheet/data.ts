@@ -130,6 +130,7 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 					formAuthorization: {
 						formId: { in: visibleFormIds },
 						status: "APPROVED",
+						scheduledSendAt: { lte: new Date() },
 					},
 				},
 				include: { formAuthorization: { select: { formId: true } } },
