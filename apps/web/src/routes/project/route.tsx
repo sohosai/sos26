@@ -257,6 +257,7 @@ function ProjectLayout() {
 	useEffect(() => {
 		let lastRefreshAt = 0;
 		const refreshIfNeeded = () => {
+			if (document.visibilityState !== "visible") return;
 			const now = Date.now();
 			if (now - lastRefreshAt < 5_000) return;
 			lastRefreshAt = now;

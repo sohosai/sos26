@@ -64,26 +64,30 @@ async function fetchFormDeliveryActions(
 	const rows = await prisma.formDelivery.findMany({
 		where: {
 			projectId,
-			formAuthorization: { form: { deletedAt: null } },
+			formAuthorization: {
+				status: "APPROVED",
+				scheduledSendAt: { lte: new Date() },
+				form: { deletedAt: null },
+			},
 		},
 		select: {
 			id: true,
-			createdAt: true,
 			formAuthorization: {
 				select: {
+					scheduledSendAt: true,
 					form: { select: { id: true, title: true } },
 					requestedBy: { select: { name: true } },
 				},
 			},
 		},
-		orderBy: { createdAt: "desc" },
+		orderBy: { formAuthorization: { scheduledSendAt: "desc" } },
 		take: PER_SOURCE_LIMIT,
 	});
 	return rows.map(d => ({
 		type: "FORM_DELIVERED",
 		id: d.id,
 		title: d.formAuthorization.form.title,
-		sentAt: d.createdAt,
+		sentAt: d.formAuthorization.scheduledSendAt,
 		actorName: d.formAuthorization.requestedBy.name,
 		formId: d.formAuthorization.form.id,
 	}));
@@ -174,26 +178,30 @@ async function fetchNoticeDeliveryActions(
 	const rows = await prisma.noticeDelivery.findMany({
 		where: {
 			projectId,
-			noticeAuthorization: { notice: { deletedAt: null } },
+			noticeAuthorization: {
+				status: "APPROVED",
+				deliveredAt: { lte: new Date() },
+				notice: { deletedAt: null },
+			},
 		},
 		select: {
 			id: true,
-			createdAt: true,
 			noticeAuthorization: {
 				select: {
+					deliveredAt: true,
 					notice: { select: { id: true, title: true } },
 					requestedBy: { select: { name: true } },
 				},
 			},
 		},
-		orderBy: { createdAt: "desc" },
+		orderBy: { noticeAuthorization: { deliveredAt: "desc" } },
 		take: PER_SOURCE_LIMIT,
 	});
 	return rows.map(d => ({
 		type: "NOTICE_DELIVERED",
 		id: d.id,
 		title: d.noticeAuthorization.notice.title,
-		sentAt: d.createdAt,
+		sentAt: d.noticeAuthorization.deliveredAt,
 		actorName: d.noticeAuthorization.requestedBy.name,
 		noticeId: d.noticeAuthorization.notice.id,
 	}));
