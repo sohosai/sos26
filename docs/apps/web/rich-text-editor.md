@@ -45,17 +45,17 @@ type RichTextEditorProps = {
 ## 使い方
 
 ```tsx
-import { RichTextEditor } from "./RichTextEditor";
-
 const [body, setBody] = useState("");
 
-<RichTextEditor
-  label="本文"
-  placeholder="お知らせの本文を入力"
-  value={body}
-  onChange={setBody}
-  required
-/>
+<Suspense fallback={<Spinner size="3" />}>
+  <RichTextEditor
+    label="本文"
+    placeholder="お知らせの本文を入力"
+    value={body}
+    onChange={setBody}
+    required
+  />
+</Suspense>
 ```
 
 ### 申請リセット

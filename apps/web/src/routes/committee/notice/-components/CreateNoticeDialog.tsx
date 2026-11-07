@@ -182,7 +182,7 @@ export function CreateNoticeDialog({
 						onChange={setTitle}
 						required
 					/>
-					<Suspense fallback={<Spinner />}>
+					<Suspense fallback={<Spinner size="3" />}>
 						<RichTextEditor
 							label="本文"
 							placeholder="お知らせの本文を入力"
