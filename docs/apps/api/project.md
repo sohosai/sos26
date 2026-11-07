@@ -16,6 +16,7 @@
   - [POST `/project/join`](#post-projectjoin)
   - [GET `/project/:projectId/detail`](#get-projectprojectiddetail)
   - [PATCH `/project/:projectId/detail`](#patch-projectprojectiddetail)
+  - [GET `/project/:projectId/notification-status`](#get-projectprojectidnotification-status)
   - [POST `/project/:projectId/invite-code/regenerate`](#post-projectprojectidinvite-coderegenerate)
   - [GET `/project/:projectId/members`](#get-projectprojectidmembers)
   - [POST `/project/:projectId/members/:userId/remove`](#post-projectprojectidmembersuseridremove)
@@ -44,6 +45,7 @@
 | POST | `/project/join` | 企画参加コードで企画参加 |
 | GET | `/project/:projectId/detail` | 企画詳細取得 |
 | PATCH | `/project/:projectId/detail` | 企画設定更新（企画責任者のみ） |
+| GET | `/project/:projectId/notification-status` | 通知すべき未処理状態の取得 |
 | POST | `/project/:projectId/invite-code/regenerate` | 企画参加コード再生成（企画責任者のみ） |
 | GET | `/project/:projectId/members` | 企画メンバー一覧 |
 | POST | `/project/:projectId/members/:userId/remove` | メンバー削除（企画責任者/副企画責任者） |
@@ -64,6 +66,7 @@
 - `subOwnerId` は `null`
 - 企画参加コード（6文字英数字）を生成し、重複時は再生成
 - 作成者を `projectMembers` に自動追加
+- カテゴリ指定の配信の delivery を同期（[配信先指定モード 仕様書](../../delivery-target-spec.md) の 5.2 を参照）
 - 実行ユーザーが他の有効な企画（`deletionStatus == null`）で既に責任者・副責任者を務めている場合は作成不可（`INVALID_REQUEST`）
 
 ### GET `/project/list`
@@ -95,6 +98,17 @@
 
 - `requireProjectMember` + `projectRole === OWNER` が必須
 - 企画責任者以外は `FORBIDDEN`
+- `type` / `location` を変更した場合は、カテゴリ指定の配信の delivery を同期（[配信先指定モード 仕様書](../../delivery-target-spec.md) の 5.2 を参照）
+
+### GET `/project/:projectId/notification-status`
+
+実行ユーザーに通知すべき未処理状態を返します。
+
+- `requireProjectMember` により、対象企画メンバーのみ取得可能
+- `hasUnansweredForms`: 配信済みで未提出の申請のうち、回答できるものがあるか。一般メンバーには `ownerOnly` の申請を含めない
+- `hasUncheckedNotices`: 配信済みのお知らせのうち、実行ユーザーが未読のものがあるか
+- `hasUnreadInquiryComments`: 実行ユーザーが担当する問い合わせに、未読の実委の活動があるか
+- `latestActivityAt`: 申請・お知らせの最新の配信時刻と、担当する問い合わせの最新の実委の活動時刻のうち、最も新しい時刻。無ければ `null`。web はこの値の変化で画面のデータを取り直す
 
 ### POST `/project/:projectId/invite-code/regenerate`
 

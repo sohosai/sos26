@@ -274,6 +274,7 @@ PENDING_APPROVAL（承認待ち）
 **処理:**
 - `status` を `APPROVED` または `REJECTED` に更新
 - `decidedAt` に現在日時をセット
+- カテゴリ指定を承認した場合、条件に合致する企画の `FormDelivery` を作成（[配信先指定モード 仕様書](./delivery-target-spec.md) の 5.2 を参照）
 
 #### 5.4.4 却下後の再申請
 
