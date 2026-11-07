@@ -8,8 +8,9 @@ import {
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import {
+	committeeActivitySelect,
 	getCommentSentAt,
-	getLatestCommitteeActivityAt,
+	hasUnreadCommitteeActivity,
 } from "../lib/inquiry-activity";
 import {
 	notifyInquiryAssigneeAdded,
@@ -365,24 +366,7 @@ projectInquiryRoute.get(
 					where: { deletedAt: null },
 					include: assigneeInclude,
 				},
-				comments: {
-					where: {
-						deletedAt: null,
-						isDraft: false,
-						senderRole: "COMMITTEE",
-					},
-					select: { createdAt: true, sentAt: true },
-					orderBy: [
-						{ sentAt: { sort: "desc", nulls: "last" } },
-						{ createdAt: "desc" },
-					],
-					take: 1,
-				},
-				commentReadStatuses: {
-					where: { userId: user.id },
-					select: { lastReadAt: true },
-					take: 1,
-				},
+				...committeeActivitySelect(user.id),
 				_count: {
 					select: {
 						comments: { where: { deletedAt: null, isDraft: false } },
@@ -420,9 +404,6 @@ projectInquiryRoute.get(
 		}
 
 		const formatted = inquiries.map(inq => {
-			const latestCommitteeActivityAt = getLatestCommitteeActivityAt(inq);
-			const lastReadAt = inq.commentReadStatuses[0]?.lastReadAt ?? null;
-
 			const awaitingReplyFrom = computeAwaitingReplyFrom({
 				isDraft: inq.isDraft,
 				creatorRole: inq.creatorRole,
@@ -438,10 +419,7 @@ projectInquiryRoute.get(
 				sentAt: inq.sentAt,
 				updatedAt: inq.updatedAt,
 				isDraft: inq.isDraft,
-				hasUnreadComments: latestCommitteeActivityAt
-					? !lastReadAt ||
-						latestCommitteeActivityAt.getTime() > lastReadAt.getTime()
-					: false,
+				hasUnreadComments: hasUnreadCommitteeActivity(inq),
 				awaitingReplyFrom,
 				createdBy: inq.createdBy,
 				project: inq.project,

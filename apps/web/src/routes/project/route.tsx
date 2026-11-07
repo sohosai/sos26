@@ -1,5 +1,6 @@
 import { Callout, Heading, Text } from "@radix-ui/themes";
 import type {
+	GetProjectNotificationStatusResponse,
 	GetProjectPublicInfoResponse,
 	MyProject,
 	Project,
@@ -98,6 +99,13 @@ function EmptyProjectState({
 	);
 }
 
+const EMPTY_NOTIFICATION_STATUS: GetProjectNotificationStatusResponse = {
+	hasUnansweredForms: false,
+	hasUncheckedNotices: false,
+	hasUnreadInquiryComments: false,
+	latestActivityAt: null,
+};
+
 /** 企画情報に対する実委人の非表示・修正の状態 */
 type PublicInfoModeration = Omit<GetProjectPublicInfoResponse, "publicInfo">;
 
@@ -130,11 +138,7 @@ export const Route = createFileRoute("/project")({
 
 		if (!selectedProjectId) {
 			return {
-				notificationStatus: {
-					hasUnansweredForms: false,
-					hasUncheckedNotices: false,
-					hasUnreadInquiryComments: false,
-				},
+				notificationStatus: EMPTY_NOTIFICATION_STATUS,
 				publicInfoProjectId: null,
 				publicInfo: null,
 				publicInfoModeration: EMPTY_PUBLIC_INFO_MODERATION,
@@ -151,11 +155,7 @@ export const Route = createFileRoute("/project")({
 		const notificationStatus =
 			notificationStatusResult.status === "fulfilled"
 				? notificationStatusResult.value
-				: {
-						hasUnansweredForms: false,
-						hasUncheckedNotices: false,
-						hasUnreadInquiryComments: true,
-					};
+				: { ...EMPTY_NOTIFICATION_STATUS, hasUnreadInquiryComments: true };
 
 		// 企画公開情報は企画情報ページと共用する（重複取得を避ける）
 		// サイドバーのアイコンは /project/list が返す iconFileId を使う
@@ -241,11 +241,7 @@ function ProjectLayout() {
 
 	const refreshNotificationStatus = useCallback(async () => {
 		if (!selectedProjectId) {
-			setNotificationStatus({
-				hasUnansweredForms: false,
-				hasUncheckedNotices: false,
-				hasUnreadInquiryComments: false,
-			});
+			setNotificationStatus(EMPTY_NOTIFICATION_STATUS);
 			return;
 		}
 
@@ -260,7 +256,9 @@ function ProjectLayout() {
 			const changed =
 				next.hasUnansweredForms !== current.hasUnansweredForms ||
 				next.hasUncheckedNotices !== current.hasUncheckedNotices ||
-				next.hasUnreadInquiryComments !== current.hasUnreadInquiryComments;
+				next.hasUnreadInquiryComments !== current.hasUnreadInquiryComments ||
+				next.latestActivityAt?.getTime() !==
+					current.latestActivityAt?.getTime();
 
 			setNotificationStatus(next);
 			// 開いている画面にも新しいお知らせや返信を反映する

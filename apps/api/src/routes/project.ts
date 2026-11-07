@@ -29,7 +29,6 @@ import {
 	assertRequiredAnswered,
 } from "../lib/form-answer-validation";
 import { mapItemToApiShape } from "../lib/form-constraints";
-import { getLatestCommitteeActivityAt } from "../lib/inquiry-activity";
 import {
 	notifySubOwnerRequestApproved,
 	notifySubOwnerRequestCancelled,
@@ -39,6 +38,7 @@ import {
 import { handlePrismaError, prisma } from "../lib/prisma";
 import { findOtherPrivilegedProject } from "../lib/project-check";
 import { syncCategoryDeliveriesForProject } from "../lib/project-delivery-targets";
+import { getProjectNotificationStatus } from "../lib/project-notification-status";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -329,110 +329,16 @@ projectRoute.get(
 	requireAuth,
 	requireProjectMember,
 	async c => {
-		const user = c.get("user");
-		const project = c.get("project");
 		const projectRole = c.get("projectRole");
-		const now = new Date();
 
-		const canAccessOwnerOnly =
-			projectRole === "OWNER" || projectRole === "SUB_OWNER";
-
-		const [
-			unansweredFormsCount,
-			uncheckedNoticesCount,
-			inquiriesWithCommitteeActivity,
-		] = await Promise.all([
-			prisma.formDelivery.count({
-				where: {
-					projectId: project.id,
-					formAuthorization: {
-						status: "APPROVED",
-						scheduledSendAt: { lte: now },
-						form: { deletedAt: null },
-						OR: [
-							{ deadlineAt: null },
-							{ allowLateResponse: true },
-							{ deadlineAt: { gte: now } },
-						],
-						...(canAccessOwnerOnly ? {} : { ownerOnly: false }),
-					},
-					responses: { none: { submittedAt: { not: null } } },
-				},
-			}),
-			prisma.noticeDelivery.count({
-				where: {
-					projectId: project.id,
-					noticeAuthorization: {
-						status: "APPROVED",
-						deliveredAt: { lte: now },
-						notice: { deletedAt: null },
-					},
-					readStatuses: { none: { userId: user.id } },
-				},
-			}),
-			prisma.inquiry.findMany({
-				where: {
-					projectId: project.id,
-					deletedAt: null,
-					isDraft: false,
-					assignees: {
-						some: { userId: user.id, side: "PROJECT", deletedAt: null },
-					},
-					OR: [
-						{ creatorRole: "COMMITTEE" },
-						{
-							comments: {
-								some: {
-									deletedAt: null,
-									isDraft: false,
-									senderRole: "COMMITTEE",
-								},
-							},
-						},
-					],
-				},
-				select: {
-					creatorRole: true,
-					createdAt: true,
-					sentAt: true,
-					comments: {
-						where: {
-							deletedAt: null,
-							isDraft: false,
-							senderRole: "COMMITTEE",
-						},
-						select: { createdAt: true, sentAt: true },
-						orderBy: [
-							{ sentAt: { sort: "desc", nulls: "last" } },
-							{ createdAt: "desc" },
-						],
-						take: 1,
-					},
-					commentReadStatuses: {
-						where: { userId: user.id },
-						select: { lastReadAt: true },
-						take: 1,
-					},
-				},
-			}),
-		]);
-
-		const hasUnreadInquiryComments = inquiriesWithCommitteeActivity.some(
-			inquiry => {
-				const latestCommitteeActivityAt = getLatestCommitteeActivityAt(inquiry);
-				const lastReadAt = inquiry.commentReadStatuses[0]?.lastReadAt ?? null;
-				return latestCommitteeActivityAt
-					? !lastReadAt ||
-							latestCommitteeActivityAt.getTime() > lastReadAt.getTime()
-					: false;
-			}
+		return c.json(
+			await getProjectNotificationStatus({
+				projectId: c.get("project").id,
+				userId: c.get("user").id,
+				canAccessOwnerOnly:
+					projectRole === "OWNER" || projectRole === "SUB_OWNER",
+			})
 		);
-
-		return c.json({
-			hasUnansweredForms: unansweredFormsCount > 0,
-			hasUncheckedNotices: uncheckedNoticesCount > 0,
-			hasUnreadInquiryComments,
-		});
 	}
 );
 
