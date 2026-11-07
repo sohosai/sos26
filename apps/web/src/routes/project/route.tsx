@@ -10,7 +10,7 @@ import {
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { Button } from "@/components/primitives";
@@ -204,6 +204,9 @@ function ProjectLayout() {
 		initialNotificationStatus
 	);
 
+	const notificationStatusRef = useRef(notificationStatus);
+	notificationStatusRef.current = notificationStatus;
+
 	useEffect(() => {
 		setNotificationStatus(initialNotificationStatus);
 	}, [initialNotificationStatus]);
@@ -248,11 +251,25 @@ function ProjectLayout() {
 
 		try {
 			const next = await getProjectNotificationStatus(selectedProjectId);
+			// 応答を待つ間に企画が切り替わっていたら、前の企画の状態を反映しない
+			if (useProjectStore.getState().selectedProjectId !== selectedProjectId) {
+				return;
+			}
+
+			const current = notificationStatusRef.current;
+			const changed =
+				next.hasUnansweredForms !== current.hasUnansweredForms ||
+				next.hasUncheckedNotices !== current.hasUncheckedNotices ||
+				next.hasUnreadInquiryComments !== current.hasUnreadInquiryComments;
+
 			setNotificationStatus(next);
+			// 開いている画面にも新しいお知らせや返信を反映する
+			if (changed) void router.invalidate();
 		} catch {
-			// Keep the current indicators when a background refresh fails.
+			// 企画から外された場合は beforeLoad が別の企画へ切り替える
+			void router.invalidate();
 		}
-	}, [selectedProjectId]);
+	}, [router, selectedProjectId]);
 
 	useEffect(() => {
 		let lastRefreshAt = 0;
@@ -278,15 +295,6 @@ function ProjectLayout() {
 
 	const handleSelectProject = (projectId: string) => {
 		setSelectedProjectId(projectId);
-		void getProjectNotificationStatus(projectId)
-			.then(setNotificationStatus)
-			.catch(() => {
-				setNotificationStatus({
-					hasUnansweredForms: false,
-					hasUncheckedNotices: false,
-					hasUnreadInquiryComments: true,
-				});
-			});
 		navigate({ to: "/project" });
 	};
 
