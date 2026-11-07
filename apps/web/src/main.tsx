@@ -17,8 +17,11 @@ declare module "@tanstack/react-router" {
 	}
 }
 
-// デプロイで消えた古いチャンクを、開いたままのタブが取得しようとしたときに最新の版へ切り替える
-window.addEventListener("vite:preloadError", () => {
+// チャンクの取得に失敗したらリロードして最新の版を読み直す。失敗が続くときに繰り返さないよう、エラーごとに1回までとする
+window.addEventListener("vite:preloadError", event => {
+	const storageKey = `vite_preload_reload:${event.payload.message}`;
+	if (sessionStorage.getItem(storageKey)) return;
+	sessionStorage.setItem(storageKey, "1");
 	window.location.reload();
 });
 
