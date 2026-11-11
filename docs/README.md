@@ -47,6 +47,7 @@
 - ストレージ（ファイル管理）: `docs/storage.md`
 - 筑波大学メールアドレス仕様: `docs/university-email.md`
 - How-to
+  - Docker での開発環境構築: `docs/how-to/docker-dev.md`
   - エンドポイント追加手順: `docs/how-to/add-endpoint.md`
   - エラーハンドリング: `docs/how-to/error-handling.md`
   - 実委人の初期登録: `docs/how-to/make-committee-member.md`

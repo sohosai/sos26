@@ -18,6 +18,7 @@ services:
     depends_on:
       - db
       - object-storage
+      - firebase-auth
   db:
     image: postgres:18.4-alpine3.23
     ports:
@@ -49,6 +50,24 @@ services:
       timeout: 3s
       retries: 20
 
+  # Firebase Auth Emulator（http://localhost:4000 で管理UI）
+  # プロジェクトIDを demo- で始めると、実際の Firebase プロジェクトには一切接続しない
+  firebase-auth:
+    image: node:24-alpine
+    working_dir: /firebase
+    command: >
+      sh -c "apk add --no-cache openjdk21-jre-headless
+      && exec npx -y firebase-tools@15.34.2 emulators:start
+      --only auth --project demo-sos26
+      --import=/firebase/store/data --export-on-exit=/firebase/store/data"
+    ports:
+      - "9099:9099"
+      - "4000:4000"
+    volumes:
+      - ./firebase.json:/firebase/firebase.json:ro
+      - firebase-data:/firebase/store
+      - firebase-cache:/root/.cache
+
   create-bucket:
     image: amazon/aws-cli:latest
     depends_on:
@@ -59,7 +78,7 @@ services:
       AWS_SECRET_ACCESS_KEY: dev_secret_access_key
       AWS_DEFAULT_REGION: jp-north-1
     entrypoint: >
-      /bin/sh -c " aws --endpoint-url http://object-storage:9000 s3 mb s3://local-bucket || true "
+      /bin/sh -c " aws --endpoint-url http://object-storage:9000 s3 mb s3://localbucket || true "
     profiles:
       - setup
 
@@ -68,3 +87,5 @@ volumes:
   object-storage-data:
   bun-cache:
   node-modules:
+  firebase-data:
+  firebase-cache:
