@@ -20,7 +20,6 @@ import {
 } from "@sos26/shared";
 import archiver from "archiver";
 import { Hono } from "hono";
-import pLimit from "p-limit";
 import { requirePermission } from "../lib/committee-permission";
 import { Errors } from "../lib/error";
 import {
@@ -221,32 +220,6 @@ function collectZipEntries(params: {
 			usedNames,
 		})
 	);
-}
-
-async function appendZipEntriesWithLimit(
-	archive: ReturnType<typeof archiver>,
-	entries: ZipEntry[],
-	concurrency: number
-): Promise<void> {
-	const limit = pLimit(concurrency);
-	await Promise.all(
-		entries.map(entry =>
-			limit(async () => {
-				const fileStream = await fetchFileStream(entry.key);
-				archive.append(fileStream, { name: entry.name });
-			})
-		)
-	);
-}
-
-async function fetchFileStream(key: string): Promise<Readable> {
-	const s3Response = await getObject(key);
-	const s3Body = s3Response.Body;
-	if (!s3Body) {
-		throw Errors.internal("ファイルの取得に失敗しました");
-	}
-	const readable = s3Body.transformToWebStream();
-	return Readable.fromWeb(readable);
 }
 
 const getFormOrThrow = async (formId: string) => {
@@ -1317,37 +1290,13 @@ committeeFormRoute.get(
 			if (!latestByCell.has(key)) latestByCell.set(key, h);
 		}
 
-		// エントリを事前に収集して、全ファイルが存在することを確認
+		// ZIP エントリ情報（メタデータのみ）を収集
 		const entries = collectZipEntries({
 			responses,
 			latestByCell,
 			fileItemLabelMap,
 			formTitle: form.title,
 		});
-
-		// ファイルが 1 個以上あれば、存在確認
-		const fileKeys = entries.map(e => e.key);
-		if (fileKeys.length > 0) {
-			// 並列で全ファイルの存在をチェック
-			const existenceResults = await Promise.allSettled(
-				fileKeys.map(key => objectExists(key))
-			);
-
-			// 1 個でも失敗または存在しないファイルがあればエラーを返す
-			const missingOrFailed = existenceResults
-				.map((result, i) => ({
-					key: fileKeys[i],
-					exists: result.status === "fulfilled" ? result.value : false,
-				}))
-				.filter(r => !r.exists);
-
-			if (missingOrFailed.length > 0) {
-				console.error("Failed to verify form attachment files for ZIP export", {
-					missingOrFailedKeys: missingOrFailed.map(r => r.key),
-				});
-				throw Errors.internal("一部のファイルを取得できませんでした");
-			}
-		}
 
 		const archive = archiver("zip", { zlib: { level: 6 } });
 		const stream = new PassThrough();
@@ -1356,14 +1305,49 @@ committeeFormRoute.get(
 		});
 		archive.pipe(stream);
 
+		// 1 ファイルずつ順次 S3 から読み出し、即座に ZIP に追記する。
+		// クライアントや ZIP 書き込み側が遅い場合は Node の stream backpressure により
+		// S3 からの読み出みが自動的に一時停止され、メモリにファイルが滞留しない。
 		void (async () => {
-			await appendZipEntriesWithLimit(archive, entries, 3);
-			await archive.finalize();
-		})().catch(error => {
-			const err =
-				error instanceof Error ? error : new Error("ZIPの生成に失敗しました");
-			archive.destroy(err);
-		});
+			try {
+				for (const entry of entries) {
+					// 存在確認は実データ取得の直前に行う。存在しないファイルへの GetObject は
+					// 一部の S3 互換ストレージで接続エラーになるため、HeadObject で先に確認する。
+					const exists = await objectExists(entry.key);
+					if (!exists) {
+						console.error("Zip export target file does not exist", {
+							key: entry.key,
+							name: entry.name,
+						});
+						throw Errors.internal("一部のファイルを取得できませんでした");
+					}
+
+					const s3Response = await getObject(entry.key);
+					const s3Body = s3Response.Body;
+					if (!s3Body) {
+						throw Errors.internal("ファイルの取得に失敗しました");
+					}
+
+					const readable = Readable.fromWeb(s3Body.transformToWebStream());
+					const completed = new Promise<void>((resolve, reject) => {
+						readable.once("end", resolve);
+						readable.once("error", reject);
+					});
+
+					archive.append(readable, { name: entry.name });
+					await completed;
+				}
+
+				await archive.finalize();
+			} catch (error) {
+				console.error("Failed to append zip entry", {
+					error,
+				});
+				const err =
+					error instanceof Error ? error : new Error("ZIPの生成に失敗しました");
+				archive.destroy(err);
+			}
+		})();
 		const downloadName = `${sanitizeFileNameSegment(form.title)}_files.zip`;
 		const encodedFileName = encodeURIComponent(downloadName);
 		c.header("Content-Type", "application/zip");
