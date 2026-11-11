@@ -9,6 +9,10 @@ import {
 	formAnswerFileSelect,
 	mapAnswerFiles,
 } from "../../lib/form-answer-files";
+import {
+	findLatestFormItemEditHistoryIds,
+	findLatestProjectRegistrationFormItemEditHistoryIds,
+} from "../../lib/latest-edit-history";
 import { prisma } from "../../lib/prisma";
 
 // ─────────────────────────────────────────────────────────────
@@ -89,6 +93,26 @@ export const getEditableProjectRegistrationFormIds = async (userId: string) => {
 	return new Set(forms.map(f => f.id));
 };
 
+/** FormViewer の scope に合致する申請 ID を返す（owner / collaborator の分は含まない） */
+export const getViewerFormIds = async (
+	userId: string,
+	committeeMember: CommitteeMember
+): Promise<Set<string>> => {
+	const viewerEntries = await prisma.formViewer.findMany({
+		where: {
+			deletedAt: null,
+			form: { deletedAt: null },
+			OR: [
+				{ scope: "ALL" },
+				{ scope: "BUREAU", bureauValue: committeeMember.Bureau },
+				{ scope: "INDIVIDUAL", userId },
+			],
+		},
+		select: { formId: true },
+	});
+	return new Set(viewerEntries.map(v => v.formId));
+};
+
 /**
  * 自分が閲覧可能（owner / collaborator / FormViewer の scope に合致）な申請 ID セットを返す。
  * FORM_ITEM カラムの閲覧範囲判定に使用する。
@@ -97,24 +121,11 @@ export const getViewableFormIds = async (
 	userId: string,
 	committeeMember: CommitteeMember
 ): Promise<Set<string>> => {
-	const [editable, viewerEntries] = await Promise.all([
+	const [editable, viewer] = await Promise.all([
 		getEditableFormIds(userId),
-		prisma.formViewer.findMany({
-			where: {
-				deletedAt: null,
-				form: { deletedAt: null },
-				OR: [
-					{ scope: "ALL" },
-					{ scope: "BUREAU", bureauValue: committeeMember.Bureau },
-					{ scope: "INDIVIDUAL", userId },
-				],
-			},
-			select: { formId: true },
-		}),
+		getViewerFormIds(userId, committeeMember),
 	]);
-	const result = new Set(editable);
-	for (const v of viewerEntries) result.add(v.formId);
-	return result;
+	return new Set([...editable, ...viewer]);
 };
 
 /** カラム閲覧権チェック（viewableFormIds は viewer 含むセット） */
@@ -275,27 +286,20 @@ export type HistoryWithOptions = Prisma.FormItemEditHistoryGetPayload<{
 export async function fetchLatestHistoryByCell(
 	formItemIds: string[]
 ): Promise<Map<string, HistoryWithOptions>> {
-	const result = new Map<string, HistoryWithOptions>();
-	if (formItemIds.length === 0) return result;
-
-	const allHistory = await prisma.formItemEditHistory.findMany({
-		where: { formItemId: { in: formItemIds } },
-		orderBy: { createdAt: "desc" },
-		include: {
-			files: {
-				orderBy: { sortOrder: "asc" },
-				include: { file: { select: formAnswerFileSelect } },
-			},
-			selectedOptions: { select: { formItemOptionId: true } },
-		},
-	});
-
-	for (const h of allHistory) {
-		const key = `${h.formItemId}:${h.projectId}`;
-		if (!result.has(key)) result.set(key, h);
-	}
-
-	return result;
+	const ids = await findLatestFormItemEditHistoryIds(formItemIds);
+	const histories = ids.length
+		? await prisma.formItemEditHistory.findMany({
+				where: { id: { in: ids } },
+				include: {
+					files: {
+						orderBy: { sortOrder: "asc" },
+						include: { file: { select: formAnswerFileSelect } },
+					},
+					selectedOptions: { select: { formItemOptionId: true } },
+				},
+			})
+		: [];
+	return new Map(histories.map(h => [`${h.formItemId}:${h.projectId}`, h]));
 }
 
 export function buildFormItemCell(
@@ -400,28 +404,21 @@ export type PrfHistoryWithOptions = {
 export async function fetchLatestPrfHistoryByCell(
 	formItemIds: string[]
 ): Promise<Map<string, PrfHistoryWithOptions>> {
-	const result = new Map<string, PrfHistoryWithOptions>();
-	if (formItemIds.length === 0) return result;
-
-	const allHistory =
-		await prisma.projectRegistrationFormItemEditHistory.findMany({
-			where: { formItemId: { in: formItemIds } },
-			orderBy: { createdAt: "desc" },
-			include: {
-				files: {
-					orderBy: { sortOrder: "asc" },
-					include: { file: { select: formAnswerFileSelect } },
+	const ids =
+		await findLatestProjectRegistrationFormItemEditHistoryIds(formItemIds);
+	const histories = ids.length
+		? await prisma.projectRegistrationFormItemEditHistory.findMany({
+				where: { id: { in: ids } },
+				include: {
+					files: {
+						orderBy: { sortOrder: "asc" },
+						include: { file: { select: formAnswerFileSelect } },
+					},
+					selectedOptions: { select: { formItemOptionId: true } },
 				},
-				selectedOptions: { select: { formItemOptionId: true } },
-			},
-		});
-
-	for (const h of allHistory) {
-		const key = `${h.formItemId}:${h.projectId}`;
-		if (!result.has(key)) result.set(key, h);
-	}
-
-	return result;
+			})
+		: [];
+	return new Map(histories.map(h => [`${h.formItemId}:${h.projectId}`, h]));
 }
 
 export function buildPrfItemCell(
