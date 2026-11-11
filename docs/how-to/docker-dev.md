@@ -1,68 +1,33 @@
 # Docker での開発環境構築
 
-`compose.yml` を使って、アプリ（Web + API）と依存サービスをまとめてローカルで起動する手順です。
-ホストに Bun や PostgreSQL を入れなくても開発できます。
-
-## 起動するサービス
-
-| サービス | 内容 | ホストのポート |
-|---|---|---|
-| `app` | Web（Vite）と API（Hono）。`bun install` → マイグレーション → `bun run dev` を実行 | 5173（Web）, 3000（API） |
-| `db` | PostgreSQL | 5432 |
-| `object-storage` | S3 互換ストレージ（RustFS） | 9000（API）, 9001（管理コンソール） |
-| `firebase-auth` | Firebase Auth Emulator | 9099（Auth）, 4000（Emulator UI） |
-| `create-bucket` | バケット作成用の使い捨てコンテナ（`setup` プロファイル） | — |
-
-外部サービスのうち、**SendGrid（メール送信）だけは本物を使います**。ローカルの代替はありません。
+Docker Composeを用いてSOS26の開発環境をローカルで起動する手順です。
 
 ## 前提条件
 
 - Docker / Docker Compose
 - SendGrid の API キー（認証メール等を実際に送信するため）
 
-## 1. 環境変数ファイルを作成する
+## 1. 環境変数を設定する
 
-`app` コンテナは `apps/api/.env` と `apps/web/.env` を `env_file` として読み込みます。
-まず `.env.example` をコピーします。
+開発用のデフォルト値は `compose.yml` の `app.environment` に書かれています（DB・ストレージ・Firebase Auth Emulator の接続先など）。
+デフォルト値がないのは SendGrid と VAPID 鍵だけなので、**リポジトリ直下**に `.env` を作ってこれらを設定します。
 
-```bash
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env
+```env
+# ./.env（リポジトリ直下。apps/api/.env ではない）
+SENDGRID_API_KEY=<SendGrid の API キー>
+EMAIL_FROM=<SendGrid で認証済みの送信元アドレス>
+VAPID_PUBLIC_KEY=<生成した公開鍵>
+VAPID_PRIVATE_KEY=<生成した秘密鍵>
 ```
 
-`.env.example` は Docker 環境向けの値（`db`・`object-storage`・`firebase-auth` などのサービス名）がデフォルトになっているので、
-以下だけ埋めれば起動できます。
+Web 側の `VITE_VAPID_PUBLIC_KEY` は、指定しなければ `VAPID_PUBLIC_KEY` と同じ値が使われます。
 
-### `apps/api/.env`
-
-| 変数 | 設定内容 |
-|---|---|
-| `SENDGRID_API_KEY` | SendGrid の API キー |
-| `EMAIL_FROM` | SendGrid で認証済みの送信元アドレス |
-| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | 後述の手順で生成した鍵 |
-| `FILE_TOKEN_SECRET` | 32 文字以上のランダムな文字列 |
-| `NOTIFICATION_SYNC_PASSWORD` | 任意の文字列 |
-
-### `apps/web/.env`
-
-| 変数 | 設定内容 |
-|---|---|
-| `VITE_VAPID_PUBLIC_KEY` | API の `VAPID_PUBLIC_KEY` と同じ値 |
-
-### VAPID 鍵の生成
-
-Web Push 用の鍵ペアです。外部サービスへの登録は不要で、手元で生成するだけです。
+VAPID 鍵（Web Push 用の鍵ペア）は外部サービスへの登録不要で、手元で生成できます。
 
 ```bash
 bunx web-push generate-vapid-keys
-# または、Bun が手元にない場合
+# Bun が手元にない場合
 docker run --rm node:24-alpine npx -y web-push generate-vapid-keys
-```
-
-### ランダム文字列の生成例
-
-```bash
-openssl rand -hex 32
 ```
 
 ## 2. 起動する
@@ -71,22 +36,7 @@ openssl rand -hex 32
 docker compose up -d
 ```
 
-初回は `app` コンテナでの `bun install` と、`firebase-auth` コンテナでの Java・firebase-tools のダウンロードがあるため数分かかります。
-進み具合はログで確認できます。
-
-```bash
-docker compose logs -f app firebase-auth
-```
-
-## 3. バケットを作成する（初回のみ）
-
-ストレージのデータは volume に保存されるので、初回に一度だけ実行すれば十分です。
-
-```bash
-docker compose --profile setup run --rm create-bucket
-```
-
-## 4. アクセスする
+## 3. アクセスする
 
 | URL | 内容 |
 |---|---|
@@ -103,7 +53,7 @@ docker compose --profile setup run --rm create-bucket
 - パスワードリセットのメールは送信されません。リセット用のリンクは Emulator UI と `firebase-auth` のログに出力されます。
 - 新規登録時の認証メールは API が SendGrid から送信するため、**受信できるメールアドレスで登録してください**。
 - API 側は `FIREBASE_AUTH_EMULATOR_HOST`、Web 側は `VITE_FIREBASE_AUTH_EMULATOR_URL` でエミュレータに接続しています。
-  これらを消して本物の認証情報を設定すれば、実際の Firebase プロジェクトを使うこともできます（`.env.example` のコメント参照）。
+  Docker 環境では常にエミュレータを使います。本物の Firebase プロジェクトを使う場合は、Docker を使わずにホストで起動してください（`.env.example` のコメント参照）。
 
 ## よく使うコマンド
 
@@ -121,7 +71,7 @@ docker compose exec app bun run db:seed
 docker compose exec app bun run db:migrate:dev
 ```
 
-`.env` を変更した場合は、もう一度 `docker compose up -d` を実行してください。変更が検出され、`app` コンテナが作り直されます。
+リポジトリ直下の `.env` を変更した場合は、もう一度 `docker compose up -d` を実行してください。変更が検出され、`app` コンテナが作り直されます。
 
 ## 停止・リセット
 
