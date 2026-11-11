@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const envSchema = z.object({
+const baseEnvSchema = z.object({
 	// CORS 設定
 	PORT: z.coerce.number().int().min(1).max(65535).default(3000),
 	CORS_ORIGIN: z
@@ -27,11 +27,15 @@ const envSchema = z.object({
 
 	// Firebase Admin
 	FIREBASE_PROJECT_ID: z.string().min(1),
-	FIREBASE_CLIENT_EMAIL: z.string().min(1),
+	// 設定すると Firebase Auth Emulator に接続する（Admin SDK がこの変数を直接参照する）
+	// エミュレータ使用時はサービスアカウントの認証情報は不要
+	FIREBASE_AUTH_EMULATOR_HOST: z.string().min(1).optional(),
+	FIREBASE_CLIENT_EMAIL: z.string().min(1).optional(),
 	FIREBASE_PRIVATE_KEY: z
 		.string()
 		.min(1)
-		.transform(v => v.replace(/\\n/g, "\n")),
+		.transform(v => v.replace(/\\n/g, "\n"))
+		.optional(),
 
 	// 認証リンク用のアプリURL
 	APP_URL: z.url(),
@@ -118,6 +122,33 @@ const envSchema = z.object({
 		),
 });
 
+const envSchema = baseEnvSchema.superRefine((val, ctx) => {
+	if (val.FIREBASE_AUTH_EMULATOR_HOST) {
+		// エミュレータは署名なしのトークンも受け付けるため、本番で有効になると認証を偽装できてしまう
+		if (process.env.NODE_ENV === "production") {
+			ctx.addIssue({
+				code: "custom",
+				path: ["FIREBASE_AUTH_EMULATOR_HOST"],
+				message: "本番環境では Firebase Auth Emulator を使用できません",
+			});
+		}
+	} else {
+		for (const key of [
+			"FIREBASE_CLIENT_EMAIL",
+			"FIREBASE_PRIVATE_KEY",
+		] as const) {
+			if (!val[key]) {
+				ctx.addIssue({
+					code: "custom",
+					path: [key],
+					message: "FIREBASE_AUTH_EMULATOR_HOST 未設定時は必須です",
+				});
+			}
+		}
+	}
+});
+
+// Firebase 関連は空文字を未設定として扱う（compose.yml で空を指定してエミュレータを無効化できるようにするため）
 export const env = envSchema.parse({
 	PORT: process.env.PORT,
 	CORS_ORIGIN: process.env.CORS_ORIGIN,
@@ -125,8 +156,10 @@ export const env = envSchema.parse({
 	EMAIL_FROM: process.env.EMAIL_FROM,
 	EMAIL_SANDBOX: process.env.EMAIL_SANDBOX,
 	FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
-	FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
-	FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
+	FIREBASE_AUTH_EMULATOR_HOST:
+		process.env.FIREBASE_AUTH_EMULATOR_HOST || undefined,
+	FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL || undefined,
+	FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY || undefined,
 	APP_URL: process.env.APP_URL,
 	ADMIN_MAIL: process.env.ADMIN_MAIL,
 	VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,

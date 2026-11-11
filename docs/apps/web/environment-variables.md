@@ -19,6 +19,7 @@ apps/webで使用する環境変数の設定方法とリファレンスです。
 | `VITE_FIREBASE_API_KEY` | Firebase API キー | なし | ✅ |
 | `VITE_FIREBASE_AUTH_DOMAIN` | Firebase Auth ドメイン | なし | ✅ |
 | `VITE_FIREBASE_PROJECT_ID` | Firebase プロジェクトID | なし | ✅ |
+| `VITE_FIREBASE_AUTH_EMULATOR_URL` | Firebase Auth Emulator の URL（例: `http://localhost:9099`）。設定するとエミュレータに接続する | なし | ❌ |
 
 ## 設定方法
 

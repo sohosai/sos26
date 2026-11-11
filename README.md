@@ -48,6 +48,8 @@
 bun install
 ```
 
+Docker でアプリと依存サービス（PostgreSQL・ストレージ・Firebase Auth Emulator）をまとめて起動する場合は [docs/how-to/docker-dev.md](docs/how-to/docker-dev.md) を参照してください。
+
 ## 開発
 
 ### すべてのアプリを同時に起動

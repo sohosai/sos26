@@ -30,8 +30,9 @@ apps/apiで使用する環境変数の設定方法とリファレンスです。
 | `EMAIL_FROM` | 送信元メールアドレス | なし | ✅ |
 | `EMAIL_SANDBOX` | SendGrid サンドボックスモード有効化 | `false` | ❌ |
 | `FIREBASE_PROJECT_ID` | Firebase プロジェクトID | なし | ✅ |
-| `FIREBASE_CLIENT_EMAIL` | Firebase サービスアカウントのメールアドレス | なし | ✅ |
-| `FIREBASE_PRIVATE_KEY` | Firebase サービスアカウントの秘密鍵 | なし | ✅ |
+| `FIREBASE_AUTH_EMULATOR_HOST` | Firebase Auth Emulator のホスト（例: `firebase-auth:9099`）。設定するとエミュレータに接続する。本番（`NODE_ENV=production`）では設定不可 | なし | ❌ |
+| `FIREBASE_CLIENT_EMAIL` | Firebase サービスアカウントのメールアドレス | なし | ✅（エミュレータ使用時は不要） |
+| `FIREBASE_PRIVATE_KEY` | Firebase サービスアカウントの秘密鍵 | なし | ✅（エミュレータ使用時は不要） |
 | `APP_URL` | アプリケーションURL（メール内リンク用） | なし | ✅ |
 | `ADMIN_MAIL` | 管理者メールアドレス（プッシュ通知用） | なし | ✅ |
 | `VAPID_PUBLIC_KEY` | VAPID 公開鍵（Web Push 用） | なし | ✅ |
