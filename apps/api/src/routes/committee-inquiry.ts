@@ -13,6 +13,7 @@ import {
 } from "@sos26/shared";
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
+import { getCommentSentAt } from "../lib/inquiry-activity";
 import {
 	notifyInquiryAssigneeAdded,
 	notifyInquiryCommentAdded,
@@ -269,10 +270,6 @@ function formatAttachment(a: {
 		isPublic: a.file.isPublic,
 		createdAt: a.createdAt,
 	};
-}
-
-function getCommentSentAt(comment: { createdAt: Date; sentAt: Date | null }) {
-	return comment.sentAt ?? comment.createdAt;
 }
 
 /**

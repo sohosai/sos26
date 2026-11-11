@@ -8,6 +8,11 @@ import {
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import {
+	committeeActivitySelect,
+	getCommentSentAt,
+	hasUnreadCommitteeActivity,
+} from "../lib/inquiry-activity";
+import {
 	notifyInquiryAssigneeAdded,
 	notifyInquiryCommentAdded,
 	notifyInquiryCreatedByProject,
@@ -43,6 +48,8 @@ async function resolveRelatedForm(
 		where: {
 			projectId,
 			formAuthorization: {
+				status: "APPROVED",
+				scheduledSendAt: { lte: new Date() },
 				form: { id: relatedFormId, deletedAt: null },
 			},
 		},
@@ -186,10 +193,6 @@ function formatAssignee(a: {
 	};
 }
 
-function getCommentSentAt(comment: { createdAt: Date; sentAt: Date | null }) {
-	return comment.sentAt ?? comment.createdAt;
-}
-
 /**
  * 次に返信が期待される側を計算する。
  * 下書きは null、それ以外は最新コメントの送信者の反対側
@@ -203,30 +206,6 @@ function computeAwaitingReplyFrom(params: {
 	if (params.isDraft) return null;
 	const lastActor = params.latestSenderRole ?? params.creatorRole;
 	return lastActor === "PROJECT" ? "COMMITTEE" : "PROJECT";
-}
-
-function getLatestCommitteeActivityAt(inquiry: {
-	sentAt: Date | null;
-	creatorRole: "PROJECT" | "COMMITTEE";
-	createdAt: Date;
-	comments: Array<{ createdAt: Date; sentAt: Date | null }>;
-}) {
-	const latestCommitteeComment = inquiry.comments[0] ?? null;
-	const latestCommitteeCommentAt = latestCommitteeComment
-		? getCommentSentAt(latestCommitteeComment)
-		: null;
-	const committeeCreatedAt =
-		inquiry.creatorRole === "COMMITTEE"
-			? (inquiry.sentAt ?? inquiry.createdAt)
-			: null;
-
-	if (latestCommitteeCommentAt && committeeCreatedAt) {
-		return latestCommitteeCommentAt.getTime() > committeeCreatedAt.getTime()
-			? latestCommitteeCommentAt
-			: committeeCreatedAt;
-	}
-
-	return latestCommitteeCommentAt ?? committeeCreatedAt;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -387,24 +366,7 @@ projectInquiryRoute.get(
 					where: { deletedAt: null },
 					include: assigneeInclude,
 				},
-				comments: {
-					where: {
-						deletedAt: null,
-						isDraft: false,
-						senderRole: "COMMITTEE",
-					},
-					select: { createdAt: true, sentAt: true },
-					orderBy: [
-						{ sentAt: { sort: "desc", nulls: "last" } },
-						{ createdAt: "desc" },
-					],
-					take: 1,
-				},
-				commentReadStatuses: {
-					where: { userId: user.id },
-					select: { lastReadAt: true },
-					take: 1,
-				},
+				...committeeActivitySelect(user.id),
 				_count: {
 					select: {
 						comments: { where: { deletedAt: null, isDraft: false } },
@@ -442,9 +404,6 @@ projectInquiryRoute.get(
 		}
 
 		const formatted = inquiries.map(inq => {
-			const latestCommitteeActivityAt = getLatestCommitteeActivityAt(inq);
-			const lastReadAt = inq.commentReadStatuses[0]?.lastReadAt ?? null;
-
 			const awaitingReplyFrom = computeAwaitingReplyFrom({
 				isDraft: inq.isDraft,
 				creatorRole: inq.creatorRole,
@@ -460,10 +419,7 @@ projectInquiryRoute.get(
 				sentAt: inq.sentAt,
 				updatedAt: inq.updatedAt,
 				isDraft: inq.isDraft,
-				hasUnreadComments: latestCommitteeActivityAt
-					? !lastReadAt ||
-						latestCommitteeActivityAt.getTime() > lastReadAt.getTime()
-					: false,
+				hasUnreadComments: hasUnreadCommitteeActivity(inq),
 				awaitingReplyFrom,
 				createdBy: inq.createdBy,
 				project: inq.project,

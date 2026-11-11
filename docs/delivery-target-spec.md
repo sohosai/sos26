@@ -14,7 +14,7 @@
 | **個別指定** | 従来の方式。マスターシートUIから企画を個別に選択して配信先を指定する |
 | **企画区分（ProjectType）** | `NORMAL`（普通企画）、`FOOD`（食品企画）、`STAGE`（ステージ企画） |
 | **実施場所（ProjectLocation）** | `INDOOR`（屋内）、`OUTDOOR`（屋外）、`STAGE`（ステージ） |
-| **遅延 Delivery 生成** | カテゴリ指定時に、企画がアクセスしたタイミングで Delivery レコードを作成する仕組み |
+| **Delivery の同期** | 企画の作成時と企画区分・実施場所の変更時に、カテゴリ指定の Delivery を企画の現在の属性に合わせて作成・削除する処理 |
 
 ---
 
@@ -25,7 +25,7 @@
 | 値 | 説明 |
 |----|------|
 | `INDIVIDUAL` | 個別指定。承認リクエスト作成時に Delivery レコードを作成 |
-| `CATEGORY` | カテゴリ指定。フィルタ条件を Authorization に保存し、Delivery は遅延生成 |
+| `CATEGORY` | カテゴリ指定。フィルタ条件を Authorization に保存し、承認時に Delivery を作成 |
 
 ### 3.2 カテゴリ指定の条件
 
@@ -88,20 +88,24 @@ z.discriminatedUnion("mode", [
 
 1. フロントエンドから `deliveryTarget: { mode: "CATEGORY", projectTypes: [...], projectLocations: [...] }` を送信
 2. Authorization レコードを `deliveryMode: CATEGORY` で作成、`filterTypes` / `filterLocations` を保存
-3. **Delivery レコードは作成しない**
+3. この時点では Delivery レコードを作成しない（[5.2](#52-カテゴリ指定の-delivery-の作成と削除) を参照）
 
-### 5.2 企画側のアクセス時（遅延 Delivery 生成）
+### 5.2 カテゴリ指定の Delivery の作成と削除
 
-企画がお知らせ一覧・詳細・既読、申請一覧にアクセスした際:
+| 時機 | 処理 | 実装 |
+|------|------|------|
+| 承認時 | 条件に合致する企画すべてに Delivery を作成する | `ensureFormDeliveriesForAuthorization` / `ensureNoticeDeliveriesForAuthorization` |
+| 企画の作成時、企画区分・実施場所の変更時 | その企画の Delivery を同期する | `syncCategoryDeliveriesForProject` |
+| 配信通知の送信時 | 条件に合致する企画のうち、Delivery が無い企画に作成する | `apps/api/src/routes/internal-notification.ts` |
 
-1. カテゴリモード × APPROVED × 配信時刻到来済み × 未削除の Authorization を検索
-2. 企画の `type` / `location` が条件に合致するかチェック（AND 結合）
-3. まだ Delivery レコードがなければ `upsert` で作成
-4. 通常の Delivery ベースのクエリを実行
+同期では、企画の現在の `type` / `location` に合わせて次の処理を行う。
 
-これにより:
-- **承認後に登録された企画**も、初回アクセス時に Delivery が生成され配信される
-- 既存の既読管理・申請回答のロジックは変更不要
+1. 配信時刻を過ぎていない Authorization のうち、条件に合致しなくなったものの Delivery を削除する
+2. 条件に合致する APPROVED の Authorization について、まだ Delivery が無ければ作成する
+
+配信時刻を過ぎた Delivery は、あとで条件に合致しなくなっても削除しない。
+
+Delivery は配信時刻より前に存在する。企画側の取得と権限の判定では、Authorization が `APPROVED` で配信時刻が到来していることも確認する。
 
 ---
 
@@ -129,10 +133,10 @@ z.discriminatedUnion("mode", [
 | Shared | `packages/shared/src/schemas/common.ts` | `deliveryModeSchema`, `deliveryTargetSchema` |
 | Shared | `packages/shared/src/schemas/notice.ts` | Notice Authorization に新フィールド追加 |
 | Shared | `packages/shared/src/schemas/form.ts` | Form Authorization に新フィールド追加 |
-| API | `apps/api/src/routes/committee-notice.ts` | カテゴリモード対応（承認リクエスト作成） |
+| API | `apps/api/src/routes/committee-notice.ts` | カテゴリモード対応（承認リクエスト作成、承認時の Delivery 作成） |
 | API | `apps/api/src/routes/committee-form.ts` | 同上 |
-| API | `apps/api/src/routes/project-notice.ts` | 遅延 Delivery 同期（`syncCategoryNoticeDeliveries`） |
-| API | `apps/api/src/routes/project-form.ts` | 遅延 Delivery 同期（`syncCategoryFormDeliveries`） |
+| API | `apps/api/src/lib/project-delivery-targets.ts` | 配信対象の解決、Delivery の作成と同期 |
+| API | `apps/api/src/routes/internal-notification.ts` | 配信通知の送信 |
 | Web | `apps/web/.../PublishRequestDialog.tsx` | お知らせ公開申請ダイアログ |
 | Web | `apps/web/.../FormPublishRequestDialog.tsx` | 申請公開申請ダイアログ |
 

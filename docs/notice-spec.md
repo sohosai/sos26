@@ -142,7 +142,7 @@ PENDING → REJECTED（自動）
 ### 7.3 配信
 
 - 承認ステータスが `APPROVED` かつ `deliveredAt` が現在時刻以前のお知らせが企画メンバーに表示される
-- 配信先企画ごとに `NoticeDelivery` レコードが作成される
+- 配信先企画ごとに `NoticeDelivery` レコードが作成される（個別指定は承認依頼の作成時、カテゴリ指定は承認時。[配信先指定モード 仕様書](./delivery-target-spec.md) の 5.2 を参照）
 
 ---
 

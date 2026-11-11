@@ -37,6 +37,8 @@ import {
 } from "../lib/notifications";
 import { handlePrismaError, prisma } from "../lib/prisma";
 import { findOtherPrivilegedProject } from "../lib/project-check";
+import { syncCategoryDeliveriesForProject } from "../lib/project-delivery-targets";
+import { getProjectNotificationStatus } from "../lib/project-notification-status";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
 
@@ -279,6 +281,8 @@ projectRoute.post("/create", requireAuth, async c => {
 			}
 		}
 
+		await syncCategoryDeliveriesForProject(tx, created.id);
+
 		return created;
 	});
 
@@ -315,6 +319,28 @@ projectRoute.get("/list", requireAuth, async c => {
 		})),
 	});
 });
+
+// ─────────────────────────────────────────
+// GET /project/:projectId/notification-status
+// 企画側でユーザーに通知すべき未処理状態を取得
+// ─────────────────────────────────────────
+projectRoute.get(
+	"/:projectId/notification-status",
+	requireAuth,
+	requireProjectMember,
+	async c => {
+		const projectRole = c.get("projectRole");
+
+		return c.json(
+			await getProjectNotificationStatus({
+				projectId: c.get("project").id,
+				userId: c.get("user").id,
+				canAccessOwnerOnly:
+					projectRole === "OWNER" || projectRole === "SUB_OWNER",
+			})
+		);
+	}
+);
 
 // ─────────────────────────────────────────
 // POST /project/join
@@ -780,9 +806,20 @@ projectRoute.patch(
 			);
 		}
 
-		const updated = await prisma.project.update({
-			where: { id: project.id },
-			data,
+		const shouldEnsureDeliveries =
+			data.type !== undefined || data.location !== undefined;
+
+		const updated = await prisma.$transaction(async tx => {
+			const updated = await tx.project.update({
+				where: { id: project.id },
+				data,
+			});
+
+			if (shouldEnsureDeliveries) {
+				await syncCategoryDeliveriesForProject(tx, updated.id);
+			}
+
+			return updated;
 		});
 
 		return c.json({ project: updated });

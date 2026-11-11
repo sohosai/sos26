@@ -184,7 +184,7 @@
 #### 動作
 
 - `PROJECT_VIEW` 権限がない場合、owner/subOwner の `email`・`telephoneNumber` は `null`
-- `actions.forms` / `actions.notices` は最新20件を返却
+- `actions.forms` / `actions.notices` は、承認済みで配信時刻を過ぎた配信を、配信時刻の新しい順に最新20件返却
   - 紐づくフォーム/お知らせ本体が論理削除済み（`deletedAt != null`）の配信は除外
 - `actions.inquiries` は下書き除外（`isDraft: false`）の最新20件を返却
 - `permissions` は実委メンバー権限から算出
@@ -201,6 +201,8 @@
 ### PATCH `/committee/projects/:projectId/base-info`
 
 企画の基礎情報を更新します。基本情報のほか、企画責任者・副企画責任者も更新可能です。
+
+`type` / `location` を変更した場合は、カテゴリ指定の配信の delivery を同期します（[配信先指定モード 仕様書](../../delivery-target-spec.md) の 5.2 を参照）。
 
 #### 権限
 

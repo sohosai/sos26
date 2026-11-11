@@ -1,8 +1,3 @@
-import type {
-	DeliveryMode,
-	ProjectLocation,
-	ProjectType,
-} from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { Hono } from "hono";
 import { env } from "../lib/env";
@@ -12,6 +7,11 @@ import {
 	notifyNoticeDelivered,
 } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
+import {
+	createFormDeliveries,
+	createNoticeDeliveries,
+	resolveDeliveryTargetProjectIds,
+} from "../lib/project-delivery-targets";
 
 type AuthEnv = {
 	Variables: Record<string, never>;
@@ -23,70 +23,6 @@ function assertPassword(password: string | undefined) {
 	if (!password || password !== env.NOTIFICATION_SYNC_PASSWORD) {
 		throw Errors.unauthorized("通知同期パスワードが不正です");
 	}
-}
-
-async function resolveTargetProjectIds(input: {
-	deliveryMode: DeliveryMode;
-	filterTypes: ProjectType[];
-	filterLocations: ProjectLocation[];
-	deliveryProjectIds: string[];
-}) {
-	if (input.deliveryMode === "INDIVIDUAL") {
-		return [...new Set(input.deliveryProjectIds)];
-	}
-
-	const projects = await prisma.project.findMany({
-		where: {
-			deletedAt: null,
-			type:
-				input.filterTypes.length > 0 ? { in: input.filterTypes } : undefined,
-			location:
-				input.filterLocations.length > 0
-					? { in: input.filterLocations }
-					: undefined,
-		},
-		select: { id: true },
-	});
-
-	return projects.map(project => project.id);
-}
-
-async function ensureFormDeliveries(
-	formAuthorizationId: string,
-	projectIds: string[]
-): Promise<string[]> {
-	if (projectIds.length === 0) return [];
-
-	const uniqueProjectIds = [...new Set(projectIds)];
-
-	await prisma.formDelivery.createMany({
-		data: uniqueProjectIds.map(projectId => ({
-			formAuthorizationId,
-			projectId,
-		})),
-		skipDuplicates: true,
-	});
-
-	return uniqueProjectIds;
-}
-
-async function ensureNoticeDeliveries(
-	noticeAuthorizationId: string,
-	projectIds: string[]
-): Promise<string[]> {
-	if (projectIds.length === 0) return [];
-
-	const uniqueProjectIds = [...new Set(projectIds)];
-
-	await prisma.noticeDelivery.createMany({
-		data: uniqueProjectIds.map(projectId => ({
-			noticeAuthorizationId,
-			projectId,
-		})),
-		skipDuplicates: true,
-	});
-
-	return uniqueProjectIds;
 }
 
 function createNoticeBodyPreview(body: string | null): string {
@@ -127,17 +63,20 @@ async function processFormAuthorizations(
 		if (auth.scheduledSendAt > now) continue;
 		if (!auth.form || auth.form.deletedAt) continue;
 
-		const targetProjectIds = await resolveTargetProjectIds({
+		const projectIds = await resolveDeliveryTargetProjectIds(prisma, {
 			deliveryMode: auth.deliveryMode,
 			filterTypes: auth.filterTypes,
 			filterLocations: auth.filterLocations,
 			deliveryProjectIds: auth.deliveries.map(delivery => delivery.projectId),
 		});
-
-		const projectIds = await ensureFormDeliveries(auth.id, targetProjectIds);
 		if (projectIds.length === 0) {
 			continue;
 		}
+
+		await createFormDeliveries(
+			prisma,
+			projectIds.map(projectId => ({ formAuthorizationId: auth.id, projectId }))
+		);
 
 		// Reserve this authorization for notification by setting deliveryNotifiedAt,
 		// guarding against concurrent workers processing the same record.
@@ -207,17 +146,23 @@ async function processNoticeAuthorizations(
 		if (auth.deliveredAt > now) continue;
 		if (auth.notice.deletedAt) continue;
 
-		const targetProjectIds = await resolveTargetProjectIds({
+		const projectIds = await resolveDeliveryTargetProjectIds(prisma, {
 			deliveryMode: auth.deliveryMode,
 			filterTypes: auth.filterTypes,
 			filterLocations: auth.filterLocations,
 			deliveryProjectIds: auth.deliveries.map(delivery => delivery.projectId),
 		});
-
-		const projectIds = await ensureNoticeDeliveries(auth.id, targetProjectIds);
 		if (projectIds.length === 0) {
 			continue;
 		}
+
+		await createNoticeDeliveries(
+			prisma,
+			projectIds.map(projectId => ({
+				noticeAuthorizationId: auth.id,
+				projectId,
+			}))
+		);
 
 		// Claim this authorization for processing to avoid duplicate notifications
 		const claimResult = await prisma.$queryRaw<

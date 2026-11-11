@@ -20,6 +20,7 @@ vi.mock("../lib/env", () => ({
 
 vi.mock("../lib/prisma", () => ({
 	prisma: {
+		$transaction: vi.fn(),
 		user: {
 			findFirst: vi.fn(),
 		},
@@ -30,6 +31,7 @@ vi.mock("../lib/prisma", () => ({
 			findMany: vi.fn(),
 			findFirst: vi.fn(),
 			count: vi.fn(),
+			updateMany: vi.fn(),
 		},
 		projectMember: {
 			findMany: vi.fn(),
@@ -64,9 +66,14 @@ vi.mock("../lib/firebase", () => ({
 	},
 }));
 
+vi.mock("../lib/project-delivery-targets", () => ({
+	syncCategoryDeliveriesForProject: vi.fn(),
+}));
+
 import { errorHandler } from "../lib/error-handler";
 import { auth as firebaseAuth } from "../lib/firebase";
 import { prisma } from "../lib/prisma";
+import { syncCategoryDeliveriesForProject } from "../lib/project-delivery-targets";
 import { committeeProjectRoute } from "./committee-project";
 
 const mockPrisma = vi.mocked(prisma, true);
@@ -412,6 +419,64 @@ describe("GET /committee/projects/:projectId", () => {
 		expect(body.project.subOwner.name).toBe("筑波花子");
 	});
 
+	it("配信の履歴は配信時刻を迎えた承認済みの配信だけを、配信時刻で返す", async () => {
+		const app = makeApp();
+		setupAuth();
+		const scheduledSendAt = new Date("2026-06-01T00:00:00Z");
+		const deliveredAt = new Date("2026-06-02T00:00:00Z");
+		mockPrisma.project.findFirst.mockResolvedValue({
+			...mockProject,
+			owner: { id: mockUser.id, name: mockUser.name, email: mockUser.email },
+			subOwner: null,
+			_count: { projectMembers: 1 },
+		} as any);
+		mockPrisma.formDelivery.findMany.mockResolvedValue([
+			{
+				id: "form-delivery-1",
+				formAuthorization: {
+					scheduledSendAt,
+					form: { id: "form-1", title: "申請" },
+					requestedBy: { name: mockUser.name },
+				},
+			},
+		] as any);
+		mockPrisma.noticeDelivery.findMany.mockResolvedValue([
+			{
+				id: "notice-delivery-1",
+				noticeAuthorization: {
+					deliveredAt,
+					notice: { id: "notice-1", title: "お知らせ" },
+					requestedBy: { name: mockUser.name },
+				},
+			},
+		] as any);
+
+		const res = await app.request(
+			`/committee/projects/${String(mockProject.number).padStart(3, "0")}`,
+			{
+				method: "GET",
+				headers: { Authorization: "Bearer valid-token" },
+			}
+		);
+
+		expect(res.status).toBe(200);
+		const { formAuthorization } =
+			mockPrisma.formDelivery.findMany.mock.calls[0][0].where;
+		expect(formAuthorization.status).toBe("APPROVED");
+		expect(formAuthorization.scheduledSendAt.lte).toBeInstanceOf(Date);
+		const { noticeAuthorization } =
+			mockPrisma.noticeDelivery.findMany.mock.calls[0][0].where;
+		expect(noticeAuthorization.status).toBe("APPROVED");
+		expect(noticeAuthorization.deliveredAt.lte).toBeInstanceOf(Date);
+
+		const body = await res.json();
+		const sentAtByType = Object.fromEntries(
+			body.project.actions.map(action => [action.type, action.sentAt])
+		);
+		expect(sentAtByType.FORM_DELIVERED).toBe(scheduledSendAt.toISOString());
+		expect(sentAtByType.NOTICE_DELIVERED).toBe(deliveredAt.toISOString());
+	});
+
 	it("存在しない企画で404", async () => {
 		const app = makeApp();
 		setupAuth();
@@ -423,6 +488,64 @@ describe("GET /committee/projects/:projectId", () => {
 		});
 
 		expect(res.status).toBe(404);
+	});
+});
+
+describe("PATCH /committee/projects/:projectId/base-info", () => {
+	const patchBaseInfo = (body: Record<string, unknown>) =>
+		makeApp().request(`/committee/projects/${mockProject.id}/base-info`, {
+			method: "PATCH",
+			headers: {
+				Authorization: "Bearer valid-token",
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(body),
+		});
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		setupAuth();
+		mockPrisma.committeeMember.findFirst.mockResolvedValue({
+			...mockCommitteeMember,
+			permissions: [{ permission: "PROJECT_EDIT" }],
+		} as any);
+		mockPrisma.$transaction.mockImplementation(callback =>
+			callback(mockPrisma)
+		);
+		mockPrisma.project.updateMany.mockResolvedValue({ count: 1 });
+		mockPrisma.project.findFirst.mockResolvedValue({
+			...mockProject,
+			owner: mockUser,
+			subOwner: null,
+			_count: { projectMembers: 1 },
+		} as any);
+	});
+
+	it("区分の変更時に delivery を同期する", async () => {
+		const res = await patchBaseInfo({ type: "FOOD" });
+
+		expect(res.status).toBe(200);
+		expect(syncCategoryDeliveriesForProject).toHaveBeenCalledWith(
+			mockPrisma,
+			mockProject.id
+		);
+	});
+
+	it("場所の変更時に delivery を同期する", async () => {
+		const res = await patchBaseInfo({ location: "OUTDOOR" });
+
+		expect(res.status).toBe(200);
+		expect(syncCategoryDeliveriesForProject).toHaveBeenCalledWith(
+			mockPrisma,
+			mockProject.id
+		);
+	});
+
+	it("区分・場所を変えない更新では delivery を同期しない", async () => {
+		const res = await patchBaseInfo({ organizationName: "別の団体" });
+
+		expect(res.status).toBe(200);
+		expect(syncCategoryDeliveriesForProject).not.toHaveBeenCalled();
 	});
 });
 

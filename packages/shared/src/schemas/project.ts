@@ -192,6 +192,21 @@ export type GetProjectDetailResponse = z.infer<
 >;
 
 // ─────────────────────────────────────────────
+// GET /project/:projectId/notification-status
+// ─────────────────────────────────────────────
+
+export const getProjectNotificationStatusResponseSchema = z.object({
+	hasUnansweredForms: z.boolean(),
+	hasUncheckedNotices: z.boolean(),
+	hasUnreadInquiryComments: z.boolean(),
+	latestActivityAt: z.coerce.date().nullable(),
+});
+
+export type GetProjectNotificationStatusResponse = z.infer<
+	typeof getProjectNotificationStatusResponseSchema
+>;
+
+// ─────────────────────────────────────────────
 // GET /project/:projectId/registration-form-responses
 // ─────────────────────────────────────────────
 
