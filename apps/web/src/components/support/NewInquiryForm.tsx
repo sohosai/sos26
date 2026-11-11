@@ -9,6 +9,7 @@ import {
 	allowedMimeTypes,
 	type Bureau,
 	buildFileTypesLabel,
+	type ProjectMemberRole,
 	resolveFileMimeType,
 	type ViewerScope,
 } from "@sos26/shared";
@@ -32,7 +33,12 @@ type ViewerInput = {
 	userId?: string;
 };
 
-type UserSummary = { id: string; name: string; avatarFileId?: string | null };
+type UserSummary = {
+	id: string;
+	name: string;
+	role?: ProjectMemberRole;
+	avatarFileId?: string | null;
+};
 type FormSummary = { id: string; title: string };
 type SubmitParams = Parameters<NewInquiryFormProps["onSubmit"]>[0];
 

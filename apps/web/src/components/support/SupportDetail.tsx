@@ -6,6 +6,7 @@ import {
 	Text,
 	Tooltip,
 } from "@radix-ui/themes";
+import type { ProjectMemberRole } from "@sos26/shared";
 import {
 	IconArrowLeft,
 	IconCheck,
@@ -50,7 +51,12 @@ type SupportDetailProps = {
 		name: string;
 		avatarFileId?: string | null;
 	}[];
-	projectMembers: { id: string; name: string; avatarFileId?: string | null }[];
+	projectMembers: {
+		id: string;
+		name: string;
+		role?: ProjectMemberRole;
+		avatarFileId?: string | null;
+	}[];
 	onUpdateStatus: (status: "RESOLVED" | "IN_PROGRESS") => Promise<void>;
 	onAddComment: (
 		body: string,
