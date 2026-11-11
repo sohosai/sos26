@@ -6,12 +6,13 @@ if (dsn) {
 	Sentry.init({
 		dsn,
 		environment: import.meta.env.VITE_SENTRY_ENVIRONMENT || "development",
-		integrations: [
-			Sentry.browserTracingIntegration(),
-			Sentry.replayIntegration(),
-		],
+		integrations: [Sentry.browserTracingIntegration()],
 		tracesSampleRate: 1.0,
 		replaysSessionSampleRate: 0.1,
 		replaysOnErrorSampleRate: 1.0,
+	});
+
+	Sentry.lazyLoadIntegration("replayIntegration").then(replayIntegration => {
+		Sentry.addIntegration(replayIntegration());
 	});
 }

@@ -1,9 +1,9 @@
-import { Dialog, Text } from "@radix-ui/themes";
+import { Dialog, Spinner, Text } from "@radix-ui/themes";
 import type { NoticeAttachment } from "@sos26/shared";
 import { buildFileAcceptAttribute } from "@sos26/shared";
 import { IconPaperclip, IconTrash, IconX } from "@tabler/icons-react";
-import { useEffect, useRef, useState } from "react";
-import { DiscardChangesDialog, RichTextEditor } from "@/components/patterns";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { DiscardChangesDialog } from "@/components/patterns";
 import { Button, IconButton, TextField } from "@/components/primitives";
 import {
 	addNoticeAttachments,
@@ -14,6 +14,12 @@ import {
 import { uploadFile } from "@/lib/api/files";
 import { formatFileSize } from "@/lib/format";
 import styles from "./CreateNoticeDialog.module.scss";
+
+const RichTextEditor = lazy(() =>
+	import("@/components/patterns/RichTextEditor").then(module => ({
+		default: module.RichTextEditor,
+	}))
+);
 
 type Props = {
 	open: boolean;
@@ -176,13 +182,15 @@ export function CreateNoticeDialog({
 						onChange={setTitle}
 						required
 					/>
-					<RichTextEditor
-						label="本文"
-						placeholder="お知らせの本文を入力"
-						value={body}
-						onChange={setBody}
-						required
-					/>
+					<Suspense fallback={<Spinner size="3" />}>
+						<RichTextEditor
+							label="本文"
+							placeholder="お知らせの本文を入力"
+							value={body}
+							onChange={setBody}
+							required
+						/>
+					</Suspense>
 
 					{/* 添付ファイルセクション */}
 					<div className={styles.attachmentSection}>

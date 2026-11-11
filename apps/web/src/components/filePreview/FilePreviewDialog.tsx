@@ -6,12 +6,13 @@ import {
 	IconZoomIn,
 	IconZoomOut,
 } from "@tabler/icons-react";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Button, IconButton } from "@/components/primitives";
-import ExcelViewer from "./ExcelViewer";
 import styles from "./FilePreviewDialog.module.scss";
-import PdfViewer from "./Pdfviewer";
-import WordViewer from "./Wordviewer";
+
+const ExcelViewer = lazy(() => import("./ExcelViewer"));
+const PdfViewer = lazy(() => import("./Pdfviewer"));
+const WordViewer = lazy(() => import("./Wordviewer"));
 
 interface Props {
 	/** PDF/Word/Excel 用（Blob オブジェクト） */
@@ -271,7 +272,15 @@ export default function FilePreviewDialog({
 					) : isStream && streamingUrl ? (
 						<StreamViewer streamingUrl={streamingUrl} fileName={displayName} />
 					) : file ? (
-						<BlobViewer file={file} scale={scale} />
+						<Suspense
+							fallback={
+								<div className={styles.loading}>
+									<Spinner size="3" />
+								</div>
+							}
+						>
+							<BlobViewer file={file} scale={scale} />
+						</Suspense>
 					) : (
 						<div className={styles.unsupported}>
 							<Text size="2">ファイルを表示できません</Text>

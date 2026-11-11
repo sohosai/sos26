@@ -16,4 +16,4 @@ export {
 } from "./DataTable";
 export { DiscardChangesDialog } from "./DiscardChangesDialog";
 export { RadioGroup, RadioGroupItem } from "./RadioGroup";
-export { RichTextEditor } from "./RichTextEditor";
+// RichTextEditor は tiptap を初期チャンクに含めないよう、ここから re-export せず使う側で React.lazy で読み込む

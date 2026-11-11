@@ -19,10 +19,14 @@ apps/web/src/components/patterns/RichTextEditor/
 └── RichTextEditor.module.scss
 ```
 
-`@/components/patterns` から re-export されているため、他の patterns と同様にインポートできる。
+tiptap を初期チャンクに含めないため、`@/components/patterns` のバレルからは re-export しない。使う側で `React.lazy` で読み込み、`Suspense` で囲む。
 
 ```tsx
-import { RichTextEditor } from "@/components/patterns";
+const RichTextEditor = lazy(() =>
+	import("@/components/patterns/RichTextEditor").then(module => ({
+		default: module.RichTextEditor,
+	}))
+);
 ```
 
 ## Props
@@ -41,17 +45,17 @@ type RichTextEditorProps = {
 ## 使い方
 
 ```tsx
-import { RichTextEditor } from "./RichTextEditor";
-
 const [body, setBody] = useState("");
 
-<RichTextEditor
-  label="本文"
-  placeholder="お知らせの本文を入力"
-  value={body}
-  onChange={setBody}
-  required
-/>
+<Suspense fallback={<Spinner size="3" />}>
+  <RichTextEditor
+    label="本文"
+    placeholder="お知らせの本文を入力"
+    value={body}
+    onChange={setBody}
+    required
+  />
+</Suspense>
 ```
 
 ### 申請リセット

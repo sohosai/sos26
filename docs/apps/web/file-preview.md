@@ -12,6 +12,7 @@
   - `PdfViewer`（PDF）
   - `ExcelViewer`（Excel）
   - `WordViewer`（Word）
+  - exceljs などの依存を初期チャンクに含めないため、`FilePreviewDialog` が `React.lazy` で読み込む
 
 関連ファイル:
 

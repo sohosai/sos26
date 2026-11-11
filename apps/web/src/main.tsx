@@ -17,6 +17,15 @@ declare module "@tanstack/react-router" {
 	}
 }
 
+// チャンクの取得に失敗したらリロードして最新の版を読み直す。失敗が続くときに繰り返さないよう、版とエラーごとに1回までとする
+// Safari のエラーメッセージは URL を含まないので、次のデプロイでも再度リロードできるようキーに版（エントリの URL）を含める
+window.addEventListener("vite:preloadError", event => {
+	const storageKey = `sos26.preloadReload:${import.meta.url}:${event.payload.message}`;
+	if (sessionStorage.getItem(storageKey)) return;
+	sessionStorage.setItem(storageKey, "1");
+	window.location.reload();
+});
+
 const rootElement = document.getElementById("root");
 if (!rootElement) {
 	throw new Error("Root element not found");
