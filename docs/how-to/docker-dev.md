@@ -53,7 +53,30 @@ docker compose up -d
 - パスワードリセットのメールは送信されません。リセット用のリンクは Emulator UI と `firebase-auth` のログに出力されます。
 - 新規登録時の認証メールは API が SendGrid から送信するため、**受信できるメールアドレスで登録してください**。
 - API 側は `FIREBASE_AUTH_EMULATOR_HOST`、Web 側は `VITE_FIREBASE_AUTH_EMULATOR_URL` でエミュレータに接続しています。
-  Docker 環境では常にエミュレータを使います。本物の Firebase プロジェクトを使う場合は、Docker を使わずにホストで起動してください（`.env.example` のコメント参照）。
+  本物の Firebase プロジェクトを使う場合は、下の「本物の Firebase プロジェクトを使う」を参照してください。
+
+### 本物の Firebase プロジェクトを使う
+
+リポジトリ直下の `.env` に以下を追加します。エミュレータの接続先を**空で指定する**ことで、エミュレータを使わなくなります（行ごと消すとデフォルトのエミュレータに戻ります）。
+
+```env
+# ./.env
+# エミュレータを無効化（空を指定する）
+FIREBASE_AUTH_EMULATOR_HOST=
+VITE_FIREBASE_AUTH_EMULATOR_URL=
+
+# API（Firebase Admin のサービスアカウント）
+FIREBASE_PROJECT_ID=<プロジェクト ID>
+FIREBASE_CLIENT_EMAIL=<サービスアカウントのメールアドレス>
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+# Web（Firebase コンソールのウェブアプリ設定）
+VITE_FIREBASE_API_KEY=<API キー>
+VITE_FIREBASE_AUTH_DOMAIN=<プロジェクト ID>.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=<プロジェクト ID>
+```
+
+この場合も `firebase-auth` コンテナは起動しますが、使われません。
 
 ## よく使うコマンド
 

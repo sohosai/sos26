@@ -148,6 +148,7 @@ const envSchema = baseEnvSchema.superRefine((val, ctx) => {
 	}
 });
 
+// Firebase 関連は空文字を未設定として扱う（compose.yml で空を指定してエミュレータを無効化できるようにするため）
 export const env = envSchema.parse({
 	PORT: process.env.PORT,
 	CORS_ORIGIN: process.env.CORS_ORIGIN,
@@ -155,9 +156,10 @@ export const env = envSchema.parse({
 	EMAIL_FROM: process.env.EMAIL_FROM,
 	EMAIL_SANDBOX: process.env.EMAIL_SANDBOX,
 	FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
-	FIREBASE_AUTH_EMULATOR_HOST: process.env.FIREBASE_AUTH_EMULATOR_HOST,
-	FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
-	FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
+	FIREBASE_AUTH_EMULATOR_HOST:
+		process.env.FIREBASE_AUTH_EMULATOR_HOST || undefined,
+	FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL || undefined,
+	FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY || undefined,
 	APP_URL: process.env.APP_URL,
 	ADMIN_MAIL: process.env.ADMIN_MAIL,
 	VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
