@@ -29,6 +29,7 @@ import {
 	constraintsFromPrisma,
 	mapItemToApiShape,
 } from "../lib/form-constraints";
+import { findLatestFormItemEditHistoryIds } from "../lib/latest-edit-history";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireProjectMember } from "../middlewares/auth";
 import type { AuthEnv } from "../types/auth-env";
@@ -457,18 +458,20 @@ projectFormRoute.get(
 
 		// FormItemEditHistory の最新値を取得して表示値をオーバーレイ
 		const formItemIds = form.items.map(item => item.id);
-		const allHistory = await prisma.formItemEditHistory.findMany({
-			where: { formItemId: { in: formItemIds }, projectId },
-			orderBy: { createdAt: "desc" },
-			include: {
-				selectedOptions: true,
-				files: answerFilesInclude,
-			},
-		});
-		const latestByItem = new Map<string, (typeof allHistory)[number]>();
-		for (const h of allHistory) {
-			if (!latestByItem.has(h.formItemId)) latestByItem.set(h.formItemId, h);
-		}
+		const latestHistoryIds = await findLatestFormItemEditHistoryIds(
+			formItemIds,
+			[projectId]
+		);
+		const latestHistories = latestHistoryIds.length
+			? await prisma.formItemEditHistory.findMany({
+					where: { id: { in: latestHistoryIds } },
+					include: {
+						selectedOptions: true,
+						files: answerFilesInclude,
+					},
+				})
+			: [];
+		const latestByItem = new Map(latestHistories.map(h => [h.formItemId, h]));
 
 		return c.json({
 			form: {

@@ -23,6 +23,7 @@ import {
 	constraintsToPrisma,
 	mapFormToApiShape,
 } from "../lib/form-constraints";
+import { findLatestProjectRegistrationFormItemEditHistoryIds } from "../lib/latest-edit-history";
 import {
 	notifyProjectRegistrationFormAuthorizationDecided,
 	notifyProjectRegistrationFormAuthorizationRequested,
@@ -786,29 +787,27 @@ committeeProjectRegistrationFormRoute.get(
 			...new Set(responses.flatMap(r => r.answers.map(a => a.formItemId))),
 		];
 		const projectIds = [...new Set(responses.map(r => r.projectId))];
-		const allHistory =
-			formItemIds.length && projectIds.length
-				? await prisma.projectRegistrationFormItemEditHistory.findMany({
-						where: {
-							formItemId: { in: formItemIds },
-							projectId: { in: projectIds },
-						},
-						orderBy: { createdAt: "desc" },
-						include: {
-							files: answerFilesInclude,
-							selectedOptions: {
-								include: {
-									formItemOption: { select: { id: true, label: true } },
-								},
+		const latestHistoryIds =
+			await findLatestProjectRegistrationFormItemEditHistoryIds(
+				formItemIds,
+				projectIds
+			);
+		const latestHistories = latestHistoryIds.length
+			? await prisma.projectRegistrationFormItemEditHistory.findMany({
+					where: { id: { in: latestHistoryIds } },
+					include: {
+						files: answerFilesInclude,
+						selectedOptions: {
+							include: {
+								formItemOption: { select: { id: true, label: true } },
 							},
 						},
-					})
-				: [];
-		const latestByCell = new Map<string, (typeof allHistory)[number]>();
-		for (const h of allHistory) {
-			const key = `${h.formItemId}:${h.projectId}`;
-			if (!latestByCell.has(key)) latestByCell.set(key, h);
-		}
+					},
+				})
+			: [];
+		const latestByCell = new Map(
+			latestHistories.map(h => [`${h.formItemId}:${h.projectId}`, h])
+		);
 
 		return c.json({
 			responses: responses.map(r => ({
@@ -885,10 +884,13 @@ committeeProjectRegistrationFormRoute.get(
 		if (!r) throw Errors.notFound("回答が見つかりません");
 
 		const formItemIds = r.answers.map(a => a.formItemId);
-		const allHistory = formItemIds.length
+		const latestHistoryIds =
+			await findLatestProjectRegistrationFormItemEditHistoryIds(formItemIds, [
+				r.projectId,
+			]);
+		const latestHistories = latestHistoryIds.length
 			? await prisma.projectRegistrationFormItemEditHistory.findMany({
-					where: { formItemId: { in: formItemIds }, projectId: r.projectId },
-					orderBy: { createdAt: "desc" },
+					where: { id: { in: latestHistoryIds } },
 					include: {
 						files: answerFilesInclude,
 						selectedOptions: {
@@ -899,10 +901,7 @@ committeeProjectRegistrationFormRoute.get(
 					},
 				})
 			: [];
-		const latestByItem = new Map<string, (typeof allHistory)[number]>();
-		for (const h of allHistory) {
-			if (!latestByItem.has(h.formItemId)) latestByItem.set(h.formItemId, h);
-		}
+		const latestByItem = new Map(latestHistories.map(h => [h.formItemId, h]));
 
 		return c.json({
 			response: {

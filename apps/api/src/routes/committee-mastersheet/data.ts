@@ -18,7 +18,7 @@ import {
 	formatColumnDef,
 	getEditableFormIds,
 	getEditableProjectRegistrationFormIds,
-	getViewableFormIds,
+	getViewerFormIds,
 } from "./helpers";
 
 export const dataRoute = new Hono<AuthEnv>();
@@ -32,55 +32,79 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 	const committeeMember = getCommitteeMember(c);
 
 	// 企画責任者・副企画責任者の連絡先（メール・電話）は PROJECT_VIEW 権限を持つ実委人にのみ含めて返す
-	const memberPermissions = await prisma.committeeMemberPermission.findMany({
-		where: { committeeMemberId: committeeMember.id },
-		select: { permission: true },
-	});
-	const canViewContacts = memberPermissions.some(
-		p => p.permission === "PROJECT_VIEW"
-	);
+	const canViewContacts = c.get("permissions").has("PROJECT_VIEW");
 
-	// 1. カラム一覧 + 権限フィルタ
-	const allColumns = await prisma.mastersheetColumn.findMany({
-		include: {
-			formItem: {
-				select: {
-					id: true,
-					formId: true,
-					type: true,
-					options: {
-						orderBy: { sortOrder: "asc" as const },
-						select: { id: true, label: true, sortOrder: true },
+	// 1. カラム一覧・権限・企画一覧
+	const [
+		allColumns,
+		editableFormIds,
+		editablePrfFormIds,
+		viewerFormIds,
+		projects,
+	] = await Promise.all([
+		prisma.mastersheetColumn.findMany({
+			include: {
+				formItem: {
+					select: {
+						id: true,
+						formId: true,
+						type: true,
+						options: {
+							orderBy: { sortOrder: "asc" as const },
+							select: { id: true, label: true, sortOrder: true },
+						},
+					},
+				},
+				projectRegistrationFormItem: {
+					select: {
+						id: true,
+						formId: true,
+						type: true,
+						options: {
+							orderBy: { sortOrder: "asc" as const },
+							select: { id: true, label: true, sortOrder: true },
+						},
+					},
+				},
+				options: {
+					orderBy: { sortOrder: "asc" },
+					select: { id: true, label: true, sortOrder: true },
+				},
+				createdBy: { select: { name: true } },
+				viewers: { include: { user: { select: { name: true } } } },
+			},
+			orderBy: { sortOrder: "asc" },
+		}),
+		getEditableFormIds(userId),
+		getEditableProjectRegistrationFormIds(userId),
+		getViewerFormIds(userId, committeeMember),
+		prisma.project.findMany({
+			where: { deletedAt: null },
+			include: {
+				owner: {
+					select: {
+						id: true,
+						name: true,
+						avatarFileId: true,
+						email: true,
+						telephoneNumber: true,
+					},
+				},
+				subOwner: {
+					select: {
+						id: true,
+						name: true,
+						avatarFileId: true,
+						email: true,
+						telephoneNumber: true,
 					},
 				},
 			},
-			projectRegistrationFormItem: {
-				select: {
-					id: true,
-					formId: true,
-					type: true,
-					options: {
-						orderBy: { sortOrder: "asc" as const },
-						select: { id: true, label: true, sortOrder: true },
-					},
-				},
-			},
-			options: {
-				orderBy: { sortOrder: "asc" },
-				select: { id: true, label: true, sortOrder: true },
-			},
-			createdBy: { select: { name: true } },
-			viewers: { include: { user: { select: { name: true } } } },
-		},
-		orderBy: { sortOrder: "asc" },
-	});
+			orderBy: { number: "asc" },
+		}),
+	]);
 
-	const [editableFormIds, editablePrfFormIds, viewableFormIds] =
-		await Promise.all([
-			getEditableFormIds(userId),
-			getEditableProjectRegistrationFormIds(userId),
-			getViewableFormIds(userId, committeeMember),
-		]);
+	const viewableFormIds = new Set([...editableFormIds, ...viewerFormIds]);
 	const visibleColumns = allColumns.filter(col =>
 		canViewColumn(col as ColumnFull, userId, committeeMember, viewableFormIds)
 	);
@@ -91,51 +115,114 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 		c => c.type === "PROJECT_REGISTRATION_FORM_ITEM"
 	);
 
-	// 2. 企画一覧
-	const projects = await prisma.project.findMany({
-		where: { deletedAt: null },
-		include: {
-			owner: {
-				select: {
-					id: true,
-					name: true,
-					avatarFileId: true,
-					email: true,
-					telephoneNumber: true,
-				},
-			},
-			subOwner: {
-				select: {
-					id: true,
-					name: true,
-					avatarFileId: true,
-					email: true,
-					telephoneNumber: true,
-				},
-			},
-		},
-		orderBy: { number: "asc" },
-	});
-
-	// 3. FORM_ITEM: 配信・回答・オーバーライドをバッチ取得
 	const visibleFormIds = [
 		...new Set(
 			formItemCols.flatMap(c => (c.formItem ? [c.formItem.formId] : []))
 		),
 	];
+	const formItemIds = [
+		...new Set(formItemCols.flatMap(c => (c.formItem ? [c.formItem.id] : []))),
+	];
+	const visiblePrfFormIds = [
+		...new Set(
+			prfItemCols.flatMap(c =>
+				c.projectRegistrationFormItem
+					? [c.projectRegistrationFormItem.formId]
+					: []
+			)
+		),
+	];
+	const prfItemIds = [
+		...new Set(
+			prfItemCols.flatMap(c =>
+				c.projectRegistrationFormItem ? [c.projectRegistrationFormItem.id] : []
+			)
+		),
+	];
+	const customColIds = customCols.map(c => c.id);
 
-	const deliveries = visibleFormIds.length
-		? await prisma.formDelivery.findMany({
-				where: {
-					formAuthorization: {
-						formId: { in: visibleFormIds },
-						status: "APPROVED",
-						scheduledSendAt: { lte: new Date() },
+	const approvedDeliveryWhere = {
+		formAuthorization: {
+			formId: { in: visibleFormIds },
+			status: "APPROVED" as const,
+			scheduledSendAt: { lte: new Date() },
+		},
+	};
+
+	// 2. 表示列のセル値をバッチ取得
+	// 回答は未提出なら表示に使わないため、提出済みのものだけを表示列の設問に絞って取得する
+	const [
+		deliveries,
+		responses,
+		latestHistoryByCell,
+		prfResponses,
+		latestPrfHistoryByCell,
+		cellValues,
+	] = await Promise.all([
+		visibleFormIds.length
+			? prisma.formDelivery.findMany({
+					where: approvedDeliveryWhere,
+					include: { formAuthorization: { select: { formId: true } } },
+				})
+			: [],
+		visibleFormIds.length
+			? prisma.formResponse.findMany({
+					where: {
+						formDelivery: approvedDeliveryWhere,
+						submittedAt: { not: null },
 					},
-				},
-				include: { formAuthorization: { select: { formId: true } } },
-			})
-		: [];
+					include: {
+						answers: {
+							where: { formItemId: { in: formItemIds } },
+							include: {
+								files: {
+									where: {
+										file: {
+											status: "CONFIRMED",
+											deletedAt: null,
+										},
+									},
+									orderBy: { sortOrder: "asc" },
+									include: { file: { select: formAnswerFileSelect } },
+								},
+								selectedOptions: { select: { formItemOptionId: true } },
+							},
+						},
+					},
+				})
+			: [],
+		fetchLatestHistoryByCell(formItemIds),
+		visiblePrfFormIds.length
+			? prisma.projectRegistrationFormResponse.findMany({
+					where: {
+						formId: { in: visiblePrfFormIds },
+						deletedAt: null,
+					},
+					include: {
+						answers: {
+							where: {
+								deletedAt: null,
+								formItemId: { in: prfItemIds },
+							},
+							include: {
+								files: {
+									orderBy: { sortOrder: "asc" },
+									include: { file: { select: formAnswerFileSelect } },
+								},
+								selectedOptions: { select: { formItemOptionId: true } },
+							},
+						},
+					},
+				})
+			: [],
+		fetchLatestPrfHistoryByCell(prfItemIds),
+		customColIds.length
+			? prisma.mastersheetCellValue.findMany({
+					where: { columnId: { in: customColIds } },
+					include: { selectedOptions: { select: { optionId: true } } },
+				})
+			: [],
+	]);
 
 	// deliveryByFormProject: formId → projectId → deliveryId
 	const deliveryByFormProject = new Map<string, Map<string, string>>();
@@ -145,30 +232,6 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 			deliveryByFormProject.set(fid, new Map());
 		deliveryByFormProject.get(fid)?.set(d.projectId, d.id);
 	}
-
-	const deliveryIds = deliveries.map(d => d.id);
-	const responses = deliveryIds.length
-		? await prisma.formResponse.findMany({
-				where: { formDeliveryId: { in: deliveryIds } },
-				include: {
-					answers: {
-						include: {
-							files: {
-								where: {
-									file: {
-										status: "CONFIRMED",
-										deletedAt: null,
-									},
-								},
-								orderBy: { sortOrder: "asc" },
-								include: { file: { select: formAnswerFileSelect } },
-							},
-							selectedOptions: { select: { formItemOptionId: true } },
-						},
-					},
-				},
-			})
-		: [];
 
 	const responseByDelivery = new Map(responses.map(r => [r.formDeliveryId, r]));
 	const answerByResponseItem = new Map<
@@ -182,46 +245,6 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 		);
 	}
 
-	// FormItemEditHistory: formItemId × projectId ごとに最新1件のみ取得
-	const formItemIds = [
-		...new Set(formItemCols.flatMap(c => (c.formItem ? [c.formItem.id] : []))),
-	];
-	const latestHistoryByCell = await fetchLatestHistoryByCell(formItemIds);
-
-	// 4. PROJECT_REGISTRATION_FORM_ITEM: 回答・編集履歴をバッチ取得
-	const visiblePrfFormIds = [
-		...new Set(
-			prfItemCols.flatMap(c =>
-				c.projectRegistrationFormItem
-					? [c.projectRegistrationFormItem.formId]
-					: []
-			)
-		),
-	];
-
-	const prfResponses = visiblePrfFormIds.length
-		? await prisma.projectRegistrationFormResponse.findMany({
-				where: {
-					formId: { in: visiblePrfFormIds },
-					deletedAt: null,
-				},
-				include: {
-					answers: {
-						where: {
-							deletedAt: null,
-						},
-						include: {
-							files: {
-								orderBy: { sortOrder: "asc" },
-								include: { file: { select: formAnswerFileSelect } },
-							},
-							selectedOptions: { select: { formItemOptionId: true } },
-						},
-					},
-				},
-			})
-		: [];
-
 	// responseByFormProject: formId → projectId → response
 	const prfResponseByFormProject = new Map<
 		string,
@@ -233,24 +256,6 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 		prfResponseByFormProject.get(r.formId)?.set(r.projectId, r);
 	}
 
-	const prfItemIds = [
-		...new Set(
-			prfItemCols.flatMap(c =>
-				c.projectRegistrationFormItem ? [c.projectRegistrationFormItem.id] : []
-			)
-		),
-	];
-	const latestPrfHistoryByCell = await fetchLatestPrfHistoryByCell(prfItemIds);
-
-	// 5. CUSTOM: セル値をバッチ取得
-	const customColIds = customCols.map(c => c.id);
-	const cellValues = customColIds.length
-		? await prisma.mastersheetCellValue.findMany({
-				where: { columnId: { in: customColIds } },
-				include: { selectedOptions: { select: { optionId: true } } },
-			})
-		: [];
-
 	const cellByColProject = new Map<
 		string,
 		Map<string, (typeof cellValues)[0]>
@@ -261,7 +266,7 @@ dataRoute.get("/data", requireAuth, requireCommitteeMember, async c => {
 		cellByColProject.get(cv.columnId)?.set(cv.projectId, cv);
 	}
 
-	// 6. レスポンス組み立て
+	// 3. レスポンス組み立て
 	const rows = projects.map(project => {
 		const cells = visibleColumns.map(col => {
 			if (col.type === "FORM_ITEM" && col.formItem) {
