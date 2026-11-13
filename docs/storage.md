@@ -362,7 +362,7 @@ const url = await getAuthenticatedFileUrl(fileId);
 
 ### 環境変数
 
-`S3_*` および `FILE_TOKEN_SECRET` を `apps/api/.env` に設定する必要がある。
+`S3_*` および `FILE_TOKEN_SECRET` をリポジトリ直下の `.env` に設定する必要がある。
 詳細は [docs/apps/api/environment-variables.md](./apps/api/environment-variables.md) を参照。
 
 ### 許可されたファイル形式

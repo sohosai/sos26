@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "postinstall": "prisma generate",
-    "dev": "bun run --hot src/index.ts",
+    "dev": "bun --env-file=../../.env run --hot src/index.ts",
     "build": "bun run typecheck && bun build src/index.ts --outdir dist --target bun --external sharp",
     "preview": "bun run dist/index.js",
     "typecheck": "tsc -b",
@@ -12,15 +12,15 @@
     "test:run": "vitest run",
     "test:watch": "vitest",
     "db:generate": "prisma generate",
-    "db:migrate:dev": "prisma migrate dev",
-    "db:migrate:deploy": "prisma migrate deploy",
-    "db:migrate:reset": "prisma migrate reset",
-    "db:push": "prisma db push",
-    "db:pull": "prisma db pull",
-    "db:studio": "prisma studio",
+    "db:migrate:dev": "bun --env-file=../../.env run prisma migrate dev",
+    "db:migrate:deploy": "bun --env-file=../../.env run prisma migrate deploy",
+    "db:migrate:reset": "bun --env-file=../../.env run prisma migrate reset",
+    "db:push": "bun --env-file=../../.env run prisma db push",
+    "db:pull": "bun --env-file=../../.env run prisma db pull",
+    "db:studio": "bun --env-file=../../.env run prisma studio",
     "db:format": "prisma format",
-    "make-committee-member": "bun run scripts/make-committee-member.ts",
-    "db:seed": "bun run scripts/seed.ts"
+    "make-committee-member": "bun --env-file=../../.env run scripts/make-committee-member.ts",
+    "db:seed": "bun --env-file=../../.env run scripts/seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.988.0",

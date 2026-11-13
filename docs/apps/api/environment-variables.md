@@ -60,10 +60,11 @@ apps/apiで使用する環境変数の設定方法とリファレンスです。
 
 ### 開発環境
 
-`apps/api` ディレクトリ直下に `.env`（または `.env.local`）を作成します。
+リポジトリ直下の `.env` に設定します（Web と共通）。`.env.example` をコピーして作成してください。
+`apps/api` のスクリプト（`dev`・`db:*`・`db:seed` など）は `bun --env-file=../../.env` でこのファイルを読み込みます。
 
 ```bash
-# apps/api/.env
+# ./.env（リポジトリ直下）
 PORT=3000
 CORS_ORIGIN=http://localhost:5173,http://localhost:3001
 
@@ -101,8 +102,6 @@ S3_SECRET_ACCESS_KEY=your_secret_key
 # ファイルトークン（openssl rand -base64 48 等で生成）
 FILE_TOKEN_SECRET=your-file-token-secret-at-least-32-chars
 
-# ローカル専用にしたい場合は .env.local を使用
-# apps/api/.env.local が存在すればこちらが優先されます
 ```
 
 ## バリデーション

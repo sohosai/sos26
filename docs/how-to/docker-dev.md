@@ -9,18 +9,23 @@ Docker Composeを用いてSOS26の開発環境をローカルで起動する手�
 
 ## 1. 環境変数を設定する
 
-開発用のデフォルト値は `compose.yml` の `app.environment` に書かれています（DB・ストレージ・Firebase Auth Emulator の接続先など）。
-デフォルト値がないのは SendGrid と VAPID 鍵だけなので、**リポジトリ直下**に `.env` を作ってこれらを設定します。
+環境変数はリポジトリ直下の `.env` 1 つにまとめています（API・Web 共通。Docker を使わずにホストで起動する場合も同じファイルを使います）。
+`.env.example` をコピーして、SendGrid と VAPID 鍵だけ埋めてください。
+
+```bash
+cp .env.example .env
+```
 
 ```env
-# ./.env（リポジトリ直下。apps/api/.env ではない）
+# ./.env（リポジトリ直下）
 SENDGRID_API_KEY=<SendGrid の API キー>
 EMAIL_FROM=<SendGrid で認証済みの送信元アドレス>
 VAPID_PUBLIC_KEY=<生成した公開鍵>
 VAPID_PRIVATE_KEY=<生成した秘密鍵>
 ```
 
-Web 側の `VITE_VAPID_PUBLIC_KEY` は、指定しなければ `VAPID_PUBLIC_KEY` と同じ値が使われます。
+`.env.example` の DB・ストレージ・Firebase Auth Emulator の接続先は `localhost` 向け（ホストで起動する場合の値）ですが、
+Docker ではコンテナ用の接続先（`db`・`object-storage`・`firebase-auth`）で自動的に上書きされるので、書き換える必要はありません（`compose.yml` の `app.environment` 参照）。
 
 VAPID 鍵（Web Push 用の鍵ペア）は外部サービスへの登録不要で、手元で生成できます。
 
@@ -57,11 +62,11 @@ docker compose up -d
 
 ### 本物の Firebase プロジェクトを使う
 
-リポジトリ直下の `.env` に以下を追加します。エミュレータの接続先を**空で指定する**ことで、エミュレータを使わなくなります（行ごと消すとデフォルトのエミュレータに戻ります）。
+リポジトリ直下の `.env` を以下のように変更します。エミュレータの接続先を**空にする（または行ごと消す）**と、エミュレータを使わなくなります。
 
 ```env
 # ./.env
-# エミュレータを無効化（空を指定する）
+# エミュレータを無効化（空にする）
 FIREBASE_AUTH_EMULATOR_HOST=
 VITE_FIREBASE_AUTH_EMULATOR_URL=
 

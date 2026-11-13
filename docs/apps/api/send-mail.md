@@ -41,7 +41,7 @@ apps/api/src/
 
 ## 3. 環境変数
 
-### apps/api/.env
+### .env（リポジトリ直下）
 
 ```env
 # SendGrid

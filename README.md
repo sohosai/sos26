@@ -46,6 +46,7 @@
 
 ```bash
 bun install
+cp .env.example .env  # 環境変数は API・Web ともにリポジトリ直下の .env にまとめる
 ```
 
 Docker でアプリと依存サービス（PostgreSQL・ストレージ・Firebase Auth Emulator）をまとめて起動する場合は [docs/how-to/docker-dev.md](docs/how-to/docker-dev.md) を参照してください。
@@ -63,7 +64,7 @@ bun run dev
 - API: `cd apps/api && bun run dev`  （http://localhost:3000）
 - Web: `cd apps/web && bun run dev`  （http://localhost:5173）
 
-Web の `VITE_API_BASE_URL` は `apps/web/.env`（または `.env.local`）で設定できます（既定は `http://localhost:3000`）。
+環境変数は API・Web ともにリポジトリ直下の `.env` で設定します。Web の `VITE_API_BASE_URL` の既定は `http://localhost:3000` です。
 
 ## ビルド
 

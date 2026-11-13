@@ -6,9 +6,16 @@ services:
     ports:
       - "5173:5173"
       - "3000:3000"
-    # 開発用のデフォルト値。リポジトリ直下の .env（またはシェルの環境変数）で指定すればそちらが優先される
+    # 開発用のデフォルト値。リポジトリ直下の .env（またはシェルの環境変数）で指定すればそちらが優先される。
+    # .env はホストで起動する場合と共通なので、コンテナ内で接続先が変わるもの（DB・ストレージ・Firebase Auth Emulator）は
+    # .env の値に関係なくコンテナ用の値で上書きする。
     environment:
       S3_FORCE_PATH_STYLE: "true"
+      # --- コンテナ用の接続先（.env の値で上書きしない） ---
+      DATABASE_URL: postgres://app:password@db:5432/app
+      S3_ENDPOINT: http://object-storage:9000
+      # .env で設定されていればエミュレータ（コンテナ内のホスト名）を使い、空か未設定なら本物の Firebase を使う
+      FIREBASE_AUTH_EMULATOR_HOST: ${FIREBASE_AUTH_EMULATOR_HOST:+firebase-auth:9099}
       # --- API ---
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       APP_URL: ${APP_URL:-http://localhost:5173}
@@ -17,15 +24,12 @@ services:
       EMAIL_FROM:
       VAPID_PUBLIC_KEY:
       VAPID_PRIVATE_KEY:
-      # Firebase: 本物のプロジェクトを使う場合は .env で FIREBASE_AUTH_EMULATOR_HOST= （空）を指定し、
+      # Firebase: 本物のプロジェクトを使う場合は .env で FIREBASE_AUTH_EMULATOR_HOST を空にし、
       # FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY を設定する
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-demo-sos26}
-      FIREBASE_AUTH_EMULATOR_HOST: ${FIREBASE_AUTH_EMULATOR_HOST-firebase-auth:9099}
       FIREBASE_CLIENT_EMAIL:
       FIREBASE_PRIVATE_KEY:
-      DATABASE_URL: ${DATABASE_URL:-postgres://app:password@db:5432/app}
       ADMIN_MAIL: ${ADMIN_MAIL:-admin@example.com}
-      S3_ENDPOINT: ${S3_ENDPOINT:-http://object-storage:9000}
       S3_REGION: ${S3_REGION:-jp-north-1}
       S3_BUCKET: ${S3_BUCKET:-localbucket}
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-dev_access_key}
@@ -37,8 +41,8 @@ services:
       VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY:-fake-api-key}
       VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN:-localhost}
       VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID:-demo-sos26}
-      # 本物のプロジェクトを使う場合は .env で VITE_FIREBASE_AUTH_EMULATOR_URL= （空）を指定する
-      VITE_FIREBASE_AUTH_EMULATOR_URL: ${VITE_FIREBASE_AUTH_EMULATOR_URL-http://localhost:9099}
+      # API 側と同じく、.env で空か未設定なら本物の Firebase を使う
+      VITE_FIREBASE_AUTH_EMULATOR_URL:
       # 未指定なら API と同じ VAPID_PUBLIC_KEY を使う
       VITE_VAPID_PUBLIC_KEY: ${VITE_VAPID_PUBLIC_KEY:-${VAPID_PUBLIC_KEY:-}}
     volumes:

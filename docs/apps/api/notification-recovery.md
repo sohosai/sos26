@@ -50,7 +50,7 @@
 
 ## 設定
 
-`apps/api/.env` に以下を設定します。
+リポジトリ直下の `.env` に以下を設定します。
 
 ```env
 NOTIFICATION_SYNC_PASSWORD=change-this-to-a-long-random-string

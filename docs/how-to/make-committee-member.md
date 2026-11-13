@@ -5,7 +5,7 @@
 ## 前提条件
 
 - 対象ユーザーがアプリで登録済み（Firebase Auth + User レコードが存在する）
-- `DATABASE_URL` が設定されている（`apps/api/.env`）
+- `DATABASE_URL` が設定されている（リポジトリ直下の `.env`）
 
 ## 使い方
 

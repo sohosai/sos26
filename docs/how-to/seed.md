@@ -6,12 +6,12 @@ Firebase Auth には事前に登録済みのユーザー UID を env で渡す�
 
 ## 前提条件
 
-- `DATABASE_URL` が設定されている（`apps/api/.env`）
+- `DATABASE_URL` が設定されている（リポジトリ直下の `.env`）
 - Firebase に開発用アカウントが作成済みで、UID を取得済みであること
 
 ## 使い方
 
-`apps/api/.env` に UID をカンマ区切りで設定します。
+リポジトリ直下の `.env` に UID をカンマ区切りで設定します。
 
 ```env
 SEED_FIREBASE_UIDS=uid-aaa,uid-bbb,uid-ccc
@@ -42,7 +42,7 @@ bun run db:seed
 
 ## 環境変数でのカスタマイズ
 
-`apps/api/.env` に以下を設定することで、作成するユーザーの情報を変更できます。
+リポジトリ直下の `.env` に以下を設定することで、作成するユーザーの情報を変更できます。
 
 | 環境変数 | デフォルト値 | 説明 |
 |---------|------------|------|

@@ -6,10 +6,10 @@
 
 ### 環境変数
 
-データベース接続には `DATABASE_URL` 環境変数が必要です。`apps/api/.env` に設定してください。
+データベース接続には `DATABASE_URL` 環境変数が必要です。リポジトリ直下の `.env` に設定してください。
 
 ```bash
-# apps/api/.env
+# ./.env（リポジトリ直下）
 DATABASE_URL="postgresql://user:password@localhost:5432/dbname?schema=public"
 ```
 
@@ -113,8 +113,8 @@ Prisma を初めて使う方向けに、よくあるシーン別に使うコマ�
 # 1. 依存関係をインストール
 bun install
 
-# 2. apps/api/.env ファイルを作成し、DATABASE_URL を設定
-cp apps/api/.env.example apps/api/.env
+# 2. リポジトリ直下に .env を作成し、DATABASE_URL などを設定
+cp .env.example .env
 # .env を編集して DATABASE_URL を設定
 
 # 3. マイグレーションを適用してDBを最新状態にする

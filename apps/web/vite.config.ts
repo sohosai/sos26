@@ -6,6 +6,8 @@ import { defineConfig, type PluginOption } from "vite";
 
 // https://vite.dev/config/
 export default defineConfig({
+	// .env はリポジトリ直下のものを使う（API と共通）
+	envDir: path.resolve(__dirname, "../.."),
 	build: {
 		sourcemap: true,
 	},

@@ -21,8 +21,8 @@ bun run test:watch
 
 ## 環境変数
 
-- 設定場所: `apps/web/.env`（または `.env.local`）
-- 例は `apps/web/.env.example` を参照
+- 設定場所: リポジトリ直下の `.env`（API と共通）
+- 例はリポジトリ直下の `.env.example` を参照
 - 主要変数: `VITE_API_BASE_URL`（デフォルト: `http://localhost:3000`）
 - 詳細: `docs/apps/web/environment-variables.md`
 

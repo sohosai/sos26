@@ -25,10 +25,11 @@ apps/webで使用する環境変数の設定方法とリファレンスです。
 
 ### 開発環境
 
-`apps/web` ディレクトリ直下に `.env`（または `.env.local`）を作成します。
+リポジトリ直下の `.env` に設定します（API と共通）。`.env.example` をコピーして作成してください。
+Vite の `envDir` をリポジトリ直下に設定しているため、`apps/web/.env` は読み込まれません。
 
 ```bash
-# apps/web/.env
+# ./.env（リポジトリ直下）
 VITE_API_BASE_URL=http://localhost:3000
 
 # Firebase（認証機能で必要）
@@ -36,8 +37,6 @@ VITE_FIREBASE_API_KEY=AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 VITE_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=your-project-id
 
-# ローカル専用にしたい場合は .env.local を使用
-# apps/web/.env.local が存在すればこちらが優先されます
 ```
 
 ## バリデーション
