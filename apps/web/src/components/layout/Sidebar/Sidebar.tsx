@@ -104,7 +104,7 @@ function SidebarItem({ item, collapsed, pathname, onClick }: SidebarItemProps) {
 			? normalizePathname(pathname) === normalizePathname(item.to)
 			: pathname.startsWith(item.to);
 	const linkAriaLabel = item.showNotificationDot
-		? `${item.label} (has notifications)`
+		? `${item.label} (未読あり)`
 		: item.label;
 
 	const itemInner = (
