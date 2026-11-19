@@ -78,6 +78,7 @@ type DataTableProps<T> = {
 	/** 左固定するカラムID（表示順は元の columns 順に従い、固定カラムを左側に寄せる） */
 	pinnedColumnIds?: string[];
 	features?: DataTableFeatures;
+	csvFileName?: string;
 	initialSorting?: SortingState;
 	initialGlobalFilter?: string;
 	initialColumnVisibility?: VisibilityState;
@@ -410,6 +411,7 @@ function DataTableToolbar<T extends RowData>(props: {
 	show: boolean;
 	features: Required<DataTableFeatures>;
 	table: ReactTable<T>;
+	csvFileName?: string;
 	globalFilter: string;
 	setGlobalFilter: (v: string) => void;
 	columnFilters: ColumnFiltersState;
@@ -421,6 +423,7 @@ function DataTableToolbar<T extends RowData>(props: {
 		show,
 		features,
 		table,
+		csvFileName,
 		globalFilter,
 		setGlobalFilter,
 		columnFilters,
@@ -483,7 +486,10 @@ function DataTableToolbar<T extends RowData>(props: {
 			)}
 			{toolbarExtraBeforeCsv}
 			{features.csvExport && (
-				<Button intent="secondary" onClick={() => downloadCsv(table)}>
+				<Button
+					intent="secondary"
+					onClick={() => downloadCsv(table, csvFileName)}
+				>
 					<IconDownload size={16} /> CSV出力
 				</Button>
 			)}
@@ -495,6 +501,7 @@ function DataTableToolbar<T extends RowData>(props: {
 export function DataTable<T extends RowData>({
 	data,
 	columns,
+	csvFileName = "table",
 	pinnedColumnIds,
 	features: featuresProp,
 	initialSorting = [],
@@ -716,6 +723,7 @@ export function DataTable<T extends RowData>({
 				show: showToolbar,
 				features: f,
 				table,
+				csvFileName,
 				globalFilter,
 				setGlobalFilter,
 				columnFilters,

@@ -8,7 +8,7 @@ function escapeCsvField(str: string): string {
 	return str;
 }
 
-export function downloadCsv<T>(table: Table<T>) {
+export function downloadCsv<T>(table: Table<T>, csvFileName?: string) {
 	const headerGroup = table.getHeaderGroups()[0];
 	if (!headerGroup) return;
 
@@ -47,7 +47,7 @@ export function downloadCsv<T>(table: Table<T>) {
 	const url = URL.createObjectURL(blob);
 	const a = document.createElement("a");
 	a.href = url;
-	a.download = "table.csv";
+	a.download = `${csvFileName}.csv`;
 	a.click();
 	setTimeout(() => URL.revokeObjectURL(url), 10000);
 }

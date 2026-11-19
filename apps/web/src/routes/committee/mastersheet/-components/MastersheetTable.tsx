@@ -936,6 +936,7 @@ export function MastersheetTable({
 					copy: true,
 					csvExport: true,
 				}}
+				csvFileName="マスターシート"
 				initialSorting={initialSorting}
 				initialColumnVisibility={initialColumnVisibility}
 				initialColumnFilters={initialColumnFilters}

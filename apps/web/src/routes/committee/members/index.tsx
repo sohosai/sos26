@@ -546,6 +546,7 @@ function RouteComponent() {
 				data={members}
 				columns={columns}
 				features={{ columnFilter: true }}
+				csvFileName="実行委員名簿"
 				initialSorting={[
 					{
 						id: "joinedAt",
