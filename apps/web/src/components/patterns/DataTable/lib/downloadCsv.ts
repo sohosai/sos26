@@ -47,7 +47,7 @@ export function downloadCsv<T>(table: Table<T>, csvFileName?: string) {
 	const url = URL.createObjectURL(blob);
 	const a = document.createElement("a");
 	a.href = url;
-	a.download = `${csvFileName}.csv`;
+	a.download = `${csvFileName ?? "table"}.csv`;
 	a.click();
 	setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
