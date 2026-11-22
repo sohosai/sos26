@@ -8,7 +8,8 @@ import {
 import { Hono } from "hono";
 import { Errors } from "../lib/error";
 import {
-	committeeActivitySelect,
+	findLastReadAts,
+	findLatestComments,
 	getCommentSentAt,
 	hasUnreadCommitteeActivity,
 } from "../lib/inquiry-activity";
@@ -208,6 +209,49 @@ function computeAwaitingReplyFrom(params: {
 	return lastActor === "PROJECT" ? "COMMITTEE" : "PROJECT";
 }
 
+/** 共同担当者が全て企画メンバーかチェック */
+async function validateCoAssignees(
+	project: { id: string; ownerId: string; subOwnerId: string | null },
+	coAssigneeIds: string[]
+): Promise<void> {
+	const ownerIds = new Set([project.ownerId, project.subOwnerId]);
+	const nonOwnerIds = coAssigneeIds.filter(id => !ownerIds.has(id));
+	if (nonOwnerIds.length === 0) return;
+	const members = await prisma.projectMember.findMany({
+		where: {
+			projectId: project.id,
+			userId: { in: nonOwnerIds },
+			deletedAt: null,
+		},
+		select: { userId: true },
+	});
+	const memberUserIds = new Set(members.map(m => m.userId));
+	if (nonOwnerIds.some(id => !memberUserIds.has(id))) {
+		throw Errors.invalidRequest(
+			"指定された共同担当者の中に企画メンバーでないユーザーが含まれています"
+		);
+	}
+}
+
+/** 添付ファイルの存在・ステータスチェック */
+async function validateAttachments(
+	fileIds: string[],
+	userId: string
+): Promise<void> {
+	if (fileIds.length === 0) return;
+	const files = await prisma.file.findMany({
+		where: {
+			id: { in: fileIds },
+			uploadedById: userId,
+			status: "CONFIRMED",
+			deletedAt: null,
+		},
+	});
+	if (files.length !== fileIds.length) {
+		throw Errors.invalidRequest("指定されたファイルの一部が見つかりません");
+	}
+}
+
 // ─────────────────────────────────────────────────────────────
 // POST /project/:projectId/inquiries
 // お問い合わせを作成
@@ -228,54 +272,16 @@ projectInquiryRoute.post(
 			fileIds,
 		} = createProjectInquiryRequestSchema.parse(body);
 
-		// 共同担当者が全て企画メンバーかチェック
 		const uniqueCoAssigneeIds = [
 			...new Set((coAssigneeUserIds ?? []).filter(id => id !== user.id)),
 		];
-		if (uniqueCoAssigneeIds.length > 0) {
-			const ownerIds = new Set(
-				[project.ownerId, project.subOwnerId].filter(Boolean)
-			);
-			const nonOwnerIds = uniqueCoAssigneeIds.filter(id => !ownerIds.has(id));
-			if (nonOwnerIds.length > 0) {
-				const members = await prisma.projectMember.findMany({
-					where: {
-						projectId: project.id,
-						userId: { in: nonOwnerIds },
-						deletedAt: null,
-					},
-					select: { userId: true },
-				});
-				const memberUserIds = new Set(members.map(m => m.userId));
-				if (nonOwnerIds.some(id => !memberUserIds.has(id))) {
-					throw Errors.invalidRequest(
-						"指定された共同担当者の中に企画メンバーでないユーザーが含まれています"
-					);
-				}
-			}
-		}
-
-		// 添付ファイルの存在・ステータスチェック
 		const uniqueFileIds = [...new Set(fileIds ?? [])];
-		if (uniqueFileIds.length > 0) {
-			const files = await prisma.file.findMany({
-				where: {
-					id: { in: uniqueFileIds },
-					uploadedById: user.id,
-					status: "CONFIRMED",
-					deletedAt: null,
-				},
-			});
-			if (files.length !== uniqueFileIds.length) {
-				throw Errors.invalidRequest("指定されたファイルの一部が見つかりません");
-			}
-		}
-
-		// 関連申請の検証と初期対応ルール
-		const { formOwnerId, formCollaboratorIds } = await resolveRelatedForm(
-			relatedFormId,
-			project.id
-		);
+		const [, , { formOwnerId, formCollaboratorIds }] = await Promise.all([
+			validateCoAssignees(project, uniqueCoAssigneeIds),
+			validateAttachments(uniqueFileIds, user.id),
+			// 関連申請の検証と初期対応ルール
+			resolveRelatedForm(relatedFormId, project.id),
+		]);
 		const {
 			effectiveOwnerId,
 			initialStatus,
@@ -298,15 +304,17 @@ projectInquiryRoute.post(
 				relatedFormId,
 				sentAt: new Date(),
 				assignees: {
-					create: [
-						{ userId: user.id, side: "PROJECT", isCreator: true },
-						...uniqueCoAssigneeIds.map(id => ({
-							userId: id,
-							side: "PROJECT" as const,
-							isCreator: false,
-						})),
-						...committeeAssignees,
-					],
+					createMany: {
+						data: [
+							{ userId: user.id, side: "PROJECT", isCreator: true },
+							...uniqueCoAssigneeIds.map(id => ({
+								userId: id,
+								side: "PROJECT" as const,
+								isCreator: false,
+							})),
+							...committeeAssignees,
+						],
+					},
 				},
 				attachments: {
 					create: uniqueFileIds.map(fileId => ({ fileId })),
@@ -366,7 +374,6 @@ projectInquiryRoute.get(
 					where: { deletedAt: null },
 					include: assigneeInclude,
 				},
-				...committeeActivitySelect(user.id),
 				_count: {
 					select: {
 						comments: { where: { deletedAt: null, isDraft: false } },
@@ -376,38 +383,21 @@ projectInquiryRoute.get(
 			orderBy: { updatedAt: "desc" },
 		});
 
-		// 最新コメントの送信者ロールを取得（awaitingReplyFrom 計算用）
 		const inquiryIds = inquiries.map(i => i.id);
-		const latestCommentsRaw =
-			inquiryIds.length === 0
-				? []
-				: await prisma.inquiryComment.findMany({
-						where: {
-							inquiryId: { in: inquiryIds },
-							deletedAt: null,
-							isDraft: false,
-						},
-						select: { inquiryId: true, senderRole: true },
-						orderBy: [
-							{ sentAt: { sort: "desc", nulls: "last" } },
-							{ createdAt: "desc" },
-						],
-					});
-		const latestSenderByInquiryId = new Map<string, "PROJECT" | "COMMITTEE">();
-		for (const c of latestCommentsRaw) {
-			if (!latestSenderByInquiryId.has(c.inquiryId)) {
-				latestSenderByInquiryId.set(
-					c.inquiryId,
-					c.senderRole as "PROJECT" | "COMMITTEE"
-				);
-			}
-		}
+		const [latestCommentsByInquiryId, lastReadAtByInquiryId] =
+			await Promise.all([
+				findLatestComments(inquiryIds),
+				findLastReadAts(inquiryIds, user.id),
+			]);
 
 		const formatted = inquiries.map(inq => {
+			const latestComments = latestCommentsByInquiryId.get(inq.id);
+			const latestCommitteeComment = latestComments?.byRole.COMMITTEE;
+			const lastReadAt = lastReadAtByInquiryId.get(inq.id);
 			const awaitingReplyFrom = computeAwaitingReplyFrom({
 				isDraft: inq.isDraft,
 				creatorRole: inq.creatorRole,
-				latestSenderRole: latestSenderByInquiryId.get(inq.id) ?? null,
+				latestSenderRole: latestComments?.latestSenderRole ?? null,
 			});
 
 			return {
@@ -419,7 +409,11 @@ projectInquiryRoute.get(
 				sentAt: inq.sentAt,
 				updatedAt: inq.updatedAt,
 				isDraft: inq.isDraft,
-				hasUnreadComments: hasUnreadCommitteeActivity(inq),
+				hasUnreadComments: hasUnreadCommitteeActivity({
+					...inq,
+					comments: latestCommitteeComment ? [latestCommitteeComment] : [],
+					commentReadStatuses: lastReadAt ? [{ lastReadAt }] : [],
+				}),
 				awaitingReplyFrom,
 				createdBy: inq.createdBy,
 				project: inq.project,
@@ -802,19 +796,27 @@ projectInquiryRoute.post(
 			throw Errors.forbidden("企画側からは企画側の担当者のみ追加できます");
 		}
 
+		const [targetProject, isMember, existing, inquiry] = await Promise.all([
+			prisma.project.findFirst({
+				where: { id: project.id, deletedAt: null },
+			}),
+			prisma.projectMember.findFirst({
+				where: { projectId: project.id, userId, deletedAt: null },
+			}),
+			prisma.inquiryAssignee.findFirst({
+				where: { inquiryId, userId, deletedAt: null },
+			}),
+			prisma.inquiry.findFirst({
+				where: { id: inquiryId, projectId: project.id, deletedAt: null },
+			}),
+		]);
+
 		// 追加対象が同企画のメンバーかチェック
-		const targetProject = await prisma.project.findFirst({
-			where: { id: project.id, deletedAt: null },
-		});
 		if (!targetProject) {
 			throw Errors.notFound("企画が見つかりません");
 		}
-
 		const isOwner = targetProject.ownerId === userId;
 		const isSubOwner = targetProject.subOwnerId === userId;
-		const isMember = await prisma.projectMember.findFirst({
-			where: { projectId: project.id, userId, deletedAt: null },
-		});
 		if (!isOwner && !isSubOwner && !isMember) {
 			throw Errors.invalidRequest(
 				"対象ユーザーはこの企画のメンバーではありません"
@@ -822,16 +824,9 @@ projectInquiryRoute.post(
 		}
 
 		// 既に担当者かチェック
-		const existing = await prisma.inquiryAssignee.findFirst({
-			where: { inquiryId, userId, deletedAt: null },
-		});
 		if (existing) {
 			throw Errors.alreadyExists("既に担当者です");
 		}
-
-		const inquiry = await prisma.inquiry.findFirst({
-			where: { id: inquiryId, projectId: project.id, deletedAt: null },
-		});
 		if (!inquiry) {
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}

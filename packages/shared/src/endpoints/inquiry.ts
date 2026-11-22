@@ -14,6 +14,7 @@ import {
 	getProjectInquiryResponseSchema,
 	inquiryCommentIdPathParamsSchema,
 	inquiryIdPathParamsSchema,
+	listCommitteeInquiriesQuerySchema,
 	listCommitteeInquiriesResponseSchema,
 	listProjectInquiriesResponseSchema,
 	projectInquiryAssigneeIdPathParamsSchema,
@@ -194,13 +195,13 @@ export const removeProjectInquiryAssigneeEndpoint: NoBodyEndpoint<
 export const listCommitteeInquiriesEndpoint: GetEndpoint<
 	"/committee/inquiries",
 	undefined,
-	undefined,
+	typeof listCommitteeInquiriesQuerySchema,
 	typeof listCommitteeInquiriesResponseSchema
 > = {
 	method: "GET",
 	path: "/committee/inquiries",
 	pathParams: undefined,
-	query: undefined,
+	query: listCommitteeInquiriesQuerySchema,
 	request: undefined,
 	response: listCommitteeInquiriesResponseSchema,
 } as const;

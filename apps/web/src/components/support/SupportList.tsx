@@ -22,40 +22,232 @@ import styles from "./SupportList.module.scss";
 type InquirySummary = ListProjectInquiriesResponse["inquiries"][number];
 type AssigneeInfo = InquirySummary["projectAssignees"][number];
 
-type SupportListProps = {
-	inquiries: InquirySummary[];
-	currentUser: { id: string; name: string };
-	viewerRole: "project" | "committee";
-	basePath: string;
-	onNewInquiry: () => void;
-	isAdmin?: boolean;
-	committeeActiveTab?: CommitteeTab;
-	onCommitteeTabChange?: (tab: CommitteeTab) => void;
+export type CommitteeTab = "open" | "draft" | "resolved";
+
+/** 「もっと見る」で続きを読み込む列 */
+export type PagedInquiries = { items: InquirySummary[]; hasMore: boolean };
+export type PagedView = "VIEWING" | "RESOLVED";
+
+/** 実委側の一覧の列。検索は取得時にサーバーで済ませてある */
+export type CommitteeInquiryLists = {
+	mine: InquirySummary[];
+	unassigned: InquirySummary[];
+	viewing: PagedInquiries;
+	draft: InquirySummary[];
+	resolved: PagedInquiries;
 };
 
-type CommitteeTab = "open" | "draft" | "resolved";
+export type CommitteeListProps = {
+	activeTab: CommitteeTab;
+	onTabChange: (tab: CommitteeTab) => void;
+	/** 取得中は null */
+	lists: CommitteeInquiryLists | null;
+	searchQuery: string;
+	onSearchQueryChange: (query: string) => void;
+	onlyUnreplied: boolean;
+	onOnlyUnrepliedChange: (onlyUnreplied: boolean) => void;
+	onLoadMore: (view: PagedView) => void;
+	loadingMore: boolean;
+};
 
-export function SupportList({
-	inquiries,
-	currentUser,
-	viewerRole,
-	basePath,
-	onNewInquiry,
-	isAdmin = false,
-	committeeActiveTab,
-	onCommitteeTabChange,
-}: SupportListProps) {
-	const [localActiveTab, setLocalActiveTab] = useState<CommitteeTab>("open");
-	const [searchQuery, setSearchQuery] = useState("");
-	const [onlyUnreplied, setOnlyUnreplied] = useState(false);
+type SupportListProps = {
+	currentUser: { id: string; name: string };
+	basePath: string;
+	onNewInquiry: () => void;
+} & (
+	| { viewerRole: "project"; inquiries: InquirySummary[] }
+	| { viewerRole: "committee"; committee: CommitteeListProps }
+);
+
+export function SupportList(props: SupportListProps) {
+	const { currentUser, viewerRole, basePath, onNewInquiry } = props;
 	const isCommittee = viewerRole === "committee";
-	const activeTab = committeeActiveTab ?? localActiveTab;
-	const showUnrepliedFilter = isCommittee && activeTab === "open";
 
-	const handleChangeTab = (tab: CommitteeTab) => {
-		setLocalActiveTab(tab);
-		onCommitteeTabChange?.(tab);
-	};
+	return (
+		<div className={styles.container}>
+			<div className={styles.header}>
+				<div
+					className={styles.titleRow}
+					data-mobile-stack={isCommittee ? "true" : "false"}
+				>
+					<Heading size="6">お問い合わせ</Heading>
+					<Button onClick={onNewInquiry}>
+						<IconPlus size={16} />
+						新しいお問い合わせ
+					</Button>
+				</div>
+				<Text size="2" color="gray">
+					{isCommittee
+						? "企画からのお問い合わせを管理します。"
+						: "実行委員会へのお問い合わせを管理します。"}
+				</Text>
+			</div>
+
+			{props.viewerRole === "committee" ? (
+				<CommitteeSupportList
+					{...props.committee}
+					currentUser={currentUser}
+					basePath={basePath}
+				/>
+			) : (
+				<ProjectSupportList inquiries={props.inquiries} basePath={basePath} />
+			)}
+		</div>
+	);
+}
+
+function SearchField({
+	value,
+	onChange,
+}: {
+	value: string;
+	onChange: (value: string) => void;
+}) {
+	return (
+		<div className={styles.search}>
+			<TextField
+				label="検索"
+				placeholder="キーワードで検索..."
+				value={value}
+				onChange={onChange}
+				type="search"
+			/>
+		</div>
+	);
+}
+
+function CommitteeSupportList({
+	activeTab,
+	onTabChange,
+	lists,
+	searchQuery,
+	onSearchQueryChange,
+	onlyUnreplied,
+	onOnlyUnrepliedChange,
+	onLoadMore,
+	loadingMore,
+	currentUser,
+	basePath,
+}: CommitteeListProps & {
+	currentUser: { id: string; name: string };
+	basePath: string;
+}) {
+	const showUnrepliedFilter = activeTab === "open";
+	const isAssignedToMe = (inq: InquirySummary) =>
+		inq.committeeAssignees.some(a => a.user.id === currentUser.id);
+
+	return (
+		<>
+			<div className={styles.toolbar}>
+				<CommitteeTabs
+					activeTab={activeTab}
+					myCount={lists?.mine.length ?? 0}
+					draftCount={lists?.draft.length ?? 0}
+					onChangeTab={onTabChange}
+				/>
+				<div className={styles.filters}>
+					<SearchField value={searchQuery} onChange={onSearchQueryChange} />
+					{showUnrepliedFilter && (
+						<div className={styles.filterToggle}>
+							<Switch
+								label="未返信のみ"
+								size="1"
+								checked={onlyUnreplied}
+								onCheckedChange={onOnlyUnrepliedChange}
+							/>
+						</div>
+					)}
+				</div>
+			</div>
+
+			{lists ? (
+				<CommitteeTabContent
+					activeTab={activeTab}
+					lists={lists}
+					onlyUnreplied={onlyUnreplied}
+					basePath={basePath}
+					isAssignedToMe={isAssignedToMe}
+					onLoadMore={onLoadMore}
+					loadingMore={loadingMore}
+				/>
+			) : (
+				<Text size="2" color="gray">
+					読み込み中...
+				</Text>
+			)}
+		</>
+	);
+}
+
+function CommitteeTabContent({
+	activeTab,
+	lists,
+	onlyUnreplied,
+	basePath,
+	isAssignedToMe,
+	onLoadMore,
+	loadingMore,
+}: {
+	activeTab: CommitteeTab;
+	lists: CommitteeInquiryLists;
+	onlyUnreplied: boolean;
+	basePath: string;
+	isAssignedToMe: (inq: InquirySummary) => boolean;
+	onLoadMore: (view: PagedView) => void;
+	loadingMore: boolean;
+}) {
+	if (activeTab === "draft") {
+		return (
+			<CommitteeDraftList
+				inquiries={lists.draft}
+				basePath={basePath}
+				viewerRole="committee"
+			/>
+		);
+	}
+	if (activeTab === "resolved") {
+		return (
+			<CommitteeResolvedList
+				resolved={lists.resolved}
+				basePath={basePath}
+				isAssignedToMe={isAssignedToMe}
+				onLoadMore={() => onLoadMore("RESOLVED")}
+				loadingMore={loadingMore}
+			/>
+		);
+	}
+	// 自分の担当と担当者未割り当ては全件を取得しているので、未返信の絞り込みはここで行う
+	const filterUnreplied = (items: InquirySummary[]) =>
+		onlyUnreplied ? items.filter(isAwaitingCommitteeReply) : items;
+	return (
+		<CommitteeOpenSections
+			myItems={filterUnreplied(lists.mine)}
+			unassignedItems={filterUnreplied(lists.unassigned)}
+			viewing={lists.viewing}
+			basePath={basePath}
+			emptyMessage={
+				onlyUnreplied
+					? "未返信のお問い合わせはありません"
+					: "未完了のお問い合わせはありません"
+			}
+			onLoadMore={() => onLoadMore("VIEWING")}
+			loadingMore={loadingMore}
+		/>
+	);
+}
+
+function isAwaitingCommitteeReply(inq: InquirySummary) {
+	return inq.awaitingReplyFrom === "COMMITTEE";
+}
+
+function ProjectSupportList({
+	inquiries,
+	basePath,
+}: {
+	inquiries: InquirySummary[];
+	basePath: string;
+}) {
+	const [searchQuery, setSearchQuery] = useState("");
 
 	const searched = (() => {
 		const q = searchQuery.trim().toLowerCase();
@@ -83,118 +275,38 @@ export function SupportList({
 		});
 	})();
 
-	const isAssignedToMe = (inq: InquirySummary) => {
-		const assignees = isCommittee
-			? inq.committeeAssignees
-			: inq.projectAssignees;
-		return assignees.some(a => a.user.id === currentUser.id);
-	};
-
-	const myCount = searched.filter(
-		inq => inq.status !== "RESOLVED" && !inq.isDraft && isAssignedToMe(inq)
-	).length;
-
-	// 企画者側: 未解決 / 解決済みに分割
-	const draftItems = searched.filter(inq => inq.isDraft);
-	const openItemsAll = searched.filter(
-		inq => inq.status !== "RESOLVED" && !inq.isDraft
-	);
-	const unrepliedActive = showUnrepliedFilter && onlyUnreplied;
-	const openItems = unrepliedActive
-		? openItemsAll.filter(inq => inq.awaitingReplyFrom === "COMMITTEE")
-		: openItemsAll;
-	const resolvedItems = searched.filter(
-		inq => inq.status === "RESOLVED" && !inq.isDraft
-	);
-	const openEmptyMessage = unrepliedActive
-		? "未返信のお問い合わせはありません"
-		: "未完了のお問い合わせはありません";
-
 	return (
-		<div className={styles.container}>
-			<div className={styles.header}>
-				<div
-					className={styles.titleRow}
-					data-mobile-stack={isCommittee ? "true" : "false"}
-				>
-					<Heading size="6">お問い合わせ</Heading>
-					<Button onClick={onNewInquiry}>
-						<IconPlus size={16} />
-						新しいお問い合わせ
-					</Button>
-				</div>
-				<Text size="2" color="gray">
-					{isCommittee
-						? "企画からのお問い合わせを管理します。"
-						: "実行委員会へのお問い合わせを管理します。"}
-				</Text>
-			</div>
-
+		<>
 			<div className={styles.toolbar}>
-				{isCommittee && (
-					<CommitteeTabs
-						activeTab={activeTab}
-						myCount={myCount}
-						draftCount={draftItems.length}
-						onChangeTab={handleChangeTab}
-					/>
-				)}
 				<div className={styles.filters}>
-					<div className={styles.search}>
-						<TextField
-							label="検索"
-							placeholder="キーワードで検索..."
-							value={searchQuery}
-							onChange={setSearchQuery}
-							type="search"
-						/>
-					</div>
-					{showUnrepliedFilter && (
-						<div className={styles.filterToggle}>
-							<Switch
-								label="未返信のみ"
-								size="1"
-								checked={onlyUnreplied}
-								onCheckedChange={setOnlyUnreplied}
-							/>
-						</div>
-					)}
+					<SearchField value={searchQuery} onChange={setSearchQuery} />
 				</div>
 			</div>
+			<ProjectList
+				openItems={searched.filter(
+					inq => inq.status !== "RESOLVED" && !inq.isDraft
+				)}
+				resolvedItems={searched.filter(
+					inq => inq.status === "RESOLVED" && !inq.isDraft
+				)}
+				basePath={basePath}
+				viewerRole="project"
+			/>
+		</>
+	);
+}
 
-			{isCommittee ? (
-				activeTab === "open" ? (
-					<CommitteeOpenSections
-						inquiries={openItems}
-						currentUser={currentUser}
-						basePath={basePath}
-						isAdmin={isAdmin}
-						viewerRole={viewerRole}
-						emptyMessage={openEmptyMessage}
-					/>
-				) : activeTab === "draft" ? (
-					<CommitteeDraftList
-						inquiries={draftItems}
-						basePath={basePath}
-						viewerRole={viewerRole}
-					/>
-				) : (
-					<CommitteeResolvedList
-						inquiries={resolvedItems}
-						basePath={basePath}
-						isAssignedToMe={isAssignedToMe}
-						viewerRole={viewerRole}
-					/>
-				)
-			) : (
-				<ProjectList
-					openItems={openItems}
-					resolvedItems={resolvedItems}
-					basePath={basePath}
-					viewerRole={viewerRole}
-				/>
-			)}
-		</div>
+function LoadMoreButton({
+	onLoadMore,
+	loadingMore,
+}: {
+	onLoadMore: () => void;
+	loadingMore: boolean;
+}) {
+	return (
+		<Button intent="secondary" onClick={onLoadMore} loading={loadingMore}>
+			もっと見る
+		</Button>
 	);
 }
 
@@ -246,42 +358,23 @@ function CommitteeTabs({
 }
 
 function CommitteeOpenSections({
-	inquiries,
-	currentUser,
+	myItems,
+	unassignedItems,
+	viewing,
 	basePath,
-	isAdmin,
-	viewerRole,
 	emptyMessage,
+	onLoadMore,
+	loadingMore,
 }: {
-	inquiries: InquirySummary[];
-	currentUser: { id: string; name: string };
+	myItems: InquirySummary[];
+	unassignedItems: InquirySummary[];
+	viewing: PagedInquiries;
 	basePath: string;
-	isAdmin: boolean;
-	viewerRole: "project" | "committee";
 	emptyMessage: string;
+	onLoadMore: () => void;
+	loadingMore: boolean;
 }) {
-	const isAssignedToMe = (inq: InquirySummary) =>
-		inq.committeeAssignees.some(a => a.user.id === currentUser.id);
-
-	// セクション1: 自分の担当（実委側担当者かつ未解決）
-	const myItems = inquiries.filter(
-		inq => inq.status !== "RESOLVED" && isAssignedToMe(inq)
-	);
-
-	// セクション2: 担当者未割り当て（INQUIRY_ADMIN のみ）
-	const unassignedItems = isAdmin
-		? inquiries.filter(inq => inq.status === "UNASSIGNED")
-		: [];
-
-	// セクション3: 閲覧中（自分が担当者ではなく未解決のもの）
-	// 管理者は UNASSIGNED を専用セクションで表示するため除外
-	const viewingItems = inquiries.filter(
-		inq =>
-			inq.status !== "RESOLVED" &&
-			!isAssignedToMe(inq) &&
-			!(isAdmin && inq.status === "UNASSIGNED")
-	);
-
+	const viewingItems = viewing.items;
 	const hasAnyItems =
 		myItems.length > 0 || unassignedItems.length > 0 || viewingItems.length > 0;
 
@@ -317,7 +410,7 @@ function CommitteeOpenSections({
 								basePath={basePath}
 								isMyInquiry
 								showAssignees
-								viewerRole={viewerRole}
+								viewerRole="committee"
 							/>
 						))}
 					</ul>
@@ -343,7 +436,7 @@ function CommitteeOpenSections({
 								basePath={basePath}
 								isMyInquiry={false}
 								showAssignees
-								viewerRole={viewerRole}
+								viewerRole="committee"
 							/>
 						))}
 					</ul>
@@ -357,9 +450,6 @@ function CommitteeOpenSections({
 						<Text size="2" weight="medium">
 							閲覧中
 						</Text>
-						<Badge size="1" variant="soft" color="gray" radius="full">
-							{viewingItems.length}
-						</Badge>
 					</div>
 					<ul className={styles.list}>
 						{viewingItems.map(inq => (
@@ -369,10 +459,13 @@ function CommitteeOpenSections({
 								basePath={basePath}
 								isMyInquiry={false}
 								showAssignees
-								viewerRole={viewerRole}
+								viewerRole="committee"
 							/>
 						))}
 					</ul>
+					{viewing.hasMore && (
+						<LoadMoreButton onLoadMore={onLoadMore} loadingMore={loadingMore} />
+					)}
 				</section>
 			)}
 		</div>
@@ -380,19 +473,19 @@ function CommitteeOpenSections({
 }
 
 function CommitteeResolvedList({
-	inquiries,
+	resolved,
 	basePath,
 	isAssignedToMe,
-	viewerRole,
+	onLoadMore,
+	loadingMore,
 }: {
-	inquiries: InquirySummary[];
+	resolved: PagedInquiries;
 	basePath: string;
 	isAssignedToMe: (inq: InquirySummary) => boolean;
-	viewerRole: "project" | "committee";
+	onLoadMore: () => void;
+	loadingMore: boolean;
 }) {
-	const items = inquiries.filter(inq => inq.status === "RESOLVED");
-
-	if (items.length === 0) {
+	if (resolved.items.length === 0) {
 		return (
 			<div className={styles.empty}>
 				<IconSearch size={40} />
@@ -404,18 +497,23 @@ function CommitteeResolvedList({
 	}
 
 	return (
-		<ul className={styles.list}>
-			{items.map(inq => (
-				<InquiryCard
-					key={inq.id}
-					inquiry={inq}
-					basePath={basePath}
-					isMyInquiry={isAssignedToMe(inq)}
-					showAssignees
-					viewerRole={viewerRole}
-				/>
-			))}
-		</ul>
+		<>
+			<ul className={styles.list}>
+				{resolved.items.map(inq => (
+					<InquiryCard
+						key={inq.id}
+						inquiry={inq}
+						basePath={basePath}
+						isMyInquiry={isAssignedToMe(inq)}
+						showAssignees
+						viewerRole="committee"
+					/>
+				))}
+			</ul>
+			{resolved.hasMore && (
+				<LoadMoreButton onLoadMore={onLoadMore} loadingMore={loadingMore} />
+			)}
+		</>
 	);
 }
 

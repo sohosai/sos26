@@ -14,6 +14,7 @@ import {
 	deleteInquiryEndpoint,
 	type GetCommitteeInquiryResponse,
 	getCommitteeInquiryEndpoint,
+	type ListCommitteeInquiriesQuery,
 	type ListCommitteeInquiriesResponse,
 	listCommitteeInquiriesEndpoint,
 	type PublishDraftCommentResponse,
@@ -43,8 +44,10 @@ import { callBodyApi, callGetApi, callNoBodyApi } from "./core";
  * GET /committee/inquiries
  * 実委側お問い合わせ一覧
  */
-export async function listCommitteeInquiries(): Promise<ListCommitteeInquiriesResponse> {
-	return callGetApi(listCommitteeInquiriesEndpoint);
+export async function listCommitteeInquiries(
+	query: ListCommitteeInquiriesQuery
+): Promise<ListCommitteeInquiriesResponse> {
+	return callGetApi(listCommitteeInquiriesEndpoint, { query });
 }
 
 /**

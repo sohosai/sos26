@@ -507,8 +507,44 @@ export type CreateCommitteeInquiryResponse = z.infer<
 // 実委側: GET /committee/inquiries
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * 一覧画面の各列
+ * - MINE: 自分が実委側担当者の未解決のもの
+ * - UNASSIGNED: 担当者未割り当て（INQUIRY_ADMIN のみ）
+ * - VIEWING: 自分が担当者ではない未解決のもの（INQUIRY_ADMIN は UNASSIGNED を除く）
+ * - DRAFT: 下書き
+ * - RESOLVED: 解決済み
+ */
+export const committeeInquiryListViewSchema = z.enum([
+	"MINE",
+	"UNASSIGNED",
+	"VIEWING",
+	"DRAFT",
+	"RESOLVED",
+]);
+export type CommitteeInquiryListView = z.infer<
+	typeof committeeInquiryListViewSchema
+>;
+
+/** limit を省くと全件を返す */
+export const listCommitteeInquiriesQuerySchema = z.object({
+	view: committeeInquiryListViewSchema,
+	/** 件名・企画名・企画番号で検索 */
+	search: z.string().min(1).optional(),
+	/** 次に返信が期待される側で絞り込む */
+	awaitingReplyFrom: inquiryCreatorRoleSchema.optional(),
+	/** 前のページの nextCursor */
+	cursor: z.cuid().optional(),
+	limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+export type ListCommitteeInquiriesQuery = z.infer<
+	typeof listCommitteeInquiriesQuerySchema
+>;
+
 export const listCommitteeInquiriesResponseSchema = z.object({
 	inquiries: z.array(inquirySummarySchema),
+	/** 続きがなければ null */
+	nextCursor: z.cuid().nullable(),
 });
 export type ListCommitteeInquiriesResponse = z.infer<
 	typeof listCommitteeInquiriesResponseSchema
