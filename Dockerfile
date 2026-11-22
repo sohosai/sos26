@@ -12,10 +12,14 @@ COPY apps/web/package.json apps/web/package.json
 COPY packages/shared/package.json packages/shared/package.json
 RUN bun install --frozen-lockfile --ignore-scripts
 
+# Prisma Client is generated into node_modules, so generate it from the schema alone
+# to keep the node_modules layer cached when only source code changes.
+COPY apps/api/prisma/schema.prisma apps/api/prisma/schema.prisma
+RUN bun run --cwd apps/api db:generate
+
 # Copy source code and build API.
 COPY apps/api ./apps/api
 COPY packages/shared ./packages/shared
-RUN bun run --cwd apps/api db:generate
 RUN bun run build --filter=@sos26/api
 
 FROM oven/bun:1.2.10 AS runner
