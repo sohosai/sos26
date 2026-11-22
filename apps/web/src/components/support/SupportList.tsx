@@ -40,14 +40,16 @@ export type CommitteeInquiryLists = {
 export type CommitteeListProps = {
 	activeTab: CommitteeTab;
 	onTabChange: (tab: CommitteeTab) => void;
-	/** 取得中は null */
+	/** 取得中と取得に失敗したときは null */
 	lists: CommitteeInquiryLists | null;
+	loadFailed: boolean;
 	searchQuery: string;
 	onSearchQueryChange: (query: string) => void;
 	onlyUnreplied: boolean;
 	onOnlyUnrepliedChange: (onlyUnreplied: boolean) => void;
 	onLoadMore: (view: PagedView) => void;
-	loadingMore: boolean;
+	/** 「もっと見る」で読み込み中の列 */
+	loadingMoreView: PagedView | null;
 };
 
 type SupportListProps = {
@@ -124,8 +126,9 @@ function CommitteeSupportList({
 	onSearchQueryChange,
 	onlyUnreplied,
 	onOnlyUnrepliedChange,
+	loadFailed,
 	onLoadMore,
-	loadingMore,
+	loadingMoreView,
 	currentUser,
 	basePath,
 }: CommitteeListProps & {
@@ -168,8 +171,12 @@ function CommitteeSupportList({
 					basePath={basePath}
 					isAssignedToMe={isAssignedToMe}
 					onLoadMore={onLoadMore}
-					loadingMore={loadingMore}
+					loadingMoreView={loadingMoreView}
 				/>
+			) : loadFailed ? (
+				<Text size="2" color="red">
+					お問い合わせ一覧を取得できませんでした。ページを再読み込みしてください。
+				</Text>
 			) : (
 				<Text size="2" color="gray">
 					読み込み中...
@@ -186,7 +193,7 @@ function CommitteeTabContent({
 	basePath,
 	isAssignedToMe,
 	onLoadMore,
-	loadingMore,
+	loadingMoreView,
 }: {
 	activeTab: CommitteeTab;
 	lists: CommitteeInquiryLists;
@@ -194,7 +201,7 @@ function CommitteeTabContent({
 	basePath: string;
 	isAssignedToMe: (inq: InquirySummary) => boolean;
 	onLoadMore: (view: PagedView) => void;
-	loadingMore: boolean;
+	loadingMoreView: PagedView | null;
 }) {
 	if (activeTab === "draft") {
 		return (
@@ -212,7 +219,7 @@ function CommitteeTabContent({
 				basePath={basePath}
 				isAssignedToMe={isAssignedToMe}
 				onLoadMore={() => onLoadMore("RESOLVED")}
-				loadingMore={loadingMore}
+				loadingMore={loadingMoreView === "RESOLVED"}
 			/>
 		);
 	}
@@ -231,7 +238,7 @@ function CommitteeTabContent({
 					: "未完了のお問い合わせはありません"
 			}
 			onLoadMore={() => onLoadMore("VIEWING")}
-			loadingMore={loadingMore}
+			loadingMore={loadingMoreView === "VIEWING"}
 		/>
 	);
 }

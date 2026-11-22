@@ -397,7 +397,10 @@ async function findProjectIdsByNumber(search: string): Promise<string[]> {
 	return rows.map(r => r.id);
 }
 
-/** 次に返信が期待される側が side の問い合わせの ID（computeAwaitingReplyFrom と同じ判定） */
+/**
+ * 次に返信が期待される側が side の未解決の問い合わせの ID（computeAwaitingReplyFrom と同じ判定）。
+ * 絞り込みは未完了の列でだけ使うので、解決済みは走査しない。
+ */
 async function findInquiryIdsAwaitingReplyFrom(
 	side: "PROJECT" | "COMMITTEE"
 ): Promise<string[]> {
@@ -406,6 +409,7 @@ async function findInquiryIdsAwaitingReplyFrom(
 		SELECT i."id" FROM "Inquiry" i
 		WHERE i."deletedAt" IS NULL
 			AND i."isDraft" = false
+			AND i."status" <> 'RESOLVED'
 			AND COALESCE(
 				(
 					SELECT c."senderRole" FROM "InquiryComment" c
@@ -419,6 +423,26 @@ async function findInquiryIdsAwaitingReplyFrom(
 			) = ${lastActor}::"InquiryCreatorRole"
 	`);
 	return rows.map(r => r.id);
+}
+
+/**
+ * 一覧のページ送りの位置。並び順（updatedAt の降順、id の降順）のキーをそのまま持つ。
+ * 行の ID だけを持つと、その行がページの間に更新されたときに続きの位置がずれる。
+ */
+function encodeListCursor(row: { updatedAt: Date; id: string }): string {
+	return `${row.updatedAt.toISOString()}_${row.id}`;
+}
+
+function decodeListCursor(cursor: string): Prisma.InquiryWhereInput {
+	const separator = cursor.lastIndexOf("_");
+	const updatedAt = new Date(cursor.slice(0, separator));
+	const id = cursor.slice(separator + 1);
+	if (separator < 0 || Number.isNaN(updatedAt.getTime()) || !id) {
+		throw Errors.invalidRequest("cursor が不正です");
+	}
+	return {
+		OR: [{ updatedAt: { lt: updatedAt } }, { updatedAt, id: { lt: id } }],
+	};
 }
 
 /** 一覧の列ごとの条件。対象がない列は null */
@@ -534,6 +558,7 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 				viewWhere,
 				searchWhere,
 				awaitingInquiryIds ? { id: { in: awaitingInquiryIds } } : {},
+				cursor ? decodeListCursor(cursor) : {},
 			],
 		},
 		include: {
@@ -552,11 +577,11 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 		orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
 		// 続きがあるかを知るために 1 件多く取る
 		take: limit === undefined ? undefined : limit + 1,
-		...(cursor && { cursor: { id: cursor }, skip: 1 }),
 	});
 	const hasMore = limit !== undefined && rows.length > limit;
 	const inquiries = hasMore ? rows.slice(0, limit) : rows;
-	const nextCursor = hasMore ? (inquiries.at(-1)?.id ?? null) : null;
+	const last = inquiries.at(-1);
+	const nextCursor = hasMore && last ? encodeListCursor(last) : null;
 
 	const inquiryIds = inquiries.map(i => i.id);
 	const [latestCommentsByInquiryId, lastReadAtByInquiryId] = await Promise.all([

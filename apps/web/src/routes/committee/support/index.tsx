@@ -91,12 +91,13 @@ function CommitteeSupportListPage() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [onlyUnreplied, setOnlyUnreplied] = useState(false);
 	const search = useDebouncedValue(searchQuery.trim(), SEARCH_DEBOUNCE_MS);
-	const { lists, loadMore, loadingMore } = useCommitteeInquiryLists({
-		tab,
-		search,
-		onlyUnreplied,
-		isAdmin,
-	});
+	const { lists, loadFailed, loadMore, loadingMoreView } =
+		useCommitteeInquiryLists({
+			tab,
+			search,
+			onlyUnreplied,
+			isAdmin,
+		});
 	const navigate = useNavigate();
 	const router = useRouter();
 	const { user } = useAuthStore();
@@ -132,12 +133,13 @@ function CommitteeSupportListPage() {
 						});
 					},
 					lists,
+					loadFailed,
 					searchQuery,
 					onSearchQueryChange: setSearchQuery,
 					onlyUnreplied,
 					onOnlyUnrepliedChange: setOnlyUnreplied,
 					onLoadMore: loadMore,
-					loadingMore,
+					loadingMoreView,
 				}}
 			/>
 			<NewInquiryForm
@@ -219,10 +221,14 @@ function useCommitteeInquiryLists({
 }) {
 	const [state, setState] = useState<{
 		tab: CommitteeTab;
-		lists: CommitteeInquiryLists;
+		/** この一覧を取得した要求の番号。条件が変わったあとの「もっと見る」を区別する */
+		requestId: number;
+		lists: CommitteeInquiryLists | null;
 		cursors: Cursors;
 	} | null>(null);
-	const [loadingMore, setLoadingMore] = useState(false);
+	const [loadingMoreView, setLoadingMoreView] = useState<PagedView | null>(
+		null
+	);
 	const requestIdRef = useRef(0);
 
 	useEffect(() => {
@@ -247,6 +253,7 @@ function useCommitteeInquiryLists({
 				if (requestId !== requestIdRef.current) return;
 				setState({
 					tab,
+					requestId,
 					lists: {
 						mine: mine.inquiries,
 						draft: draft.inquiries,
@@ -268,6 +275,13 @@ function useCommitteeInquiryLists({
 			})
 			.catch(error => {
 				if (requestId !== requestIdRef.current) return;
+				// 条件と合わない前の一覧を残さない
+				setState({
+					tab,
+					requestId,
+					lists: null,
+					cursors: { VIEWING: null, RESOLVED: null },
+				});
 				reportHandledError({
 					error,
 					operation: "read",
@@ -279,20 +293,25 @@ function useCommitteeInquiryLists({
 
 	async function loadMore(view: PagedView) {
 		const cursor = state?.cursors[view];
-		if (!state || !cursor) return;
-		const requestId = requestIdRef.current;
-		setLoadingMore(true);
+		// 条件を変えたあとの取得が終わるまでは、前の条件の続きを読まない
+		if (!state || !cursor || state.requestId !== requestIdRef.current) return;
+		const { requestId } = state;
+		setLoadingMoreView(view);
 		try {
 			const res = await listCommitteeInquiries({
 				...buildListQuery(view, true, search, onlyUnreplied),
 				cursor,
 			});
-			// 取得中に条件が変わったら捨てる
 			if (requestId !== requestIdRef.current) return;
 			const key = view === "VIEWING" ? "viewing" : "resolved";
 			setState(prev => {
-				if (!prev) return prev;
-				const items: Inquiries = [...prev.lists[key].items, ...res.inquiries];
+				if (!prev?.lists || prev.requestId !== requestId) return prev;
+				// ページの間に更新されて上へ移った問い合わせが、続きにもう一度含まれることがある
+				const loadedIds = new Set(prev.lists[key].items.map(inq => inq.id));
+				const items: Inquiries = [
+					...prev.lists[key].items,
+					...res.inquiries.filter(inq => !loadedIds.has(inq.id)),
+				];
 				return {
 					...prev,
 					lists: {
@@ -303,6 +322,7 @@ function useCommitteeInquiryLists({
 				};
 			});
 		} catch (error) {
+			if (requestId !== requestIdRef.current) return;
 			reportHandledError({
 				error,
 				operation: "read",
@@ -310,11 +330,16 @@ function useCommitteeInquiryLists({
 				ui: { type: "toast" },
 			});
 		} finally {
-			setLoadingMore(false);
+			setLoadingMoreView(current => (current === view ? null : current));
 		}
 	}
 
 	// タブを切り替えた直後は、前のタブの列を見せない
-	const lists = state && state.tab === tab ? state.lists : null;
-	return { lists, loadMore, loadingMore };
+	const current = state && state.tab === tab ? state : null;
+	return {
+		lists: current?.lists ?? null,
+		loadFailed: current !== null && current.lists === null,
+		loadMore,
+		loadingMoreView,
+	};
 }

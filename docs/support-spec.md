@@ -314,8 +314,8 @@ API 内で以下の自動遷移が行われる:
 |-----------|------|
 | `view` | 取得する列。`MINE`（自分の担当）/ `UNASSIGNED`（担当者未割り当て。INQUIRY_ADMIN 以外は常に空）/ `VIEWING`（閲覧中）/ `DRAFT`（下書き）/ `RESOLVED`（解決済み） |
 | `search` | 件名・企画名・企画番号（3 桁表示）の部分一致 |
-| `awaitingReplyFrom` | 次に返信が期待される側（`PROJECT` / `COMMITTEE`）で絞り込む |
-| `cursor` / `limit` | 更新日時の降順でページ分けする。`limit` を省くと全件を返し、続きがあればレスポンスの `nextCursor` に次の `cursor` を返す |
+| `awaitingReplyFrom` | 次に返信が期待される側（`PROJECT` / `COMMITTEE`）で絞り込む。対象は未解決の問い合わせだけ |
+| `cursor` / `limit` | 更新日時の降順でページ分けする。`limit` を省くと全件を返し、続きがあればレスポンスの `nextCursor` に次の `cursor` を返す。`nextCursor` はそのページの最後の行の更新日時と ID を持つ |
 
 ---
 

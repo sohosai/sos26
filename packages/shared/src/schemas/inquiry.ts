@@ -531,10 +531,10 @@ export const listCommitteeInquiriesQuerySchema = z.object({
 	view: committeeInquiryListViewSchema,
 	/** 件名・企画名・企画番号で検索 */
 	search: z.string().min(1).optional(),
-	/** 次に返信が期待される側で絞り込む */
+	/** 次に返信が期待される側で絞り込む。対象は未解決の問い合わせだけ */
 	awaitingReplyFrom: inquiryCreatorRoleSchema.optional(),
-	/** 前のページの nextCursor */
-	cursor: z.cuid().optional(),
+	/** 前のページの nextCursor をそのまま渡す */
+	cursor: z.string().optional(),
 	limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 export type ListCommitteeInquiriesQuery = z.infer<
@@ -544,7 +544,7 @@ export type ListCommitteeInquiriesQuery = z.infer<
 export const listCommitteeInquiriesResponseSchema = z.object({
 	inquiries: z.array(inquirySummarySchema),
 	/** 続きがなければ null */
-	nextCursor: z.cuid().nullable(),
+	nextCursor: z.string().nullable(),
 });
 export type ListCommitteeInquiriesResponse = z.infer<
 	typeof listCommitteeInquiriesResponseSchema
