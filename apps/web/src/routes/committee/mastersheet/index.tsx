@@ -1,4 +1,5 @@
 import { Heading, Text } from "@radix-ui/themes";
+import type { GetMastersheetDataResponse } from "@sos26/shared";
 import { IconHistory, IconLayoutColumns } from "@tabler/icons-react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import type {
@@ -7,6 +8,7 @@ import type {
 	VisibilityState,
 } from "@tanstack/react-table";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/primitives";
 import { getMastersheetData } from "@/lib/api/committee-mastersheet";
@@ -26,6 +28,8 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/committee/mastersheet/")({
 	validateSearch: searchSchema,
+	// セルの編集は loader のデータに反映しないため、ページを離れたら捨てて次回は取り直す
+	gcTime: 0,
 	loader: async () => {
 		return await getMastersheetData();
 	},
@@ -68,8 +72,19 @@ const DEFAULT_HIDDEN_FIXED_COLUMNS: Record<string, boolean> = {
 	subOwnerTelephoneNumber: false,
 };
 
+type MastersheetCell =
+	GetMastersheetDataResponse["rows"][number]["cells"][number];
+type MastersheetColumn = GetMastersheetDataResponse["columns"][number];
+
 function MastersheetPage() {
-	const { columns, rows } = Route.useLoaderData();
+	const loaderData = Route.useLoaderData();
+	const [data, setData] = useState(loaderData);
+	const [prevLoaderData, setPrevLoaderData] = useState(loaderData);
+	if (loaderData !== prevLoaderData) {
+		setPrevLoaderData(loaderData);
+		setData(loaderData);
+	}
+	const { columns, rows } = data;
 	const { debug } = Route.useSearch();
 	const router = useRouter();
 	const historyPanelRef = useRef<HTMLDivElement>(null);
@@ -89,6 +104,69 @@ function MastersheetPage() {
 
 	async function handleColumnSuccess() {
 		await router.invalidate();
+	}
+
+	async function reloadData() {
+		try {
+			setData(await getMastersheetData());
+		} catch {
+			toast.error(
+				"最新のデータを取得できませんでした。ページを再読み込みしてください"
+			);
+		}
+	}
+
+	/** cell が undefined のときはセルを取り除く */
+	function handleCellChange(
+		projectId: string,
+		columnId: string,
+		cell: MastersheetCell | undefined
+	) {
+		setData(prev => ({
+			...prev,
+			rows: prev.rows.map(row => {
+				if (row.project.id !== projectId) return row;
+				const others = row.cells.filter(c => c.columnId !== columnId);
+				return { ...row, cells: cell ? [...others, cell] : others };
+			}),
+		}));
+	}
+
+	function handleColumnUpdated(column: MastersheetColumn) {
+		// 削除された選択肢はセルの値からも消える
+		const optionIds = new Set(column.options.map(o => o.id));
+		const filterOptions = (value: MastersheetCell["cellValue"]) =>
+			value && {
+				...value,
+				selectedOptionIds: value.selectedOptionIds.filter(id =>
+					optionIds.has(id)
+				),
+			};
+		setData(prev => ({
+			columns: prev.columns.map(c => (c.id === column.id ? column : c)),
+			rows:
+				column.type === "CUSTOM"
+					? prev.rows.map(row => ({
+							...row,
+							cells: row.cells.map(c =>
+								c.columnId === column.id
+									? { ...c, cellValue: filterOptions(c.cellValue) }
+									: c
+							),
+						}))
+					: prev.rows,
+		}));
+	}
+
+	function handleColumnDeleted(columnId: string) {
+		setData(prev => ({
+			columns: prev.columns.filter(c => c.id !== columnId),
+			rows: prev.rows.map(row => ({
+				...row,
+				cells: row.cells.filter(c => c.columnId !== columnId),
+			})),
+		}));
+		setPinnedColumnIds(prev => prev.filter(id => id !== columnId));
 	}
 
 	function handleSortingChange(newSorting: SortingState) {
@@ -206,6 +284,8 @@ function MastersheetPage() {
 						onColumnFiltersChange={setColumnFilters}
 						toolbarExtra={toolbarExtra}
 						onSelectionChange={setSelectedCells}
+						onCellChange={handleCellChange}
+						onReload={reloadData}
 						showColumnIds={debug === true}
 						selectionIgnoreRef={historyPanelRef}
 					/>
@@ -228,6 +308,8 @@ function MastersheetPage() {
 				onToggleColumn={handleToggleColumn}
 				onTogglePinColumn={handleTogglePinColumn}
 				onSuccess={handleColumnSuccess}
+				onColumnUpdated={handleColumnUpdated}
+				onColumnDeleted={handleColumnDeleted}
 			/>
 		</div>
 	);
