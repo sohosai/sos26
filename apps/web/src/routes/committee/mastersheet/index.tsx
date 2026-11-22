@@ -8,6 +8,7 @@ import type {
 	VisibilityState,
 } from "@tanstack/react-table";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/primitives";
 import { getMastersheetData } from "@/lib/api/committee-mastersheet";
@@ -103,6 +104,16 @@ function MastersheetPage() {
 
 	async function handleColumnSuccess() {
 		await router.invalidate();
+	}
+
+	async function reloadData() {
+		try {
+			setData(await getMastersheetData());
+		} catch {
+			toast.error(
+				"最新のデータを取得できませんでした。ページを再読み込みしてください"
+			);
+		}
 	}
 
 	/** cell が undefined のときはセルを取り除く */
@@ -274,6 +285,7 @@ function MastersheetPage() {
 						toolbarExtra={toolbarExtra}
 						onSelectionChange={setSelectedCells}
 						onCellChange={handleCellChange}
+						onReload={reloadData}
 						showColumnIds={debug === true}
 						selectionIgnoreRef={historyPanelRef}
 					/>

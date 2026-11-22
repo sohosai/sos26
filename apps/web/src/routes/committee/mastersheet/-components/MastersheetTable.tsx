@@ -18,7 +18,7 @@ import {
 	IconFileText,
 	IconPencil,
 } from "@tabler/icons-react";
-import { Link as RouterLink, useRouter } from "@tanstack/react-router";
+import { Link as RouterLink } from "@tanstack/react-router";
 import type { ColumnFiltersState } from "@tanstack/react-table";
 import {
 	type ColumnDef,
@@ -85,6 +85,7 @@ type Props = {
 		columnId: string,
 		cell: MastersheetCell | undefined
 	) => void;
+	onReload: () => Promise<void>;
 	selectionIgnoreRef?: React.RefObject<HTMLElement | null>;
 	showColumnIds?: boolean;
 };
@@ -869,6 +870,10 @@ function buildOptimisticCell(
 const latestSaveIds = new Map<string, number>();
 let nextSaveId = 0;
 
+function isResponseLost(error: unknown): boolean {
+	return !(isClientError(error) && error.kind === "api");
+}
+
 async function saveCell(
 	col: ApiColumn,
 	projectId: string,
@@ -894,11 +899,10 @@ export function MastersheetTable({
 	onColumnFiltersChange,
 	onSelectionChange,
 	onCellChange,
+	onReload,
 	selectionIgnoreRef,
 	showColumnIds = false,
 }: Props) {
-	const router = useRouter();
-
 	const effectivePinnedColumnIds = useMemo(() => {
 		const ids = pinnedColumnIds ?? [];
 		return ["actions", ...ids.filter(id => id !== "actions")];
@@ -956,13 +960,17 @@ export function MastersheetTable({
 			onCellChange(projectId, columnId, cell);
 		} catch (error) {
 			if (latestSaveIds.get(saveKey) !== saveId) return;
-			toast.error(
-				isClientError(error) ? error.message : "セルの更新に失敗しました"
-			);
 			onCellChange(projectId, columnId, prevCell);
-			// 応答だけが失われ、サーバーでは保存できている場合があるため取り直す
-			await router.invalidate();
+			await handleSaveFailure(error);
 		}
+	}
+
+	async function handleSaveFailure(error: unknown) {
+		toast.error(
+			isClientError(error) ? error.message : "セルの更新に失敗しました"
+		);
+		// 応答が届かなかったときは、サーバーで保存できていることがあるため取り直す
+		if (isResponseLost(error)) await onReload();
 	}
 
 	return (
