@@ -18,7 +18,7 @@ import {
 	IconFileText,
 	IconPencil,
 } from "@tabler/icons-react";
-import { Link as RouterLink } from "@tanstack/react-router";
+import { Link as RouterLink, useRouter } from "@tanstack/react-router";
 import type { ColumnFiltersState } from "@tanstack/react-table";
 import {
 	type ColumnDef,
@@ -410,8 +410,7 @@ type FormCellFile = NonNullable<
 >["files"][number];
 
 function CompactFileLink({ file }: { file: FormCellFile }) {
-	async function handleClick(e: React.MouseEvent) {
-		e.preventDefault();
+	async function handleClick() {
 		// await のあとに開くとポップアップブロックに掛かるため、先にタブを開いておく
 		const tab = window.open("", "_blank");
 		if (!tab) return;
@@ -427,8 +426,10 @@ function CompactFileLink({ file }: { file: FormCellFile }) {
 	}
 
 	return (
-		<Link href="#" size="2" onClick={handleClick}>
-			{file.fileName}
+		<Link asChild size="2">
+			<button type="button" onClick={handleClick}>
+				{file.fileName}
+			</button>
 		</Link>
 	);
 }
@@ -864,6 +865,10 @@ function buildOptimisticCell(
 	};
 }
 
+/** セルごとに最後に送った保存の番号。古い保存の結果で表示を上書きしないために使う */
+const latestSaveIds = new Map<string, number>();
+let nextSaveId = 0;
+
 async function saveCell(
 	col: ApiColumn,
 	projectId: string,
@@ -892,6 +897,8 @@ export function MastersheetTable({
 	selectionIgnoreRef,
 	showColumnIds = false,
 }: Props) {
+	const router = useRouter();
+
 	const effectivePinnedColumnIds = useMemo(() => {
 		const ids = pinnedColumnIds ?? [];
 		return ["actions", ...ids.filter(id => id !== "actions")];
@@ -935,22 +942,26 @@ export function MastersheetTable({
 
 		const projectId = row.project.id;
 		const prevCell = row.cells[columnId];
+		const saveKey = `${projectId}:${columnId}`;
+		const saveId = ++nextSaveId;
+		latestSaveIds.set(saveKey, saveId);
 		onCellChange(
 			projectId,
 			columnId,
 			buildOptimisticCell(col, prevCell, payload)
 		);
 		try {
-			onCellChange(
-				projectId,
-				columnId,
-				await saveCell(col, projectId, payload)
-			);
+			const cell = await saveCell(col, projectId, payload);
+			if (latestSaveIds.get(saveKey) !== saveId) return;
+			onCellChange(projectId, columnId, cell);
 		} catch (error) {
+			if (latestSaveIds.get(saveKey) !== saveId) return;
 			toast.error(
 				isClientError(error) ? error.message : "セルの更新に失敗しました"
 			);
 			onCellChange(projectId, columnId, prevCell);
+			// 応答だけが失われ、サーバーでは保存できている場合があるため取り直す
+			await router.invalidate();
 		}
 	}
 

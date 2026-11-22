@@ -27,6 +27,8 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/committee/mastersheet/")({
 	validateSearch: searchSchema,
+	// セルの編集は loader のデータに反映しないため、ページを離れたら捨てて次回は取り直す
+	gcTime: 0,
 	loader: async () => {
 		return await getMastersheetData();
 	},
