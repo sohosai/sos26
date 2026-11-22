@@ -1,4 +1,5 @@
 import { Heading, Text } from "@radix-ui/themes";
+import type { GetMastersheetDataResponse } from "@sos26/shared";
 import { IconHistory, IconLayoutColumns } from "@tabler/icons-react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import type {
@@ -68,8 +69,19 @@ const DEFAULT_HIDDEN_FIXED_COLUMNS: Record<string, boolean> = {
 	subOwnerTelephoneNumber: false,
 };
 
+type MastersheetCell =
+	GetMastersheetDataResponse["rows"][number]["cells"][number];
+type MastersheetColumn = GetMastersheetDataResponse["columns"][number];
+
 function MastersheetPage() {
-	const { columns, rows } = Route.useLoaderData();
+	const loaderData = Route.useLoaderData();
+	const [data, setData] = useState(loaderData);
+	const [prevLoaderData, setPrevLoaderData] = useState(loaderData);
+	if (loaderData !== prevLoaderData) {
+		setPrevLoaderData(loaderData);
+		setData(loaderData);
+	}
+	const { columns, rows } = data;
 	const { debug } = Route.useSearch();
 	const router = useRouter();
 	const historyPanelRef = useRef<HTMLDivElement>(null);
@@ -89,6 +101,59 @@ function MastersheetPage() {
 
 	async function handleColumnSuccess() {
 		await router.invalidate();
+	}
+
+	/** cell が undefined のときはセルを取り除く */
+	function handleCellChange(
+		projectId: string,
+		columnId: string,
+		cell: MastersheetCell | undefined
+	) {
+		setData(prev => ({
+			...prev,
+			rows: prev.rows.map(row => {
+				if (row.project.id !== projectId) return row;
+				const others = row.cells.filter(c => c.columnId !== columnId);
+				return { ...row, cells: cell ? [...others, cell] : others };
+			}),
+		}));
+	}
+
+	function handleColumnUpdated(column: MastersheetColumn) {
+		// 削除された選択肢はセルの値からも消える
+		const optionIds = new Set(column.options.map(o => o.id));
+		const filterOptions = (value: MastersheetCell["cellValue"]) =>
+			value && {
+				...value,
+				selectedOptionIds: value.selectedOptionIds.filter(id =>
+					optionIds.has(id)
+				),
+			};
+		setData(prev => ({
+			columns: prev.columns.map(c => (c.id === column.id ? column : c)),
+			rows:
+				column.type === "CUSTOM"
+					? prev.rows.map(row => ({
+							...row,
+							cells: row.cells.map(c =>
+								c.columnId === column.id
+									? { ...c, cellValue: filterOptions(c.cellValue) }
+									: c
+							),
+						}))
+					: prev.rows,
+		}));
+	}
+
+	function handleColumnDeleted(columnId: string) {
+		setData(prev => ({
+			columns: prev.columns.filter(c => c.id !== columnId),
+			rows: prev.rows.map(row => ({
+				...row,
+				cells: row.cells.filter(c => c.columnId !== columnId),
+			})),
+		}));
+		setPinnedColumnIds(prev => prev.filter(id => id !== columnId));
 	}
 
 	function handleSortingChange(newSorting: SortingState) {
@@ -206,6 +271,7 @@ function MastersheetPage() {
 						onColumnFiltersChange={setColumnFilters}
 						toolbarExtra={toolbarExtra}
 						onSelectionChange={setSelectedCells}
+						onCellChange={handleCellChange}
 						showColumnIds={debug === true}
 						selectionIgnoreRef={historyPanelRef}
 					/>
@@ -228,6 +294,8 @@ function MastersheetPage() {
 				onToggleColumn={handleToggleColumn}
 				onTogglePinColumn={handleTogglePinColumn}
 				onSuccess={handleColumnSuccess}
+				onColumnUpdated={handleColumnUpdated}
+				onColumnDeleted={handleColumnDeleted}
 			/>
 		</div>
 	);
