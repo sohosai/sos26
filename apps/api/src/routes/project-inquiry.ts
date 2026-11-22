@@ -6,6 +6,7 @@ import {
 	projectInquiryIdPathParamsSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
+import { allInOrder } from "../lib/all-in-order";
 import { Errors } from "../lib/error";
 import {
 	findLastReadAts,
@@ -276,7 +277,7 @@ projectInquiryRoute.post(
 			...new Set((coAssigneeUserIds ?? []).filter(id => id !== user.id)),
 		];
 		const uniqueFileIds = [...new Set(fileIds ?? [])];
-		const [, , { formOwnerId, formCollaboratorIds }] = await Promise.all([
+		const [, , { formOwnerId, formCollaboratorIds }] = await allInOrder([
 			validateCoAssignees(project, uniqueCoAssigneeIds),
 			validateAttachments(uniqueFileIds, user.id),
 			// 関連申請の検証と初期対応ルール

@@ -42,6 +42,8 @@ export type CommitteeListProps = {
 	onTabChange: (tab: CommitteeTab) => void;
 	/** 取得中と取得に失敗したときは null */
 	lists: CommitteeInquiryLists | null;
+	/** タブのバッジ。一覧を取り直しているあいだも前の件数を出す */
+	badgeCounts: { mine: number; draft: number };
 	loadFailed: boolean;
 	searchQuery: string;
 	onSearchQueryChange: (query: string) => void;
@@ -122,6 +124,7 @@ function CommitteeSupportList({
 	activeTab,
 	onTabChange,
 	lists,
+	badgeCounts,
 	searchQuery,
 	onSearchQueryChange,
 	onlyUnreplied,
@@ -144,8 +147,8 @@ function CommitteeSupportList({
 			<div className={styles.toolbar}>
 				<CommitteeTabs
 					activeTab={activeTab}
-					myCount={lists?.mine.length ?? 0}
-					draftCount={lists?.draft.length ?? 0}
+					myCount={badgeCounts.mine}
+					draftCount={badgeCounts.draft}
 					onChangeTab={onTabChange}
 				/>
 				<div className={styles.filters}>

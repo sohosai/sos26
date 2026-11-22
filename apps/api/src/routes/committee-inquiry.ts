@@ -14,6 +14,7 @@ import {
 	updateInquiryViewersRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
+import { allInOrder } from "../lib/all-in-order";
 import { Errors } from "../lib/error";
 import {
 	findLastReadAts,
@@ -316,7 +317,7 @@ committeeInquiryRoute.post(
 			isDraft,
 		} = createCommitteeInquiryRequestSchema.parse(body);
 
-		await Promise.all([
+		await allInOrder([
 			validateProjectAssignees(projectId, projectAssigneeUserIds),
 			validateCommitteeAssignees(committeeAssigneeUserIds ?? []),
 			validateAttachments(fileIds ?? [], user.id),
