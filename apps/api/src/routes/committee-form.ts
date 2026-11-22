@@ -37,6 +37,7 @@ import {
 	mapFormToApiShape,
 	mapItemToApiShape,
 } from "../lib/form-constraints";
+import { findLatestFormItemEditHistoryIds } from "../lib/latest-edit-history";
 import {
 	notifyFormAuthorizationCancelled,
 	notifyFormAuthorizationDecided,
@@ -1177,30 +1178,26 @@ committeeFormRoute.get(
 			...new Set(responses.map(r => r.formDelivery.projectId)),
 		];
 
-		const allHistory =
-			formItemIds.length && projectIds.length
-				? await prisma.formItemEditHistory.findMany({
-						where: {
-							formItemId: { in: formItemIds },
-							projectId: { in: projectIds },
-						},
-						orderBy: { createdAt: "desc" },
-						include: {
-							files: answerFilesInclude,
-							selectedOptions: {
-								include: {
-									formItemOption: { select: { id: true, label: true } },
-								},
+		const latestHistoryIds = await findLatestFormItemEditHistoryIds(
+			formItemIds,
+			projectIds
+		);
+		const latestHistories = latestHistoryIds.length
+			? await prisma.formItemEditHistory.findMany({
+					where: { id: { in: latestHistoryIds } },
+					include: {
+						files: answerFilesInclude,
+						selectedOptions: {
+							include: {
+								formItemOption: { select: { id: true, label: true } },
 							},
 						},
-					})
-				: [];
-
-		const latestByCell = new Map<string, (typeof allHistory)[0]>();
-		for (const h of allHistory) {
-			const key = `${h.formItemId}:${h.projectId}`;
-			if (!latestByCell.has(key)) latestByCell.set(key, h);
-		}
+					},
+				})
+			: [];
+		const latestByCell = new Map(
+			latestHistories.map(h => [`${h.formItemId}:${h.projectId}`, h])
+		);
 
 		return c.json({
 			responses: responses.map(r => ({
@@ -1307,23 +1304,19 @@ committeeFormRoute.get(
 		const projectIds = [
 			...new Set(responses.map(r => r.formDelivery.projectId)),
 		];
-		const allHistory =
-			fileItemIds.length && projectIds.length
-				? await prisma.formItemEditHistory.findMany({
-						where: {
-							formItemId: { in: fileItemIds },
-							projectId: { in: projectIds },
-						},
-						orderBy: { createdAt: "desc" },
-						include: { files: answerFilesWithKeyInclude },
-					})
-				: [];
-
-		const latestByCell = new Map<string, (typeof allHistory)[0]>();
-		for (const h of allHistory) {
-			const key = `${h.formItemId}:${h.projectId}`;
-			if (!latestByCell.has(key)) latestByCell.set(key, h);
-		}
+		const latestHistoryIds = await findLatestFormItemEditHistoryIds(
+			fileItemIds,
+			projectIds
+		);
+		const latestHistories = latestHistoryIds.length
+			? await prisma.formItemEditHistory.findMany({
+					where: { id: { in: latestHistoryIds } },
+					include: { files: answerFilesWithKeyInclude },
+				})
+			: [];
+		const latestByCell = new Map(
+			latestHistories.map(h => [`${h.formItemId}:${h.projectId}`, h])
+		);
 
 		// エントリを事前に収集して、全ファイルが存在することを確認
 		const entries = collectZipEntries({
@@ -1434,13 +1427,13 @@ committeeFormRoute.get(
 		// FormItemEditHistory の最新値を取得
 		const formItemIds = r.answers.map(a => a.formItemId);
 		const projectId = r.formDelivery.project.id;
-		const allHistory = formItemIds.length
+		const latestHistoryIds = await findLatestFormItemEditHistoryIds(
+			formItemIds,
+			[projectId]
+		);
+		const latestHistories = latestHistoryIds.length
 			? await prisma.formItemEditHistory.findMany({
-					where: {
-						formItemId: { in: formItemIds },
-						projectId,
-					},
-					orderBy: { createdAt: "desc" },
+					where: { id: { in: latestHistoryIds } },
 					include: {
 						files: answerFilesInclude,
 						selectedOptions: {
@@ -1451,11 +1444,7 @@ committeeFormRoute.get(
 					},
 				})
 			: [];
-
-		const latestByItem = new Map<string, (typeof allHistory)[0]>();
-		for (const h of allHistory) {
-			if (!latestByItem.has(h.formItemId)) latestByItem.set(h.formItemId, h);
-		}
+		const latestByItem = new Map(latestHistories.map(h => [h.formItemId, h]));
 
 		return c.json({
 			response: {

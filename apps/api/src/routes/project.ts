@@ -29,6 +29,7 @@ import {
 	assertRequiredAnswered,
 } from "../lib/form-answer-validation";
 import { mapItemToApiShape } from "../lib/form-constraints";
+import { findLatestProjectRegistrationFormItemEditHistoryIds } from "../lib/latest-edit-history";
 import {
 	notifySubOwnerRequestApproved,
 	notifySubOwnerRequestCancelled,
@@ -494,13 +495,14 @@ projectRoute.get(
 				selectedOptions: { formItemOption: { id: string; label: string } }[];
 			}
 		>();
-		if (formItemIds.length > 0) {
+		const latestHistoryIds =
+			await findLatestProjectRegistrationFormItemEditHistoryIds(formItemIds, [
+				project.id,
+			]);
+		if (latestHistoryIds.length > 0) {
 			const editHistories =
 				await prisma.projectRegistrationFormItemEditHistory.findMany({
-					where: {
-						projectId: project.id,
-						formItemId: { in: formItemIds },
-					},
+					where: { id: { in: latestHistoryIds } },
 					include: {
 						files: {
 							orderBy: { sortOrder: "asc" },
@@ -523,20 +525,15 @@ projectRoute.get(
 							},
 						},
 					},
-					orderBy: {
-						createdAt: "desc",
-					},
 				});
 
 			for (const history of editHistories) {
-				if (!latestHistoryByFormItemId.has(history.formItemId)) {
-					latestHistoryByFormItemId.set(history.formItemId, {
-						textValue: history.textValue,
-						numberValue: history.numberValue,
-						files: history.files,
-						selectedOptions: history.selectedOptions,
-					});
-				}
+				latestHistoryByFormItemId.set(history.formItemId, {
+					textValue: history.textValue,
+					numberValue: history.numberValue,
+					files: history.files,
+					selectedOptions: history.selectedOptions,
+				});
 			}
 		}
 
