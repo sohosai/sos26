@@ -30,7 +30,7 @@ import {
 	useReactTable,
 	type VisibilityState,
 } from "@tanstack/react-table";
-import { useWindowVirtualizer } from "@tanstack/react-virtual";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
 	type CSSProperties,
 	memo,
@@ -457,26 +457,70 @@ function DataTableRowImpl<T extends RowData>(props: DataTableRowProps<T>) {
 const DataTableRow = memo(DataTableRowImpl) as typeof DataTableRowImpl;
 
 /**
- * 行が多い表では、画面に見えている行とその前後だけを返す。
- * 表はページ全体のスクロールで動くので、ページの先頭から表の本体までの距離を起点にする
+ * 縦にスクロールしている祖先の要素を返す。
+ * 表を横スクロールさせる要素も overflow-y が auto と計算されるので、中身がはみ出しているかでも見分ける
+ */
+function findScrollParent(el: HTMLElement | null): HTMLElement | null {
+	for (let parent = el?.parentElement; parent; parent = parent.parentElement) {
+		const { overflowY } = getComputedStyle(parent);
+		const scrollable = overflowY === "auto" || overflowY === "scroll";
+		if (scrollable && parent.scrollHeight > parent.clientHeight) return parent;
+	}
+	return null;
+}
+
+/**
+ * 行が多い表では、スクロールしている祖先の要素（レイアウトの main やダイアログの中）で見えている行と、その前後だけを返す
  */
 function useRowVirtualizer<T extends RowData>(rows: Row<T>[]) {
-	const virtualize = rows.length > VIRTUALIZE_ROW_THRESHOLD;
+	const wantsVirtualize = rows.length > VIRTUALIZE_ROW_THRESHOLD;
 	const tbodyRef = useRef<HTMLTableSectionElement>(null);
+	// まだ探していないときは undefined、スクロールする祖先がないときは null
+	const [scrollElement, setScrollElement] = useState<
+		HTMLElement | null | undefined
+	>(undefined);
+	useLayoutEffect(() => {
+		if (!wantsVirtualize) return;
+		setScrollElement(findScrollParent(tbodyRef.current));
+	}, [wantsVirtualize]);
+
+	// スクロールする要素の中での、表の本体の位置
 	const [scrollMargin, setScrollMargin] = useState(0);
 	useLayoutEffect(() => {
-		if (!virtualize || !tbodyRef.current) return;
-		const top = tbodyRef.current.getBoundingClientRect().top + window.scrollY;
+		if (!scrollElement || !tbodyRef.current) return;
+		const top =
+			tbodyRef.current.getBoundingClientRect().top -
+			scrollElement.getBoundingClientRect().top -
+			scrollElement.clientTop +
+			scrollElement.scrollTop;
 		setScrollMargin(prev => (prev === top ? prev : top));
 	});
-	const virtualizer = useWindowVirtualizer({
+
+	const virtualize = wantsVirtualize && !!scrollElement;
+	const virtualizer = useVirtualizer({
 		count: rows.length,
+		getScrollElement: () => scrollElement ?? null,
 		estimateSize: () => ESTIMATED_ROW_HEIGHT,
+		// 並べ替えで行の位置が変わっても、測った高さを行に結びつけておく
+		getItemKey: index => rows[index]?.id ?? index,
 		overscan: 10,
 		scrollMargin,
 		enabled: virtualize,
 	});
 
+	if (wantsVirtualize && scrollElement === undefined) {
+		// スクロールする祖先を探す前の描画。行の分の高さを置いて、祖先が実際にはみ出すようにする
+		return {
+			virtualize,
+			tbodyRef,
+			renderedRows: [],
+			paddingTop: rows.length * ESTIMATED_ROW_HEIGHT,
+			paddingBottom: 0,
+			measureElement: virtualizer.measureElement,
+			firstRenderedIndex: 0,
+			lastRenderedIndex: -1,
+		};
+	}
 	if (!virtualize) {
 		return {
 			virtualize,
@@ -486,6 +530,7 @@ function useRowVirtualizer<T extends RowData>(rows: Row<T>[]) {
 			paddingBottom: 0,
 			measureElement: virtualizer.measureElement,
 			firstRenderedIndex: 0,
+			lastRenderedIndex: rows.length - 1,
 		};
 	}
 	const items = virtualizer.getVirtualItems();
@@ -504,6 +549,7 @@ function useRowVirtualizer<T extends RowData>(rows: Row<T>[]) {
 			: 0,
 		measureElement: virtualizer.measureElement,
 		firstRenderedIndex: first?.index ?? 0,
+		lastRenderedIndex: last?.index ?? -1,
 	};
 }
 
@@ -812,6 +858,7 @@ export function DataTable<T extends RowData>({
 		paddingBottom,
 		measureElement,
 		firstRenderedIndex,
+		lastRenderedIndex,
 	} = useRowVirtualizer(table.getRowModel().rows);
 	const selectedCellIndexesByRow = groupSelectedCellIndexes(selected);
 	const visibleColumnCount = table.getVisibleLeafColumns().length;
@@ -824,8 +871,8 @@ export function DataTable<T extends RowData>({
 	}, [pinnedColumnIds, f.rowSelection, effectivePinnedSet, table]);
 	const lastPinnedId = pinnedVisibleColumns.at(-1)?.id;
 
-	// 仮想化すると描画する行が変わり、列の幅も変わりうるので、firstRenderedIndex が変わったら測り直す
-	// biome-ignore lint/correctness/useExhaustiveDependencies: firstRenderedIndex is an intentional trigger
+	// 仮想化すると描画する行が変わり、列の幅も変わりうるので、描画する範囲が変わったら測り直す
+	// biome-ignore lint/correctness/useExhaustiveDependencies: firstRenderedIndex and lastRenderedIndex are intentional triggers
 	useLayoutEffect(() => {
 		if (!pinnedColumnIds?.length && !f.rowSelection) {
 			setPinnedLeft({});
@@ -848,6 +895,7 @@ export function DataTable<T extends RowData>({
 		f.rowSelection,
 		pinnedVisibleColumns,
 		firstRenderedIndex,
+		lastRenderedIndex,
 	]);
 
 	return (
