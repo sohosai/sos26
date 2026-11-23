@@ -1,12 +1,13 @@
 import { Badge, Heading, Text } from "@radix-ui/themes";
 import { IconEdit, IconLock } from "@tabler/icons-react";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
 import { DataTable, DateCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { listProjectForms } from "@/lib/api/project-form";
+import { refreshNotificationDot } from "@/lib/project/notification-status";
 import { useProjectStore } from "@/lib/project/store";
 import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 import { ProjectFormAnswerDialog } from "./-components/ProjectFormAnswerDialog";
@@ -63,7 +64,6 @@ export const Route = createFileRoute("/project/forms/")({
 
 function RouteComponent() {
 	const { forms: initialForms } = Route.useLoaderData();
-	const router = useRouter();
 	const [forms, setForms] = useState<FormRow[]>(initialForms);
 	const { selectedProjectId } = useProjectStore();
 
@@ -82,9 +82,8 @@ function RouteComponent() {
 					f.formDeliveryId === deliveryId ? { ...f, responseId } : f
 				)
 			);
-			void router.invalidate();
 		},
-		[router]
+		[]
 	);
 
 	const handleSubmitSuccess = useCallback(
@@ -95,9 +94,9 @@ function RouteComponent() {
 				)
 			);
 			setAnsweringDeliveryId(null);
-			void router.invalidate();
+			void refreshNotificationDot();
 		},
-		[router]
+		[]
 	);
 
 	const columns = [

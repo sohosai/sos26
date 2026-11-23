@@ -29,6 +29,7 @@ import { getProjectPublicInfo } from "@/lib/api/project-public-info";
 import { requireAuth, useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
 import { refreshMyProjects } from "@/lib/project/my-projects";
+import { registerNotificationDotRefresh } from "@/lib/project/notification-status";
 import { useProjectStore } from "@/lib/project/store";
 import styles from "./route.module.scss";
 
@@ -282,36 +283,50 @@ function ProjectLayout() {
 				notificationStatus.hasUnreadInquiryComments),
 	}));
 
-	const refreshNotificationStatus = useCallback(async () => {
-		if (!selectedProjectId) {
-			setNotificationStatus(EMPTY_NOTIFICATION_STATUS);
-			return;
-		}
-
-		try {
-			const next = await getProjectNotificationStatus(selectedProjectId);
-			// 応答を待つ間に企画が切り替わっていたら、前の企画の状態を反映しない
-			if (useProjectStore.getState().selectedProjectId !== selectedProjectId) {
+	/** reflectChanges が false のときは、状態が変わっても開いている画面を取り直さない */
+	const refreshNotificationStatus = useCallback(
+		async ({ reflectChanges = true }: { reflectChanges?: boolean } = {}) => {
+			if (!selectedProjectId) {
+				setNotificationStatus(EMPTY_NOTIFICATION_STATUS);
 				return;
 			}
 
-			const current = notificationStatusRef.current;
-			const changed =
-				next.hasUnansweredForms !== current.hasUnansweredForms ||
-				next.hasUncheckedNotices !== current.hasUncheckedNotices ||
-				next.hasUnreadInquiryComments !== current.hasUnreadInquiryComments ||
-				next.latestActivityAt?.getTime() !==
-					current.latestActivityAt?.getTime();
+			try {
+				const next = await getProjectNotificationStatus(selectedProjectId);
+				// 応答を待つ間に企画が切り替わっていたら、前の企画の状態を反映しない
+				if (
+					useProjectStore.getState().selectedProjectId !== selectedProjectId
+				) {
+					return;
+				}
 
-			setNotificationStatus(next);
-			// 開いている画面にも新しいお知らせや返信を反映する
-			if (changed) void router.invalidate();
-		} catch {
-			// 企画から外された場合に別の企画へ切り替える
-			await refreshMyProjects().catch(() => undefined);
-			void router.invalidate();
-		}
-	}, [router, selectedProjectId]);
+				const current = notificationStatusRef.current;
+				const changed =
+					next.hasUnansweredForms !== current.hasUnansweredForms ||
+					next.hasUncheckedNotices !== current.hasUncheckedNotices ||
+					next.hasUnreadInquiryComments !== current.hasUnreadInquiryComments ||
+					next.latestActivityAt?.getTime() !==
+						current.latestActivityAt?.getTime();
+
+				setNotificationStatus(next);
+				// 開いている画面にも新しいお知らせや返信を反映する
+				if (changed && reflectChanges) void router.invalidate();
+			} catch {
+				// 企画から外された場合に別の企画へ切り替える
+				await refreshMyProjects().catch(() => undefined);
+				void router.invalidate();
+			}
+		},
+		[router, selectedProjectId]
+	);
+
+	useEffect(
+		() =>
+			registerNotificationDotRefresh(() =>
+				refreshNotificationStatus({ reflectChanges: false })
+			),
+		[refreshNotificationStatus]
+	);
 
 	useEffect(() => {
 		let lastRefreshAt = 0;
