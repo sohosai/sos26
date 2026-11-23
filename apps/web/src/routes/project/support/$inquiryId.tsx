@@ -1,6 +1,6 @@
 import { Heading, Text } from "@radix-ui/themes";
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/primitives";
@@ -15,6 +15,7 @@ import {
 	reopenProjectInquiry,
 } from "@/lib/api/project-inquiry";
 import { useAuthStore } from "@/lib/auth";
+import { reportHandledError } from "@/lib/error/report";
 import { useProjectStore } from "@/lib/project/store";
 import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 
@@ -31,6 +32,10 @@ export const Route = createFileRoute("/project/support/$inquiryId")({
 		],
 	}),
 	validateSearch: searchSchema,
+	// 操作の結果は画面の state にだけ反映するので、ページを離れたら loader のデータを捨て、開き直したときに古い表示を出さない
+	gcTime: 0,
+	// パラメータが変わったら作り直し、前の詳細を待っていた応答を移った先の画面に入れない
+	remountDeps: ({ params }) => params,
 	beforeLoad: ({ search }) => {
 		syncSelectedProjectFromSearch(search.projectId);
 	},
@@ -55,10 +60,18 @@ export const Route = createFileRoute("/project/support/$inquiryId")({
 function ProjectSupportDetailPage() {
 	const { inquiryId } = Route.useParams();
 	const data = Route.useLoaderData();
-	const router = useRouter();
 	const { selectedProjectId } = useProjectStore();
 	const { user } = useAuthStore();
 	const loadedInquiry = data?.inquiry;
+
+	// 操作の結果を loader の再実行なしで反映するため、手元で持つ
+	const [inquiry, setInquiry] = useState(loadedInquiry);
+	const [loadedFrom, setLoadedFrom] = useState(loadedInquiry);
+	if (loadedFrom !== loadedInquiry) {
+		setLoadedFrom(loadedInquiry);
+		setInquiry(loadedInquiry);
+	}
+	const latestRefreshIdRef = useRef(0);
 
 	// 詳細を表示したときと、新しいコメントを取り直したときに既読にする。失敗しても表示は続ける
 	useEffect(() => {
@@ -68,7 +81,7 @@ function ProjectSupportDetailPage() {
 		);
 	}, [selectedProjectId, loadedInquiry]);
 
-	if (!data || !selectedProjectId) {
+	if (!data || !inquiry || !selectedProjectId) {
 		return (
 			<div>
 				<Heading size="5">お問い合わせが見つかりません</Heading>
@@ -82,7 +95,31 @@ function ProjectSupportDetailPage() {
 		);
 	}
 
-	const { inquiry, projectMembers } = data;
+	const { projectMembers } = data;
+
+	// 操作で変わるアクティビティや担当者・ステータスを反映するため、詳細だけを取り直す。
+	// 続けて操作したときに古い応答で上書きしないよう、最後に出したリクエストの分だけ反映する
+	const refreshInquiry = async () => {
+		latestRefreshIdRef.current += 1;
+		const refreshId = latestRefreshIdRef.current;
+		try {
+			const res = await getProjectInquiry(selectedProjectId, inquiryId);
+			if (refreshId !== latestRefreshIdRef.current) return;
+			setInquiry(res.inquiry);
+			void readProjectInquiry(selectedProjectId, inquiryId).catch(
+				() => undefined
+			);
+		} catch (error) {
+			if (refreshId !== latestRefreshIdRef.current) return;
+			reportHandledError({
+				error,
+				operation: "read",
+				userMessage: "お問い合わせの再読み込みに失敗しました",
+				ui: { type: "toast" },
+				context: { inquiryId },
+			});
+		}
+	};
 
 	const isAssigneeOrAdmin =
 		!!user && inquiry.projectAssignees.some(a => a.user.id === user.id);
@@ -100,8 +137,8 @@ function ProjectSupportDetailPage() {
 				try {
 					if (status === "IN_PROGRESS") {
 						await reopenProjectInquiry(selectedProjectId, inquiryId);
+						await refreshInquiry();
 					}
-					await router.invalidate();
 				} catch {
 					toast.error("ステータスの更新に失敗しました");
 				}
@@ -112,7 +149,7 @@ function ProjectSupportDetailPage() {
 						body,
 						fileIds,
 					});
-					await router.invalidate();
+					await refreshInquiry();
 				} catch {
 					toast.error("コメントの送信に失敗しました");
 				}
@@ -123,7 +160,7 @@ function ProjectSupportDetailPage() {
 						userId,
 						side,
 					});
-					await router.invalidate();
+					await refreshInquiry();
 				} catch {
 					toast.error("担当者の追加に失敗しました");
 				}
@@ -134,7 +171,11 @@ function ProjectSupportDetailPage() {
 					inquiryId,
 					assigneeId
 				);
-				await router.invalidate();
+				// 自分を外したときは一覧へ移る。閲覧できなくなるので取り直さない
+				const removedSelf = inquiry.projectAssignees.some(
+					a => a.id === assigneeId && a.user.id === user?.id
+				);
+				if (!removedSelf) await refreshInquiry();
 			}}
 		/>
 	);
