@@ -1,19 +1,26 @@
 import { Badge, Heading, Text } from "@radix-ui/themes";
-import type { Bureau, GetProjectNoticeResponse } from "@sos26/shared";
+import type {
+	Bureau,
+	GetProjectNoticeResponse,
+	ListProjectNoticesResponse,
+} from "@sos26/shared";
 import { bureauLabelMap, ErrorCode } from "@sos26/shared";
 import { IconEye } from "@tabler/icons-react";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { DataTable, DateCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
-import { getProjectNotice, listProjectNotices } from "@/lib/api/project-notice";
+import { getProjectNotice } from "@/lib/api/project-notice";
 import { isClientError } from "@/lib/http/error";
 import { refreshNotificationDot } from "@/lib/project/notification-status";
-import { useProjectStore } from "@/lib/project/store";
+import { useProject, useProjectStore } from "@/lib/project/store";
 import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
+import { queryClient } from "@/lib/query/client";
+import { projectNoticesQuery } from "@/lib/query/project";
 import { NoticeDetailDialog } from "./-components/NoticeDetailDialog";
 import styles from "./index.module.scss";
 
@@ -33,6 +40,19 @@ type NoticeRow = {
 	deliveredAt: Date;
 	isRead: boolean;
 };
+type ProjectNoticeListItem = ListProjectNoticesResponse["notices"][number];
+
+function toNoticeRow(n: ProjectNoticeListItem): NoticeRow {
+	return {
+		id: n.id,
+		title: n.title,
+		ownerName: n.owner.name,
+		ownerBureau: n.ownerBureau,
+		deliveredAt: n.deliveredAt,
+		isRead: n.isRead,
+	};
+}
+
 type NoticeDetail = GetProjectNoticeResponse["notice"];
 type ResolvedNotice = { projectId: string; notice: NoticeDetail };
 type SelectedNotice = {
@@ -99,10 +119,10 @@ async function getNoticeDetailInProject(
 async function resolveNoticeProject(
 	noticeId: string,
 	preferredProjectId: string | undefined,
-	preferredNotices: NoticeRow[],
+	isInPreferredProject: boolean,
 	signal: AbortSignal
 ): Promise<ResolvedNotice | null> {
-	if (preferredProjectId && preferredNotices.some(n => n.id === noticeId)) {
+	if (preferredProjectId && isInPreferredProject) {
 		return getNoticeDetailInProject(preferredProjectId, noticeId, signal);
 	}
 
@@ -110,7 +130,9 @@ async function resolveNoticeProject(
 	for (const project of projects) {
 		if (project.id === preferredProjectId) continue;
 		if (signal.aborted) return null;
-		const { notices } = await listProjectNotices(project.id);
+		const { notices } = await queryClient.fetchQuery(
+			projectNoticesQuery(project.id)
+		);
 		if (!notices.some(n => n.id === noticeId)) continue;
 		return getNoticeDetailInProject(project.id, noticeId, signal);
 	}
@@ -128,31 +150,20 @@ export const Route = createFileRoute("/project/notice/")({
 	},
 	loader: async () => {
 		const { selectedProjectId } = useProjectStore.getState();
-		if (!selectedProjectId) return { notices: [] as NoticeRow[] };
-		const res = await listProjectNotices(selectedProjectId);
-		return {
-			notices: res.notices.map(n => ({
-				id: n.id,
-				title: n.title,
-				ownerName: n.owner.name,
-				ownerBureau: n.ownerBureau,
-				deliveredAt: n.deliveredAt,
-				isRead: n.isRead,
-			})),
-		};
+		if (!selectedProjectId) return;
+		await queryClient.fetchQuery(projectNoticesQuery(selectedProjectId));
 	},
 });
 
 function RouteComponent() {
-	const { notices: initialNotices } = Route.useLoaderData();
 	const search = Route.useSearch();
 	const navigate = useNavigate();
-	const [notices, setNotices] = useState<NoticeRow[]>(initialNotices);
-	const { selectedProjectId } = useProjectStore();
-
-	useEffect(() => {
-		setNotices(initialNotices);
-	}, [initialNotices]);
+	const { id: selectedProjectId } = useProject();
+	const { data } = useSuspenseQuery(projectNoticesQuery(selectedProjectId));
+	const notices = useMemo(() => data.notices.map(toNoticeRow), [data]);
+	const isTargetInSelectedProject =
+		search.noticeId !== undefined &&
+		data.notices.some(n => n.id === search.noticeId);
 
 	const [selectedNotice, setSelectedNotice] = useState<SelectedNotice | null>(
 		null
@@ -172,11 +183,10 @@ function RouteComponent() {
 		}
 
 		const controller = new AbortController();
-		const preferredProjectId = selectedProjectId ?? undefined;
 		void resolveNoticeProject(
 			targetNoticeId,
-			preferredProjectId,
-			initialNotices,
+			selectedProjectId,
+			isTargetInSelectedProject,
 			controller.signal
 		)
 			.then(result => {
@@ -210,15 +220,25 @@ function RouteComponent() {
 			});
 
 		return () => controller.abort();
-	}, [search.noticeId, selectedProjectId, navigate, initialNotices]);
+	}, [search.noticeId, selectedProjectId, navigate, isTargetInSelectedProject]);
 
-	const handleRead = useCallback((noticeId: string) => {
-		setNotices(prev =>
-			prev.map(n => (n.id === noticeId ? { ...n, isRead: true } : n))
-		);
-		markCachedNoticeRead(noticeId);
-		void refreshNotificationDot();
-	}, []);
+	const handleRead = useCallback(
+		(noticeId: string) => {
+			queryClient.setQueryData(
+				projectNoticesQuery(selectedProjectId).queryKey,
+				prev =>
+					prev && {
+						...prev,
+						notices: prev.notices.map(n =>
+							n.id === noticeId ? { ...n, isRead: true } : n
+						),
+					}
+			);
+			markCachedNoticeRead(noticeId);
+			void refreshNotificationDot();
+		},
+		[selectedProjectId]
+	);
 
 	const columns = [
 		noticeColumnHelper.accessor("title", {
@@ -256,7 +276,6 @@ function RouteComponent() {
 					intent="secondary"
 					size="1"
 					onClick={() => {
-						if (!selectedProjectId) return;
 						setSelectedNotice({
 							id: row.original.id,
 							projectId: selectedProjectId,

@@ -31,7 +31,6 @@ import {
 	removeFormCollaborator,
 	updateFormViewers,
 } from "@/lib/api/committee-form";
-import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import { useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
 import {
@@ -42,6 +41,8 @@ import { formDetailToForm } from "@/lib/form/convert";
 import { getFormStatusFromAuth } from "@/lib/form/form-status";
 import { useLazyResponses } from "@/lib/form/use-lazy-responses";
 import { formatDate, formatProjectNumber } from "@/lib/format";
+import { queryClient } from "@/lib/query/client";
+import { committeeMembersPickerQuery } from "@/lib/query/committee";
 import { EditFormDialog } from "./-components/EditFormDialog";
 import { FormDetailSidebar } from "./-components/FormDetailSidebar";
 import { FormItemsPreview } from "./-components/FormItemsPreview";
@@ -90,7 +91,7 @@ export const Route = createFileRoute("/committee/forms/$formId/")({
 	loader: async ({ params }) => {
 		const [formRes, membersRes] = await Promise.all([
 			getFormDetail(params.formId),
-			listCommitteeMembersPicker(),
+			queryClient.fetchQuery(committeeMembersPickerQuery),
 		]);
 		return {
 			form: formRes.form,

@@ -12,10 +12,12 @@ import type {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
-import { getFormDetail, listMyForms } from "@/lib/api/committee-form";
+import { getFormDetail } from "@/lib/api/committee-form";
 import { createMastersheetColumn } from "@/lib/api/committee-mastersheet";
 import { useAuthStore } from "@/lib/auth";
 import { isClientError } from "@/lib/http/error";
+import { queryClient } from "@/lib/query/client";
+import { myFormsQuery } from "@/lib/query/committee";
 import styles from "./AddFormItemColumnsDialog.module.scss";
 
 type ApiColumn = GetMastersheetDataResponse["columns"][number];
@@ -61,7 +63,8 @@ export function AddFormItemColumnsDialog({
 		setSelectedFormId(null);
 		setItems([]);
 		setSelectedItemIds(new Set());
-		listMyForms()
+		queryClient
+			.fetchQuery(myFormsQuery)
 			.then(res => {
 				const accessible = res.forms.filter(
 					f =>

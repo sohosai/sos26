@@ -17,6 +17,8 @@ import {
 	updateCommitteeProjectBaseInfo,
 } from "@/lib/api/committee-project";
 import { reportHandledError } from "@/lib/error/report";
+import { queryClient } from "@/lib/query/client";
+import { committeeQueryKeys } from "@/lib/query/committee";
 import styles from "../$projectId.module.scss";
 import { Field } from "./Field";
 
@@ -102,6 +104,10 @@ export function EditProjectDialog({
 
 			// 責任者情報を含めて基本情報を更新
 			const res = await updateCommitteeProjectBaseInfo(project.id, form);
+			// 問い合わせの作成画面などで使う企画名の一覧も変わりうる
+			void queryClient.invalidateQueries({
+				queryKey: committeeQueryKeys.allProjects,
+			});
 			onProjectUpdate(res.project);
 
 			onOpenChange(false);

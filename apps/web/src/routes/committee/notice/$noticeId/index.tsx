@@ -14,7 +14,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AttachmentPreviewButton } from "@/components/filePreview/AttachmentPreviewButton";
 import { Button } from "@/components/primitives";
-import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import {
 	addCollaborator,
 	deleteNotice,
@@ -26,6 +25,8 @@ import { useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
 import { formatDate } from "@/lib/format";
 import { getNoticeStatusFromAuth } from "@/lib/notice-status";
+import { queryClient } from "@/lib/query/client";
+import { committeeMembersPickerQuery } from "@/lib/query/committee";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { CreateNoticeDialog } from "../-components/CreateNoticeDialog";
 import { NoticeDetailSidebar } from "./-components/NoticeDetailSidebar";
@@ -45,7 +46,7 @@ export const Route = createFileRoute("/committee/notice/$noticeId/")({
 	loader: async ({ params }) => {
 		const [noticeRes, membersRes] = await Promise.all([
 			getNotice(params.noticeId),
-			listCommitteeMembersPicker(),
+			queryClient.fetchQuery(committeeMembersPickerQuery),
 		]);
 		return {
 			notice: noticeRes.notice,

@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
 import { SupportDetail } from "@/components/support/SupportDetail";
-import { listMyForms } from "@/lib/api/committee-form";
 import {
 	addCommitteeInquiryAssignee,
 	addCommitteeInquiryComment,
@@ -21,10 +20,14 @@ import {
 	updateCommitteeInquiryViewers,
 	updateDraftInquiry,
 } from "@/lib/api/committee-inquiry";
-import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import { listCommitteeProjectMembers } from "@/lib/api/committee-project";
 import { useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
+import { queryClient } from "@/lib/query/client";
+import {
+	committeeMembersPickerQuery,
+	myFormsQuery,
+} from "@/lib/query/committee";
 
 export const Route = createFileRoute("/committee/support/$inquiryId")({
 	component: CommitteeSupportDetailPage,
@@ -49,8 +52,8 @@ export const Route = createFileRoute("/committee/support/$inquiryId")({
 							await listCommitteeProjectMembers(res.inquiry.projectId),
 						] as const
 				),
-				listCommitteeMembersPicker(),
-				listMyForms(),
+				queryClient.fetchQuery(committeeMembersPickerQuery),
+				queryClient.fetchQuery(myFormsQuery),
 			]);
 
 		// INQUIRY_ADMIN 権限チェック（store から参照）

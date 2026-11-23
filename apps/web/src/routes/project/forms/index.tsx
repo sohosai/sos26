@@ -1,15 +1,18 @@
 import { Badge, Heading, Text } from "@radix-ui/themes";
+import type { ListProjectFormsResponse } from "@sos26/shared";
 import { IconEdit, IconLock } from "@tabler/icons-react";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { z } from "zod";
 import { DataTable, DateCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
-import { listProjectForms } from "@/lib/api/project-form";
 import { refreshNotificationDot } from "@/lib/project/notification-status";
-import { useProjectStore } from "@/lib/project/store";
+import { useProject, useProjectStore } from "@/lib/project/store";
 import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
+import { queryClient } from "@/lib/query/client";
+import { projectFormsQuery } from "@/lib/query/project";
 import { ProjectFormAnswerDialog } from "./-components/ProjectFormAnswerDialog";
 import styles from "./index.module.scss";
 
@@ -30,6 +33,45 @@ type FormRow = {
 	submittedAt: Date | null;
 };
 
+type ProjectFormListItem = ListProjectFormsResponse["forms"][number];
+
+function toFormRow(f: ProjectFormListItem): FormRow {
+	return {
+		formDeliveryId: f.formDeliveryId,
+		title: f.title,
+		description: f.description,
+		scheduledSendAt: f.scheduledSendAt,
+		deadlineAt: f.deadlineAt,
+		allowLateResponse: f.allowLateResponse,
+		required: f.required,
+		restricted: f.restricted,
+		responseId: f.response?.id ?? null,
+		submittedAt: f.response?.submittedAt ?? null,
+	};
+}
+
+/** 回答の保存結果を一覧のキャッシュに反映する */
+function setFormResponse(
+	projectId: string,
+	deliveryId: string,
+	update: (
+		prev: ProjectFormListItem["response"]
+	) => NonNullable<ProjectFormListItem["response"]>
+) {
+	queryClient.setQueryData(projectFormsQuery(projectId).queryKey, prev =>
+		prev
+			? {
+					...prev,
+					forms: prev.forms.map(f =>
+						f.formDeliveryId === deliveryId
+							? { ...f, response: update(f.response) }
+							: f
+					),
+				}
+			: prev
+	);
+}
+
 const columnHelper = createColumnHelper<FormRow>();
 
 export const Route = createFileRoute("/project/forms/")({
@@ -43,33 +85,15 @@ export const Route = createFileRoute("/project/forms/")({
 	},
 	loader: async () => {
 		const { selectedProjectId } = useProjectStore.getState();
-		if (!selectedProjectId) return { forms: [] as FormRow[] };
-		const res = await listProjectForms(selectedProjectId);
-		return {
-			forms: res.forms.map(f => ({
-				formDeliveryId: f.formDeliveryId,
-				title: f.title,
-				description: f.description,
-				scheduledSendAt: f.scheduledSendAt,
-				deadlineAt: f.deadlineAt,
-				allowLateResponse: f.allowLateResponse,
-				required: f.required,
-				restricted: f.restricted,
-				responseId: f.response?.id ?? null,
-				submittedAt: f.response?.submittedAt ?? null,
-			})),
-		};
+		if (!selectedProjectId) return;
+		await queryClient.fetchQuery(projectFormsQuery(selectedProjectId));
 	},
 });
 
 function RouteComponent() {
-	const { forms: initialForms } = Route.useLoaderData();
-	const [forms, setForms] = useState<FormRow[]>(initialForms);
-	const { selectedProjectId } = useProjectStore();
-
-	useEffect(() => {
-		setForms(initialForms);
-	}, [initialForms]);
+	const { id: projectId } = useProject();
+	const { data } = useSuspenseQuery(projectFormsQuery(projectId));
+	const forms = useMemo(() => data.forms.map(toFormRow), [data]);
 
 	const [answeringDeliveryId, setAnsweringDeliveryId] = useState<string | null>(
 		null
@@ -77,28 +101,24 @@ function RouteComponent() {
 
 	const handleDraftSaved = useCallback(
 		(deliveryId: string, responseId: string) => {
-			setForms(prev =>
-				prev.map(f =>
-					f.formDeliveryId === deliveryId ? { ...f, responseId } : f
-				)
-			);
+			setFormResponse(projectId, deliveryId, prev => ({
+				id: responseId,
+				submittedAt: prev?.submittedAt ?? null,
+			}));
 		},
-		[]
+		[projectId]
 	);
 
 	const handleSubmitSuccess = useCallback(
 		(deliveryId: string, responseId: string, submittedAt: Date | null) => {
-			setForms(prev =>
-				prev.map(f =>
-					f.formDeliveryId === deliveryId
-						? { ...f, responseId, submittedAt }
-						: f
-				)
-			);
+			setFormResponse(projectId, deliveryId, () => ({
+				id: responseId,
+				submittedAt,
+			}));
 			setAnsweringDeliveryId(null);
 			void refreshNotificationDot();
 		},
-		[]
+		[projectId]
 	);
 
 	const columns = [
@@ -251,13 +271,13 @@ function RouteComponent() {
 				initialSorting={[{ id: "scheduledSendAt", desc: true }]}
 			/>
 
-			{answeringDeliveryId && selectedProjectId && (
+			{answeringDeliveryId && (
 				<ProjectFormAnswerDialog
 					open={!!answeringDeliveryId}
 					onOpenChange={open => {
 						if (!open) setAnsweringDeliveryId(null);
 					}}
-					projectId={selectedProjectId}
+					projectId={projectId}
 					formDeliveryId={answeringDeliveryId}
 					onSubmitSuccess={(responseId, submittedAt) =>
 						handleSubmitSuccess(answeringDeliveryId, responseId, submittedAt)

@@ -1,19 +1,17 @@
-import {
-	createFileRoute,
-	useNavigate,
-	useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { NewInquiryForm } from "@/components/support/NewInquiryForm";
 import { SupportList } from "@/components/support/SupportList";
-import { listProjectMembers } from "@/lib/api/project";
-import { listProjectForms } from "@/lib/api/project-form";
-import {
-	createProjectInquiry,
-	listProjectInquiries,
-} from "@/lib/api/project-inquiry";
+import { createProjectInquiry } from "@/lib/api/project-inquiry";
 import { useAuthStore } from "@/lib/auth";
 import { useProjectStore } from "@/lib/project/store";
+import { queryClient } from "@/lib/query/client";
+import {
+	projectFormsQuery,
+	projectInquiriesQuery,
+	projectMembersQuery,
+	projectQueryKeys,
+} from "@/lib/query/project";
 
 export const Route = createFileRoute("/project/support/")({
 	component: ProjectSupportListPage,
@@ -32,9 +30,9 @@ export const Route = createFileRoute("/project/support/")({
 				availableForms: [] as never[],
 			};
 		const [inquiriesRes, membersRes, formsRes] = await Promise.all([
-			listProjectInquiries(selectedProjectId),
-			listProjectMembers(selectedProjectId),
-			listProjectForms(selectedProjectId),
+			queryClient.fetchQuery(projectInquiriesQuery(selectedProjectId)),
+			queryClient.fetchQuery(projectMembersQuery(selectedProjectId)),
+			queryClient.fetchQuery(projectFormsQuery(selectedProjectId)),
 		]);
 		return {
 			inquiries: inquiriesRes.inquiries,
@@ -55,7 +53,6 @@ function ProjectSupportListPage() {
 	const { inquiries, projectMembers, availableForms } = Route.useLoaderData();
 	const [formOpen, setFormOpen] = useState(false);
 	const navigate = useNavigate();
-	const router = useRouter();
 	const { user } = useAuthStore();
 	const { selectedProjectId } = useProjectStore();
 
@@ -87,7 +84,9 @@ function ProjectSupportListPage() {
 						coAssigneeUserIds: params.coAssigneeUserIds,
 						fileIds: params.fileIds,
 					});
-					await router.invalidate();
+					await queryClient.invalidateQueries({
+						queryKey: projectQueryKeys.inquiries(selectedProjectId),
+					});
 					navigate({
 						to: "/project/support/$inquiryId",
 						params: { inquiryId: inquiry.id },

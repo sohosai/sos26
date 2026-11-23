@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/primitives";
 import { SupportDetail } from "@/components/support/SupportDetail";
-import { listProjectMembers } from "@/lib/api/project";
 import {
 	addProjectInquiryAssignee,
 	addProjectInquiryComment,
@@ -19,6 +18,8 @@ import { reportHandledError } from "@/lib/error/report";
 import { refreshNotificationDot } from "@/lib/project/notification-status";
 import { useProjectStore } from "@/lib/project/store";
 import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
+import { queryClient } from "@/lib/query/client";
+import { projectMembersQuery, projectQueryKeys } from "@/lib/query/project";
 
 const searchSchema = z.object({
 	projectId: z.string().optional(),
@@ -43,9 +44,13 @@ export const Route = createFileRoute("/project/support/$inquiryId")({
 	loader: async ({ params }) => {
 		const { selectedProjectId } = useProjectStore.getState();
 		if (!selectedProjectId) return null;
+		// 開くと既読になり、返信などでも一覧の表示が変わるので、一覧に戻ったときに取り直させる
+		void queryClient.invalidateQueries({
+			queryKey: projectQueryKeys.inquiries(selectedProjectId),
+		});
 		const [inquiryRes, membersRes] = await Promise.all([
 			getProjectInquiry(selectedProjectId, params.inquiryId),
-			listProjectMembers(selectedProjectId),
+			queryClient.fetchQuery(projectMembersQuery(selectedProjectId)),
 		]);
 		return {
 			inquiry: inquiryRes.inquiry,

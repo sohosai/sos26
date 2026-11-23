@@ -63,6 +63,8 @@ import {
 	imageAcceptAttribute,
 } from "@/lib/project/public-info";
 import { useProjectStore } from "@/lib/project/store";
+import { queryClient } from "@/lib/query/client";
+import { projectQueryKeys } from "@/lib/query/project";
 import { ImageCropperModal } from "./-components/ImageCropperModal";
 import { ImagePreviewModal } from "./-components/ImagePreviewModal";
 import { SortableMapImageItem } from "./-components/SortableMapImageItem";
@@ -450,6 +452,10 @@ function ProjectPublicInfoPage() {
 			setProjectIconFileId(project.id, values.iconFileId || null);
 		}
 		// 保存は成功しているため、再取得の成否にかかわらず編集状態は解除する
+		await queryClient.invalidateQueries({
+			queryKey: projectQueryKeys.publicInfo(project.id),
+			refetchType: "none",
+		});
 		await router.invalidate().catch(() => undefined);
 		setDraft(null);
 	};

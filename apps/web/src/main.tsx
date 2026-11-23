@@ -1,8 +1,10 @@
 import "./lib/sentry";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Toaster } from "sonner";
+import { queryClient } from "./lib/query/client";
 import { routeTree } from "./routeTree.gen";
 
 import "./styles/index.css";
@@ -33,7 +35,9 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
 	<StrictMode>
-		<RouterProvider router={router} />
-		<Toaster />
+		<QueryClientProvider client={queryClient}>
+			<RouterProvider router={router} />
+			<Toaster />
+		</QueryClientProvider>
 	</StrictMode>
 );

@@ -35,12 +35,13 @@ import {
 	updateMastersheetAccessRequest,
 	updateMastersheetColumn,
 } from "@/lib/api/committee-mastersheet";
-import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import {
 	getProjectRegistrationFormDetail,
 	listProjectRegistrationForms,
 } from "@/lib/api/committee-project-registration-form";
 import { isClientError } from "@/lib/http/error";
+import { queryClient } from "@/lib/query/client";
+import { committeeMembersPickerQuery } from "@/lib/query/committee";
 import { AddCustomColumnDialog } from "./AddCustomColumnDialog";
 import { AddFormItemColumnsDialog } from "./AddFormItemColumnsDialog";
 import styles from "./ColumnPanel.module.scss";
@@ -236,7 +237,8 @@ function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 	}
 
 	useEffect(() => {
-		listCommitteeMembersPicker()
+		queryClient
+			.fetchQuery(committeeMembersPickerQuery)
 			.then(res =>
 				setCommitteeMembers(
 					res.committeeMembers.map(m => ({ id: m.user.id, name: m.user.name }))

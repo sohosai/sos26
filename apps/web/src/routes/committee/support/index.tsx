@@ -16,18 +16,19 @@ import {
 	type PagedView,
 	SupportList,
 } from "@/components/support/SupportList";
-import { listMyForms } from "@/lib/api/committee-form";
 import {
 	createCommitteeInquiry,
 	listCommitteeInquiries,
 } from "@/lib/api/committee-inquiry";
-import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
-import {
-	listCommitteeProjectMembers,
-	listCommitteeProjects,
-} from "@/lib/api/committee-project";
+import { listCommitteeProjectMembers } from "@/lib/api/committee-project";
 import { useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
+import { queryClient } from "@/lib/query/client";
+import {
+	allCommitteeProjectsQuery,
+	committeeMembersPickerQuery,
+	myFormsQuery,
+} from "@/lib/query/committee";
 
 const PAGE_SIZE = 50;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -49,9 +50,9 @@ export const Route = createFileRoute("/committee/support/")({
 		const { committeeMember } = useAuthStore.getState();
 
 		const [projectsRes, membersRes, formsRes] = await Promise.all([
-			listCommitteeProjects(),
-			listCommitteeMembersPicker(),
-			listMyForms(),
+			queryClient.fetchQuery(allCommitteeProjectsQuery),
+			queryClient.fetchQuery(committeeMembersPickerQuery),
+			queryClient.fetchQuery(myFormsQuery),
 		]);
 
 		return {

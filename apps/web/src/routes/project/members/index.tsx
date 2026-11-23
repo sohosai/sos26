@@ -15,7 +15,6 @@ import {
 	approveSubOwnerRequest,
 	assignSubOwner,
 	cancelSubOwnerRequest,
-	listProjectMembers,
 	rejectSubOwnerRequest,
 	removeProjectMember,
 } from "@/lib/api/project";
@@ -24,6 +23,8 @@ import { reportHandledError } from "@/lib/error/report";
 import { formatDate } from "@/lib/format";
 import { refreshMyProjects } from "@/lib/project/my-projects";
 import { useProject, useProjectStore } from "@/lib/project/store";
+import { queryClient } from "@/lib/query/client";
+import { projectMembersQuery, projectQueryKeys } from "@/lib/query/project";
 import styles from "./index.module.scss";
 
 export type MemberRow = {
@@ -93,6 +94,13 @@ const roleColorMap: Record<string, string> = {
 
 const memberColumnHelper = createColumnHelper<MemberRow>();
 
+/** 一覧は画面の state で更新するので、次に開いたときにキャッシュから古い一覧を出さないようにする */
+function invalidateProjectMembers(projectId: string) {
+	void queryClient.invalidateQueries({
+		queryKey: projectQueryKeys.members(projectId),
+	});
+}
+
 export const Route = createFileRoute("/project/members/")({
 	component: RouteComponent,
 	head: () => ({
@@ -107,7 +115,9 @@ export const Route = createFileRoute("/project/members/")({
 			};
 		}
 
-		const data = await listProjectMembers(selectedProjectId);
+		const data = await queryClient.fetchQuery(
+			projectMembersQuery(selectedProjectId)
+		);
 		return {
 			members: data.members.map((m: Omit<MemberRow, "roleLabel">) => {
 				const roleLabel =
@@ -170,6 +180,7 @@ function RouteComponent() {
 	const handleAssign = async (memberId: string) => {
 		try {
 			await assignSubOwner(project.id, memberId);
+			invalidateProjectMembers(project.id);
 			setPendingSubOwnerRequestUserId(memberId);
 			setMembers(prev =>
 				prev.map(m => ({
@@ -200,6 +211,7 @@ function RouteComponent() {
 		setIsApprovingSubOwnerRequest(true);
 		try {
 			await approveSubOwnerRequest(project.id);
+			invalidateProjectMembers(project.id);
 			// 自分が副企画責任者になるので、企画一覧の権限も取り直す
 			void refreshMyProjects().catch(() => undefined);
 			setSubOwnerRequestDialogOpen(false);
@@ -238,6 +250,7 @@ function RouteComponent() {
 	const handleCancelSubOwnerRequest = async () => {
 		try {
 			await cancelSubOwnerRequest(project.id);
+			invalidateProjectMembers(project.id);
 			setPendingSubOwnerRequestUserId(null);
 			setMembers(prev =>
 				prev.map(m => ({
@@ -263,6 +276,7 @@ function RouteComponent() {
 		setIsRejectingSubOwnerRequest(true);
 		try {
 			await rejectSubOwnerRequest(project.id);
+			invalidateProjectMembers(project.id);
 			setSubOwnerRequestDialogOpen(false);
 			setPendingSubOwnerRequestUserId(null);
 			setMembers(prev =>
@@ -290,6 +304,7 @@ function RouteComponent() {
 	const handleDeleteMember = async (memberId: string) => {
 		try {
 			await removeProjectMember(project.id, memberId);
+			invalidateProjectMembers(project.id);
 			setMembers(prev => prev.filter(m => m.userId !== memberId));
 			if (pendingSubOwnerRequestUserId === memberId) {
 				setPendingSubOwnerRequestUserId(null);

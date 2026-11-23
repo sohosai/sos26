@@ -20,17 +20,18 @@ import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { Button } from "@/components/primitives";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
 import { ProjectJoinDialog } from "@/components/project/ProjectJoinDialog";
-import {
-	getApplicationPeriod,
-	getProjectNotificationStatus,
-	joinProject,
-} from "@/lib/api/project";
-import { getProjectPublicInfo } from "@/lib/api/project-public-info";
+import { getApplicationPeriod, joinProject } from "@/lib/api/project";
 import { requireAuth, useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
 import { refreshMyProjects } from "@/lib/project/my-projects";
 import { registerNotificationDotRefresh } from "@/lib/project/notification-status";
 import { useProjectStore } from "@/lib/project/store";
+import { queryClient } from "@/lib/query/client";
+import {
+	projectNotificationStatusQuery,
+	projectPublicInfoQuery,
+	projectQueryKeys,
+} from "@/lib/query/project";
 import styles from "./route.module.scss";
 
 function projectDeletionStatusLabel(status: Project["deletionStatus"]): string {
@@ -169,8 +170,8 @@ export const Route = createFileRoute("/project")({
 			publicInfoResult,
 		] = await Promise.allSettled([
 			applicationPeriodPromise,
-			getProjectNotificationStatus(selectedProjectId),
-			getProjectPublicInfo(selectedProjectId),
+			queryClient.fetchQuery(projectNotificationStatusQuery(selectedProjectId)),
+			queryClient.fetchQuery(projectPublicInfoQuery(selectedProjectId)),
 		]);
 		// applicationPeriodPromise は失敗を null にしているので reject しない
 		const applicationPeriodInfo =
@@ -292,7 +293,10 @@ function ProjectLayout() {
 			}
 
 			try {
-				const next = await getProjectNotificationStatus(selectedProjectId);
+				const next = await queryClient.fetchQuery({
+					...projectNotificationStatusQuery(selectedProjectId),
+					staleTime: 0,
+				});
 				// 応答を待つ間に企画が切り替わっていたら、前の企画の状態を反映しない
 				if (
 					useProjectStore.getState().selectedProjectId !== selectedProjectId
@@ -309,8 +313,16 @@ function ProjectLayout() {
 						current.latestActivityAt?.getTime();
 
 				setNotificationStatus(next);
-				// 開いている画面にも新しいお知らせや返信を反映する
-				if (changed && reflectChanges) void router.invalidate();
+				// 開いている画面にも新しいお知らせや返信を反映する。
+				// loader がキャッシュを返さないよう、notification-status 以外の企画の query を古くしてから取り直す
+				if (changed && reflectChanges) {
+					await queryClient.invalidateQueries({
+						queryKey: projectQueryKeys.all(selectedProjectId),
+						predicate: query => query.queryKey[2] !== "notification-status",
+						refetchType: "none",
+					});
+					void router.invalidate();
+				}
 			} catch {
 				// 企画から外された場合に別の企画へ切り替える
 				await refreshMyProjects().catch(() => undefined);

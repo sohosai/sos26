@@ -17,7 +17,6 @@ import { AnswerDetailDialog } from "@/components/form/Answer/AnswerDetailDialog"
 import type { Form } from "@/components/form/type";
 import { DataTable, DateCell, NameCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
-import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import {
 	addProjectRegistrationFormCollaborator,
 	deleteProjectRegistrationForm,
@@ -42,6 +41,8 @@ import {
 	PROJECT_LOCATION_LABELS,
 	PROJECT_TYPE_LABELS,
 } from "@/lib/project/options";
+import { queryClient } from "@/lib/query/client";
+import { committeeMembersPickerQuery } from "@/lib/query/committee";
 import { FormItemsPreview } from "@/routes/committee/forms/$formId/-components/FormItemsPreview";
 import { EditProjectRegistrationFormDialog } from "./-components/EditProjectRegistrationFormDialog";
 import { ProjectRegistrationFormDetailSidebar } from "./-components/ProjectRegistrationFormDetailSidebar";
@@ -102,7 +103,7 @@ export const Route = createFileRoute(
 		const [{ form }, { committeeMembers }, { forms: allForms }] =
 			await Promise.all([
 				getProjectRegistrationFormDetail(params.formId),
-				listCommitteeMembersPicker(),
+				queryClient.fetchQuery(committeeMembersPickerQuery),
 				listProjectRegistrationForms(),
 			]);
 		const currentUserId = useAuthStore.getState().user?.id;
