@@ -38,6 +38,8 @@ export const Route = createFileRoute("/committee/notice/$noticeId/")({
 	head: () => ({
 		meta: [{ title: "お知らせ詳細 | 雙峰祭オンラインシステム" }],
 	}),
+	// 操作の結果は画面の state にだけ反映するので、ページを離れたら loader のデータを捨て、開き直したときに古い表示を出さない
+	gcTime: 0,
 	loader: async ({ params }) => {
 		const [noticeRes, membersRes] = await Promise.all([
 			getNotice(params.noticeId),
@@ -97,6 +99,14 @@ function RouteComponent() {
 			avatarFileId: m.user.avatarFileId,
 		}));
 
+	// 応答で差し替えるときも番号を進め、その前に出ていた再取得の応答で差し替えを戻さない
+	const updateNoticeLocally = (
+		update: (prev: typeof notice) => typeof notice
+	) => {
+		latestRefetchIdRef.current += 1;
+		setNotice(update);
+	};
+
 	// 応答は最後に出した再取得の分だけ反映する。続けて操作したときに古い応答で上書きしないため
 	const refetchNotice = async () => {
 		latestRefetchIdRef.current += 1;
@@ -119,7 +129,7 @@ function RouteComponent() {
 	const handleAddCollaborator = async (userId: string) => {
 		try {
 			const res = await addCollaborator(notice.id, { userId });
-			setNotice(prev => ({
+			updateNoticeLocally(prev => ({
 				...prev,
 				collaborators: [...prev.collaborators, res.collaborator],
 			}));
@@ -132,7 +142,7 @@ function RouteComponent() {
 		setRemovingId(collaboratorId);
 		try {
 			await removeCollaborator(notice.id, collaboratorId);
-			setNotice(prev => ({
+			updateNoticeLocally(prev => ({
 				...prev,
 				collaborators: prev.collaborators.filter(c => c.id !== collaboratorId),
 			}));
@@ -171,7 +181,7 @@ function RouteComponent() {
 	const applyAuthorization = (
 		authorization: UpdateNoticeAuthorizationResponse["authorization"]
 	) => {
-		setNotice(prev => ({
+		updateNoticeLocally(prev => ({
 			...prev,
 			authorizations: prev.authorizations.map(a =>
 				a.id === authorization.id ? { ...a, ...authorization } : a
