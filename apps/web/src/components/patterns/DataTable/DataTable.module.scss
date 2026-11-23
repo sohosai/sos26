@@ -25,6 +25,20 @@
 	position: relative;
 }
 
+// 行が多い表は表の中で縦にスクロールさせ、見えている行だけを描画する。
+// 高さを固定するので、描画する行が変わってもページの高さは変わらない
+.virtualized {
+	height: var(--data-table-virtualized-height, 70vh);
+	overflow-y: auto;
+
+	:global(.rt-TableHeader) :global(.rt-TableColumnHeaderCell) {
+		position: sticky;
+		top: 0;
+		z-index: 3;
+		background-color: var(--color-panel-solid);
+	}
+}
+
 :global(.rt-TableCell) {
 	vertical-align: middle;
 }
@@ -36,7 +50,7 @@
 
 .pinnedHeaderCell {
 	position: sticky !important;
-	z-index: 3;
+	z-index: 4;
 	background-color: var(--accent-2);
 }
 
