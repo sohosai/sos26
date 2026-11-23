@@ -83,7 +83,9 @@ export const Route = createFileRoute("/project/forms/")({
 	beforeLoad: ({ search }) => {
 		syncSelectedProjectFromSearch(search.projectId);
 	},
-	loader: async () => {
+	loader: async ({ context }) => {
+		// 新着があれば一覧が古くなっているので、確認を待ってから読む
+		await context.notificationStatusCheck;
 		const { selectedProjectId } = useProjectStore.getState();
 		if (selectedProjectId) {
 			await queryClient.fetchQuery(projectFormsQuery(selectedProjectId));

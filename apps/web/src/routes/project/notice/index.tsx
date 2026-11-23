@@ -118,11 +118,11 @@ async function getNoticeDetailInProject(
 
 async function resolveNoticeProject(
 	noticeId: string,
-	preferredProjectId: string | undefined,
+	preferredProjectId: string,
 	isInPreferredProject: boolean,
 	signal: AbortSignal
 ): Promise<ResolvedNotice | null> {
-	if (preferredProjectId && isInPreferredProject) {
+	if (isInPreferredProject) {
 		return getNoticeDetailInProject(preferredProjectId, noticeId, signal);
 	}
 
@@ -150,7 +150,9 @@ export const Route = createFileRoute("/project/notice/")({
 	beforeLoad: ({ search }) => {
 		syncSelectedProjectFromSearch(search.projectId);
 	},
-	loader: async () => {
+	loader: async ({ context }) => {
+		// 新着があれば一覧が古くなっているので、確認を待ってから読む
+		await context.notificationStatusCheck;
 		const { selectedProjectId } = useProjectStore.getState();
 		if (selectedProjectId) {
 			await queryClient.fetchQuery(projectNoticesQuery(selectedProjectId));
@@ -170,7 +172,6 @@ function RouteComponent() {
 function ProjectNoticePage({ projectId }: { projectId: string }) {
 	const search = Route.useSearch();
 	const navigate = useNavigate();
-	const { selectedProjectId } = useProjectStore();
 	const { data } = useSuspenseQuery(projectNoticesQuery(projectId));
 	const notices = useMemo(() => data.notices.map(toNoticeRow), [data]);
 	const isTargetInSelectedProject =
@@ -197,14 +198,14 @@ function ProjectNoticePage({ projectId }: { projectId: string }) {
 		const controller = new AbortController();
 		void resolveNoticeProject(
 			targetNoticeId,
-			selectedProjectId ?? undefined,
+			projectId,
 			isTargetInSelectedProject,
 			controller.signal
 		)
 			.then(result => {
 				if (controller.signal.aborted) return;
 				if (result) {
-					if (selectedProjectId !== result.projectId) {
+					if (projectId !== result.projectId) {
 						useProjectStore.getState().setSelectedProjectId(result.projectId);
 						navigate({
 							to: "/project/notice",
@@ -232,7 +233,7 @@ function ProjectNoticePage({ projectId }: { projectId: string }) {
 			});
 
 		return () => controller.abort();
-	}, [search.noticeId, selectedProjectId, navigate, isTargetInSelectedProject]);
+	}, [search.noticeId, projectId, navigate, isTargetInSelectedProject]);
 
 	const handleRead = useCallback(
 		(noticeId: string) => {
@@ -288,10 +289,9 @@ function ProjectNoticePage({ projectId }: { projectId: string }) {
 					intent="secondary"
 					size="1"
 					onClick={() => {
-						if (!selectedProjectId) return;
 						setSelectedNotice({
 							id: row.original.id,
-							projectId: selectedProjectId,
+							projectId,
 							initialNotice: null,
 							source: "list",
 						});

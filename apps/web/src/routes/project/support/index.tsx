@@ -21,7 +21,9 @@ export const Route = createFileRoute("/project/support/")({
 			{ name: "description", content: "お問い合わせ管理" },
 		],
 	}),
-	loader: async () => {
+	loader: async ({ context }) => {
+		// 新着があれば一覧が古くなっているので、確認を待ってから読む
+		await context.notificationStatusCheck;
 		const { selectedProjectId } = useProjectStore.getState();
 		if (!selectedProjectId)
 			return {

@@ -15,7 +15,7 @@ Web では、画面をまたいで同じ API を取り直さないよう、取�
 | `retry` | `false` | GET は HTTP クライアント（ky）で 1 回再試行している |
 | `refetchOnWindowFocus` | `false` | `/project` 配下は notification-status の変化を見て取り直す（5 章） |
 
-Firebase のユーザーが替わったとき（サインアウトを含む）は、`lib/auth/store.ts` で `queryClient.clear()` を呼んでキャッシュを捨てる。
+Firebase のユーザーが替わったとき（サインアウトを含む）は、`main.tsx` で `queryClient.clear()` を呼ぶ。TanStack Router も離れた画面の loader の結果を持っているので、`router.clearCache()` も合わせて呼ぶ。
 
 ### 1.2 キャッシュする API
 
@@ -24,9 +24,9 @@ staleTime のあいだは API を呼ばずにキャッシュを返す。自分�
 | 対象 | 定義 | staleTime | ほかの人の操作を反映する時点 |
 |---|---|---|---|
 | 委員の候補（委員メンバー、自分の申請、全企画） | `lib/query/committee.ts` | 60 秒 | 最大 60 秒後。委員の申請一覧を開いたときは、自分の申請を取り直す |
-| 企画の申請・お知らせ・問い合わせの一覧 | `lib/query/project.ts` | 30 秒 | notification-status が変わったとき（5 章） |
+| 企画の申請・お知らせ・問い合わせの一覧 | `lib/query/project.ts` | 30 秒 | notification-status が変わったとき（5 章）。ほかのメンバーの回答・問い合わせの作成・コメントのように notification-status に出ない変化は、最大 30 秒後 |
 | 企画メンバーの一覧 | `lib/query/project.ts` | 30 秒 | メンバー管理画面を開いたとき。問い合わせの担当者の候補では最大 30 秒後 |
-| 企画の notification-status | `lib/query/project.ts` | 30 秒 | `/project` の中で画面を移るたびと、60 秒ごと（5 章） |
+| 企画の notification-status | `lib/query/project.ts` | 30 秒 | `/project` の中で画面を移るたびと、60 秒ごと（5 章）。前回の値と比べるため、`gcTime` を無期限にしてキャッシュから消さない |
 
 ## 2. query の定義
 
@@ -137,13 +137,21 @@ void router.invalidate();
 
 ## 5. `/project` の新着の反映
 
-`/project` のレイアウト（`routes/project/route.tsx`）は、次の時点で notification-status を `staleTime: 0` で取り直し、キャッシュにあった前回の値と比べる。
+`/project` のレイアウト（`routes/project/route.tsx`）は、次の時点で notification-status を取り直し、キャッシュにあった前回の値と比べる。直前（1 秒以内）に取り直していれば、その値を使う。
 
 | 時点 | 変わっていたときの処理 |
 |---|---|
-| `/project` の中で画面を移るとき（`beforeLoad`） | notification-status 以外の企画の query を古くする。続く子ルートの loader が一覧を取り直す |
+| `/project` の中で画面を移るとき（`beforeLoad`） | notification-status 以外の企画の query を古くする |
 | 60 秒ごとと、タブに戻ったとき | 同じく古くしたうえで `router.invalidate()` を呼び、開いている画面を取り直す |
+| 自分の操作のあと（`refreshNotificationDot()`） | サイドバーのドットだけを新しくする。操作の結果は画面に反映済みなので、一覧は古くしない |
 
-`beforeLoad` で比べるのは、TanStack Router が親と子の loader を並列に実行するためである。親の loader で古くしても、同じ遷移の子の loader には間に合わない。
+`beforeLoad` は確認を待たず、その Promise を `context.notificationStatusCheck` として子ルートに渡す。キャッシュから一覧を読む loader（申請・お知らせ・問い合わせの一覧）と `/project` の loader だけがこれを待ってから `fetchQuery` を呼ぶ。こうすると、一覧を読まない画面は確認を待たずに読み込める。
 
-自分の操作で未回答・未確認の状態が変わったときは `refreshNotificationDot()` を呼ぶ。サイドバーのドットを取り直し、開いている画面は取り直さない。
+```ts
+loader: async ({ context }) => {
+	await context.notificationStatusCheck;
+	// ...
+},
+```
+
+古くする処理を `beforeLoad` から始めるのは、TanStack Router が `beforeLoad` をすべて終えてから loader を並列に実行するためである。親の loader で古くしても、同じ遷移の子の loader には間に合わない。

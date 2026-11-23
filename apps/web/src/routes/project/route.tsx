@@ -123,17 +123,22 @@ function isNotificationStatusChanged(
 
 /**
  * notification-status を取り直し、キャッシュにあった前回の値から変わったかを返す。
- * 変わっていたら、次に loader が一覧を取得するときに取り直すよう、notification-status 以外の企画の query を古くする
+ * invalidateLists のときは、変わっていたら、次に loader が一覧を取得するときに取り直すよう、
+ * notification-status 以外の企画の query を古くする。
+ * 直前（1 秒以内）に取り直していれば、その値を使う
  */
-async function refreshNotificationStatusCache(projectId: string): Promise<{
+async function refreshNotificationStatusCache(
+	projectId: string,
+	{ invalidateLists }: { invalidateLists: boolean }
+): Promise<{
 	next: GetProjectNotificationStatusResponse;
 	changed: boolean;
 }> {
 	const query = projectNotificationStatusQuery(projectId);
 	const prev = queryClient.getQueryData(query.queryKey);
-	const next = await queryClient.fetchQuery({ ...query, staleTime: 0 });
+	const next = await queryClient.fetchQuery({ ...query, staleTime: 1_000 });
 	const changed = prev !== undefined && isNotificationStatusChanged(prev, next);
-	if (changed) {
+	if (changed && invalidateLists) {
 		await queryClient.invalidateQueries({
 			queryKey: projectQueryKeys.all(projectId),
 			predicate: q => q.queryKey[2] !== "notification-status",
@@ -166,16 +171,21 @@ export const Route = createFileRoute("/project")({
 			await refreshMyProjects();
 		}
 
-		// 一覧はキャッシュから返すので、ページを移るたびに新着の有無だけを確かめ、あれば子ルートの loader で取り直させる。
+		// 一覧はキャッシュから返すので、ページを移るたびに新着の有無を確かめ、あれば一覧を古くする。
+		// 待つのはキャッシュから一覧を読む loader だけにするため、ここでは待たずに渡す。
 		// 取得に失敗したときは loader で扱う
 		const { selectedProjectId } = useProjectStore.getState();
-		if (selectedProjectId) {
-			await refreshNotificationStatusCache(selectedProjectId).catch(
-				() => undefined
-			);
-		}
+		const notificationStatusCheck: Promise<void> = selectedProjectId
+			? refreshNotificationStatusCache(selectedProjectId, {
+					invalidateLists: true,
+				}).then(
+					() => undefined,
+					() => undefined
+				)
+			: Promise.resolve();
+		return { notificationStatusCheck };
 	},
-	loader: async ({ cause }) => {
+	loader: async ({ cause, context }) => {
 		const store = useProjectStore.getState();
 		const { selectedProjectId } = store;
 
@@ -195,8 +205,11 @@ export const Route = createFileRoute("/project")({
 		const [applicationPeriodResult, notificationStatusResult] =
 			await Promise.allSettled([
 				applicationPeriodPromise,
-				queryClient.fetchQuery(
-					projectNotificationStatusQuery(selectedProjectId)
+				// 確認の取得が終わる前にキャッシュの古い値を返さないよう、待ってから読む
+				context.notificationStatusCheck.then(() =>
+					queryClient.fetchQuery(
+						projectNotificationStatusQuery(selectedProjectId)
+					)
 				),
 			]);
 		// applicationPeriodPromise は失敗を null にしているので reject しない
@@ -297,8 +310,11 @@ function ProjectLayout() {
 			}
 
 			try {
-				const { next, changed } =
-					await refreshNotificationStatusCache(selectedProjectId);
+				const { next, changed } = await refreshNotificationStatusCache(
+					selectedProjectId,
+					// 自分の操作の結果は画面に反映済みなので、一覧を古くしない
+					{ invalidateLists: reflectChanges }
+				);
 				// 応答を待つ間に企画が切り替わっていたら、前の企画の状態を反映しない
 				if (
 					useProjectStore.getState().selectedProjectId !== selectedProjectId

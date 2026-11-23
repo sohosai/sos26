@@ -30,6 +30,8 @@ export const projectNotificationStatusQuery = (projectId: string) =>
 		queryKey: projectQueryKeys.notificationStatus(projectId),
 		queryFn: () => getProjectNotificationStatus(projectId),
 		staleTime: PROJECT_STALE_TIME,
+		// 前回の値と比べて新着を見つけるので、タブを長く離れていてもキャッシュから消さない
+		gcTime: Number.POSITIVE_INFINITY,
 	});
 
 export const projectFormsQuery = (projectId: string) =>
