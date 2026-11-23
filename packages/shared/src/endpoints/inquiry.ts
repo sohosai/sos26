@@ -83,7 +83,7 @@ export const getProjectInquiryEndpoint: GetEndpoint<
 
 /**
  * POST /project/:projectId/inquiries/:inquiryId/read
- * お問い合わせのコメントを既読にする（詳細を表示したときに呼ぶ）
+ * お問い合わせのコメントを既読にする（詳細を表示したときと取り直したときに呼ぶ）
  */
 export const readProjectInquiryEndpoint: Endpoint<
 	"POST",
@@ -247,7 +247,7 @@ export const getCommitteeInquiryEndpoint: GetEndpoint<
 
 /**
  * POST /committee/inquiries/:inquiryId/read
- * お問い合わせのコメントを既読にする（詳細を表示したときに呼ぶ）
+ * お問い合わせのコメントを既読にする（詳細を表示したときと取り直したときに呼ぶ）
  */
 export const readCommitteeInquiryEndpoint: Endpoint<
 	"POST",

@@ -213,7 +213,8 @@ export const Route = createFileRoute("/project")({
 
 /**
  * 企画から外されたときやアカウントを切り替えたときは、選択中の企画で子ページを読めずにエラーになる。
- * 企画一覧を取り直して選択中の企画が変わったら読み込み直し、変わらなければエラーを表示する
+ * 企画一覧を取り直して選択中の企画が変わったらダッシュボードへ移り、変わらなければエラーを表示する。
+ * 移動するのは、問い合わせ詳細のように URL に前の企画の ID を含むページを、切り替えた企画で開き直さないため
  */
 function ProjectErrorComponent({ error }: ErrorComponentProps) {
 	const router = useRouter();
@@ -224,7 +225,7 @@ function ProjectErrorComponent({ error }: ErrorComponentProps) {
 		refreshMyProjects()
 			.then(() => {
 				if (useProjectStore.getState().selectedProjectId !== before) {
-					void router.invalidate();
+					void router.navigate({ to: "/project" });
 				} else {
 					setRecoveryFailed(true);
 				}
