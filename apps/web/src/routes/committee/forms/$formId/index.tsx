@@ -44,6 +44,7 @@ import {
 } from "@/lib/form/answer-table";
 import { formDetailToForm } from "@/lib/form/convert";
 import { getFormStatusFromAuth } from "@/lib/form/form-status";
+import { useLazyResponses } from "@/lib/form/use-lazy-responses";
 import { formatDate, formatProjectNumber } from "@/lib/format";
 import { EditFormDialog } from "./-components/EditFormDialog";
 import { FormDetailSidebar } from "./-components/FormDetailSidebar";
@@ -85,15 +86,13 @@ export const Route = createFileRoute("/committee/forms/$formId/")({
 	}),
 	validateSearch: searchSchema,
 	loader: async ({ params }) => {
-		const [formRes, membersRes, responsesRes] = await Promise.all([
+		const [formRes, membersRes] = await Promise.all([
 			getFormDetail(params.formId),
 			listCommitteeMembersPicker(),
-			listFormResponses(params.formId).catch(() => ({ responses: [] })),
 		]);
 		return {
 			form: formRes.form,
 			committeeMembers: membersRes.committeeMembers,
-			responses: responsesRes.responses,
 		};
 	},
 });
@@ -102,7 +101,7 @@ type TabName = "content" | "answers";
 
 function RouteComponent() {
 	const { formId } = Route.useParams();
-	const { form, committeeMembers, responses } = Route.useLoaderData();
+	const { form, committeeMembers } = Route.useLoaderData();
 	const { tab } = Route.useSearch();
 	const navigate = useNavigate();
 	const router = useRouter();
@@ -170,11 +169,19 @@ function RouteComponent() {
 		(canEdit || isViewer) &&
 		(statusInfo.code === "PUBLISHED" || statusInfo.code === "EXPIRED");
 
-	// 回答データ
-	const answerRows = useMemo(() => buildAnswerRows(responses), [responses]);
-
 	const activeTab: TabName =
 		tab === "answers" && canViewAnswers ? "answers" : "content";
+
+	// 回答データ
+	const { responses, error: responsesError } = useLazyResponses(
+		formId,
+		activeTab === "answers",
+		listFormResponses
+	);
+	const answerRows = useMemo(
+		() => (responses ? buildAnswerRows(responses) : null),
+		[responses]
+	);
 
 	const setActiveTab = (t: TabName) => {
 		navigate({
@@ -385,8 +392,8 @@ function RouteComponent() {
 							onClick={() => setActiveTab("answers")}
 						>
 							回答
-							{responses.length > 0 && (
-								<span className={styles.tabBadge}>{responses.length}</span>
+							{!!form.responseCount && (
+								<span className={styles.tabBadge}>{form.responseCount}</span>
 							)}
 						</button>
 					)}
@@ -404,6 +411,7 @@ function RouteComponent() {
 						formTitle={form.title}
 						items={form.items}
 						rows={answerRows}
+						error={responsesError}
 						onViewDetail={setAnswerDialogResponseId}
 					/>
 				)}
@@ -515,12 +523,14 @@ function AnswersTab({
 	formTitle,
 	items,
 	rows,
+	error,
 	onViewDetail,
 }: {
 	formId: string;
 	formTitle: string;
 	items: GetFormDetailResponse["form"]["items"];
-	rows: AnswerRow[];
+	rows: AnswerRow[] | null;
+	error: string | null;
 	onViewDetail: (responseId: string) => void;
 }) {
 	const [isDownloading, setIsDownloading] = useState(false);
@@ -618,11 +628,11 @@ function AnswersTab({
 		}
 	};
 
-	if (rows.length === 0) {
+	if (!rows || rows.length === 0) {
 		return (
 			<div className={styles.emptyState}>
-				<Text size="2" color="gray">
-					まだ回答がありません。
+				<Text size="2" color={error ? "red" : "gray"}>
+					{error ?? (rows ? "まだ回答がありません。" : "読み込み中...")}
 				</Text>
 			</div>
 		);

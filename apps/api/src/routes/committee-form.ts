@@ -303,6 +303,27 @@ const requireNotApproved = async (formId: string) => {
  * 2. 共同編集者 → 閲覧可
  * 3. 閲覧者（FormViewer）にマッチ → 閲覧可
  */
+function isFormResponseViewer(
+	form: { ownerId: string; collaborators: { userId: string }[] },
+	viewers: {
+		scope: string;
+		bureauValue: string | null;
+		userId: string | null;
+	}[],
+	userId: string,
+	committeeMember: CommitteeMember
+): boolean {
+	if (form.ownerId === userId) return true;
+	if (form.collaborators.some(c => c.userId === userId)) return true;
+	return viewers.some(
+		viewer =>
+			viewer.scope === "ALL" ||
+			(viewer.scope === "BUREAU" &&
+				viewer.bureauValue === committeeMember.Bureau) ||
+			(viewer.scope === "INDIVIDUAL" && viewer.userId === userId)
+	);
+}
+
 async function canViewFormResponses(
 	formId: string,
 	userId: string,
@@ -320,24 +341,7 @@ async function canViewFormResponses(
 		where: { formId, deletedAt: null },
 	});
 
-	// 1. owner
-	if (form.ownerId === userId) return true;
-
-	// 2. collaborator
-	if (form.collaborators.some(c => c.userId === userId)) return true;
-
-	// 3. viewer
-	for (const viewer of viewers) {
-		if (viewer.scope === "ALL") return true;
-		if (
-			viewer.scope === "BUREAU" &&
-			viewer.bureauValue === committeeMember.Bureau
-		)
-			return true;
-		if (viewer.scope === "INDIVIDUAL" && viewer.userId === userId) return true;
-	}
-
-	return false;
+	return isFormResponseViewer(form, viewers, userId, committeeMember);
 }
 
 // 承認時の配信スケジュール日時バリデーション
@@ -516,9 +520,25 @@ committeeFormRoute.get(
 			include: { user: { select: userSelect } },
 		});
 
+		const canViewResponses = isFormResponseViewer(
+			form,
+			viewers,
+			c.get("user").id,
+			getCommitteeMember(c)
+		);
+		const responseCount = canViewResponses
+			? await prisma.formResponse.count({
+					where: {
+						formDelivery: { formAuthorization: { formId } },
+						submittedAt: { not: null },
+					},
+				})
+			: null;
+
 		return c.json({
 			form: {
 				...form,
+				responseCount,
 				items: form.items.map(mapItemToApiShape),
 				attachments: mapFormAttachments(form.attachments),
 				authorizationDetail: form.authorizations[0] ?? null,

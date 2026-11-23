@@ -15,7 +15,7 @@ import {
 	useRouter,
 } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { type ComponentProps, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AnswerDetailDialog } from "@/components/form/Answer/AnswerDetailDialog";
 import type { Form } from "@/components/form/type";
@@ -40,6 +40,7 @@ import {
 	buildAnswerValueMap,
 } from "@/lib/form/answer-table";
 import { getProjectRegistrationFormStatus } from "@/lib/form/form-status";
+import { useLazyResponses } from "@/lib/form/use-lazy-responses";
 import { formatDate } from "@/lib/format";
 import {
 	PROJECT_LOCATION_LABELS,
@@ -98,14 +99,11 @@ export const Route = createFileRoute(
 		meta: [{ title: "企画登録フォーム詳細 | 雙峰祭オンラインシステム" }],
 	}),
 	loader: async ({ params }) => {
-		const [{ form }, { committeeMembers }, { forms: allForms }, responsesRes] =
+		const [{ form }, { committeeMembers }, { forms: allForms }] =
 			await Promise.all([
 				getProjectRegistrationFormDetail(params.formId),
 				listCommitteeMembersPicker(),
 				listProjectRegistrationForms(),
-				listProjectRegistrationFormResponses(params.formId).catch(() => ({
-					responses: [],
-				})),
 			]);
 		const currentUserId = useAuthStore.getState().user?.id;
 		const currentMember = committeeMembers.find(
@@ -158,21 +156,14 @@ export const Route = createFileRoute(
 			approvers,
 			availableMembers,
 			activeForms,
-			responses: responsesRes.responses,
 		};
 	},
 });
 
 function RouteComponent() {
 	const { formId } = Route.useParams();
-	const {
-		form,
-		canCreate,
-		approvers,
-		availableMembers,
-		activeForms,
-		responses,
-	} = Route.useLoaderData();
+	const { form, canCreate, approvers, availableMembers, activeForms } =
+		Route.useLoaderData();
 	const navigate = useNavigate();
 	const router = useRouter();
 	const { user } = useAuthStore();
@@ -196,7 +187,15 @@ function RouteComponent() {
 	const canEditAnswers = isOwner || isWriteCollaborator;
 
 	const previewForm = useMemo(() => formDetailToPreviewForm(form), [form]);
-	const answerRows = useMemo(() => buildAnswerRows(responses), [responses]);
+	const { responses, error: responsesError } = useLazyResponses(
+		formId,
+		activeTab === "answers",
+		listProjectRegistrationFormResponses
+	);
+	const answerRows = useMemo(
+		() => (responses ? buildAnswerRows(responses) : null),
+		[responses]
+	);
 	const answerColumns = useMemo(
 		() => [
 			answerColumnHelper.display({
@@ -467,33 +466,18 @@ function RouteComponent() {
 						onClick={() => setActiveTab("answers")}
 					>
 						回答
-						{responses.length > 0 && (
-							<span className={styles.tabBadge}>{responses.length}</span>
+						{form.responseCount > 0 && (
+							<span className={styles.tabBadge}>{form.responseCount}</span>
 						)}
 					</button>
 				</div>
 
 				{activeTab === "answers" ? (
-					<section className={styles.answersSection}>
-						{answerRows.length === 0 ? (
-							<Text size="2" color="gray">
-								まだ回答がありません。
-							</Text>
-						) : (
-							<DataTable<AnswerRow>
-								data={answerRows}
-								columns={answerColumns}
-								features={{
-									sorting: true,
-									globalFilter: true,
-									columnVisibility: false,
-									selection: false,
-									copy: false,
-									csvExport: true,
-								}}
-							/>
-						)}
-					</section>
+					<AnswersSection
+						rows={answerRows}
+						error={responsesError}
+						columns={answerColumns}
+					/>
 				) : (
 					<div className={styles.contentLayout}>
 						<FormItemsPreview items={previewForm.items} />
@@ -568,6 +552,39 @@ function RouteComponent() {
 				</AlertDialog.Content>
 			</AlertDialog.Root>
 		</div>
+	);
+}
+
+function AnswersSection({
+	rows,
+	error,
+	columns,
+}: {
+	rows: AnswerRow[] | null;
+	error: string | null;
+	columns: ComponentProps<typeof DataTable<AnswerRow>>["columns"];
+}) {
+	return (
+		<section className={styles.answersSection}>
+			{!rows || rows.length === 0 ? (
+				<Text size="2" color={error ? "red" : "gray"}>
+					{error ?? (rows ? "まだ回答がありません。" : "読み込み中...")}
+				</Text>
+			) : (
+				<DataTable<AnswerRow>
+					data={rows}
+					columns={columns}
+					features={{
+						sorting: true,
+						globalFilter: true,
+						columnVisibility: false,
+						selection: false,
+						copy: false,
+						csvExport: true,
+					}}
+				/>
+			)}
+		</section>
 	);
 }
 
