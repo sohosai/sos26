@@ -173,11 +173,11 @@ function RouteComponent() {
 		tab === "answers" && canViewAnswers ? "answers" : "content";
 
 	// 回答データ
-	const { responses, error: responsesError } = useLazyResponses(
-		formId,
-		activeTab === "answers",
-		listFormResponses
-	);
+	const {
+		responses,
+		error: responsesError,
+		reload: reloadResponses,
+	} = useLazyResponses(formId, activeTab === "answers", listFormResponses);
 	const answerRows = useMemo(
 		() => (responses ? buildAnswerRows(responses) : null),
 		[responses]
@@ -465,7 +465,11 @@ function RouteComponent() {
 				form={previewForm}
 				canEditAnswers={canEditAnswers}
 				fetchResponse={getFormResponse}
-				onSave={editFormAnswer}
+				onSave={async (...args: Parameters<typeof editFormAnswer>) => {
+					const res = await editFormAnswer(...args);
+					reloadResponses();
+					return res;
+				}}
 			/>
 		</div>
 	);

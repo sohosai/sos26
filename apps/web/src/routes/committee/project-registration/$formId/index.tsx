@@ -187,7 +187,11 @@ function RouteComponent() {
 	const canEditAnswers = isOwner || isWriteCollaborator;
 
 	const previewForm = useMemo(() => formDetailToPreviewForm(form), [form]);
-	const { responses, error: responsesError } = useLazyResponses(
+	const {
+		responses,
+		error: responsesError,
+		reload: reloadResponses,
+	} = useLazyResponses(
 		formId,
 		activeTab === "answers",
 		listProjectRegistrationFormResponses
@@ -508,7 +512,13 @@ function RouteComponent() {
 					form={previewForm}
 					canEditAnswers={canEditAnswers}
 					fetchResponse={getProjectRegistrationFormResponse}
-					onSave={editProjectRegistrationFormAnswer}
+					onSave={async (
+						...args: Parameters<typeof editProjectRegistrationFormAnswer>
+					) => {
+						const res = await editProjectRegistrationFormAnswer(...args);
+						reloadResponses();
+						return res;
+					}}
 					submittedAtLabel="提出日"
 					submittedAtFallback="-"
 				/>
