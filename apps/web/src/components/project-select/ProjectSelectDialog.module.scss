@@ -8,8 +8,8 @@
 .tableWrapper {
 	max-height: 60vh;
 	overflow: auto;
-	// 行が多いときは表自身が縦にスクロールするので、ツールバーの分を引いて、この中に収まる高さにする
-	--data-table-virtualized-height: calc(60vh - 80px);
+	// 行が多いときは表自身が縦にスクロールするので、ツールバー（狭い画面では 2 行）の分を引いて、この中に収まる高さにする
+	--data-table-virtualized-height: calc(60vh - 120px);
 }
 
 .footer {

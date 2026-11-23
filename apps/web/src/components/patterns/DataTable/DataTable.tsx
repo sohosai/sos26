@@ -147,8 +147,8 @@ multiValueFilterFn.autoRemove = (val: string[]) => !val?.length;
 
 /** これより行が多い表だけ、画面に見えている行とその前後だけを描画する */
 const VIRTUALIZE_ROW_THRESHOLD = 100;
-/** 行の高さの見積もり。描画したあとは実際の高さで測り直す */
-const ESTIMATED_ROW_HEIGHT = 37;
+/** 行の高さの見積もり（Radix Table の size 2 のセルの最小の高さ）。描画したあとは実際の高さで測り直す */
+const ESTIMATED_ROW_HEIGHT = 44;
 
 const sortIndicator: Record<string, string> = {
 	asc: " ↑",
@@ -458,6 +458,16 @@ function DataTableRowImpl<T extends RowData>(props: DataTableRowProps<T>) {
 const DataTableRow = memo(DataTableRowImpl) as typeof DataTableRowImpl;
 
 /**
+ * Radix の Table は table を ScrollArea で包むので、表の中のスクロールはその Viewport で起きる。
+ * 見出しやピン留めした列の sticky もこの要素が基準になる
+ */
+function getTableViewport(container: HTMLElement | null): HTMLElement | null {
+	return (
+		container?.querySelector<HTMLElement>(".rt-ScrollAreaViewport") ?? null
+	);
+}
+
+/**
  * 行が多い表では、表自身のスクロール領域で見えている行と、その前後だけを返す。
  * 表の外側のスクロールに合わせると、レイアウトやスクロール位置の復元に左右されるため、表の中でスクロールさせる
  */
@@ -470,18 +480,18 @@ function useRowVirtualizer<T extends RowData>(
 	// スクロール領域の中での表の本体の位置（見出しの高さ）
 	const [scrollMargin, setScrollMargin] = useState(0);
 	useLayoutEffect(() => {
-		const container = scrollContainerRef.current;
-		if (!virtualize || !container || !tbodyRef.current) return;
+		const viewport = getTableViewport(scrollContainerRef.current);
+		if (!virtualize || !viewport || !tbodyRef.current) return;
 		const top =
 			tbodyRef.current.getBoundingClientRect().top -
-			container.getBoundingClientRect().top -
-			container.clientTop +
-			container.scrollTop;
+			viewport.getBoundingClientRect().top -
+			viewport.clientTop +
+			viewport.scrollTop;
 		setScrollMargin(prev => (prev === top ? prev : top));
 	});
 	const virtualizer = useVirtualizer({
 		count: rows.length,
-		getScrollElement: () => scrollContainerRef.current,
+		getScrollElement: () => getTableViewport(scrollContainerRef.current),
 		estimateSize: () => ESTIMATED_ROW_HEIGHT,
 		// 並べ替えで行の位置が変わっても、測った高さを行に結びつけておく
 		getItemKey: index => rows[index]?.id ?? index,
