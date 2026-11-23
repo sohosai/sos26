@@ -96,6 +96,8 @@ export const Route = createFileRoute(
 	}),
 	// 操作の結果は画面の state にだけ反映するので、ページを離れたら loader のデータを捨て、開き直したときに古い表示を出さない
 	gcTime: 0,
+	// パラメータが変わったら作り直し、前の詳細を待っていた応答を移った先の画面に入れない
+	remountDeps: ({ params }) => params,
 	loader: async ({ params }) => {
 		const [{ form }, { committeeMembers }, { forms: allForms }] =
 			await Promise.all([

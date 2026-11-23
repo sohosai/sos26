@@ -83,6 +83,10 @@ export const Route = createFileRoute("/committee/forms/$formId/")({
 	validateSearch: searchSchema,
 	// 操作の結果は画面の state にだけ反映するので、ページを離れたら loader のデータを捨て、開き直したときに古い表示を出さない
 	gcTime: 0,
+	// パラメータが変わったら作り直し、前の詳細を待っていた応答を移った先の画面に入れない
+	remountDeps: ({ params }) => params,
+	// タブの切り替えは search だけが変わるので、loader を取り直さない。開き直したときは gcTime: 0 で取り直す
+	staleTime: Number.POSITIVE_INFINITY,
 	loader: async ({ params }) => {
 		const [formRes, membersRes] = await Promise.all([
 			getFormDetail(params.formId),
