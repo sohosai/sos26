@@ -23,14 +23,17 @@ import {
 	getSortedRowModel,
 	type Header,
 	type Table as ReactTable,
+	type Row,
 	type RowData,
 	type RowSelectionState,
 	type SortingState,
 	useReactTable,
 	type VisibilityState,
 } from "@tanstack/react-table";
+import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import {
 	type CSSProperties,
+	memo,
 	type MouseEvent as ReactMouseEvent,
 	type ReactNode,
 	useEffect,
@@ -141,6 +144,11 @@ const multiValueFilterFn: FilterFn<any> = (row, columnId, value: string[]) => {
 	return value.includes(String(cellVal ?? ""));
 };
 multiValueFilterFn.autoRemove = (val: string[]) => !val?.length;
+
+/** これより行が多い表だけ、画面に見えている行とその前後だけを描画する */
+const VIRTUALIZE_ROW_THRESHOLD = 100;
+/** 行の高さの見積もり。描画したあとは実際の高さで測り直す */
+const ESTIMATED_ROW_HEIGHT = 37;
 
 const sortIndicator: Record<string, string> = {
 	asc: " ↑",
@@ -351,7 +359,7 @@ function renderBodyCell<T extends RowData>(args: {
 	pinnedLeft: Record<string, number>;
 	lastPinnedId: string | undefined;
 	cellSelection: boolean;
-	isSelected: (ri: number, ci: number) => boolean;
+	isCellSelected: boolean;
 	handleCellMouseDown: (ri: number, ci: number, e: ReactMouseEvent) => void;
 	handleCellMouseEnter: (ri: number, ci: number) => void;
 }): ReactNode {
@@ -363,7 +371,7 @@ function renderBodyCell<T extends RowData>(args: {
 		pinnedLeft,
 		lastPinnedId,
 		cellSelection,
-		isSelected,
+		isCellSelected,
 		handleCellMouseDown,
 		handleCellMouseEnter,
 	} = args;
@@ -377,9 +385,7 @@ function renderBodyCell<T extends RowData>(args: {
 		"body"
 	);
 	const selectedClass =
-		cellSelection && isSelected(rowIndex, cellIndex)
-			? ` ${styles.cellSelected}`
-			: "";
+		cellSelection && isCellSelected ? ` ${styles.cellSelected}` : "";
 	const className = `${pinned.className ?? ""}${selectedClass}`.trim();
 
 	return (
@@ -403,6 +409,122 @@ function renderBodyCell<T extends RowData>(args: {
 		>
 			{flexRender(cell.column.columnDef.cell, cell.getContext())}
 		</Table.Cell>
+	);
+}
+
+type DataTableRowProps<T extends RowData> = {
+	row: Row<T>;
+	rowIndex: number;
+	/** この行で選択中の列番号を「,1,3,」の形でつないだもの。変わった行だけを描画し直すために文字列で渡す */
+	selectedCellIndexes: string;
+	/** 行チェックボックスの状態。row が同じままでも変わるので、描画し直すために渡す */
+	isRowSelected: boolean;
+	/** カラム定義と表示カラム。変わったら描画し直すために渡す（中では使わない） */
+	columns: unknown;
+	columnVisibility: VisibilityState;
+	effectivePinnedSet: ReadonlySet<string>;
+	pinnedLeft: Record<string, number>;
+	lastPinnedId: string | undefined;
+	cellSelection: boolean;
+	handleCellMouseDown: (ri: number, ci: number, e: ReactMouseEvent) => void;
+	handleCellMouseEnter: (ri: number, ci: number) => void;
+	measureElement: ((el: Element | null) => void) | undefined;
+};
+
+function DataTableRowImpl<T extends RowData>(props: DataTableRowProps<T>) {
+	const { row, rowIndex, selectedCellIndexes, measureElement } = props;
+	return (
+		<Table.Row ref={measureElement} data-index={rowIndex}>
+			{row.getVisibleCells().map((cell, ci) =>
+				renderBodyCell({
+					cell,
+					rowIndex,
+					cellIndex: ci,
+					effectivePinnedSet: props.effectivePinnedSet,
+					pinnedLeft: props.pinnedLeft,
+					lastPinnedId: props.lastPinnedId,
+					cellSelection: props.cellSelection,
+					isCellSelected: selectedCellIndexes.includes(`,${ci},`),
+					handleCellMouseDown: props.handleCellMouseDown,
+					handleCellMouseEnter: props.handleCellMouseEnter,
+				})
+			)}
+		</Table.Row>
+	);
+}
+
+// ドラッグで選択が変わるたびに、選択の変わった行だけを描画し直す
+const DataTableRow = memo(DataTableRowImpl) as typeof DataTableRowImpl;
+
+/**
+ * 行が多い表では、画面に見えている行とその前後だけを返す。
+ * 表はページ全体のスクロールで動くので、ページの先頭から表の本体までの距離を起点にする
+ */
+function useRowVirtualizer<T extends RowData>(rows: Row<T>[]) {
+	const virtualize = rows.length > VIRTUALIZE_ROW_THRESHOLD;
+	const tbodyRef = useRef<HTMLTableSectionElement>(null);
+	const [scrollMargin, setScrollMargin] = useState(0);
+	useLayoutEffect(() => {
+		if (!virtualize || !tbodyRef.current) return;
+		const top = tbodyRef.current.getBoundingClientRect().top + window.scrollY;
+		setScrollMargin(prev => (prev === top ? prev : top));
+	});
+	const virtualizer = useWindowVirtualizer({
+		count: rows.length,
+		estimateSize: () => ESTIMATED_ROW_HEIGHT,
+		overscan: 10,
+		scrollMargin,
+		enabled: virtualize,
+	});
+
+	if (!virtualize) {
+		return {
+			virtualize,
+			tbodyRef,
+			renderedRows: rows.map((row, index) => ({ row, index })),
+			paddingTop: 0,
+			paddingBottom: 0,
+			measureElement: virtualizer.measureElement,
+			firstRenderedIndex: 0,
+		};
+	}
+	const items = virtualizer.getVirtualItems();
+	const first = items[0];
+	const last = items.at(-1);
+	return {
+		virtualize,
+		tbodyRef,
+		renderedRows: items.flatMap(item => {
+			const row = rows[item.index];
+			return row ? [{ row, index: item.index }] : [];
+		}),
+		paddingTop: first ? first.start - scrollMargin : 0,
+		paddingBottom: last
+			? virtualizer.getTotalSize() - (last.end - scrollMargin)
+			: 0,
+		measureElement: virtualizer.measureElement,
+		firstRenderedIndex: first?.index ?? 0,
+	};
+}
+
+/** 選択中のセルを、行番号ごとに「,1,3,」の形の列番号にまとめる */
+function groupSelectedCellIndexes(selected: ReadonlySet<string>) {
+	const byRow = new Map<number, string>();
+	for (const cellId of selected) {
+		const [rowStr, colStr] = cellId.split(":");
+		const ri = Number(rowStr);
+		byRow.set(ri, `${byRow.get(ri) ?? ","}${colStr},`);
+	}
+	return byRow;
+}
+
+/** 仮想化で描画しない行の分の高さを埋める */
+function SpacerRow({ height, colSpan }: { height: number; colSpan: number }) {
+	if (height <= 0) return null;
+	return (
+		<tr>
+			<td colSpan={colSpan} style={{ height, padding: 0, border: 0 }} />
+		</tr>
 	);
 }
 
@@ -543,7 +665,6 @@ export function DataTable<T extends RowData>({
 	const {
 		selected,
 		isDragging,
-		isSelected,
 		clearSelection,
 		handleCellMouseDown,
 		handleCellMouseEnter,
@@ -616,12 +737,12 @@ export function DataTable<T extends RowData>({
 	useChangeCallback(columnVisibility, onColumnVisibilityChange);
 	useChangeCallback(columnFilters, onColumnFiltersChange);
 
-	// セル選択変化を親に通知
+	// セル選択変化を親に通知する。ドラッグ中は通知せず、mouseup のあとに 1 回だけ通知する
 	const onSelectionChangeRef = useRef(onSelectionChange);
 	onSelectionChangeRef.current = onSelectionChange;
 	// biome-ignore lint/correctness/useExhaustiveDependencies: selected triggers the callback
 	useEffect(() => {
-		if (!onSelectionChangeRef.current || !cellSelection) return;
+		if (!onSelectionChangeRef.current || !cellSelection || isDragging) return;
 		const rows = table.getRowModel().rows;
 		const visibleColumns = table.getVisibleFlatColumns();
 		const items: { row: T; columnId: string }[] = [];
@@ -636,7 +757,7 @@ export function DataTable<T extends RowData>({
 			}
 		}
 		onSelectionChangeRef.current(items);
-	}, [selected, cellSelection]);
+	}, [selected, cellSelection, isDragging]);
 
 	useCopyToClipboard(table, selected, cellSelection && f.copy);
 
@@ -683,6 +804,18 @@ export function DataTable<T extends RowData>({
 
 	const showToolbar = hasToolbar(f, toolbarExtra, toolbarExtraBeforeCsv);
 
+	const {
+		virtualize,
+		tbodyRef,
+		renderedRows,
+		paddingTop,
+		paddingBottom,
+		measureElement,
+		firstRenderedIndex,
+	} = useRowVirtualizer(table.getRowModel().rows);
+	const selectedCellIndexesByRow = groupSelectedCellIndexes(selected);
+	const visibleColumnCount = table.getVisibleLeafColumns().length;
+
 	const pinnedVisibleColumns = useMemo(() => {
 		if (!pinnedColumnIds?.length && !f.rowSelection) return [];
 		return table
@@ -691,6 +824,8 @@ export function DataTable<T extends RowData>({
 	}, [pinnedColumnIds, f.rowSelection, effectivePinnedSet, table]);
 	const lastPinnedId = pinnedVisibleColumns.at(-1)?.id;
 
+	// 仮想化すると描画する行が変わり、列の幅も変わりうるので、firstRenderedIndex が変わったら測り直す
+	// biome-ignore lint/correctness/useExhaustiveDependencies: firstRenderedIndex is an intentional trigger
 	useLayoutEffect(() => {
 		if (!pinnedColumnIds?.length && !f.rowSelection) {
 			setPinnedLeft({});
@@ -708,7 +843,12 @@ export function DataTable<T extends RowData>({
 			left += w;
 		}
 		setPinnedLeft(prev => (isSamePinnedLeft(prev, next) ? prev : next));
-	}, [pinnedColumnIds, f.rowSelection, pinnedVisibleColumns]);
+	}, [
+		pinnedColumnIds,
+		f.rowSelection,
+		pinnedVisibleColumns,
+		firstRenderedIndex,
+	]);
 
 	return (
 		<Box ref={tableRef}>
@@ -743,25 +883,27 @@ export function DataTable<T extends RowData>({
 							</Table.Row>
 						))}
 					</Table.Header>
-					<Table.Body>
-						{table.getRowModel().rows.map((row, ri) => (
-							<Table.Row key={row.id}>
-								{row.getVisibleCells().map((cell, ci) =>
-									renderBodyCell({
-										cell,
-										rowIndex: ri,
-										cellIndex: ci,
-										effectivePinnedSet,
-										pinnedLeft,
-										lastPinnedId,
-										cellSelection,
-										isSelected,
-										handleCellMouseDown,
-										handleCellMouseEnter,
-									})
-								)}
-							</Table.Row>
+					<Table.Body ref={tbodyRef}>
+						<SpacerRow height={paddingTop} colSpan={visibleColumnCount} />
+						{renderedRows.map(({ row, index }) => (
+							<DataTableRow
+								key={row.id}
+								row={row}
+								rowIndex={index}
+								selectedCellIndexes={selectedCellIndexesByRow.get(index) ?? ""}
+								isRowSelected={row.getIsSelected()}
+								columns={tableColumns}
+								columnVisibility={columnVisibility}
+								effectivePinnedSet={effectivePinnedSet}
+								pinnedLeft={pinnedLeft}
+								lastPinnedId={lastPinnedId}
+								cellSelection={cellSelection}
+								handleCellMouseDown={handleCellMouseDown}
+								handleCellMouseEnter={handleCellMouseEnter}
+								measureElement={virtualize ? measureElement : undefined}
+							/>
 						))}
+						<SpacerRow height={paddingBottom} colSpan={visibleColumnCount} />
 					</Table.Body>
 				</Table.Root>
 			</div>

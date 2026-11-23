@@ -29,11 +29,6 @@ export function useSelection() {
 	const [isDragging, setIsDragging] = useState(false);
 	const baseSelectionRef = useRef<Set<CellId>>(new Set());
 
-	const isSelected = useCallback(
-		(row: number, col: number) => selected.has(makeCellId(row, col)),
-		[selected]
-	);
-
 	const clearSelection = useCallback(() => {
 		setSelected(prev => {
 			if (prev.size === 0) return prev;
@@ -96,7 +91,6 @@ export function useSelection() {
 	return {
 		selected,
 		isDragging,
-		isSelected,
 		clearSelection,
 		handleCellMouseDown,
 		handleCellMouseEnter,
