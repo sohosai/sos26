@@ -1156,43 +1156,45 @@ committeeFormRoute.get(
 			throw Errors.forbidden("回答の閲覧権限がありません");
 		}
 
-		const responses = await prisma.formResponse.findMany({
-			where: {
-				formDelivery: { formAuthorization: { formId } },
-				submittedAt: { not: null }, // 提出済みのみ
-			},
-			include: {
-				respondent: { select: userSelect },
-				formDelivery: {
-					include: {
-						project: {
-							select: {
-								id: true,
-								number: true,
-								name: true,
+		const [responses, formItems] = await Promise.all([
+			prisma.formResponse.findMany({
+				where: {
+					formDelivery: { formAuthorization: { formId } },
+					submittedAt: { not: null }, // 提出済みのみ
+				},
+				include: {
+					respondent: { select: userSelect },
+					formDelivery: {
+						include: {
+							project: {
+								select: {
+									id: true,
+									number: true,
+									name: true,
+								},
+							},
+						},
+					},
+					answers: {
+						include: {
+							files: answerFilesInclude,
+							selectedOptions: {
+								include: {
+									formItemOption: { select: { id: true, label: true } },
+								},
 							},
 						},
 					},
 				},
-				answers: {
-					include: {
-						files: answerFilesInclude,
-						selectedOptions: {
-							include: {
-								formItemOption: { select: { id: true, label: true } },
-							},
-						},
-					},
-				},
-			},
-			orderBy: { submittedAt: "desc" },
-		});
+				orderBy: { submittedAt: "desc" },
+			}),
+			prisma.formItem.findMany({
+				where: { formId },
+				select: { id: true },
+			}),
+		]);
 
 		// FormItemEditHistory の最新値を取得
-		const formItems = await prisma.formItem.findMany({
-			where: { formId },
-			select: { id: true },
-		});
 		const formItemIds = formItems.map(fi => fi.id);
 		const projectIds = [
 			...new Set(responses.map(r => r.formDelivery.projectId)),
