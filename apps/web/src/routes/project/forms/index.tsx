@@ -87,10 +87,12 @@ function RouteComponent() {
 	);
 
 	const handleSubmitSuccess = useCallback(
-		(deliveryId: string, submittedAt: Date | null) => {
+		(deliveryId: string, responseId: string, submittedAt: Date | null) => {
 			setForms(prev =>
 				prev.map(f =>
-					f.formDeliveryId === deliveryId ? { ...f, submittedAt } : f
+					f.formDeliveryId === deliveryId
+						? { ...f, responseId, submittedAt }
+						: f
 				)
 			);
 			setAnsweringDeliveryId(null);
@@ -257,8 +259,8 @@ function RouteComponent() {
 					}}
 					projectId={selectedProjectId}
 					formDeliveryId={answeringDeliveryId}
-					onSubmitSuccess={(submittedAt: Date | null) =>
-						handleSubmitSuccess(answeringDeliveryId, submittedAt)
+					onSubmitSuccess={(responseId, submittedAt) =>
+						handleSubmitSuccess(answeringDeliveryId, responseId, submittedAt)
 					}
 					onDraftSaved={responseId =>
 						handleDraftSaved(answeringDeliveryId, responseId)

@@ -163,7 +163,7 @@ function RouteComponent() {
 	useEffect(() => {
 		const targetNoticeId = search.noticeId;
 		if (!targetNoticeId) {
-			// 一覧から開いたお知らせは、既読更新によるloaderの再実行後も閉じない。
+			// 一覧から開いたお知らせは、新着の反映などで loader が再実行されても閉じない。
 			// URL経由で開いた場合のみ、noticeIdがなくなったら選択を解除する。
 			setSelectedNotice(current =>
 				current?.source === "search" ? null : current
