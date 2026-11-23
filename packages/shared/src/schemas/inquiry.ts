@@ -535,7 +535,13 @@ export const listCommitteeInquiriesQuerySchema = z.object({
 	awaitingReplyFrom: inquiryCreatorRoleSchema.optional(),
 	/** 前のページの nextCursor をそのまま渡す */
 	cursor: z.string().optional(),
-	limit: z.coerce.number().int().min(1).optional(),
+	// DB には limit + 1 件を要求するので、32 ビット整数に収める
+	limit: z.coerce
+		.number()
+		.int()
+		.min(1)
+		.max(2 ** 31 - 2)
+		.optional(),
 });
 export type ListCommitteeInquiriesQuery = z.infer<
 	typeof listCommitteeInquiriesQuerySchema

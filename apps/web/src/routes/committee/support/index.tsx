@@ -216,6 +216,8 @@ type ListState = {
  * 別のユーザーの一覧を見せないよう、キーにユーザーの ID を含める。
  */
 const listCache = new Map<string, ListState>();
+/** 要求の番号。listCache の一覧の番号と重ならないよう、マウントし直しても数え直さない */
+let lastRequestId = 0;
 
 function listKey(
 	userId: string,
@@ -257,7 +259,8 @@ function useCommitteeInquiryLists({
 	const requestIdRef = useRef(0);
 
 	useEffect(() => {
-		const requestId = ++requestIdRef.current;
+		const requestId = ++lastRequestId;
+		requestIdRef.current = requestId;
 		const cached = listCache.get(key)?.lists;
 		// 取り直すときは「もっと見る」で読み込んだ件数まで取る
 		const limitFor = (view: PagedView) =>
@@ -349,13 +352,9 @@ function useCommitteeInquiryLists({
 			const listName = pagedKey(view);
 			setState(prev => {
 				if (!prev?.lists || prev.requestId !== requestId) return prev;
-				// ページの間に更新されて上へ移った問い合わせが、続きにもう一度含まれることがある
-				const loadedIds = new Set(
-					prev.lists[listName].items.map(inq => inq.id)
-				);
 				const items: Inquiries = [
 					...prev.lists[listName].items,
-					...res.inquiries.filter(inq => !loadedIds.has(inq.id)),
+					...res.inquiries,
 				];
 				return {
 					...prev,
