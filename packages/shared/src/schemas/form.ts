@@ -526,6 +526,8 @@ export const getFormDetailResponseSchema = z.object({
 		authorizationDetail: authorizationDetailSchema.nullable(),
 		attachments: z.array(formAttachmentSchema),
 		viewers: z.array(formViewerDetailSchema),
+		// 提出済みの回答の件数。回答の閲覧権限がないときは null
+		responseCount: z.number().int().nullable(),
 	}),
 });
 export type GetFormDetailResponse = z.infer<typeof getFormDetailResponseSchema>;

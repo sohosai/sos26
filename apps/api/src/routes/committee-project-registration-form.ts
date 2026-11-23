@@ -249,8 +249,13 @@ committeeProjectRegistrationFormRoute.get(
 		const { formId } = projectRegistrationFormIdPathParamsSchema.parse(
 			c.req.param()
 		);
-		const form = await getFormOrThrow(formId);
-		return c.json({ form: mapFormToApiShape(form) });
+		const [form, responseCount] = await Promise.all([
+			getFormOrThrow(formId),
+			prisma.projectRegistrationFormResponse.count({
+				where: { formId, deletedAt: null },
+			}),
+		]);
+		return c.json({ form: { ...mapFormToApiShape(form), responseCount } });
 	}
 );
 
