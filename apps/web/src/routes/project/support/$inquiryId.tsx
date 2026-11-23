@@ -58,15 +58,15 @@ function ProjectSupportDetailPage() {
 	const router = useRouter();
 	const { selectedProjectId } = useProjectStore();
 	const { user } = useAuthStore();
-	const loadedInquiryId = data?.inquiry.id;
+	const loadedInquiry = data?.inquiry;
 
-	// 詳細を表示したときに 1 回だけ既読にする。失敗しても表示は続ける
+	// 詳細を表示したときと、新しいコメントを取り直したときに既読にする。失敗しても表示は続ける
 	useEffect(() => {
-		if (!selectedProjectId || !loadedInquiryId) return;
-		void readProjectInquiry(selectedProjectId, loadedInquiryId).catch(
+		if (!selectedProjectId || !loadedInquiry) return;
+		void readProjectInquiry(selectedProjectId, loadedInquiry.id).catch(
 			() => undefined
 		);
-	}, [selectedProjectId, loadedInquiryId]);
+	}, [selectedProjectId, loadedInquiry]);
 
 	if (!data || !selectedProjectId) {
 		return (

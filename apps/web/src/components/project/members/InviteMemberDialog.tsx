@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button, IconButton } from "@/components/primitives";
 import { regenerateInviteCode } from "@/lib/api/project";
 import { useAuthStore } from "@/lib/auth";
-import { useProject } from "@/lib/project/store";
+import { useProject, useProjectStore } from "@/lib/project/store";
 import styles from "./InviteMemberDialog.module.scss";
 
 type Props = {
@@ -27,6 +27,13 @@ export function InviteMemberDialog({ open, onOpenChange }: Props) {
 		try {
 			const res = await regenerateInviteCode(project.id);
 			setInviteCode(res.inviteCode);
+			// ダイアログを開き直したときも新しいコードを出す
+			const { projects, setProjects } = useProjectStore.getState();
+			setProjects(
+				projects.map(p =>
+					p.id === project.id ? { ...p, inviteCode: res.inviteCode } : p
+				)
+			);
 			setRegenerateConfirmOpen(false);
 		} catch {
 			toast.error("企画参加コードの再生成に失敗しました");

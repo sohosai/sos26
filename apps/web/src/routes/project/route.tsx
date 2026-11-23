@@ -8,11 +8,13 @@ import type {
 } from "@sos26/shared";
 import {
 	createFileRoute,
+	type ErrorComponentProps,
 	Outlet,
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { RouteError } from "@/components/common/RouteError";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { Button } from "@/components/primitives";
@@ -120,8 +122,11 @@ const EMPTY_PUBLIC_INFO_MODERATION: PublicInfoModeration = {
  * /project に入ったときに取得した申請期間。取得に失敗したときは null。
  * ルートの自動コード分割で別チャンクから参照されるため、変数ではなくオブジェクトの値を書き換える
  */
-const applicationPeriodCache: { info: GetApplicationPeriodResponse | null } = {
-	info: null,
+const applicationPeriodCache: {
+	/** まだ取得していないときは undefined */
+	info: GetApplicationPeriodResponse | null | undefined;
+} = {
+	info: undefined,
 };
 
 export const Route = createFileRoute("/project")({
@@ -130,8 +135,9 @@ export const Route = createFileRoute("/project")({
 		useAuthStore.getState().setActivePortal("project");
 
 		// 子ルートの loader が選択中の企画を使うので、loader ではなくここで決める。
-		// /project の中でページを移るたびには取得せず、一覧が変わりうる操作のあとに refreshMyProjects を呼ぶ
-		if (cause === "enter") {
+		// /project の中でページを移るたびには取得せず、一覧が変わりうる操作のあとに refreshMyProjects を呼ぶ。
+		// 入ったときの取得に失敗した場合に備えて、一覧が空のときも取り直す
+		if (cause === "enter" || useProjectStore.getState().projects.length === 0) {
 			await refreshMyProjects();
 		}
 	},
@@ -139,13 +145,13 @@ export const Route = createFileRoute("/project")({
 		const store = useProjectStore.getState();
 		const { selectedProjectId } = store;
 
-		if (cause === "enter") {
-			applicationPeriodCache.info = await getApplicationPeriod().catch(
-				() => null
-			);
-		}
+		const applicationPeriodPromise =
+			cause === "enter" || applicationPeriodCache.info === undefined
+				? getApplicationPeriod().catch(() => null)
+				: Promise.resolve(applicationPeriodCache.info);
 
 		if (!selectedProjectId) {
+			applicationPeriodCache.info = await applicationPeriodPromise;
 			return {
 				applicationPeriodInfo: applicationPeriodCache.info,
 				notificationStatus: EMPTY_NOTIFICATION_STATUS,
@@ -156,11 +162,21 @@ export const Route = createFileRoute("/project")({
 			};
 		}
 
-		const [notificationStatusResult, publicInfoResult] =
-			await Promise.allSettled([
-				getProjectNotificationStatus(selectedProjectId),
-				getProjectPublicInfo(selectedProjectId),
-			]);
+		const [
+			applicationPeriodResult,
+			notificationStatusResult,
+			publicInfoResult,
+		] = await Promise.allSettled([
+			applicationPeriodPromise,
+			getProjectNotificationStatus(selectedProjectId),
+			getProjectPublicInfo(selectedProjectId),
+		]);
+		// applicationPeriodPromise は失敗を null にしているので reject しない
+		const applicationPeriodInfo =
+			applicationPeriodResult.status === "fulfilled"
+				? applicationPeriodResult.value
+				: null;
+		applicationPeriodCache.info = applicationPeriodInfo;
 
 		const notificationStatus =
 			notificationStatusResult.status === "fulfilled"
@@ -183,7 +199,7 @@ export const Route = createFileRoute("/project")({
 				: EMPTY_PUBLIC_INFO_MODERATION;
 
 		return {
-			applicationPeriodInfo: applicationPeriodCache.info,
+			applicationPeriodInfo,
 			notificationStatus,
 			publicInfoProjectId: selectedProjectId,
 			publicInfo,
@@ -192,7 +208,32 @@ export const Route = createFileRoute("/project")({
 		};
 	},
 	component: ProjectLayout,
+	errorComponent: ProjectErrorComponent,
 });
+
+/**
+ * 企画から外されたときやアカウントを切り替えたときは、選択中の企画で子ページを読めずにエラーになる。
+ * 企画一覧を取り直して選択中の企画が変わったら読み込み直し、変わらなければエラーを表示する
+ */
+function ProjectErrorComponent({ error }: ErrorComponentProps) {
+	const router = useRouter();
+	const [recoveryFailed, setRecoveryFailed] = useState(false);
+
+	useEffect(() => {
+		const before = useProjectStore.getState().selectedProjectId;
+		refreshMyProjects()
+			.then(() => {
+				if (useProjectStore.getState().selectedProjectId !== before) {
+					void router.invalidate();
+				} else {
+					setRecoveryFailed(true);
+				}
+			})
+			.catch(() => setRecoveryFailed(true));
+	}, [router]);
+
+	return recoveryFailed ? <RouteError error={error} /> : null;
+}
 
 function ProjectLayout() {
 	const {

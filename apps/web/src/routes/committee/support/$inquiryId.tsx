@@ -86,12 +86,11 @@ function CommitteeSupportDetailPage() {
 		setCurrentInquiry(inquiry);
 	}, [inquiry]);
 
-	// 詳細を表示したときに 1 回だけ既読にする。失敗しても表示は続ける
-	const loadedInquiryId = inquiry?.id;
+	// 詳細を表示したときと、新しいコメントを取り直したときに既読にする。失敗しても表示は続ける
 	useEffect(() => {
-		if (!loadedInquiryId) return;
-		void readCommitteeInquiry(loadedInquiryId).catch(() => undefined);
-	}, [loadedInquiryId]);
+		if (!inquiry) return;
+		void readCommitteeInquiry(inquiry.id).catch(() => undefined);
+	}, [inquiry]);
 
 	if (!currentInquiry) {
 		return (
