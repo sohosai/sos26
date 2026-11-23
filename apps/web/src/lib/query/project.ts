@@ -1,4 +1,8 @@
-import { type QueryKey, queryOptions } from "@tanstack/react-query";
+import {
+	type FetchQueryOptions,
+	type QueryKey,
+	queryOptions,
+} from "@tanstack/react-query";
 import {
 	getProjectNotificationStatus,
 	listProjectMembers,
@@ -13,6 +17,12 @@ import { queryClient } from "./client";
  * 新着は、画面を移るたびと定期的に notification-status を確かめ、変わっていたら取り直す
  */
 const PROJECT_STALE_TIME = 30_000;
+
+/**
+ * 一覧はキャッシュから消さない。ルーターは離れた画面の loader の結果を持ち続け、再訪するとその結果ですぐに描画する。
+ * そのとき一覧のキャッシュが消えていると、取得が終わるまで画面が表示されない
+ */
+const PROJECT_LIST_GC_TIME = Number.POSITIVE_INFINITY;
 
 export const projectQueryKeys = {
 	/** 企画ごとの query をまとめて無効にするときに使う */
@@ -40,6 +50,7 @@ export const projectFormsQuery = (projectId: string) =>
 		queryKey: projectQueryKeys.forms(projectId),
 		queryFn: () => listProjectForms(projectId),
 		staleTime: PROJECT_STALE_TIME,
+		gcTime: PROJECT_LIST_GC_TIME,
 	});
 
 export const projectNoticesQuery = (projectId: string) =>
@@ -47,6 +58,7 @@ export const projectNoticesQuery = (projectId: string) =>
 		queryKey: projectQueryKeys.notices(projectId),
 		queryFn: () => listProjectNotices(projectId),
 		staleTime: PROJECT_STALE_TIME,
+		gcTime: PROJECT_LIST_GC_TIME,
 	});
 
 export const projectInquiriesQuery = (projectId: string) =>
@@ -54,6 +66,7 @@ export const projectInquiriesQuery = (projectId: string) =>
 		queryKey: projectQueryKeys.inquiries(projectId),
 		queryFn: () => listProjectInquiries(projectId),
 		staleTime: PROJECT_STALE_TIME,
+		gcTime: PROJECT_LIST_GC_TIME,
 	});
 
 export const projectMembersQuery = (projectId: string) =>
@@ -61,24 +74,41 @@ export const projectMembersQuery = (projectId: string) =>
 		queryKey: projectQueryKeys.members(projectId),
 		queryFn: () => listProjectMembers(projectId),
 		staleTime: PROJECT_STALE_TIME,
+		gcTime: PROJECT_LIST_GC_TIME,
 	});
 
+function hasFreshCache(queryKey: QueryKey): boolean {
+	const state = queryClient.getQueryState(queryKey);
+	return (
+		state?.data !== undefined &&
+		!state.isInvalidated &&
+		Date.now() - state.dataUpdatedAt < PROJECT_STALE_TIME
+	);
+}
+
 /**
- * 一覧のキャッシュがまだ新しいときだけ、/project の beforeLoad が始めた新着の確認を待つ。
+ * 一覧を取得する。キャッシュがまだ新しいときだけ、/project の beforeLoad が始めた新着の確認を待ってから読む。
  * 新着があれば確認がキャッシュを古くするので、待ってから読めば取り直される。
- * キャッシュが古いときや無いときは、待たずに取得すればよい
+ * キャッシュが古いときや無いときは、確認を待たずに取得する
  */
-export async function waitForNotificationStatusCheck(
-	check: Promise<void>,
-	listQueryKeys: QueryKey[]
+export async function fetchProjectListQuery<TData, TQueryKey extends QueryKey>(
+	notificationStatusCheck: Promise<void>,
+	options: FetchQueryOptions<TData, Error, TData, TQueryKey>
+): Promise<TData> {
+	if (hasFreshCache(options.queryKey)) await notificationStatusCheck;
+	return queryClient.fetchQuery(options);
+}
+
+/**
+ * query を無効にする。取得中なら、その取得の終わりを待ってから無効にする。
+ * 取得中に無効にすると、その取得の成功で無効が打ち消されるため
+ */
+export async function invalidateQueryAfterFetch(
+	queryKey: QueryKey
 ): Promise<void> {
-	const hasFreshCache = listQueryKeys.some(queryKey => {
-		const state = queryClient.getQueryState(queryKey);
-		return (
-			state?.data !== undefined &&
-			!state.isInvalidated &&
-			Date.now() - state.dataUpdatedAt < PROJECT_STALE_TIME
-		);
-	});
-	if (hasFreshCache) await check;
+	const query = queryClient.getQueryCache().find({ queryKey, exact: true });
+	if (query?.state.fetchStatus === "fetching") {
+		await query.promise?.catch(() => undefined);
+	}
+	await queryClient.invalidateQueries({ queryKey, exact: true });
 }

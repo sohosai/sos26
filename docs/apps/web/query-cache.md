@@ -15,7 +15,7 @@ Web では、画面をまたいで同じ API を取り直さないよう、取�
 | `retry` | `false` | GET は HTTP クライアント（ky）で 1 回再試行している |
 | `refetchOnWindowFocus` | `false` | `/project` 配下は notification-status の変化を見て取り直す（5 章） |
 
-Firebase のユーザーが替わったとき（サインアウトを含む）は、`main.tsx` で `queryClient.clear()` を呼ぶ。TanStack Router も離れた画面の loader の結果を持っているので、`router.clearCache()` も合わせて呼ぶ。
+Firebase のユーザーが替わったとき（サインアウトを含む）は、`main.tsx` で `queryClient.clear()` を呼ぶ。TanStack Router も離れた画面の loader の結果を持っているので、`router.clearCache()` も合わせて呼ぶ。前のユーザーがいたとき（サインアウトや、別のタブでのログイン）は、表示中の画面も `router.invalidate()` で取り直す。
 
 ### 1.2 キャッシュする API
 
@@ -25,7 +25,7 @@ staleTime のあいだは API を呼ばずにキャッシュを返す。自分�
 |---|---|---|---|
 | 委員の候補（委員メンバー、自分の申請、全企画） | `lib/query/committee.ts` | 60 秒 | 前回の取得から 60 秒以上たって、候補を使う画面を開いたとき。委員の申請一覧を開いたときは、自分の申請を取り直す |
 | 企画の申請・お知らせ・問い合わせの一覧 | `lib/query/project.ts` | 30 秒 | notification-status が変わったとき（5 章）。ほかのメンバーの回答・問い合わせの作成・コメントのように notification-status に出ない変化は、前回の取得から 30 秒以上たって一覧を開いたとき |
-| 企画メンバーの一覧 | `lib/query/project.ts` | 30 秒 | メンバー管理画面を開いたとき。問い合わせの担当者の候補では、前回の取得から 30 秒以上たって候補を使う画面を開いたとき |
+| 企画メンバーの一覧 | `lib/query/project.ts` | 30 秒 | メンバー管理画面を開いたとき。問い合わせの担当者の候補では、notification-status が変わったときと、前回の取得から 30 秒以上たって候補を使う画面を開いたとき |
 | 企画の notification-status | `lib/query/project.ts` | 30 秒 | `/project` の中で画面を移るたびと、60 秒ごと（5 章）。前回の値と比べるため、`gcTime` を無期限にしてキャッシュから消さない |
 
 ## 2. query の定義
@@ -63,13 +63,26 @@ await queryClient.fetchQuery({ ...myFormsQuery, staleTime: 0 });
 | 開くたびに取り直し、画面で書き換える | loader の返り値を state に移して書き換え、4.2 の形でキャッシュを古くする | 企画メンバーの管理画面 |
 | 書き換えない | loader の返り値を `Route.useLoaderData()` で読む | 問い合わせ一覧 |
 
-`useSuspenseQuery` に渡す企画 ID には、`useProjectStore` の値ではなく loader が返した値を使う。企画を切り替えた直後は、新しい loader が終わる前に画面が描画し直される。このときストアの企画 ID を使うと、キャッシュのない企画の一覧を待つあいだ `/project` 全体が表示されなくなる。
+`useSuspenseQuery` で読む画面は、データの待ちで画面が消えないよう次の4点を守る。
+
+| 決まり | 理由 |
+|---|---|
+| `useSuspenseQuery` に渡す企画 ID には、`useProjectStore` の値ではなく loader が返した値を使う | 企画を切り替えた直後は、新しい loader が終わる前に画面が描画し直される。ストアの企画 ID を使うと、キャッシュのない企画の一覧を待つことになる |
+| `loaderDeps` に企画 ID を入れる（`resolveProjectIdForLoaderDeps`） | ルーターは離れた画面の loader の結果を持ち、再訪するとその結果ですぐに描画する。企画 ID を入れないと、企画を切り替えたあとに前の企画の結果で描画する |
+| 一覧の query の `gcTime` を無期限にする | 再訪したときにルーターが持つ結果で描画しても、一覧のキャッシュが残っているようにする |
+| `/project` のレイアウトで、Outlet を `Suspense` で包む | それでも待ちが起きたときに、サイドバーを表示したままにする |
 
 ```tsx
-loader: async () => {
+loaderDeps: ({ search }) => ({
+	projectId: resolveProjectIdForLoaderDeps(search.projectId),
+}),
+loader: async ({ context }) => {
 	const { selectedProjectId } = useProjectStore.getState();
 	if (selectedProjectId) {
-		await queryClient.fetchQuery(projectFormsQuery(selectedProjectId));
+		await fetchProjectListQuery(
+			context.notificationStatusCheck,
+			projectFormsQuery(selectedProjectId)
+		);
 	}
 	return { projectId: selectedProjectId };
 },
@@ -99,6 +112,8 @@ loader を持たないダイアログでは、開いたときに `queryClient.fe
 
 `updatedAt` には書き換える前の取得時刻を渡す。渡さないと書き換えた時刻が取得時刻になり、ほかの人の変化を取り直すまでの時間が延びる。
 
+書き換えたときに一覧を取得中なら、その応答で書き換えが戻る。そのときは `invalidateQueryAfterFetch(queryKey)` で、取得が終わってから取り直す。
+
 ```ts
 const { queryKey } = projectNoticesQuery(projectId);
 queryClient.setQueryData(
@@ -126,7 +141,7 @@ queryClient.setQueryData(
 | 企画メンバーの削除、副企画責任者の任命とリクエストの承認・取り消し・辞退 | `projectQueryKeys.members(projectId)` |
 | 問い合わせの作成、問い合わせ詳細を開いたときと既読にしたあと | `projectQueryKeys.inquiries(projectId)` |
 
-取得中の query を無効にすると、その取得が成功した時点で無効が打ち消される。問い合わせ詳細のように、取得と同時に状態が変わる操作では、取得を待ってから無効にする。
+取得中の query を無効にすると、その取得が成功した時点で無効が打ち消される。取得と同時に状態が変わりうる操作では、`invalidateQueryAfterFetch(queryKey)` を使い、取得が終わってから無効にする。問い合わせを既読にしたあとがこれにあたる。
 
 ### 4.3 loader を取り直させるとき
 
@@ -145,15 +160,15 @@ void router.invalidate();
 
 ### 5.1 確認する時点
 
-`/project` のレイアウト（`routes/project/route.tsx`）は、次の時点で notification-status を取り直し、キャッシュにあった前回の値と比べる。直前（1 秒以内）に取り直していれば、その値を使う。
+`/project` のレイアウト（`routes/project/route.tsx`）は、次の時点で notification-status を取り直し、キャッシュにあった前回の値と比べる。直前（1 秒以内）に取り直していれば、その値を使う。どの時点でも、変わっていれば notification-status 以外の企画の query を古くし、サイドバーのドットを新しい値にする。
 
-| 時点 | 変化とみなすもの | 変化があったときの処理 |
-|---|---|---|
-| `/project` の中で画面を移るとき（`beforeLoad`） | すべての項目 | notification-status 以外の企画の query を古くする |
-| 60 秒ごとと、タブに戻ったとき | すべての項目 | 同じく古くしたうえで `router.invalidate()` を呼び、開いている画面を取り直す |
-| 自分の操作のあと（`refreshNotificationDot()`） | `latestActivityAt` だけ | 同上 |
+| 時点 | 開いている画面を `router.invalidate()` で取り直す条件 |
+|---|---|
+| `/project` の中で画面を移るとき（`beforeLoad`） | 取り直さない（続く loader が古くした一覧を取り直す） |
+| 60 秒ごとと、タブに戻ったとき | いずれかの項目が変わったとき |
+| 自分の操作のあと（`refreshNotificationDot()`） | `latestActivityAt` が変わったとき |
 
-サイドバーのドットはどの時点でも新しい値にする。自分の操作のあとに `latestActivityAt` だけを見るのは、操作の結果を画面に反映済みだからである。`latestActivityAt` は配信と実委の活動の時刻から決まり、自分の回答や既読では変わらない。
+自分の操作のあとに `latestActivityAt` だけを見るのは、操作の結果を画面に反映済みだからである。`latestActivityAt` は配信と実委の活動の時刻から決まり、自分の回答や既読では変わらない。ほかの項目の変化は、自分の操作によるものかほかの人の操作によるものかを区別できないので、一覧を古くするだけにし、次に開いたときに取り直す。
 
 URL に `projectId` があるときは、`beforeLoad` で先にその企画へ切り替えてから確かめる。
 
@@ -164,19 +179,8 @@ URL に `projectId` があるときは、`beforeLoad` で先にその企画へ�
 | loader | 待つ条件 |
 |---|---|
 | `/project` | 常に待つ（ドットの値を読むため） |
-| 申請・お知らせ・問い合わせの一覧 | 一覧のキャッシュが staleTime 内のとき（`waitForNotificationStatusCheck`）。古いときや無いときは、待たずに取得する |
+| 申請・お知らせ・問い合わせの一覧 | 一覧のキャッシュが staleTime 内のとき（`fetchProjectListQuery`）。古いときや無いときは、待たずに取得する |
 
-```ts
-loader: async ({ context }) => {
-	const { selectedProjectId } = useProjectStore.getState();
-	if (selectedProjectId) {
-		await waitForNotificationStatusCheck(context.notificationStatusCheck, [
-			projectQueryKeys.forms(selectedProjectId),
-		]);
-		await queryClient.fetchQuery(projectFormsQuery(selectedProjectId));
-	}
-	return { projectId: selectedProjectId };
-},
-```
+一度開いた画面へ戻るときは、ルーターが前の loader の結果ですぐに描画し、loader を裏で実行する。このときは確認を待たずに前の一覧をいったん表示し、loader が終わったら新しい一覧に替わる。
 
 古くする処理を `beforeLoad` から始めるのは、TanStack Router が `beforeLoad` をすべて終えてから loader を並列に実行するためである。親の loader で古くしても、同じ遷移の子の loader には間に合わない。

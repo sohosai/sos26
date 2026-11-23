@@ -12,7 +12,7 @@ import {
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { RouteError } from "@/components/common/RouteError";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
@@ -123,12 +123,14 @@ function isNotificationStatusChanged(
 }
 
 /**
- * notification-status を取り直し、キャッシュにあった前回の値と比べて、一覧に出ていない変化があるかを返す。
- * あれば、次に loader が一覧を取得するときに取り直すよう、notification-status 以外の企画の query を古くする。
+ * notification-status を取り直し、キャッシュにあった前回の値と比べる。
+ * 変わっていたら、次に loader が一覧を取得するときに取り直すよう、notification-status 以外の企画の query を古くする。
  * 直前（1 秒以内）に取り直していれば、その値を使う。
  *
- * 自分の操作のあとは、その結果を画面に反映済みなので、ほかの人の変化だけを見る。
- * latestActivityAt は配信と実委の活動の時刻から決まり、自分の回答や既読では変わらない
+ * 戻り値の hasNewChanges は、開いている画面も取り直すべきか。
+ * 自分の操作のあとは、その結果を画面に反映済みなので、ほかの人の変化（latestActivityAt）だけで判断する。
+ * latestActivityAt は配信と実委の活動の時刻から決まり、自分の回答や既読では変わらない。
+ * それ以外の項目のほかの人の変化は区別できないので、一覧は古くしておき、次に開いたときに取り直す
  */
 async function refreshNotificationStatusCache(
 	projectId: string,
@@ -140,12 +142,12 @@ async function refreshNotificationStatusCache(
 	const query = projectNotificationStatusQuery(projectId);
 	const prev = queryClient.getQueryData(query.queryKey);
 	const next = await queryClient.fetchQuery({ ...query, staleTime: 1_000 });
+	const changed = prev !== undefined && isNotificationStatusChanged(prev, next);
 	const hasNewChanges =
-		prev !== undefined &&
-		(afterOwnAction
-			? next.latestActivityAt?.getTime() !== prev.latestActivityAt?.getTime()
-			: isNotificationStatusChanged(prev, next));
-	if (hasNewChanges) {
+		changed &&
+		(!afterOwnAction ||
+			next.latestActivityAt?.getTime() !== prev?.latestActivityAt?.getTime());
+	if (changed) {
 		await queryClient.invalidateQueries({
 			queryKey: projectQueryKeys.all(projectId),
 			predicate: q => q.queryKey[2] !== "notification-status",
@@ -451,7 +453,12 @@ function ProjectLayout() {
 						isApplicationPeriodOpen={applicationPeriodInfo.isOpen}
 					/>
 				) : (
-					selectedProjectId && <Outlet key={selectedProjectId} />
+					selectedProjectId && (
+						// 子ルートが一覧の取得を待つあいだも、サイドバーを表示したままにする
+						<Suspense fallback={null}>
+							<Outlet key={selectedProjectId} />
+						</Suspense>
+					)
 				)}
 			</main>
 			<ProjectCreateDialog

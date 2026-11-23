@@ -19,7 +19,11 @@ import { refreshNotificationDot } from "@/lib/project/notification-status";
 import { useProjectStore } from "@/lib/project/store";
 import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 import { queryClient } from "@/lib/query/client";
-import { projectMembersQuery, projectQueryKeys } from "@/lib/query/project";
+import {
+	invalidateQueryAfterFetch,
+	projectMembersQuery,
+	projectQueryKeys,
+} from "@/lib/query/project";
 
 /**
  * 既読にしてから、一覧とサイドバーのドットを取り直させる。失敗しても表示は続ける。
@@ -28,9 +32,7 @@ import { projectMembersQuery, projectQueryKeys } from "@/lib/query/project";
 function markInquiryRead(projectId: string, inquiryId: string) {
 	void readProjectInquiry(projectId, inquiryId)
 		.then(() => {
-			void queryClient.invalidateQueries({
-				queryKey: projectQueryKeys.inquiries(projectId),
-			});
+			void invalidateQueryAfterFetch(projectQueryKeys.inquiries(projectId));
 			return refreshNotificationDot();
 		})
 		.catch(() => undefined);

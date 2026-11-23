@@ -18,12 +18,15 @@ import { getProjectNotice } from "@/lib/api/project-notice";
 import { isClientError } from "@/lib/http/error";
 import { refreshNotificationDot } from "@/lib/project/notification-status";
 import { useProjectStore } from "@/lib/project/store";
-import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
+import {
+	resolveProjectIdForLoaderDeps,
+	syncSelectedProjectFromSearch,
+} from "@/lib/project/sync";
 import { queryClient } from "@/lib/query/client";
 import {
+	fetchProjectListQuery,
+	invalidateQueryAfterFetch,
 	projectNoticesQuery,
-	projectQueryKeys,
-	waitForNotificationStatusCheck,
 } from "@/lib/query/project";
 import { NoticeDetailDialog } from "./-components/NoticeDetailDialog";
 import styles from "./index.module.scss";
@@ -154,13 +157,17 @@ export const Route = createFileRoute("/project/notice/")({
 	beforeLoad: ({ search }) => {
 		syncSelectedProjectFromSearch(search.projectId);
 	},
+	// 企画ごとに別の画面として扱い、企画を切り替えたあとに前の企画の一覧を出さない
+	loaderDeps: ({ search }) => ({
+		projectId: resolveProjectIdForLoaderDeps(search.projectId),
+	}),
 	loader: async ({ context }) => {
 		const { selectedProjectId } = useProjectStore.getState();
 		if (selectedProjectId) {
-			await waitForNotificationStatusCheck(context.notificationStatusCheck, [
-				projectQueryKeys.notices(selectedProjectId),
-			]);
-			await queryClient.fetchQuery(projectNoticesQuery(selectedProjectId));
+			await fetchProjectListQuery(
+				context.notificationStatusCheck,
+				projectNoticesQuery(selectedProjectId)
+			);
 		}
 		return { projectId: selectedProjectId };
 	},
@@ -255,6 +262,10 @@ function ProjectNoticePage({ projectId }: { projectId: string }) {
 				// 取得した時刻を保ち、ほかの人の変化を取り直すまでの時間を延ばさない
 				{ updatedAt: queryClient.getQueryState(queryKey)?.dataUpdatedAt }
 			);
+			// 取得中なら、その応答で既読が戻るので、取得のあとに取り直す
+			if (queryClient.isFetching({ queryKey, exact: true }) > 0) {
+				void invalidateQueryAfterFetch(queryKey);
+			}
 			markCachedNoticeRead(noticeId);
 			void refreshNotificationDot();
 		},

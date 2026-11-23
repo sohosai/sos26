@@ -16,3 +16,17 @@ export function syncSelectedProjectFromSearch(
 		store.setSelectedProjectId(searchProjectId);
 	}
 }
+
+/**
+ * 画面を開いたあとに選ばれる企画を返す。URL の projectId が所属企画にあればその企画、なければ選択中の企画。
+ * loaderDeps に使い、企画ごとに別の画面として扱わせる（beforeLoad より先に評価されるため、ここで URL も見る）
+ */
+export function resolveProjectIdForLoaderDeps(
+	searchProjectId: string | undefined
+): string | null {
+	const { projects, selectedProjectId } = useProjectStore.getState();
+	if (searchProjectId && projects.some(p => p.id === searchProjectId)) {
+		return searchProjectId;
+	}
+	return selectedProjectId;
+}

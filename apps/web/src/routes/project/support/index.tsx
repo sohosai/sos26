@@ -7,11 +7,11 @@ import { useAuthStore } from "@/lib/auth";
 import { useProjectStore } from "@/lib/project/store";
 import { queryClient } from "@/lib/query/client";
 import {
+	fetchProjectListQuery,
 	projectFormsQuery,
 	projectInquiriesQuery,
 	projectMembersQuery,
 	projectQueryKeys,
-	waitForNotificationStatusCheck,
 } from "@/lib/query/project";
 
 export const Route = createFileRoute("/project/support/")({
@@ -22,6 +22,10 @@ export const Route = createFileRoute("/project/support/")({
 			{ name: "description", content: "お問い合わせ管理" },
 		],
 	}),
+	// 企画ごとに別の画面として扱い、企画を切り替えたあとに前の企画の一覧を出さない
+	loaderDeps: () => ({
+		projectId: useProjectStore.getState().selectedProjectId,
+	}),
 	loader: async ({ context }) => {
 		const { selectedProjectId } = useProjectStore.getState();
 		if (!selectedProjectId)
@@ -30,14 +34,11 @@ export const Route = createFileRoute("/project/support/")({
 				projectMembers: [] as never[],
 				availableForms: [] as never[],
 			};
-		await waitForNotificationStatusCheck(context.notificationStatusCheck, [
-			projectQueryKeys.inquiries(selectedProjectId),
-			projectQueryKeys.forms(selectedProjectId),
-		]);
+		const check = context.notificationStatusCheck;
 		const [inquiriesRes, membersRes, formsRes] = await Promise.all([
-			queryClient.fetchQuery(projectInquiriesQuery(selectedProjectId)),
+			fetchProjectListQuery(check, projectInquiriesQuery(selectedProjectId)),
 			queryClient.fetchQuery(projectMembersQuery(selectedProjectId)),
-			queryClient.fetchQuery(projectFormsQuery(selectedProjectId)),
+			fetchProjectListQuery(check, projectFormsQuery(selectedProjectId)),
 		]);
 		return {
 			inquiries: inquiriesRes.inquiries,

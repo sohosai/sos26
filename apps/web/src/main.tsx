@@ -13,11 +13,14 @@ import "./styles/index.css";
 // Create a new router instance
 const router = createRouter({ routeTree, scrollRestoration: true });
 
-// 前のユーザーの取得結果を次のユーザーに見せない。ルーターも離れた画面の loader の結果を持っているので、両方を捨てる
+// 前のユーザーの取得結果を次のユーザーに見せない。ルーターも離れた画面の loader の結果を持っているので、両方を捨てる。
+// 別のタブでのログインなどでサインアウトを経ずに替わった場合に備え、表示中の画面も取り直す
 useAuthStore.subscribe((state, prev) => {
 	if (state.firebaseUser?.uid !== prev.firebaseUser?.uid) {
 		queryClient.clear();
 		router.clearCache();
+		// 起動時のログインでは表示中の画面がまだ読み込み中なので、前のユーザーがいたときだけにする
+		if (prev.firebaseUser) void router.invalidate();
 	}
 });
 
