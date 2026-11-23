@@ -116,8 +116,13 @@ const EMPTY_PUBLIC_INFO_MODERATION: PublicInfoModeration = {
 	hiddenMapImageFileIds: [],
 };
 
-/** /project に入ったときに取得した申請期間。取得に失敗したときは null */
-let applicationPeriodInfo: GetApplicationPeriodResponse | null = null;
+/**
+ * /project に入ったときに取得した申請期間。取得に失敗したときは null。
+ * ルートの自動コード分割で別チャンクから参照されるため、変数ではなくオブジェクトの値を書き換える
+ */
+const applicationPeriodCache: { info: GetApplicationPeriodResponse | null } = {
+	info: null,
+};
 
 export const Route = createFileRoute("/project")({
 	beforeLoad: async ({ location, cause }) => {
@@ -135,12 +140,14 @@ export const Route = createFileRoute("/project")({
 		const { selectedProjectId } = store;
 
 		if (cause === "enter") {
-			applicationPeriodInfo = await getApplicationPeriod().catch(() => null);
+			applicationPeriodCache.info = await getApplicationPeriod().catch(
+				() => null
+			);
 		}
 
 		if (!selectedProjectId) {
 			return {
-				applicationPeriodInfo,
+				applicationPeriodInfo: applicationPeriodCache.info,
 				notificationStatus: EMPTY_NOTIFICATION_STATUS,
 				publicInfoProjectId: null,
 				publicInfo: null,
@@ -176,7 +183,7 @@ export const Route = createFileRoute("/project")({
 				: EMPTY_PUBLIC_INFO_MODERATION;
 
 		return {
-			applicationPeriodInfo,
+			applicationPeriodInfo: applicationPeriodCache.info,
 			notificationStatus,
 			publicInfoProjectId: selectedProjectId,
 			publicInfo,
