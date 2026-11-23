@@ -1,4 +1,4 @@
-import type { CommitteeMember } from "@prisma/client";
+import { type CommitteeMember, Prisma } from "@prisma/client";
 import {
 	addInquiryAssigneeRequestSchema,
 	addInquiryCommentRequestSchema,
@@ -6,14 +6,21 @@ import {
 	createCommitteeInquiryRequestSchema,
 	inquiryCommentIdPathParamsSchema,
 	inquiryIdPathParamsSchema,
+	type ListCommitteeInquiriesQuery,
+	listCommitteeInquiriesQuerySchema,
 	updateDraftCommentRequestSchema,
 	updateDraftInquiryRequestSchema,
 	updateInquiryStatusRequestSchema,
 	updateInquiryViewersRequestSchema,
 } from "@sos26/shared";
 import { Hono } from "hono";
+import { allInOrder } from "../lib/all-in-order";
 import { Errors } from "../lib/error";
-import { getCommentSentAt } from "../lib/inquiry-activity";
+import {
+	findLastReadAts,
+	findLatestComments,
+	getCommentSentAt,
+} from "../lib/inquiry-activity";
 import {
 	notifyInquiryAssigneeAdded,
 	notifyInquiryCommentAdded,
@@ -310,14 +317,13 @@ committeeInquiryRoute.post(
 			isDraft,
 		} = createCommitteeInquiryRequestSchema.parse(body);
 
-		await validateProjectAssignees(projectId, projectAssigneeUserIds);
-		await validateCommitteeAssignees(committeeAssigneeUserIds ?? []);
-		await validateAttachments(fileIds ?? [], user.id);
-
-		// 関連申請の検証（オーナーまたは共同編集者のみ）
-		if (relatedFormId) {
-			await validateRelatedForm(relatedFormId, user.id);
-		}
+		await allInOrder([
+			validateProjectAssignees(projectId, projectAssigneeUserIds),
+			validateCommitteeAssignees(committeeAssigneeUserIds ?? []),
+			validateAttachments(fileIds ?? [], user.id),
+			// 関連申請の検証（オーナーまたは共同編集者のみ）
+			relatedFormId && validateRelatedForm(relatedFormId, user.id),
+		]);
 
 		const uniqueUserIds = [...new Set(projectAssigneeUserIds)];
 		const uniqueCommitteeIds = [
@@ -337,22 +343,24 @@ committeeInquiryRoute.post(
 				isDraft: isDraft ?? false,
 				sentAt: isDraft ? null : new Date(),
 				assignees: {
-					create: [
-						// 作成者（実委側）
-						{ userId: user.id, side: "COMMITTEE", isCreator: true },
-						// 企画側担当者
-						...uniqueUserIds.map(userId => ({
-							userId,
-							side: "PROJECT" as const,
-							isCreator: false,
-						})),
-						// 追加実委担当者
-						...uniqueCommitteeIds.map(userId => ({
-							userId,
-							side: "COMMITTEE" as const,
-							isCreator: false,
-						})),
-					],
+					createMany: {
+						data: [
+							// 作成者（実委側）
+							{ userId: user.id, side: "COMMITTEE", isCreator: true },
+							// 企画側担当者
+							...uniqueUserIds.map(userId => ({
+								userId,
+								side: "PROJECT" as const,
+								isCreator: false,
+							})),
+							// 追加実委担当者
+							...uniqueCommitteeIds.map(userId => ({
+								userId,
+								side: "COMMITTEE" as const,
+								isCreator: false,
+							})),
+						],
+					},
 				},
 				attachments: {
 					create: uniqueFileIds.map(fileId => ({ fileId })),
@@ -380,6 +388,95 @@ committeeInquiryRoute.post(
 	}
 );
 
+/** 企画番号（3 桁にゼロ埋めした表示）に検索語を含む企画の ID */
+async function findProjectIdsByNumber(search: string): Promise<string[]> {
+	if (!/^\d+$/.test(search)) return [];
+	const rows = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+		SELECT "id" FROM "Project"
+		WHERE LPAD("number"::text, GREATEST(LENGTH("number"::text), 3), '0') LIKE ${`%${search}%`}
+	`);
+	return rows.map(r => r.id);
+}
+
+/**
+ * 次に返信が期待される側が side の未解決の問い合わせの ID（computeAwaitingReplyFrom と同じ判定）。
+ * 絞り込みは未完了の列でだけ使うので、解決済みは走査しない。
+ */
+async function findInquiryIdsAwaitingReplyFrom(
+	side: "PROJECT" | "COMMITTEE"
+): Promise<string[]> {
+	const lastActor = side === "PROJECT" ? "COMMITTEE" : "PROJECT";
+	const rows = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+		SELECT i."id" FROM "Inquiry" i
+		WHERE i."deletedAt" IS NULL
+			AND i."isDraft" = false
+			AND i."status" <> 'RESOLVED'
+			AND COALESCE(
+				(
+					SELECT c."senderRole" FROM "InquiryComment" c
+					WHERE c."inquiryId" = i."id"
+						AND c."deletedAt" IS NULL
+						AND c."isDraft" = false
+					ORDER BY c."sentAt" DESC NULLS LAST, c."createdAt" DESC
+					LIMIT 1
+				),
+				i."creatorRole"
+			) = ${lastActor}::"InquiryCreatorRole"
+	`);
+	return rows.map(r => r.id);
+}
+
+/**
+ * 一覧のページ送りの位置。並び順（updatedAt の降順、id の降順）のキーをそのまま持つ。
+ * 行の ID だけを持つと、その行がページの間に更新されたときに続きの位置がずれる。
+ */
+function encodeListCursor(row: { updatedAt: Date; id: string }): string {
+	return `${row.updatedAt.toISOString()}_${row.id}`;
+}
+
+function decodeListCursor(cursor: string): Prisma.InquiryWhereInput {
+	const separator = cursor.lastIndexOf("_");
+	const updatedAt = new Date(cursor.slice(0, separator));
+	const id = cursor.slice(separator + 1);
+	if (separator < 0 || Number.isNaN(updatedAt.getTime()) || !id) {
+		throw Errors.invalidRequest("cursor が不正です");
+	}
+	return {
+		OR: [{ updatedAt: { lt: updatedAt } }, { updatedAt, id: { lt: id } }],
+	};
+}
+
+/** 一覧の列ごとの条件。対象がない列は null */
+function buildListViewWhere(
+	view: ListCommitteeInquiriesQuery["view"],
+	userId: string,
+	admin: boolean
+): Prisma.InquiryWhereInput | null {
+	const assignedToMe: Prisma.InquiryWhereInput = {
+		assignees: {
+			some: { userId, side: "COMMITTEE", deletedAt: null },
+		},
+	};
+	switch (view) {
+		case "MINE":
+			return { isDraft: false, status: { not: "RESOLVED" }, ...assignedToMe };
+		case "UNASSIGNED":
+			return admin ? { isDraft: false, status: "UNASSIGNED" } : null;
+		case "VIEWING":
+			return {
+				isDraft: false,
+				status: admin
+					? { notIn: ["RESOLVED", "UNASSIGNED"] }
+					: { not: "RESOLVED" },
+				NOT: assignedToMe,
+			};
+		case "DRAFT":
+			return { isDraft: true };
+		case "RESOLVED":
+			return { isDraft: false, status: "RESOLVED" };
+	}
+}
+
 // ─────────────────────────────────────────────────────────────
 // GET /committee/inquiries
 // お問い合わせ一覧（権限に基づくフィルタリング）
@@ -387,54 +484,84 @@ committeeInquiryRoute.post(
 committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 	const user = c.get("user");
 	const committeeMember = getCommitteeMember(c);
+	const { view, search, awaitingReplyFrom, cursor, limit } =
+		listCommitteeInquiriesQuerySchema.parse(c.req.query());
 
 	const admin = await isInquiryAdmin(committeeMember.id);
+	const viewWhere = buildListViewWhere(view, user.id, admin);
+	if (!viewWhere) return c.json({ inquiries: [], nextCursor: null });
 
-	// 管理者は全件、それ以外はDB側でフィルタリング
-	const inquiries = await prisma.inquiry.findMany({
-		where: admin
-			? { deletedAt: null }
-			: {
-					deletedAt: null,
-					OR: [
-						// 実委側担当者として割り当てられている
-						{
-							assignees: {
-								some: {
-									userId: user.id,
-									side: "COMMITTEE" as const,
-									deletedAt: null,
-								},
+	const [projectIdsByNumber, awaitingInquiryIds] = await Promise.all([
+		search ? findProjectIdsByNumber(search) : [],
+		awaitingReplyFrom
+			? findInquiryIdsAwaitingReplyFrom(awaitingReplyFrom)
+			: null,
+	]);
+
+	// 管理者は全件、それ以外は閲覧できるものに絞る
+	const visibilityWhere: Prisma.InquiryWhereInput = admin
+		? {}
+		: {
+				OR: [
+					// 実委側担当者として割り当てられている
+					{
+						assignees: {
+							some: {
+								userId: user.id,
+								side: "COMMITTEE" as const,
+								deletedAt: null,
 							},
 						},
-						// 閲覧者: 全員
-						{
-							viewers: {
-								some: { scope: "ALL" as const, deletedAt: null },
+					},
+					// 閲覧者: 全員
+					{
+						viewers: {
+							some: { scope: "ALL" as const, deletedAt: null },
+						},
+					},
+					// 閲覧者: 同じ局
+					{
+						viewers: {
+							some: {
+								scope: "BUREAU" as const,
+								bureauValue: committeeMember.Bureau,
+								deletedAt: null,
 							},
 						},
-						// 閲覧者: 同じ局
-						{
-							viewers: {
-								some: {
-									scope: "BUREAU" as const,
-									bureauValue: committeeMember.Bureau,
-									deletedAt: null,
-								},
+					},
+					// 閲覧者: 個人指定
+					{
+						viewers: {
+							some: {
+								scope: "INDIVIDUAL" as const,
+								userId: user.id,
+								deletedAt: null,
 							},
 						},
-						// 閲覧者: 個人指定
-						{
-							viewers: {
-								some: {
-									scope: "INDIVIDUAL" as const,
-									userId: user.id,
-									deletedAt: null,
-								},
-							},
-						},
-					],
-				},
+					},
+				],
+			};
+	const searchWhere: Prisma.InquiryWhereInput = search
+		? {
+				OR: [
+					{ title: { contains: search, mode: "insensitive" } },
+					{ project: { name: { contains: search, mode: "insensitive" } } },
+					{ projectId: { in: projectIdsByNumber } },
+				],
+			}
+		: {};
+
+	const rows = await prisma.inquiry.findMany({
+		where: {
+			deletedAt: null,
+			AND: [
+				visibilityWhere,
+				viewWhere,
+				searchWhere,
+				awaitingInquiryIds ? { id: { in: awaitingInquiryIds } } : {},
+				cursor ? decodeListCursor(cursor) : {},
+			],
+		},
 		include: {
 			createdBy: { select: userSelect },
 			project: { select: { id: true, number: true, name: true } },
@@ -442,71 +569,39 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 				where: { deletedAt: null },
 				include: assigneeInclude,
 			},
-			comments: {
-				where: {
-					deletedAt: null,
-					isDraft: false,
-					senderRole: "PROJECT",
-				},
-				select: { createdAt: true, sentAt: true },
-				orderBy: [
-					{ sentAt: { sort: "desc", nulls: "last" } },
-					{ createdAt: "desc" },
-				],
-				take: 1,
-			},
-			commentReadStatuses: {
-				where: { userId: user.id },
-				select: { lastReadAt: true },
-				take: 1,
-			},
 			_count: {
 				select: {
 					comments: { where: { deletedAt: null, isDraft: false } },
 				},
 			},
 		},
-		orderBy: { updatedAt: "desc" },
+		orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+		// 続きがあるかを知るために 1 件多く取る
+		take: limit === undefined ? undefined : limit + 1,
 	});
+	const hasMore = limit !== undefined && rows.length > limit;
+	const inquiries = hasMore ? rows.slice(0, limit) : rows;
+	const last = inquiries.at(-1);
+	const nextCursor = hasMore && last ? encodeListCursor(last) : null;
 
-	// 最新コメントの送信者ロールを取得（awaitingReplyFrom 計算用）
 	const inquiryIds = inquiries.map(i => i.id);
-	const latestCommentsRaw =
-		inquiryIds.length === 0
-			? []
-			: await prisma.inquiryComment.findMany({
-					where: {
-						inquiryId: { in: inquiryIds },
-						deletedAt: null,
-						isDraft: false,
-					},
-					select: { inquiryId: true, senderRole: true },
-					orderBy: [
-						{ sentAt: { sort: "desc", nulls: "last" } },
-						{ createdAt: "desc" },
-					],
-				});
-	const latestSenderByInquiryId = new Map<string, "PROJECT" | "COMMITTEE">();
-	for (const c of latestCommentsRaw) {
-		if (!latestSenderByInquiryId.has(c.inquiryId)) {
-			latestSenderByInquiryId.set(
-				c.inquiryId,
-				c.senderRole as "PROJECT" | "COMMITTEE"
-			);
-		}
-	}
+	const [latestCommentsByInquiryId, lastReadAtByInquiryId] = await Promise.all([
+		findLatestComments(inquiryIds),
+		findLastReadAts(inquiryIds, user.id),
+	]);
 
 	const formatted = inquiries.map(inq => {
-		const latestProjectComment = inq.comments[0] ?? null;
+		const latestComments = latestCommentsByInquiryId.get(inq.id);
+		const latestProjectComment = latestComments?.byRole.PROJECT;
 		const latestProjectCommentAt = latestProjectComment
 			? getCommentSentAt(latestProjectComment)
 			: null;
-		const lastReadAt = inq.commentReadStatuses[0]?.lastReadAt ?? null;
+		const lastReadAt = lastReadAtByInquiryId.get(inq.id) ?? null;
 
 		const awaitingReplyFrom = computeAwaitingReplyFrom({
 			isDraft: inq.isDraft,
 			creatorRole: inq.creatorRole,
-			latestSenderRole: latestSenderByInquiryId.get(inq.id) ?? null,
+			latestSenderRole: latestComments?.latestSenderRole ?? null,
 		});
 
 		return {
@@ -534,7 +629,7 @@ committeeInquiryRoute.get("/", requireAuth, requireCommitteeMember, async c => {
 		};
 	});
 
-	return c.json({ inquiries: formatted });
+	return c.json({ inquiries: formatted, nextCursor });
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -1200,35 +1295,50 @@ committeeInquiryRoute.post(
 		// 担当者 or 管理者チェック
 		await requireAssigneeOrAdmin(inquiryId, user.id, committeeMember);
 
-		const inquiry = await prisma.inquiry.findFirst({
-			where: { id: inquiryId, deletedAt: null },
-		});
+		const [inquiry, existing, projectMember, targetMember] = await Promise.all([
+			prisma.inquiry.findFirst({
+				where: { id: inquiryId, deletedAt: null },
+				include: {
+					project: {
+						select: { ownerId: true, subOwnerId: true, deletedAt: true },
+					},
+				},
+			}),
+			// 既に担当者かチェック
+			prisma.inquiryAssignee.findFirst({
+				where: { inquiryId, userId, deletedAt: null },
+			}),
+			side === "PROJECT"
+				? prisma.projectMember.findFirst({
+						where: {
+							userId,
+							deletedAt: null,
+							project: { inquiries: { some: { id: inquiryId } } },
+						},
+					})
+				: null,
+			side === "COMMITTEE"
+				? prisma.committeeMember.findFirst({
+						where: { userId, deletedAt: null },
+					})
+				: null,
+		]);
 		if (!inquiry) {
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
-
-		// 既に担当者かチェック
-		const existing = await prisma.inquiryAssignee.findFirst({
-			where: { inquiryId, userId, deletedAt: null },
-		});
 		if (existing) {
 			throw Errors.alreadyExists("既に担当者です");
 		}
 
 		// 企画側担当者の場合は対象企画のメンバーかチェック
 		if (side === "PROJECT") {
-			const project = await prisma.project.findFirst({
-				where: { id: inquiry.projectId, deletedAt: null },
-			});
-			if (!project) {
+			const { project } = inquiry;
+			if (project.deletedAt) {
 				throw Errors.notFound("企画が見つかりません");
 			}
 			const isOwner = project.ownerId === userId;
 			const isSubOwner = project.subOwnerId === userId;
-			const isMember = await prisma.projectMember.findFirst({
-				where: { projectId: inquiry.projectId, userId, deletedAt: null },
-			});
-			if (!isOwner && !isSubOwner && !isMember) {
+			if (!isOwner && !isSubOwner && !projectMember) {
 				throw Errors.invalidRequest(
 					"対象ユーザーはこの企画のメンバーではありません"
 				);
@@ -1236,13 +1346,8 @@ committeeInquiryRoute.post(
 		}
 
 		// 実委側担当者の場合は実委人かチェック
-		if (side === "COMMITTEE") {
-			const targetMember = await prisma.committeeMember.findFirst({
-				where: { userId, deletedAt: null },
-			});
-			if (!targetMember) {
-				throw Errors.invalidRequest("対象ユーザーは実委人ではありません");
-			}
+		if (side === "COMMITTEE" && !targetMember) {
+			throw Errors.invalidRequest("対象ユーザーは実委人ではありません");
 		}
 
 		const assignee = await prisma.$transaction(async tx => {
