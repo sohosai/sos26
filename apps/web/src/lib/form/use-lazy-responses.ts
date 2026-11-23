@@ -1,52 +1,60 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { reportHandledError } from "@/lib/error/report";
-
-type Loaded<T> =
-	| { formId: string; responses: T[]; error: null }
-	| { formId: string; responses: null; error: string };
 
 /**
  * enabled になったときに回答一覧を取得し、formId ごとに保持する。
  * loader で取ると詳細画面の再取得（router.invalidate）のたびに全回答を取り直すため、回答タブを開くまで取らない。
+ * 取得中に enabled が false になっても結果は保存し、失敗したときは次に enabled になったときに取り直す。
  */
 export function useLazyResponses<T>(
 	formId: string,
 	enabled: boolean,
 	fetchResponses: (formId: string) => Promise<{ responses: T[] }>
 ) {
-	const [loaded, setLoaded] = useState<Loaded<T> | null>(null);
-	const current = loaded?.formId === formId ? loaded : null;
-	const shouldFetch = enabled && current === null;
+	const [loaded, setLoaded] = useState<{
+		formId: string;
+		responses: T[];
+	} | null>(null);
+	const [error, setError] = useState<{
+		formId: string;
+		message: string;
+	} | null>(null);
+	const fetchingFormIdRef = useRef<string | null>(null);
+	const currentFormIdRef = useRef(formId);
+	currentFormIdRef.current = formId;
+
+	const responses = loaded?.formId === formId ? loaded.responses : null;
+	const needsFetch = enabled && responses === null;
 
 	useEffect(() => {
-		if (!shouldFetch) return;
-		let cancelled = false;
+		if (!needsFetch || fetchingFormIdRef.current === formId) return;
+		fetchingFormIdRef.current = formId;
+		setError(null);
 		fetchResponses(formId)
 			.then(res => {
-				if (!cancelled)
-					setLoaded({ formId, responses: res.responses, error: null });
+				if (currentFormIdRef.current === formId)
+					setLoaded({ formId, responses: res.responses });
 			})
 			.catch(error => {
-				if (cancelled) return;
 				reportHandledError({
 					error,
 					operation: "read",
 					userMessage: "回答の取得に失敗しました",
 					ui: {
 						type: "inline",
-						setError: message =>
-							setLoaded({ formId, responses: null, error: message }),
+						setError: message => setError({ formId, message }),
 					},
 					context: { formId },
 				});
+			})
+			.finally(() => {
+				if (fetchingFormIdRef.current === formId)
+					fetchingFormIdRef.current = null;
 			});
-		return () => {
-			cancelled = true;
-		};
-	}, [shouldFetch, formId, fetchResponses]);
+	}, [needsFetch, formId, fetchResponses]);
 
 	return {
-		responses: current?.responses ?? null,
-		error: current?.error ?? null,
+		responses,
+		error: error?.formId === formId ? error.message : null,
 	};
 }

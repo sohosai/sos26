@@ -324,6 +324,7 @@ function isFormResponseViewer(
 	);
 }
 
+/** 申請と閲覧者を取得して、isFormResponseViewer で回答の閲覧権限を判定する */
 async function canViewFormResponses(
 	formId: string,
 	userId: string,
