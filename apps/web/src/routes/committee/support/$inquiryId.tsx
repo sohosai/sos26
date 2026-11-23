@@ -13,6 +13,7 @@ import {
 	getCommitteeInquiry,
 	publishDraftComment,
 	publishDraftInquiry,
+	readCommitteeInquiry,
 	removeCommitteeInquiryAssignee,
 	reopenCommitteeInquiry,
 	updateCommitteeDraftComment,
@@ -83,6 +84,12 @@ function CommitteeSupportDetailPage() {
 
 	useEffect(() => {
 		setCurrentInquiry(inquiry);
+	}, [inquiry]);
+
+	// 詳細を表示したときと、新しいコメントを取り直したときに既読にする。失敗しても表示は続ける
+	useEffect(() => {
+		if (!inquiry) return;
+		void readCommitteeInquiry(inquiry.id).catch(() => undefined);
 	}, [inquiry]);
 
 	if (!currentInquiry) {

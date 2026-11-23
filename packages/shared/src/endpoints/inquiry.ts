@@ -21,6 +21,7 @@ import {
 	projectInquiryIdPathParamsSchema,
 	publishDraftCommentResponseSchema,
 	publishDraftInquiryResponseSchema,
+	readInquiryResponseSchema,
 	removeInquiryAssigneeResponseSchema,
 	reopenInquiryResponseSchema,
 	updateDraftCommentRequestSchema,
@@ -78,6 +79,26 @@ export const getProjectInquiryEndpoint: GetEndpoint<
 	query: undefined,
 	request: undefined,
 	response: getProjectInquiryResponseSchema,
+} as const;
+
+/**
+ * POST /project/:projectId/inquiries/:inquiryId/read
+ * お問い合わせのコメントを既読にする（詳細を表示したときと取り直したときに呼ぶ）
+ */
+export const readProjectInquiryEndpoint: Endpoint<
+	"POST",
+	"/project/:projectId/inquiries/:inquiryId/read",
+	typeof projectInquiryIdPathParamsSchema,
+	undefined,
+	undefined,
+	typeof readInquiryResponseSchema
+> = {
+	method: "POST",
+	path: "/project/:projectId/inquiries/:inquiryId/read",
+	pathParams: projectInquiryIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: readInquiryResponseSchema,
 } as const;
 
 /**
@@ -222,6 +243,26 @@ export const getCommitteeInquiryEndpoint: GetEndpoint<
 	query: undefined,
 	request: undefined,
 	response: getCommitteeInquiryResponseSchema,
+} as const;
+
+/**
+ * POST /committee/inquiries/:inquiryId/read
+ * お問い合わせのコメントを既読にする（詳細を表示したときと取り直したときに呼ぶ）
+ */
+export const readCommitteeInquiryEndpoint: Endpoint<
+	"POST",
+	"/committee/inquiries/:inquiryId/read",
+	typeof inquiryIdPathParamsSchema,
+	undefined,
+	undefined,
+	typeof readInquiryResponseSchema
+> = {
+	method: "POST",
+	path: "/committee/inquiries/:inquiryId/read",
+	pathParams: inquiryIdPathParamsSchema,
+	query: undefined,
+	request: undefined,
+	response: readInquiryResponseSchema,
 } as const;
 
 /**

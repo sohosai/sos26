@@ -617,3 +617,12 @@ export const updateInquiryViewersResponseSchema = z.object({
 export type UpdateInquiryViewersResponse = z.infer<
 	typeof updateInquiryViewersResponseSchema
 >;
+
+// ─────────────────────────────────────────────────────────────
+// 企画側・実委側: POST .../inquiries/:inquiryId/read
+// ─────────────────────────────────────────────────────────────
+
+export const readInquiryResponseSchema = z.object({
+	success: z.literal(true),
+});
+export type ReadInquiryResponse = z.infer<typeof readInquiryResponseSchema>;

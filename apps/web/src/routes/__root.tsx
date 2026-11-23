@@ -1,5 +1,4 @@
 import { Dialog, Heading, Text, Theme } from "@radix-ui/themes";
-import * as Sentry from "@sentry/react";
 import {
 	createRootRoute,
 	HeadContent,
@@ -9,6 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { useEffect, useState } from "react";
+import { RouteError } from "@/components/common/RouteError";
 import { Button } from "@/components/primitives";
 import { enablePush } from "@/lib/api/push";
 import { authReady } from "@/lib/auth";
@@ -25,7 +25,7 @@ import styles from "./__root.module.scss";
 export const Route = createRootRoute({
 	beforeLoad: () => authReady(),
 	component: RootComponent,
-	errorComponent: ErrorComponent,
+	errorComponent: RouteError,
 	notFoundComponent: NotFoundComponent,
 });
 
@@ -96,31 +96,6 @@ function NotFoundComponent() {
 			<Text color="gray">
 				お探しのページは存在しないか、移動した可能性があります。
 			</Text>
-			<div className={styles.actions}>
-				<Link to="/">
-					<Button>ホームに戻る</Button>
-				</Link>
-			</div>
-		</div>
-	);
-}
-
-function ErrorComponent({ error }: { error: unknown }) {
-	const message =
-		error instanceof Error ? error.message : String(error ?? "Unknown error");
-
-	useEffect(() => {
-		console.error("[Route Error]", error);
-		Sentry.captureException(error);
-	}, [error]);
-
-	return (
-		<div className={styles.errorContainer}>
-			<Heading size="8" color="red">
-				Error
-			</Heading>
-			<Heading size="5">エラーが発生しました</Heading>
-			<Text color="gray">{message}</Text>
 			<div className={styles.actions}>
 				<Link to="/">
 					<Button>ホームに戻る</Button>

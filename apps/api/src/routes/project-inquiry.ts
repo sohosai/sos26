@@ -13,6 +13,7 @@ import {
 	findLatestComments,
 	getCommentSentAt,
 	hasUnreadCommitteeActivity,
+	markInquiryRead,
 } from "../lib/inquiry-activity";
 import {
 	notifyInquiryAssigneeAdded,
@@ -503,23 +504,6 @@ projectInquiryRoute.get(
 			throw Errors.notFound("お問い合わせが見つかりません");
 		}
 
-		await prisma.inquiryCommentReadStatus.upsert({
-			where: {
-				inquiryId_userId: {
-					inquiryId,
-					userId: user.id,
-				},
-			},
-			create: {
-				inquiryId,
-				userId: user.id,
-				lastReadAt: new Date(),
-			},
-			update: {
-				lastReadAt: new Date(),
-			},
-		});
-
 		const allUserIds = [
 			inquiry.createdBy.id,
 			...inquiry.assignees.map(a => a.user.id),
@@ -583,6 +567,43 @@ projectInquiryRoute.get(
 		};
 
 		return c.json({ inquiry: formatted });
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// POST /project/:projectId/inquiries/:inquiryId/read
+// お問い合わせのコメントを既読にする
+// ─────────────────────────────────────────────────────────────
+projectInquiryRoute.post(
+	"/:projectId/inquiries/:inquiryId/read",
+	requireAuth,
+	requireProjectMember,
+	async c => {
+		const user = c.get("user");
+		const project = c.get("project");
+		const { inquiryId } = projectInquiryIdPathParamsSchema.parse({
+			projectId: c.req.param("projectId"),
+			inquiryId: c.req.param("inquiryId"),
+		});
+
+		// 企画側担当者チェック
+		await requireProjectAssignee(inquiryId, user.id);
+
+		const inquiry = await prisma.inquiry.findFirst({
+			where: {
+				id: inquiryId,
+				projectId: project.id,
+				deletedAt: null,
+				isDraft: false,
+			},
+			select: { id: true },
+		});
+		if (!inquiry) {
+			throw Errors.notFound("お問い合わせが見つかりません");
+		}
+
+		await markInquiryRead(inquiryId, user.id);
+		return c.json({ success: true as const });
 	}
 );
 
