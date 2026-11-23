@@ -7,6 +7,7 @@ import { create } from "zustand";
 import { getMe } from "../api/auth";
 import { auth as firebaseAuth } from "../firebase";
 import { isClientError } from "../http/error";
+import { queryClient } from "../query/client";
 
 type AuthStore = {
 	user: User | null;
@@ -55,6 +56,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
  * Firebase ユーザーからバックエンドのユーザー情報を取得し、store を更新する
  */
 async function fetchAndSetUser(fbUser: FirebaseUser | null): Promise<void> {
+	// 前のユーザーの取得結果を次のユーザーに見せない
+	if (useAuthStore.getState().firebaseUser?.uid !== fbUser?.uid) {
+		queryClient.clear();
+	}
 	useAuthStore.setState({
 		firebaseUser: fbUser,
 		isFirebaseAuthenticated: !!fbUser,

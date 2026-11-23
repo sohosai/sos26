@@ -5,7 +5,6 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { useState } from "react";
 import { DataTable, DateCell, NameCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
-import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import { listProjectRegistrationForms } from "@/lib/api/committee-project-registration-form";
 import { useAuthStore } from "@/lib/auth";
 import {
@@ -16,6 +15,8 @@ import {
 	PROJECT_LOCATION_LABELS,
 	PROJECT_TYPE_LABELS,
 } from "@/lib/project/options";
+import { queryClient } from "@/lib/query/client";
+import { committeeMembersPickerQuery } from "@/lib/query/committee";
 import { CreateProjectRegistrationFormDialog } from "./-components/CreateProjectRegistrationFormDialog";
 import styles from "./index.module.scss";
 
@@ -47,7 +48,7 @@ export const Route = createFileRoute("/committee/project-registration/")({
 	loader: async (): Promise<LoaderData> => {
 		const [{ forms }, { committeeMembers }] = await Promise.all([
 			listProjectRegistrationForms(),
-			listCommitteeMembersPicker(),
+			queryClient.fetchQuery(committeeMembersPickerQuery),
 		]);
 
 		const currentUserId = useAuthStore.getState().user?.id;

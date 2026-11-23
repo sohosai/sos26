@@ -40,6 +40,8 @@ import {
 import { ForbiddenError, useAuthStore } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { isClientError } from "@/lib/http/error";
+import { queryClient } from "@/lib/query/client";
+import { committeeQueryKeys } from "@/lib/query/committee";
 import { AddMemberDialog } from "./-components/AddMemberDialog";
 import styles from "./index.module.scss";
 
@@ -289,6 +291,13 @@ function MemberActionsCell({
 
 const memberColumnHelper = createColumnHelper<CommitteeMemberRow>();
 
+/** 担当者の候補などに使う委員の一覧を、次に開いたときに取り直させる */
+function invalidateMembersPicker() {
+	void queryClient.invalidateQueries({
+		queryKey: committeeQueryKeys.membersPicker,
+	});
+}
+
 export const Route = createFileRoute("/committee/members/")({
 	component: RouteComponent,
 	head: () => ({
@@ -338,6 +347,7 @@ function RouteComponent() {
 	const handleBureauChange = async (memberId: string, bureau: Bureau) => {
 		try {
 			await updateCommitteeMember(memberId, { Bureau: bureau });
+			invalidateMembersPicker();
 			setMembers(prev =>
 				prev.map(m => (m.id === memberId ? { ...m, bureau } : m))
 			);
@@ -361,6 +371,7 @@ function RouteComponent() {
 			} else {
 				await grantCommitteeMemberPermission(memberId, { permission });
 			}
+			invalidateMembersPicker();
 
 			setMembers(prev =>
 				prev.map(m => {
@@ -422,6 +433,7 @@ function RouteComponent() {
 		if (!pendingDeleteId) return;
 		try {
 			await deleteCommitteeMember(pendingDeleteId);
+			invalidateMembersPicker();
 			setMembers(prev => prev.filter(m => m.id !== pendingDeleteId));
 			toast.success("メンバーを削除しました");
 		} catch (error) {
@@ -442,6 +454,7 @@ function RouteComponent() {
 		isExecutive?: boolean;
 	}) => {
 		const result = await createCommitteeMember(body);
+		invalidateMembersPicker();
 		// リストを再取得して反映
 		const data = await listCommitteeMembers();
 		setMembers(

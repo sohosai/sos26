@@ -2,7 +2,6 @@ import { Callout, Heading, Text } from "@radix-ui/themes";
 import type {
 	GetApplicationPeriodResponse,
 	GetProjectNotificationStatusResponse,
-	GetProjectPublicInfoResponse,
 	MyProject,
 	Project,
 } from "@sos26/shared";
@@ -13,24 +12,24 @@ import {
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { RouteError } from "@/components/common/RouteError";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { Button } from "@/components/primitives";
 import { ProjectCreateDialog } from "@/components/project/ProjectCreateDialog";
 import { ProjectJoinDialog } from "@/components/project/ProjectJoinDialog";
-import {
-	getApplicationPeriod,
-	getProjectNotificationStatus,
-	joinProject,
-} from "@/lib/api/project";
-import { getProjectPublicInfo } from "@/lib/api/project-public-info";
+import { getApplicationPeriod, joinProject } from "@/lib/api/project";
 import { requireAuth, useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
 import { refreshMyProjects } from "@/lib/project/my-projects";
 import { registerNotificationDotRefresh } from "@/lib/project/notification-status";
 import { useProjectStore } from "@/lib/project/store";
+import { queryClient } from "@/lib/query/client";
+import {
+	projectNotificationStatusQuery,
+	projectQueryKeys,
+} from "@/lib/query/project";
 import styles from "./route.module.scss";
 
 function projectDeletionStatusLabel(status: Project["deletionStatus"]): string {
@@ -110,14 +109,39 @@ const EMPTY_NOTIFICATION_STATUS: GetProjectNotificationStatusResponse = {
 	latestActivityAt: null,
 };
 
-/** 企画情報に対する実委人の非表示・修正の状態 */
-type PublicInfoModeration = Omit<GetProjectPublicInfoResponse, "publicInfo">;
+function isNotificationStatusChanged(
+	prev: GetProjectNotificationStatusResponse,
+	next: GetProjectNotificationStatusResponse
+): boolean {
+	return (
+		next.hasUnansweredForms !== prev.hasUnansweredForms ||
+		next.hasUncheckedNotices !== prev.hasUncheckedNotices ||
+		next.hasUnreadInquiryComments !== prev.hasUnreadInquiryComments ||
+		next.latestActivityAt?.getTime() !== prev.latestActivityAt?.getTime()
+	);
+}
 
-const EMPTY_PUBLIC_INFO_MODERATION: PublicInfoModeration = {
-	hiddenFields: [],
-	correctedFields: [],
-	hiddenMapImageFileIds: [],
-};
+/**
+ * notification-status を取り直し、キャッシュにあった前回の値から変わったかを返す。
+ * 変わっていたら、次に loader が一覧を取得するときに取り直すよう、notification-status 以外の企画の query を古くする
+ */
+async function refreshNotificationStatusCache(projectId: string): Promise<{
+	next: GetProjectNotificationStatusResponse;
+	changed: boolean;
+}> {
+	const query = projectNotificationStatusQuery(projectId);
+	const prev = queryClient.getQueryData(query.queryKey);
+	const next = await queryClient.fetchQuery({ ...query, staleTime: 0 });
+	const changed = prev !== undefined && isNotificationStatusChanged(prev, next);
+	if (changed) {
+		await queryClient.invalidateQueries({
+			queryKey: projectQueryKeys.all(projectId),
+			predicate: q => q.queryKey[2] !== "notification-status",
+			refetchType: "none",
+		});
+	}
+	return { next, changed };
+}
 
 /**
  * /project に入ったときに取得した申請期間。取得に失敗したときは null。
@@ -144,6 +168,15 @@ export const Route = createFileRoute("/project")({
 		if (cause === "enter" || useProjectStore.getState().projects.length === 0) {
 			await refreshMyProjects();
 		}
+
+		// 一覧はキャッシュから返すので、ページを移るたびに新着の有無だけを確かめ、あれば子ルートの loader で取り直させる。
+		// 取得に失敗したときは loader で扱う
+		const { selectedProjectId } = useProjectStore.getState();
+		if (selectedProjectId) {
+			await refreshNotificationStatusCache(selectedProjectId).catch(
+				() => undefined
+			);
+		}
 	},
 	// /project の中でページを移るたびには、通知状態と公開情報を取り直さない。
 	// 取り直すのは、/project に入ったとき、選択中の企画が変わったとき、router.invalidate() されたとき（新着の反映や企画の作成・参加など）
@@ -165,22 +198,16 @@ export const Route = createFileRoute("/project")({
 			return {
 				applicationPeriodInfo: applicationPeriodCache.info,
 				notificationStatus: EMPTY_NOTIFICATION_STATUS,
-				publicInfoProjectId: null,
-				publicInfo: null,
-				publicInfoModeration: EMPTY_PUBLIC_INFO_MODERATION,
-				publicInfoLoadFailed: false,
 			};
 		}
 
-		const [
-			applicationPeriodResult,
-			notificationStatusResult,
-			publicInfoResult,
-		] = await Promise.allSettled([
-			applicationPeriodPromise,
-			getProjectNotificationStatus(selectedProjectId),
-			getProjectPublicInfo(selectedProjectId),
-		]);
+		const [applicationPeriodResult, notificationStatusResult] =
+			await Promise.allSettled([
+				applicationPeriodPromise,
+				queryClient.fetchQuery(
+					projectNotificationStatusQuery(selectedProjectId)
+				),
+			]);
 		// applicationPeriodPromise は失敗を null にしているので reject しない
 		const applicationPeriodInfo =
 			applicationPeriodResult.status === "fulfilled"
@@ -193,28 +220,9 @@ export const Route = createFileRoute("/project")({
 				? notificationStatusResult.value
 				: { ...EMPTY_NOTIFICATION_STATUS, hasUnreadInquiryComments: true };
 
-		// 企画公開情報は企画情報ページと共用する（重複取得を避ける）
-		// サイドバーのアイコンは /project/list が返す iconFileId を使う
-		const publicInfo =
-			publicInfoResult.status === "fulfilled"
-				? publicInfoResult.value.publicInfo
-				: null;
-		const publicInfoModeration =
-			publicInfoResult.status === "fulfilled"
-				? {
-						hiddenFields: publicInfoResult.value.hiddenFields,
-						correctedFields: publicInfoResult.value.correctedFields,
-						hiddenMapImageFileIds: publicInfoResult.value.hiddenMapImageFileIds,
-					}
-				: EMPTY_PUBLIC_INFO_MODERATION;
-
 		return {
 			applicationPeriodInfo,
 			notificationStatus,
-			publicInfoProjectId: selectedProjectId,
-			publicInfo,
-			publicInfoModeration,
-			publicInfoLoadFailed: publicInfoResult.status === "rejected",
 		};
 	},
 	component: ProjectLayout,
@@ -270,9 +278,6 @@ function ProjectLayout() {
 		initialNotificationStatus
 	);
 
-	const notificationStatusRef = useRef(notificationStatus);
-	notificationStatusRef.current = notificationStatus;
-
 	useEffect(() => {
 		setNotificationStatus(initialNotificationStatus);
 	}, [initialNotificationStatus]);
@@ -301,21 +306,14 @@ function ProjectLayout() {
 			}
 
 			try {
-				const next = await getProjectNotificationStatus(selectedProjectId);
+				const { next, changed } =
+					await refreshNotificationStatusCache(selectedProjectId);
 				// 応答を待つ間に企画が切り替わっていたら、前の企画の状態を反映しない
 				if (
 					useProjectStore.getState().selectedProjectId !== selectedProjectId
 				) {
 					return;
 				}
-
-				const current = notificationStatusRef.current;
-				const changed =
-					next.hasUnansweredForms !== current.hasUnansweredForms ||
-					next.hasUncheckedNotices !== current.hasUncheckedNotices ||
-					next.hasUnreadInquiryComments !== current.hasUnreadInquiryComments ||
-					next.latestActivityAt?.getTime() !==
-						current.latestActivityAt?.getTime();
 
 				setNotificationStatus(next);
 				// 開いている画面にも新しいお知らせや返信を反映する

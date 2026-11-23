@@ -16,6 +16,7 @@ import {
 } from "@dnd-kit/sortable";
 import { Badge, Callout, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import type {
+	GetProjectPublicInfoResponse,
 	MapAppSetting,
 	OpenStatus,
 	Project,
@@ -39,12 +40,7 @@ import {
 	IconUpload,
 	IconX,
 } from "@tabler/icons-react";
-import {
-	createFileRoute,
-	getRouteApi,
-	useBlocker,
-	useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, useBlocker, useRouter } from "@tanstack/react-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -53,7 +49,10 @@ import { DiscardChangesDialog } from "@/components/patterns";
 import { Button, Select, TextArea, TextField } from "@/components/primitives";
 import { deleteFile, uploadFile } from "@/lib/api/files";
 import { getMapAppSetting } from "@/lib/api/map-app-setting";
-import { updateProjectPublicInfo } from "@/lib/api/project-public-info";
+import {
+	getProjectPublicInfo,
+	updateProjectPublicInfo,
+} from "@/lib/api/project-public-info";
 import { useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
 import {
@@ -72,7 +71,14 @@ import styles from "./route.module.scss";
 const MAX_MAP_IMAGES = PROJECT_MAP_IMAGES_MAX_COUNT;
 const DESCRIPTION_MAX_LENGTH = PROJECT_DESCRIPTION_MAX_LENGTH;
 
-const projectRoute = getRouteApi("/project");
+const EMPTY_PUBLIC_INFO_MODERATION: Omit<
+	GetProjectPublicInfoResponse,
+	"publicInfo"
+> = {
+	hiddenFields: [],
+	correctedFields: [],
+	hiddenMapImageFileIds: [],
+};
 
 const SNS_LINK_FIELDS: {
 	key: ProjectSnsLinkKey;
@@ -125,10 +131,28 @@ function toSnsLinkInputs(links: string[] | undefined): string[] {
 }
 
 export const Route = createFileRoute("/project/public-info")({
-	// 企画公開情報は親（/project）ローダーの取得結果を共用する
+	// 実委による非表示・修正や共同編集者の保存を反映するため、開くたびに取り直す
 	loader: async () => {
-		const { setting } = await getMapAppSetting();
-		return { setting };
+		const { selectedProjectId } = useProjectStore.getState();
+		const [{ setting }, loaded] = await Promise.all([
+			getMapAppSetting(),
+			selectedProjectId
+				? getProjectPublicInfo(selectedProjectId).catch(() => null)
+				: null,
+		]);
+		return {
+			setting,
+			publicInfoProjectId: selectedProjectId,
+			publicInfo: loaded?.publicInfo ?? null,
+			publicInfoModeration: loaded
+				? {
+						hiddenFields: loaded.hiddenFields,
+						correctedFields: loaded.correctedFields,
+						hiddenMapImageFileIds: loaded.hiddenMapImageFileIds,
+					}
+				: EMPTY_PUBLIC_INFO_MODERATION,
+			publicInfoLoadFailed: selectedProjectId !== null && loaded === null,
+		};
 	},
 	component: ProjectPublicInfoPage,
 	head: () => ({
@@ -290,14 +314,14 @@ function ProjectPublicInfoPage() {
 	const project = projects.find(p => p.id === selectedProjectId);
 
 	const {
+		setting,
 		publicInfo,
 		publicInfoModeration,
 		publicInfoProjectId,
 		publicInfoLoadFailed,
-	} = projectRoute.useLoaderData();
-	const { setting } = Route.useLoaderData();
+	} = Route.useLoaderData();
 
-	// 親ローダーの再取得が終わるまでは、前の企画の情報を表示しない
+	// 企画を切り替えたあと、ローダーの再取得が終わるまでは前の企画の情報を表示しない
 	const isPublicInfoStale = publicInfoProjectId !== selectedProjectId;
 
 	const isEditable =

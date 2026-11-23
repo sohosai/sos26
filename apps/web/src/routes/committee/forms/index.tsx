@@ -11,11 +11,12 @@ import {
 	NameCell,
 } from "@/components/patterns";
 import { Button } from "@/components/primitives";
-import { listMyForms } from "@/lib/api/committee-form";
 import {
 	type FormStatusInfo,
 	getFormStatusFromAuth,
 } from "@/lib/form/form-status";
+import { queryClient } from "@/lib/query/client";
+import { myFormsQuery } from "@/lib/query/committee";
 import { CreateFormDialog } from "./-components/CreateFormDialog";
 import styles from "./index.module.scss";
 
@@ -41,7 +42,11 @@ export const Route = createFileRoute("/committee/forms/")({
 		],
 	}),
 	loader: async () => {
-		const { forms } = await listMyForms();
+		// 一覧そのものは毎回取り直し、問い合わせなどで使う候補のキャッシュも新しくする
+		const { forms } = await queryClient.fetchQuery({
+			...myFormsQuery,
+			staleTime: 0,
+		});
 
 		return {
 			forms: forms.map(f => {

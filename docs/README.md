@@ -13,6 +13,7 @@
 - Web 開発
   - ルーティング: `docs/apps/web/routing.md`
   - API クライアント: `docs/apps/web/api-client.md`
+  - query cache（TanStack Query）: `docs/apps/web/query-cache.md`
   - コンポーネント: `docs/apps/web/components.md`
   - RichTextEditor（サニタイズ仕様含む）: `docs/apps/web/rich-text-editor.md`
   - 日付フォーマット: `docs/apps/web/format.md`

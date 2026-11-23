@@ -21,6 +21,7 @@
     "@sentry/react": "^10.43.0",
     "@sos26/shared": "workspace:*",
     "@tabler/icons-react": "^3.36.1",
+    "@tanstack/react-query": "^5.108.3",
     "@tanstack/react-router": "^1.147.1",
     "@tanstack/react-table": "^8.21.3",
     "@tiptap/extension-link": "^3.19.0",

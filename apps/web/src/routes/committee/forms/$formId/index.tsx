@@ -31,7 +31,6 @@ import {
 	removeFormCollaborator,
 	updateFormViewers,
 } from "@/lib/api/committee-form";
-import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import { useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
 import {
@@ -42,6 +41,11 @@ import { formDetailToForm } from "@/lib/form/convert";
 import { getFormStatusFromAuth } from "@/lib/form/form-status";
 import { useLazyResponses } from "@/lib/form/use-lazy-responses";
 import { formatDate, formatProjectNumber } from "@/lib/format";
+import { queryClient } from "@/lib/query/client";
+import {
+	committeeMembersPickerQuery,
+	committeeQueryKeys,
+} from "@/lib/query/committee";
 import { EditFormDialog } from "./-components/EditFormDialog";
 import { FormDetailSidebar } from "./-components/FormDetailSidebar";
 import { FormItemsPreview } from "./-components/FormItemsPreview";
@@ -73,6 +77,11 @@ function buildAnswerRows(
 	});
 }
 
+/** 申請の名前・共同編集者・閲覧者を変えたあとに、問い合わせなどで使う自分の申請の候補を取り直させる */
+function invalidateMyForms() {
+	void queryClient.invalidateQueries({ queryKey: committeeQueryKeys.myForms });
+}
+
 /* ─── Route ─── */
 
 export const Route = createFileRoute("/committee/forms/$formId/")({
@@ -90,7 +99,7 @@ export const Route = createFileRoute("/committee/forms/$formId/")({
 	loader: async ({ params }) => {
 		const [formRes, membersRes] = await Promise.all([
 			getFormDetail(params.formId),
-			listCommitteeMembersPicker(),
+			queryClient.fetchQuery(committeeMembersPickerQuery),
 		]);
 		return {
 			form: formRes.form,
@@ -215,6 +224,7 @@ function RouteComponent() {
 		const requestId = latestDetailRequestIdRef.current;
 		try {
 			const res = await getFormDetail(formId);
+			invalidateMyForms();
 			// 続けて取り直したときの古い応答や、別の申請へ移る前の応答では上書きしない
 			if (requestId !== latestDetailRequestIdRef.current) return;
 			setForm(prev => (prev.id === res.form.id ? res.form : prev));
@@ -251,6 +261,7 @@ function RouteComponent() {
 		setRemovingId(userId);
 		try {
 			await removeFormCollaborator(form.id, userId);
+			invalidateMyForms();
 			updateFormLocally(prev => ({
 				...prev,
 				collaborators: prev.collaborators.filter(c => c.user.id !== userId),
@@ -278,6 +289,7 @@ function RouteComponent() {
 			const res = await updateFormViewers(form.id, {
 				viewers: viewers as Parameters<typeof updateFormViewers>[1]["viewers"],
 			});
+			invalidateMyForms();
 			updateFormLocally(prev => ({ ...prev, viewers: res.viewers }));
 		} catch (error) {
 			reportHandledError({

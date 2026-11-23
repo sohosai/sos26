@@ -16,8 +16,9 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button, IconButton, Select, TextField } from "@/components/primitives";
 import { createMastersheetColumn } from "@/lib/api/committee-mastersheet";
-import { listCommitteeMembersPicker } from "@/lib/api/committee-member";
 import { isClientError } from "@/lib/http/error";
+import { queryClient } from "@/lib/query/client";
+import { committeeMembersPickerQuery } from "@/lib/query/committee";
 import styles from "./AddCustomColumnDialog.module.scss";
 import { ViewerSelector } from "./ViewerSelector";
 
@@ -90,7 +91,8 @@ export function AddCustomColumnDialog({
 
 	useEffect(() => {
 		if (!open) return;
-		listCommitteeMembersPicker()
+		queryClient
+			.fetchQuery(committeeMembersPickerQuery)
 			.then(res =>
 				setCommitteeMembers(
 					res.committeeMembers.map(m => ({ id: m.user.id, name: m.user.name }))
