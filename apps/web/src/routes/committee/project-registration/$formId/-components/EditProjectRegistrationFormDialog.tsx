@@ -21,7 +21,7 @@ type Props = {
 	formId: string;
 	initialForm: ProjectRegistrationFormDetail;
 	activeForms?: FormPreview[];
-	onSuccess?: () => void;
+	onSuccess: (form: ProjectRegistrationFormDetail) => void;
 };
 
 function toFormValues(
@@ -58,8 +58,9 @@ export function EditProjectRegistrationFormDialog({
 	onSuccess,
 }: Props) {
 	const handleSubmit = async (values: ProjectRegistrationFormValues) => {
+		let res: Awaited<ReturnType<typeof updateProjectRegistrationForm>>;
 		try {
-			await updateProjectRegistrationForm(formId, {
+			res = await updateProjectRegistrationForm(formId, {
 				title: values.title.trim(),
 				description: values.description.trim() || null,
 				sortOrder: values.sortOrder,
@@ -94,6 +95,7 @@ export function EditProjectRegistrationFormDialog({
 			});
 			throw error;
 		}
+		onSuccess(res.form);
 	};
 
 	const initialValues = useMemo(() => toFormValues(initialForm), [initialForm]);
@@ -107,7 +109,6 @@ export function EditProjectRegistrationFormDialog({
 			initialValues={initialValues}
 			activeForms={activeForms}
 			onSubmit={handleSubmit}
-			onSuccess={onSuccess}
 		/>
 	);
 }

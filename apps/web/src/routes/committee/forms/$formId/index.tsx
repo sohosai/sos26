@@ -10,13 +10,9 @@ import {
 	IconDownload,
 	IconEye,
 } from "@tabler/icons-react";
-import {
-	createFileRoute,
-	useNavigate,
-	useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { AttachmentPreviewButton } from "@/components/filePreview/AttachmentPreviewButton";
 import { AnswerDetailDialog } from "@/components/form/Answer/AnswerDetailDialog";
@@ -85,6 +81,12 @@ export const Route = createFileRoute("/committee/forms/$formId/")({
 		meta: [{ title: "申請詳細 | 雙峰祭オンラインシステム" }],
 	}),
 	validateSearch: searchSchema,
+	// 操作の結果は画面の state にだけ反映するので、ページを離れたら loader のデータを捨て、開き直したときに古い表示を出さない
+	gcTime: 0,
+	// パラメータが変わったら作り直し、前の詳細を待っていた応答を移った先の画面に入れない
+	remountDeps: ({ params }) => params,
+	// タブの切り替えは search だけが変わるので、loader を取り直さない。開き直したときは gcTime: 0 で取り直す
+	staleTime: Number.POSITIVE_INFINITY,
 	loader: async ({ params }) => {
 		const [formRes, membersRes] = await Promise.all([
 			getFormDetail(params.formId),
@@ -99,13 +101,22 @@ export const Route = createFileRoute("/committee/forms/$formId/")({
 
 type TabName = "content" | "answers";
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: 1画面で申請の編集・共同編集者・閲覧者・承認・回答を扱うページのため
 function RouteComponent() {
 	const { formId } = Route.useParams();
-	const { form, committeeMembers } = Route.useLoaderData();
+	const { form: loadedForm, committeeMembers } = Route.useLoaderData();
 	const { tab } = Route.useSearch();
 	const navigate = useNavigate();
-	const router = useRouter();
 	const { user } = useAuthStore();
+
+	// 操作の結果を loader の再実行なしで反映するため、手元で持つ
+	const [form, setForm] = useState(loadedForm);
+	const [loadedFrom, setLoadedFrom] = useState(loadedForm);
+	if (loadedFrom !== loadedForm) {
+		setLoadedFrom(loadedForm);
+		setForm(loadedForm);
+	}
+	const latestDetailRequestIdRef = useRef(0);
 
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -192,10 +203,36 @@ function RouteComponent() {
 		});
 	};
 
+	// 応答で差し替えるときも番号を進め、その前に出ていた取り直しの応答で差し替えを戻さない
+	const updateFormLocally = (update: (prev: typeof form) => typeof form) => {
+		latestDetailRequestIdRef.current += 1;
+		setForm(update);
+	};
+
+	// 応答に画面で使う形の詳細が含まれない操作のあとに、詳細だけを取り直す
+	const reloadForm = async () => {
+		latestDetailRequestIdRef.current += 1;
+		const requestId = latestDetailRequestIdRef.current;
+		try {
+			const res = await getFormDetail(formId);
+			// 続けて取り直したときの古い応答や、別の申請へ移る前の応答では上書きしない
+			if (requestId !== latestDetailRequestIdRef.current) return;
+			setForm(prev => (prev.id === res.form.id ? res.form : prev));
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "read",
+				userMessage: "申請の再取得に失敗しました",
+				ui: { type: "toast" },
+				context: { formId },
+			});
+		}
+	};
+
 	const handleAddCollaborator = async (userId: string) => {
 		try {
 			await addFormCollaborator(form.id, userId, { isWrite: true });
-			await router.invalidate();
+			await reloadForm();
 		} catch (error) {
 			reportHandledError({
 				error,
@@ -214,7 +251,10 @@ function RouteComponent() {
 		setRemovingId(userId);
 		try {
 			await removeFormCollaborator(form.id, userId);
-			await router.invalidate();
+			updateFormLocally(prev => ({
+				...prev,
+				collaborators: prev.collaborators.filter(c => c.user.id !== userId),
+			}));
 		} catch (error) {
 			reportHandledError({
 				error,
@@ -235,10 +275,10 @@ function RouteComponent() {
 		viewers: { scope: string; bureauValue?: string; userId?: string }[]
 	) => {
 		try {
-			await updateFormViewers(form.id, {
+			const res = await updateFormViewers(form.id, {
 				viewers: viewers as Parameters<typeof updateFormViewers>[1]["viewers"],
 			});
-			await router.invalidate();
+			updateFormLocally(prev => ({ ...prev, viewers: res.viewers }));
 		} catch (error) {
 			reportHandledError({
 				error,
@@ -276,7 +316,7 @@ function RouteComponent() {
 	const handleApprove = async (authorizationId: string) => {
 		try {
 			await approveFormAuthorization(formId, authorizationId);
-			await router.invalidate();
+			await reloadForm();
 		} catch (error) {
 			reportHandledError({
 				error,
@@ -294,7 +334,7 @@ function RouteComponent() {
 	const handleReject = async (authorizationId: string) => {
 		try {
 			await rejectFormAuthorization(formId, authorizationId);
-			await router.invalidate();
+			await reloadForm();
 		} catch (error) {
 			reportHandledError({
 				error,
@@ -312,7 +352,7 @@ function RouteComponent() {
 	const handleCancelApproval = async (authorizationId: string) => {
 		try {
 			await rejectFormAuthorization(formId, authorizationId);
-			await router.invalidate();
+			await reloadForm();
 		} catch (error) {
 			reportHandledError({
 				error,
@@ -348,7 +388,7 @@ function RouteComponent() {
 			onReject={handleReject}
 			onCancelApproval={handleCancelApproval}
 			onUpdateViewers={handleUpdateViewers}
-			onPublishSuccess={() => router.invalidate()}
+			onPublishSuccess={reloadForm}
 			onEdit={() => setEditDialogOpen(true)}
 			onDelete={() => setDeleteConfirmOpen(true)}
 		/>
@@ -423,7 +463,7 @@ function RouteComponent() {
 				onOpenChange={setEditDialogOpen}
 				formId={form.id}
 				initialValues={previewForm}
-				onSuccess={() => router.invalidate()}
+				onSuccess={reloadForm}
 			/>
 
 			{/* 削除確認ダイアログ */}
