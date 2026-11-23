@@ -22,6 +22,7 @@ import {
 import { useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
 import { formatDate } from "@/lib/format";
+import { refreshMyProjects } from "@/lib/project/my-projects";
 import { useProject, useProjectStore } from "@/lib/project/store";
 import styles from "./index.module.scss";
 
@@ -199,6 +200,8 @@ function RouteComponent() {
 		setIsApprovingSubOwnerRequest(true);
 		try {
 			await approveSubOwnerRequest(project.id);
+			// 自分が副企画責任者になるので、企画一覧の権限も取り直す
+			void refreshMyProjects().catch(() => undefined);
 			setSubOwnerRequestDialogOpen(false);
 			setPendingSubOwnerRequestUserId(null);
 			setMembers(prev =>

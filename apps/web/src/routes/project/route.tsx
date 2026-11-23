@@ -1,5 +1,6 @@
 import { Callout, Heading, Text } from "@radix-ui/themes";
 import type {
+	GetApplicationPeriodResponse,
 	GetProjectNotificationStatusResponse,
 	GetProjectPublicInfoResponse,
 	MyProject,
@@ -21,11 +22,11 @@ import {
 	getApplicationPeriod,
 	getProjectNotificationStatus,
 	joinProject,
-	listMyProjects,
 } from "@/lib/api/project";
 import { getProjectPublicInfo } from "@/lib/api/project-public-info";
 import { requireAuth, useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
+import { refreshMyProjects } from "@/lib/project/my-projects";
 import { useProjectStore } from "@/lib/project/store";
 import styles from "./route.module.scss";
 
@@ -115,29 +116,31 @@ const EMPTY_PUBLIC_INFO_MODERATION: PublicInfoModeration = {
 	hiddenMapImageFileIds: [],
 };
 
+/** /project に入ったときに取得した申請期間。取得に失敗したときは null */
+let applicationPeriodInfo: GetApplicationPeriodResponse | null = null;
+
 export const Route = createFileRoute("/project")({
-	beforeLoad: async ({ location }) => {
+	beforeLoad: async ({ location, cause }) => {
 		await requireAuth(location.href);
 		useAuthStore.getState().setActivePortal("project");
 
-		const res = await listMyProjects();
-
-		const store = useProjectStore.getState();
-		const currentId = store.selectedProjectId;
-		const isValid =
-			currentId && res.projects.some((p: Project) => p.id === currentId);
-
-		store.setProjects(res.projects);
-		if (!isValid && res.projects[0]) {
-			store.setSelectedProjectId(res.projects[0].id);
+		// 子ルートの loader が選択中の企画を使うので、loader ではなくここで決める。
+		// /project の中でページを移るたびには取得せず、一覧が変わりうる操作のあとに refreshMyProjects を呼ぶ
+		if (cause === "enter") {
+			await refreshMyProjects();
 		}
 	},
-	loader: async () => {
+	loader: async ({ cause }) => {
 		const store = useProjectStore.getState();
 		const { selectedProjectId } = store;
 
+		if (cause === "enter") {
+			applicationPeriodInfo = await getApplicationPeriod().catch(() => null);
+		}
+
 		if (!selectedProjectId) {
 			return {
+				applicationPeriodInfo,
 				notificationStatus: EMPTY_NOTIFICATION_STATUS,
 				publicInfoProjectId: null,
 				publicInfo: null,
@@ -173,6 +176,7 @@ export const Route = createFileRoute("/project")({
 				: EMPTY_PUBLIC_INFO_MODERATION;
 
 		return {
+			applicationPeriodInfo,
 			notificationStatus,
 			publicInfoProjectId: selectedProjectId,
 			publicInfo,
@@ -184,8 +188,15 @@ export const Route = createFileRoute("/project")({
 });
 
 function ProjectLayout() {
-	const { notificationStatus: initialNotificationStatus } =
-		Route.useLoaderData();
+	const {
+		notificationStatus: initialNotificationStatus,
+		applicationPeriodInfo: loadedApplicationPeriodInfo,
+	} = Route.useLoaderData();
+	// 取得に失敗したときは保守的に期間外として扱う
+	const applicationPeriodInfo = loadedApplicationPeriodInfo ?? {
+		isOpen: false,
+		periods: null,
+	};
 	const navigate = useNavigate();
 	const router = useRouter();
 	const { projects, selectedProjectId, setSelectedProjectId, setProjects } =
@@ -193,10 +204,6 @@ function ProjectLayout() {
 	const selectedProject =
 		projects.find(p => p.id === selectedProjectId) ?? null;
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-	const [applicationPeriodInfo, setApplicationPeriodInfo] = useState<{
-		isOpen: boolean;
-		periods: { start: string; end: string }[] | null;
-	} | null>(null);
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 	const [joinDialogOpen, setJoinDialogOpen] = useState(false);
 	const { user } = useAuthStore();
@@ -210,19 +217,6 @@ function ProjectLayout() {
 	useEffect(() => {
 		setNotificationStatus(initialNotificationStatus);
 	}, [initialNotificationStatus]);
-
-	useEffect(() => {
-		const fetchApplicationPeriod = async () => {
-			try {
-				const info = await getApplicationPeriod();
-				setApplicationPeriodInfo(info);
-			} catch {
-				// API失敗時は保守的に期間外として扱う
-				setApplicationPeriodInfo({ isOpen: false, periods: null });
-			}
-		};
-		void fetchApplicationPeriod();
-	}, []);
 
 	const hasPrivilegedProject = projects.some(
 		project =>
@@ -264,7 +258,8 @@ function ProjectLayout() {
 			// 開いている画面にも新しいお知らせや返信を反映する
 			if (changed) void router.invalidate();
 		} catch {
-			// 企画から外された場合は beforeLoad が別の企画へ切り替える
+			// 企画から外された場合に別の企画へ切り替える
+			await refreshMyProjects().catch(() => undefined);
 			void router.invalidate();
 		}
 	}, [router, selectedProjectId]);
@@ -301,11 +296,12 @@ function ProjectLayout() {
 			const { project } = await joinProject({ inviteCode });
 
 			if (!projects.some(p => p.id === project.id)) {
-				// アイコンは直後の invalidate による一覧再取得で反映される
+				// アイコンは直後の一覧の取り直しで反映される
 				setProjects([...projects, { ...project, iconFileId: null }]);
 			}
 
 			setSelectedProjectId(project.id);
+			void refreshMyProjects().catch(() => undefined);
 			router.invalidate();
 		} catch (error) {
 			reportHandledError({
@@ -359,21 +355,11 @@ function ProjectLayout() {
 					</Callout.Root>
 				)}
 				{projects.length === 0 ? (
-					applicationPeriodInfo ? (
-						<EmptyProjectState
-							onCreateProject={() => setCreateDialogOpen(true)}
-							onJoinProject={() => setJoinDialogOpen(true)}
-							isApplicationPeriodOpen={applicationPeriodInfo.isOpen}
-						/>
-					) : (
-						<div className={styles.emptyState}>
-							<div className={styles.emptyStateContent}>
-								<Heading size="5" className={styles.emptyStateHeading}>
-									読み込み中...
-								</Heading>
-							</div>
-						</div>
-					)
+					<EmptyProjectState
+						onCreateProject={() => setCreateDialogOpen(true)}
+						onJoinProject={() => setJoinDialogOpen(true)}
+						isApplicationPeriodOpen={applicationPeriodInfo.isOpen}
+					/>
 				) : (
 					selectedProjectId && <Outlet key={selectedProjectId} />
 				)}
@@ -382,9 +368,10 @@ function ProjectLayout() {
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}
 				onCreated={project => {
-					// アイコンは直後の invalidate による一覧再取得で反映される
+					// アイコンは直後の一覧の取り直しで反映される
 					setProjects([...projects, { ...project, iconFileId: null }]);
 					setSelectedProjectId(project.id);
+					void refreshMyProjects().catch(() => undefined);
 					router.invalidate();
 				}}
 			/>

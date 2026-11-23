@@ -13,6 +13,7 @@ import {
 	getCommitteeInquiry,
 	publishDraftComment,
 	publishDraftInquiry,
+	readCommitteeInquiry,
 	removeCommitteeInquiryAssignee,
 	reopenCommitteeInquiry,
 	updateCommitteeDraftComment,
@@ -84,6 +85,13 @@ function CommitteeSupportDetailPage() {
 	useEffect(() => {
 		setCurrentInquiry(inquiry);
 	}, [inquiry]);
+
+	// 詳細を表示したときに 1 回だけ既読にする。失敗しても表示は続ける
+	const loadedInquiryId = inquiry?.id;
+	useEffect(() => {
+		if (!loadedInquiryId) return;
+		void readCommitteeInquiry(loadedInquiryId).catch(() => undefined);
+	}, [loadedInquiryId]);
 
 	if (!currentInquiry) {
 		return (

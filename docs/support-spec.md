@@ -237,6 +237,7 @@ enum InquiryActivityType { ASSIGNEE_ADDED, ASSIGNEE_REMOVED, VIEWER_UPDATED, STA
 |---------|------|------|------|
 | GET | `/project/:projectId/inquiries` | 自分が担当のお問い合わせ一覧 | 企画メンバー |
 | GET | `/project/:projectId/inquiries/:inquiryId` | お問い合わせ詳細 | 企画側担当者 |
+| POST | `/project/:projectId/inquiries/:inquiryId/read` | コメントを既読にする（詳細を表示したときに 1 回呼ぶ） | 企画側担当者 |
 | POST | `/project/:projectId/inquiries` | お問い合わせ作成 | 企画メンバー |
 | POST | `/project/:projectId/inquiries/:inquiryId/comments` | コメント追加 | 企画側担当者 |
 | PATCH | `/project/:projectId/inquiries/:inquiryId/reopen` | 再オープン | 企画側担当者 |
@@ -251,6 +252,7 @@ enum InquiryActivityType { ASSIGNEE_ADDED, ASSIGNEE_REMOVED, VIEWER_UPDATED, STA
 |---------|------|------|------|
 | GET | `/committee/inquiries` | お問い合わせ一覧 | 担当者 / 閲覧者 / 管理者 |
 | GET | `/committee/inquiries/:inquiryId` | お問い合わせ詳細 | 担当者 / 閲覧者 / 管理者 |
+| POST | `/committee/inquiries/:inquiryId/read` | コメントを既読にする（詳細を表示したときに 1 回呼ぶ） | 担当者 / 閲覧者 / 管理者 |
 | POST | `/committee/inquiries` | お問い合わせ作成 | 実委人 |
 | POST | `/committee/inquiries/:inquiryId/comments` | コメント追加 | 担当者 / 管理者 |
 | POST | `/committee/inquiries/:inquiryId/comments/:commentId/publish` | 下書きコメントを正式送信 | 下書き作成者 |

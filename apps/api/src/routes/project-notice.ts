@@ -28,11 +28,15 @@ projectNoticeRoute.get(
 					notice: { deletedAt: null },
 				},
 			},
-			include: {
+			// 一覧で使う列だけを取る（本文は詳細でだけ使う）
+			select: {
 				noticeAuthorization: {
-					include: {
+					select: {
+						deliveredAt: true,
 						notice: {
-							include: {
+							select: {
+								id: true,
+								title: true,
 								owner: {
 									select: {
 										id: true,
@@ -47,7 +51,10 @@ projectNoticeRoute.get(
 						},
 					},
 				},
-				readStatuses: { where: { userId: user.id } },
+				readStatuses: {
+					where: { userId: user.id },
+					select: { id: true },
+				},
 			},
 			orderBy: {
 				noticeAuthorization: { deliveredAt: "desc" },

@@ -1,5 +1,6 @@
 import { Heading, Text } from "@radix-ui/themes";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/primitives";
@@ -9,6 +10,7 @@ import {
 	addProjectInquiryAssignee,
 	addProjectInquiryComment,
 	getProjectInquiry,
+	readProjectInquiry,
 	removeProjectInquiryAssignee,
 	reopenProjectInquiry,
 } from "@/lib/api/project-inquiry";
@@ -56,6 +58,15 @@ function ProjectSupportDetailPage() {
 	const router = useRouter();
 	const { selectedProjectId } = useProjectStore();
 	const { user } = useAuthStore();
+	const loadedInquiryId = data?.inquiry.id;
+
+	// 詳細を表示したときに 1 回だけ既読にする。失敗しても表示は続ける
+	useEffect(() => {
+		if (!selectedProjectId || !loadedInquiryId) return;
+		void readProjectInquiry(selectedProjectId, loadedInquiryId).catch(
+			() => undefined
+		);
+	}, [selectedProjectId, loadedInquiryId]);
 
 	if (!data || !selectedProjectId) {
 		return (

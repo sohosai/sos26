@@ -145,3 +145,13 @@ export async function findLastReadAts(
 	});
 	return new Map(statuses.map(s => [s.inquiryId, s.lastReadAt]));
 }
+
+/** ユーザーが問い合わせのコメントを今の時点まで読んだことを記録する */
+export async function markInquiryRead(inquiryId: string, userId: string) {
+	const lastReadAt = new Date();
+	await prisma.inquiryCommentReadStatus.upsert({
+		where: { inquiryId_userId: { inquiryId, userId } },
+		create: { inquiryId, userId, lastReadAt },
+		update: { lastReadAt },
+	});
+}

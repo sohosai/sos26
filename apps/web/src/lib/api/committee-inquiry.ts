@@ -21,8 +21,10 @@ import {
 	type PublishDraftInquiryResponse,
 	publishDraftCommentEndpoint,
 	publishDraftInquiryEndpoint,
+	type ReadInquiryResponse,
 	type RemoveInquiryAssigneeResponse,
 	type ReopenInquiryResponse,
+	readCommitteeInquiryEndpoint,
 	removeCommitteeInquiryAssigneeEndpoint,
 	reopenCommitteeInquiryEndpoint,
 	type UpdateDraftCommentRequest,
@@ -222,6 +224,18 @@ export async function deleteDraftInquiry(
 	inquiryId: string
 ): Promise<DeleteInquiryResponse> {
 	return callNoBodyApi(deleteInquiryEndpoint, {
+		pathParams: { inquiryId },
+	});
+}
+
+/**
+ * POST /committee/inquiries/:inquiryId/read
+ * 実委側お問い合わせのコメントを既読にする
+ */
+export async function readCommitteeInquiry(
+	inquiryId: string
+): Promise<ReadInquiryResponse> {
+	return callNoBodyApi(readCommitteeInquiryEndpoint, {
 		pathParams: { inquiryId },
 	});
 }

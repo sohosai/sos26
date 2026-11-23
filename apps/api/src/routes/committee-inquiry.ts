@@ -20,6 +20,7 @@ import {
 	findLastReadAts,
 	findLatestComments,
 	getCommentSentAt,
+	markInquiryRead,
 } from "../lib/inquiry-activity";
 import {
 	notifyInquiryAssigneeAdded,
@@ -789,24 +790,39 @@ committeeInquiryRoute.get(
 			attachments: inquiry.attachments.map(formatAttachment),
 		};
 
-		await prisma.inquiryCommentReadStatus.upsert({
-			where: {
-				inquiryId_userId: {
-					inquiryId,
-					userId: user.id,
-				},
-			},
-			create: {
-				inquiryId,
-				userId: user.id,
-				lastReadAt: new Date(),
-			},
-			update: {
-				lastReadAt: new Date(),
-			},
+		return c.json({ inquiry: formatted });
+	}
+);
+
+// ─────────────────────────────────────────────────────────────
+// POST /committee/inquiries/:inquiryId/read
+// お問い合わせのコメントを既読にする（閲覧権限チェックあり）
+// ─────────────────────────────────────────────────────────────
+committeeInquiryRoute.post(
+	"/:inquiryId/read",
+	requireAuth,
+	requireCommitteeMember,
+	async c => {
+		const user = c.get("user");
+		const committeeMember = getCommitteeMember(c);
+		const { inquiryId } = inquiryIdPathParamsSchema.parse({
+			inquiryId: c.req.param("inquiryId"),
 		});
 
-		return c.json({ inquiry: formatted });
+		if (!(await canViewInquiry(inquiryId, user.id, committeeMember))) {
+			throw Errors.forbidden("このお問い合わせを閲覧する権限がありません");
+		}
+
+		const inquiry = await prisma.inquiry.findFirst({
+			where: { id: inquiryId, deletedAt: null },
+			select: { id: true },
+		});
+		if (!inquiry) {
+			throw Errors.notFound("お問い合わせが見つかりません");
+		}
+
+		await markInquiryRead(inquiryId, user.id);
+		return c.json({ success: true as const });
 	}
 );
 

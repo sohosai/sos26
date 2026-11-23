@@ -12,8 +12,10 @@ import {
 	getProjectInquiryEndpoint,
 	type ListProjectInquiriesResponse,
 	listProjectInquiriesEndpoint,
+	type ReadInquiryResponse,
 	type RemoveInquiryAssigneeResponse,
 	type ReopenInquiryResponse,
+	readProjectInquiryEndpoint,
 	removeProjectInquiryAssigneeEndpoint,
 	reopenProjectInquiryEndpoint,
 } from "@sos26/shared";
@@ -40,6 +42,19 @@ export async function getProjectInquiry(
 	inquiryId: string
 ): Promise<GetProjectInquiryResponse> {
 	return callGetApi(getProjectInquiryEndpoint, {
+		pathParams: { projectId, inquiryId },
+	});
+}
+
+/**
+ * POST /project/:projectId/inquiries/:inquiryId/read
+ * 企画側お問い合わせのコメントを既読にする
+ */
+export async function readProjectInquiry(
+	projectId: string,
+	inquiryId: string
+): Promise<ReadInquiryResponse> {
+	return callNoBodyApi(readProjectInquiryEndpoint, {
 		pathParams: { projectId, inquiryId },
 	});
 }
