@@ -146,8 +146,9 @@ export const Route = createFileRoute("/project")({
 		}
 	},
 	// /project の中でページを移るたびには、通知状態と公開情報を取り直さない。
-	// 取り直すのは、選択中の企画が変わったときと、router.invalidate() されたとき（新着の反映や企画の作成・参加など）
-	shouldReload: () =>
+	// 取り直すのは、/project に入ったとき、選択中の企画が変わったとき、router.invalidate() されたとき（新着の反映や企画の作成・参加など）
+	shouldReload: ({ cause }) =>
+		cause === "enter" ||
 		useProjectStore.getState().selectedProjectId !== loadedProject.id,
 	loader: async ({ cause }) => {
 		const store = useProjectStore.getState();
