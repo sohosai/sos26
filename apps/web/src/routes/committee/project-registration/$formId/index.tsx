@@ -9,13 +9,9 @@ import {
 	IconClock,
 	IconEye,
 } from "@tabler/icons-react";
-import {
-	createFileRoute,
-	useNavigate,
-	useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { type ComponentProps, useMemo, useState } from "react";
+import { type ComponentProps, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AnswerDetailDialog } from "@/components/form/Answer/AnswerDetailDialog";
 import type { Form } from "@/components/form/type";
@@ -124,17 +120,11 @@ export const Route = createFileRoute(
 				name: m.user.name,
 				avatarFileId: m.user.avatarFileId,
 			}));
-		const existingCollaboratorIds = new Set(
-			form.collaborators.map(c => c.user.id)
-		);
-		const availableMembers = committeeMembers
-			.filter(
-				m =>
-					m.user.id !== form.ownerId &&
-					!existingCollaboratorIds.has(m.user.id) &&
-					m.permissions.some(
-						p => p.permission === "PROJECT_REGISTRATION_FORM_CREATE"
-					)
+		const collaboratorCandidates = committeeMembers
+			.filter(m =>
+				m.permissions.some(
+					p => p.permission === "PROJECT_REGISTRATION_FORM_CREATE"
+				)
 			)
 			.map(m => ({
 				userId: m.user.id,
@@ -154,7 +144,7 @@ export const Route = createFileRoute(
 			form,
 			canCreate,
 			approvers,
-			availableMembers,
+			collaboratorCandidates,
 			activeForms,
 		};
 	},
@@ -162,11 +152,24 @@ export const Route = createFileRoute(
 
 function RouteComponent() {
 	const { formId } = Route.useParams();
-	const { form, canCreate, approvers, availableMembers, activeForms } =
-		Route.useLoaderData();
+	const {
+		form: loadedForm,
+		canCreate,
+		approvers,
+		collaboratorCandidates,
+		activeForms,
+	} = Route.useLoaderData();
 	const navigate = useNavigate();
-	const router = useRouter();
 	const { user } = useAuthStore();
+
+	// 操作の結果を loader の再実行なしで反映するため、手元で持つ
+	const [form, setForm] = useState(loadedForm);
+	const [loadedFrom, setLoadedFrom] = useState(loadedForm);
+	if (loadedFrom !== loadedForm) {
+		setLoadedFrom(loadedForm);
+		setForm(loadedForm);
+	}
+	const latestDetailRequestIdRef = useRef(0);
 
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -185,6 +188,11 @@ function RouteComponent() {
 	const canEdit =
 		(isOwner || isWriteCollaborator) && canCreate && !form.isActive;
 	const canEditAnswers = isOwner || isWriteCollaborator;
+
+	const collaboratorUserIds = new Set(form.collaborators.map(c => c.user.id));
+	const availableMembers = collaboratorCandidates.filter(
+		m => m.userId !== form.ownerId && !collaboratorUserIds.has(m.userId)
+	);
 
 	const previewForm = useMemo(() => formDetailToPreviewForm(form), [form]);
 	const {
@@ -280,12 +288,32 @@ function RouteComponent() {
 
 	if (!user) return null;
 
+	// 応答に画面で使う形の詳細が含まれない操作のあとに、詳細だけを取り直す
+	const reloadForm = async () => {
+		latestDetailRequestIdRef.current += 1;
+		const requestId = latestDetailRequestIdRef.current;
+		try {
+			const res = await getProjectRegistrationFormDetail(formId);
+			// 続けて取り直したときの古い応答や、別のフォームへ移る前の応答では上書きしない
+			if (requestId !== latestDetailRequestIdRef.current) return;
+			setForm(prev => (prev.id === res.form.id ? res.form : prev));
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "read",
+				userMessage: "フォームの再取得に失敗しました",
+				ui: { type: "toast" },
+				context: { formId },
+			});
+		}
+	};
+
 	const handleAddCollaborator = async (targetUserId: string) => {
 		try {
 			await addProjectRegistrationFormCollaborator(formId, targetUserId, {
 				isWrite: true,
 			});
-			await router.invalidate();
+			await reloadForm();
 			toast.success("共同編集者を追加しました");
 		} catch (error) {
 			reportHandledError({
@@ -305,7 +333,12 @@ function RouteComponent() {
 		setRemovingId(targetUserId);
 		try {
 			await removeProjectRegistrationFormCollaborator(formId, targetUserId);
-			await router.invalidate();
+			setForm(prev => ({
+				...prev,
+				collaborators: prev.collaborators.filter(
+					c => c.user.id !== targetUserId
+				),
+			}));
 			toast.success("共同編集者を削除しました");
 		} catch (error) {
 			reportHandledError({
@@ -328,7 +361,7 @@ function RouteComponent() {
 			await updateProjectRegistrationFormAuthorization(formId, authId, {
 				status: "APPROVED",
 			});
-			await router.invalidate();
+			await reloadForm();
 			toast.success("承認しました。フォームが公開されました。");
 		} catch (error) {
 			reportHandledError({
@@ -349,7 +382,7 @@ function RouteComponent() {
 			await updateProjectRegistrationFormAuthorization(formId, authId, {
 				status: "REJECTED",
 			});
-			await router.invalidate();
+			await reloadForm();
 			toast.success("却下しました");
 		} catch (error) {
 			reportHandledError({
@@ -497,7 +530,7 @@ function RouteComponent() {
 							onRemoveCollaborator={handleRemoveCollaborator}
 							onApprove={handleApprove}
 							onReject={handleReject}
-							onAuthRequestSuccess={() => router.invalidate()}
+							onAuthRequestSuccess={reloadForm}
 							onEdit={() => setEditDialogOpen(true)}
 							onDelete={() => setDeleteConfirmOpen(true)}
 						/>
@@ -530,7 +563,13 @@ function RouteComponent() {
 				formId={form.id}
 				initialForm={form}
 				activeForms={activeForms}
-				onSuccess={() => router.invalidate()}
+				onSuccess={updated =>
+					// 更新の応答には回答数が含まれない。更新で回答数は変わらないため、手元の値を残す
+					setForm(prev => ({
+						...updated,
+						responseCount: prev.responseCount,
+					}))
+				}
 			/>
 
 			<AlertDialog.Root
