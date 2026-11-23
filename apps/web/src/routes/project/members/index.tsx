@@ -94,7 +94,7 @@ const roleColorMap: Record<string, string> = {
 
 const memberColumnHelper = createColumnHelper<MemberRow>();
 
-/** 一覧は画面の state で更新するので、次に開いたときにキャッシュから古い一覧を出さないようにする */
+/** 問い合わせの担当者の候補で、操作の前のメンバー一覧を使わないようにする */
 function invalidateProjectMembers(projectId: string) {
 	void queryClient.invalidateQueries({
 		queryKey: projectQueryKeys.members(projectId),
@@ -115,9 +115,12 @@ export const Route = createFileRoute("/project/members/")({
 			};
 		}
 
-		const data = await queryClient.fetchQuery(
-			projectMembersQuery(selectedProjectId)
-		);
+		// ほかのメンバーの参加や任命は notification-status に出ないので、開くたびに取り直す。
+		// 取得結果はキャッシュに入り、問い合わせの担当者の候補も新しくなる
+		const data = await queryClient.fetchQuery({
+			...projectMembersQuery(selectedProjectId),
+			staleTime: 0,
+		});
 		return {
 			members: data.members.map((m: Omit<MemberRow, "roleLabel">) => {
 				const roleLabel =

@@ -17,7 +17,7 @@ import { Button } from "@/components/primitives";
 import { getProjectNotice } from "@/lib/api/project-notice";
 import { isClientError } from "@/lib/http/error";
 import { refreshNotificationDot } from "@/lib/project/notification-status";
-import { useProject, useProjectStore } from "@/lib/project/store";
+import { useProjectStore } from "@/lib/project/store";
 import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 import { queryClient } from "@/lib/query/client";
 import { projectNoticesQuery } from "@/lib/query/project";
@@ -130,9 +130,11 @@ async function resolveNoticeProject(
 	for (const project of projects) {
 		if (project.id === preferredProjectId) continue;
 		if (signal.aborted) return null;
-		const { notices } = await queryClient.fetchQuery(
-			projectNoticesQuery(project.id)
-		);
+		// 配信直後のお知らせを見落とさないよう、キャッシュがあっても取り直す
+		const { notices } = await queryClient.fetchQuery({
+			...projectNoticesQuery(project.id),
+			staleTime: 0,
+		});
 		if (!notices.some(n => n.id === noticeId)) continue;
 		return getNoticeDetailInProject(project.id, noticeId, signal);
 	}
@@ -150,16 +152,26 @@ export const Route = createFileRoute("/project/notice/")({
 	},
 	loader: async () => {
 		const { selectedProjectId } = useProjectStore.getState();
-		if (!selectedProjectId) return;
-		await queryClient.fetchQuery(projectNoticesQuery(selectedProjectId));
+		if (selectedProjectId) {
+			await queryClient.fetchQuery(projectNoticesQuery(selectedProjectId));
+		}
+		return { projectId: selectedProjectId };
 	},
 });
 
 function RouteComponent() {
+	const { projectId } = Route.useLoaderData();
+	return projectId ? <ProjectNoticePage projectId={projectId} /> : null;
+}
+
+/**
+ * 一覧は loader が取得した企画のものを使う。企画を切り替えたときに、新しい loader が終わるまで前の企画の一覧を出したままにするため
+ */
+function ProjectNoticePage({ projectId }: { projectId: string }) {
 	const search = Route.useSearch();
 	const navigate = useNavigate();
-	const { id: selectedProjectId } = useProject();
-	const { data } = useSuspenseQuery(projectNoticesQuery(selectedProjectId));
+	const { selectedProjectId } = useProjectStore();
+	const { data } = useSuspenseQuery(projectNoticesQuery(projectId));
 	const notices = useMemo(() => data.notices.map(toNoticeRow), [data]);
 	const isTargetInSelectedProject =
 		search.noticeId !== undefined &&
@@ -185,7 +197,7 @@ function RouteComponent() {
 		const controller = new AbortController();
 		void resolveNoticeProject(
 			targetNoticeId,
-			selectedProjectId,
+			selectedProjectId ?? undefined,
 			isTargetInSelectedProject,
 			controller.signal
 		)
@@ -225,7 +237,7 @@ function RouteComponent() {
 	const handleRead = useCallback(
 		(noticeId: string) => {
 			queryClient.setQueryData(
-				projectNoticesQuery(selectedProjectId).queryKey,
+				projectNoticesQuery(projectId).queryKey,
 				prev =>
 					prev && {
 						...prev,
@@ -237,7 +249,7 @@ function RouteComponent() {
 			markCachedNoticeRead(noticeId);
 			void refreshNotificationDot();
 		},
-		[selectedProjectId]
+		[projectId]
 	);
 
 	const columns = [
@@ -276,6 +288,7 @@ function RouteComponent() {
 					intent="secondary"
 					size="1"
 					onClick={() => {
+						if (!selectedProjectId) return;
 						setSelectedNotice({
 							id: row.original.id,
 							projectId: selectedProjectId,

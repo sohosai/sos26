@@ -19,12 +19,14 @@ Firebase のユーザーが替わったとき（サインアウトを含む）�
 
 ### 1.2 キャッシュする API
 
-| 対象 | 定義 | query key | staleTime |
-|---|---|---|---|
-| 委員の候補（委員メンバー、自分の申請、全企画） | `lib/query/committee.ts` | `["committee", ...]` | 60 秒 |
-| 企画の notification-status、企画情報、申請・お知らせ・問い合わせ・メンバーの一覧 | `lib/query/project.ts` | `["project", projectId, 種類]` | 30 秒 |
+staleTime のあいだは API を呼ばずにキャッシュを返す。自分の操作による変化は 4 章の更新ですぐに反映し、ほかの人の操作による変化は次の表の時点で反映する。
 
-staleTime のあいだは API を呼ばずにキャッシュを返す。委員の候補は、ほかの委員の操作で変わっても 60 秒までは古いまま使う。
+| 対象 | 定義 | staleTime | ほかの人の操作を反映する時点 |
+|---|---|---|---|
+| 委員の候補（委員メンバー、自分の申請、全企画） | `lib/query/committee.ts` | 60 秒 | 最大 60 秒後。委員の申請一覧を開いたときは、自分の申請を取り直す |
+| 企画の申請・お知らせ・問い合わせの一覧 | `lib/query/project.ts` | 30 秒 | notification-status が変わったとき（5 章） |
+| 企画メンバーの一覧 | `lib/query/project.ts` | 30 秒 | メンバー管理画面を開いたとき。問い合わせの担当者の候補では最大 30 秒後 |
+| 企画の notification-status | `lib/query/project.ts` | 30 秒 | `/project` の中で画面を移るたびと、60 秒ごと（5 章） |
 
 ## 2. query の定義
 
@@ -47,15 +49,7 @@ export const projectFormsQuery = (projectId: string) =>
 
 loader では `queryClient.fetchQuery(query)` を使う。staleTime 内ならキャッシュを返し、過ぎていれば取得を待つ。`ensureQueryData` は staleTime を過ぎたキャッシュもそのまま返すため、loader では使わない。
 
-```ts
-loader: async () => {
-	const { selectedProjectId } = useProjectStore.getState();
-	if (!selectedProjectId) return;
-	await queryClient.fetchQuery(projectFormsQuery(selectedProjectId));
-},
-```
-
-一覧そのものを表示する画面で、開くたびに最新にしたいときは `staleTime: 0` を上書きする。取得結果はキャッシュに入るので、ほかの画面の候補も新しくなる。
+その画面が主に表示する一覧で、ほかの人の操作をすぐに反映したいときは、`staleTime: 0` を上書きして開くたびに取り直す。取得結果はキャッシュに入るので、ほかの画面の候補も新しくなる。委員の申請一覧と企画メンバーの管理画面がこの形である。
 
 ```ts
 await queryClient.fetchQuery({ ...myFormsQuery, staleTime: 0 });
@@ -63,16 +57,34 @@ await queryClient.fetchQuery({ ...myFormsQuery, staleTime: 0 });
 
 ### 3.2 コンポーネント
 
-| 画面で取得結果を書き換えるか | 読み方 |
-|---|---|
-| 書き換える | loader と同じ query を `useSuspenseQuery` で読む |
-| 書き換えない | loader の返り値を `Route.useLoaderData()` で読む |
+| 画面の形 | 読み方 | 例 |
+|---|---|---|
+| キャッシュの一覧を表示し、画面で書き換える | loader と同じ query を `useSuspenseQuery` で読み、4.1 の形で書き換える | 企画の申請一覧、お知らせ一覧 |
+| 開くたびに取り直し、画面で書き換える | loader の返り値を state に移して書き換え、4.2 の形でキャッシュを古くする | 企画メンバーの管理画面 |
+| 書き換えない | loader の返り値を `Route.useLoaderData()` で読む | 問い合わせ一覧 |
 
-`useSuspenseQuery` で読むと、4 章の更新がそのまま画面に反映される。
+`useSuspenseQuery` に渡す企画 ID には、`useProjectStore` の値ではなく loader が返した値を使う。企画を切り替えた直後は、新しい loader が終わる前に画面が描画し直される。このときストアの企画 ID を使うと、キャッシュのない企画の一覧を待つあいだ `/project` 全体が表示されなくなる。
 
 ```tsx
-const { id: projectId } = useProject();
-const { data } = useSuspenseQuery(projectFormsQuery(projectId));
+loader: async () => {
+	const { selectedProjectId } = useProjectStore.getState();
+	if (selectedProjectId) {
+		await queryClient.fetchQuery(projectFormsQuery(selectedProjectId));
+	}
+	return { projectId: selectedProjectId };
+},
+```
+
+```tsx
+function RouteComponent() {
+	const { projectId } = Route.useLoaderData();
+	return projectId ? <ProjectFormsPage projectId={projectId} /> : null;
+}
+
+function ProjectFormsPage({ projectId }: { projectId: string }) {
+	const { data } = useSuspenseQuery(projectFormsQuery(projectId));
+	// ...
+}
 ```
 
 loader を持たないダイアログでは、開いたときに `queryClient.fetchQuery(query)` を呼ぶ。
@@ -103,10 +115,12 @@ queryClient.setQueryData(projectNoticesQuery(projectId).queryKey, prev =>
 | 操作 | 無効にする key |
 |---|---|
 | 委員メンバーの追加・削除・所属局と権限の変更 | `committeeQueryKeys.membersPicker` |
+| 申請の編集・共同編集者と閲覧者の変更・承認など、申請詳細を取り直す操作 | `committeeQueryKeys.myForms` |
 | 委員による企画の基本情報の更新 | `committeeQueryKeys.allProjects` |
 | 企画メンバーの削除、副企画責任者の任命とリクエストの承認・取り消し・辞退 | `projectQueryKeys.members(projectId)` |
 | 問い合わせの作成、問い合わせ詳細を開く | `projectQueryKeys.inquiries(projectId)` |
-| 企画情報の保存 | `projectQueryKeys.publicInfo(projectId)` |
+
+取得中の query を無効にすると、その取得が成功した時点で無効が打ち消される。問い合わせ詳細のように、取得と同時に状態が変わる操作では、取得を待ってから無効にする。
 
 ### 4.3 loader を取り直させるとき
 
@@ -114,14 +128,22 @@ queryClient.setQueryData(projectNoticesQuery(projectId).queryKey, prev =>
 
 ```ts
 await queryClient.invalidateQueries({
-	queryKey: projectQueryKeys.publicInfo(project.id),
+	queryKey: projectQueryKeys.all(projectId),
+	predicate: q => q.queryKey[2] !== "notification-status",
 	refetchType: "none",
 });
-await router.invalidate();
+void router.invalidate();
 ```
 
 ## 5. `/project` の新着の反映
 
-`/project` のレイアウト（`routes/project/route.tsx`）は、60 秒ごとと、タブに戻ったときに notification-status を `staleTime: 0` で取り直す。前の値から変わっていれば、notification-status 以外の企画の query を 4.3 の形で古くし、`router.invalidate()` で開いている画面を取り直す。
+`/project` のレイアウト（`routes/project/route.tsx`）は、次の時点で notification-status を `staleTime: 0` で取り直し、キャッシュにあった前回の値と比べる。
 
-自分の操作で未回答・未確認の状態が変わったときは `refreshNotificationDot()` を呼ぶ。サイドバーのドットだけを取り直し、画面は取り直さない。
+| 時点 | 変わっていたときの処理 |
+|---|---|
+| `/project` の中で画面を移るとき（`beforeLoad`） | notification-status 以外の企画の query を古くする。続く子ルートの loader が一覧を取り直す |
+| 60 秒ごとと、タブに戻ったとき | 同じく古くしたうえで `router.invalidate()` を呼び、開いている画面を取り直す |
+
+`beforeLoad` で比べるのは、TanStack Router が親と子の loader を並列に実行するためである。親の loader で古くしても、同じ遷移の子の loader には間に合わない。
+
+自分の操作で未回答・未確認の状態が変わったときは `refreshNotificationDot()` を呼ぶ。サイドバーのドットを取り直し、開いている画面は取り直さない。

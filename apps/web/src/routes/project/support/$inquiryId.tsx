@@ -44,14 +44,15 @@ export const Route = createFileRoute("/project/support/$inquiryId")({
 	loader: async ({ params }) => {
 		const { selectedProjectId } = useProjectStore.getState();
 		if (!selectedProjectId) return null;
-		// 開くと既読になり、返信などでも一覧の表示が変わるので、一覧に戻ったときに取り直させる
-		void queryClient.invalidateQueries({
-			queryKey: projectQueryKeys.inquiries(selectedProjectId),
-		});
 		const [inquiryRes, membersRes] = await Promise.all([
 			getProjectInquiry(selectedProjectId, params.inquiryId),
 			queryClient.fetchQuery(projectMembersQuery(selectedProjectId)),
 		]);
+		// 開くと既読になり、返信などでも一覧の表示が変わるので、一覧に戻ったときに取り直させる。
+		// 取得中の一覧の応答で無効化が打ち消されないよう、詳細を取得したあとに行う
+		void queryClient.invalidateQueries({
+			queryKey: projectQueryKeys.inquiries(selectedProjectId),
+		});
 		return {
 			inquiry: inquiryRes.inquiry,
 			projectMembers: membersRes.members.map(m => ({

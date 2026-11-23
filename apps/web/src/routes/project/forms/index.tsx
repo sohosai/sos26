@@ -9,7 +9,7 @@ import { z } from "zod";
 import { DataTable, DateCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { refreshNotificationDot } from "@/lib/project/notification-status";
-import { useProject, useProjectStore } from "@/lib/project/store";
+import { useProjectStore } from "@/lib/project/store";
 import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 import { queryClient } from "@/lib/query/client";
 import { projectFormsQuery } from "@/lib/query/project";
@@ -85,13 +85,22 @@ export const Route = createFileRoute("/project/forms/")({
 	},
 	loader: async () => {
 		const { selectedProjectId } = useProjectStore.getState();
-		if (!selectedProjectId) return;
-		await queryClient.fetchQuery(projectFormsQuery(selectedProjectId));
+		if (selectedProjectId) {
+			await queryClient.fetchQuery(projectFormsQuery(selectedProjectId));
+		}
+		return { projectId: selectedProjectId };
 	},
 });
 
 function RouteComponent() {
-	const { id: projectId } = useProject();
+	const { projectId } = Route.useLoaderData();
+	return projectId ? <ProjectFormsPage projectId={projectId} /> : null;
+}
+
+/**
+ * 企画は loader が取得したものを使う。企画を切り替えたときに、新しい loader が終わるまで前の企画の一覧を出したままにするため
+ */
+function ProjectFormsPage({ projectId }: { projectId: string }) {
 	const { data } = useSuspenseQuery(projectFormsQuery(projectId));
 	const forms = useMemo(() => data.forms.map(toFormRow), [data]);
 

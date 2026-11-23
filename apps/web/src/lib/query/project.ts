@@ -6,9 +6,11 @@ import {
 import { listProjectForms } from "../api/project-form";
 import { listProjectInquiries } from "../api/project-inquiry";
 import { listProjectNotices } from "../api/project-notice";
-import { getProjectPublicInfo } from "../api/project-public-info";
 
-/** /project のサイドバーで画面を移るたびには取り直さない。新着は notification-status の変化で取り直す */
+/**
+ * /project の中で画面を移るたびには一覧を取り直さない。
+ * 新着は、画面を移るたびと定期的に notification-status を確かめ、変わっていたら取り直す
+ */
 const PROJECT_STALE_TIME = 30_000;
 
 export const projectQueryKeys = {
@@ -16,8 +18,6 @@ export const projectQueryKeys = {
 	all: (projectId: string) => ["project", projectId] as const,
 	notificationStatus: (projectId: string) =>
 		["project", projectId, "notification-status"] as const,
-	publicInfo: (projectId: string) =>
-		["project", projectId, "public-info"] as const,
 	forms: (projectId: string) => ["project", projectId, "forms"] as const,
 	notices: (projectId: string) => ["project", projectId, "notices"] as const,
 	inquiries: (projectId: string) =>
@@ -29,13 +29,6 @@ export const projectNotificationStatusQuery = (projectId: string) =>
 	queryOptions({
 		queryKey: projectQueryKeys.notificationStatus(projectId),
 		queryFn: () => getProjectNotificationStatus(projectId),
-		staleTime: PROJECT_STALE_TIME,
-	});
-
-export const projectPublicInfoQuery = (projectId: string) =>
-	queryOptions({
-		queryKey: projectQueryKeys.publicInfo(projectId),
-		queryFn: () => getProjectPublicInfo(projectId),
 		staleTime: PROJECT_STALE_TIME,
 	});
 
