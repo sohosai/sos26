@@ -130,6 +130,9 @@ const applicationPeriodCache: {
 	info: undefined,
 };
 
+/** loader が最後に読み込んだ企画。ルートの自動コード分割のため、オブジェクトの値を書き換える */
+const loadedProject: { id: string | null | undefined } = { id: undefined };
+
 export const Route = createFileRoute("/project")({
 	beforeLoad: async ({ location, cause }) => {
 		await requireAuth(location.href);
@@ -142,9 +145,15 @@ export const Route = createFileRoute("/project")({
 			await refreshMyProjects();
 		}
 	},
+	// /project の中でページを移るたびには、通知状態と公開情報を取り直さない。
+	// 取り直すのは、/project に入ったとき、選択中の企画が変わったとき、router.invalidate() されたとき（新着の反映や企画の作成・参加など）
+	shouldReload: ({ cause }) =>
+		cause === "enter" ||
+		useProjectStore.getState().selectedProjectId !== loadedProject.id,
 	loader: async ({ cause }) => {
 		const store = useProjectStore.getState();
 		const { selectedProjectId } = store;
+		loadedProject.id = selectedProjectId;
 
 		const applicationPeriodPromise =
 			cause === "enter" || applicationPeriodCache.info === undefined
