@@ -16,6 +16,7 @@ import {
 } from "@/lib/api/project-inquiry";
 import { useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
+import { refreshNotificationDot } from "@/lib/project/notification-status";
 import { useProjectStore } from "@/lib/project/store";
 import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 
@@ -66,19 +67,20 @@ function ProjectSupportDetailPage() {
 
 	// 操作の結果を loader の再実行なしで反映するため、手元で持つ
 	const [inquiry, setInquiry] = useState(loadedInquiry);
-	const [loadedFrom, setLoadedFrom] = useState(loadedInquiry);
-	if (loadedFrom !== loadedInquiry) {
-		setLoadedFrom(loadedInquiry);
-		setInquiry(loadedInquiry);
-	}
 	const latestRefreshIdRef = useRef(0);
+
+	// 新着の反映などで loader が再実行されたら、その前に出ていた取り直しの応答で上書きしない
+	useEffect(() => {
+		latestRefreshIdRef.current += 1;
+		setInquiry(loadedInquiry);
+	}, [loadedInquiry]);
 
 	// 詳細を表示したときと、新しいコメントを取り直したときに既読にする。失敗しても表示は続ける
 	useEffect(() => {
 		if (!selectedProjectId || !loadedInquiry) return;
-		void readProjectInquiry(selectedProjectId, loadedInquiry.id).catch(
-			() => undefined
-		);
+		void readProjectInquiry(selectedProjectId, loadedInquiry.id)
+			.then(() => refreshNotificationDot())
+			.catch(() => undefined);
 	}, [selectedProjectId, loadedInquiry]);
 
 	if (!data || !inquiry || !selectedProjectId) {
@@ -106,9 +108,10 @@ function ProjectSupportDetailPage() {
 			const res = await getProjectInquiry(selectedProjectId, inquiryId);
 			if (refreshId !== latestRefreshIdRef.current) return;
 			setInquiry(res.inquiry);
-			void readProjectInquiry(selectedProjectId, inquiryId).catch(
-				() => undefined
-			);
+			// 既読にしたあとでサイドバーのドットを取り直す
+			void readProjectInquiry(selectedProjectId, inquiryId)
+				.then(() => refreshNotificationDot())
+				.catch(() => undefined);
 		} catch (error) {
 			if (refreshId !== latestRefreshIdRef.current) return;
 			reportHandledError({
