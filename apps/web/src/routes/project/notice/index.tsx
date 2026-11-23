@@ -20,7 +20,11 @@ import { refreshNotificationDot } from "@/lib/project/notification-status";
 import { useProjectStore } from "@/lib/project/store";
 import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 import { queryClient } from "@/lib/query/client";
-import { projectNoticesQuery } from "@/lib/query/project";
+import {
+	projectNoticesQuery,
+	projectQueryKeys,
+	waitForNotificationStatusCheck,
+} from "@/lib/query/project";
 import { NoticeDetailDialog } from "./-components/NoticeDetailDialog";
 import styles from "./index.module.scss";
 
@@ -151,10 +155,11 @@ export const Route = createFileRoute("/project/notice/")({
 		syncSelectedProjectFromSearch(search.projectId);
 	},
 	loader: async ({ context }) => {
-		// 新着があれば一覧が古くなっているので、確認を待ってから読む
-		await context.notificationStatusCheck;
 		const { selectedProjectId } = useProjectStore.getState();
 		if (selectedProjectId) {
+			await waitForNotificationStatusCheck(context.notificationStatusCheck, [
+				projectQueryKeys.notices(selectedProjectId),
+			]);
 			await queryClient.fetchQuery(projectNoticesQuery(selectedProjectId));
 		}
 		return { projectId: selectedProjectId };
@@ -237,15 +242,18 @@ function ProjectNoticePage({ projectId }: { projectId: string }) {
 
 	const handleRead = useCallback(
 		(noticeId: string) => {
+			const { queryKey } = projectNoticesQuery(projectId);
 			queryClient.setQueryData(
-				projectNoticesQuery(projectId).queryKey,
+				queryKey,
 				prev =>
 					prev && {
 						...prev,
 						notices: prev.notices.map(n =>
 							n.id === noticeId ? { ...n, isRead: true } : n
 						),
-					}
+					},
+				// 取得した時刻を保ち、ほかの人の変化を取り直すまでの時間を延ばさない
+				{ updatedAt: queryClient.getQueryState(queryKey)?.dataUpdatedAt }
 			);
 			markCachedNoticeRead(noticeId);
 			void refreshNotificationDot();

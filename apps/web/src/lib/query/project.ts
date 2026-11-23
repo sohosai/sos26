@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { type QueryKey, queryOptions } from "@tanstack/react-query";
 import {
 	getProjectNotificationStatus,
 	listProjectMembers,
@@ -6,6 +6,7 @@ import {
 import { listProjectForms } from "../api/project-form";
 import { listProjectInquiries } from "../api/project-inquiry";
 import { listProjectNotices } from "../api/project-notice";
+import { queryClient } from "./client";
 
 /**
  * /project の中で画面を移るたびには一覧を取り直さない。
@@ -61,3 +62,23 @@ export const projectMembersQuery = (projectId: string) =>
 		queryFn: () => listProjectMembers(projectId),
 		staleTime: PROJECT_STALE_TIME,
 	});
+
+/**
+ * 一覧のキャッシュがまだ新しいときだけ、/project の beforeLoad が始めた新着の確認を待つ。
+ * 新着があれば確認がキャッシュを古くするので、待ってから読めば取り直される。
+ * キャッシュが古いときや無いときは、待たずに取得すればよい
+ */
+export async function waitForNotificationStatusCheck(
+	check: Promise<void>,
+	listQueryKeys: QueryKey[]
+): Promise<void> {
+	const hasFreshCache = listQueryKeys.some(queryKey => {
+		const state = queryClient.getQueryState(queryKey);
+		return (
+			state?.data !== undefined &&
+			!state.isInvalidated &&
+			Date.now() - state.dataUpdatedAt < PROJECT_STALE_TIME
+		);
+	});
+	if (hasFreshCache) await check;
+}

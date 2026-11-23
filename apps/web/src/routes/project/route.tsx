@@ -25,6 +25,7 @@ import { reportHandledError } from "@/lib/error/report";
 import { refreshMyProjects } from "@/lib/project/my-projects";
 import { registerNotificationDotRefresh } from "@/lib/project/notification-status";
 import { useProjectStore } from "@/lib/project/store";
+import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 import { queryClient } from "@/lib/query/client";
 import {
 	projectNotificationStatusQuery,
@@ -122,30 +123,36 @@ function isNotificationStatusChanged(
 }
 
 /**
- * notification-status を取り直し、キャッシュにあった前回の値から変わったかを返す。
- * invalidateLists のときは、変わっていたら、次に loader が一覧を取得するときに取り直すよう、
- * notification-status 以外の企画の query を古くする。
- * 直前（1 秒以内）に取り直していれば、その値を使う
+ * notification-status を取り直し、キャッシュにあった前回の値と比べて、一覧に出ていない変化があるかを返す。
+ * あれば、次に loader が一覧を取得するときに取り直すよう、notification-status 以外の企画の query を古くする。
+ * 直前（1 秒以内）に取り直していれば、その値を使う。
+ *
+ * 自分の操作のあとは、その結果を画面に反映済みなので、ほかの人の変化だけを見る。
+ * latestActivityAt は配信と実委の活動の時刻から決まり、自分の回答や既読では変わらない
  */
 async function refreshNotificationStatusCache(
 	projectId: string,
-	{ invalidateLists }: { invalidateLists: boolean }
+	{ afterOwnAction }: { afterOwnAction: boolean }
 ): Promise<{
 	next: GetProjectNotificationStatusResponse;
-	changed: boolean;
+	hasNewChanges: boolean;
 }> {
 	const query = projectNotificationStatusQuery(projectId);
 	const prev = queryClient.getQueryData(query.queryKey);
 	const next = await queryClient.fetchQuery({ ...query, staleTime: 1_000 });
-	const changed = prev !== undefined && isNotificationStatusChanged(prev, next);
-	if (changed && invalidateLists) {
+	const hasNewChanges =
+		prev !== undefined &&
+		(afterOwnAction
+			? next.latestActivityAt?.getTime() !== prev.latestActivityAt?.getTime()
+			: isNotificationStatusChanged(prev, next));
+	if (hasNewChanges) {
 		await queryClient.invalidateQueries({
 			queryKey: projectQueryKeys.all(projectId),
 			predicate: q => q.queryKey[2] !== "notification-status",
 			refetchType: "none",
 		});
 	}
-	return { next, changed };
+	return { next, hasNewChanges };
 }
 
 /**
@@ -170,6 +177,12 @@ export const Route = createFileRoute("/project")({
 		if (cause === "enter" || useProjectStore.getState().projects.length === 0) {
 			await refreshMyProjects();
 		}
+		// 子ルートも URL の企画に切り替えるが、新着の確認より先に切り替えて、移った先の企画を確かめる
+		const searchProjectId = (location.search as { projectId?: unknown })
+			.projectId;
+		if (typeof searchProjectId === "string") {
+			syncSelectedProjectFromSearch(searchProjectId);
+		}
 
 		// 一覧はキャッシュから返すので、ページを移るたびに新着の有無を確かめ、あれば一覧を古くする。
 		// 待つのはキャッシュから一覧を読む loader だけにするため、ここでは待たずに渡す。
@@ -177,7 +190,7 @@ export const Route = createFileRoute("/project")({
 		const { selectedProjectId } = useProjectStore.getState();
 		const notificationStatusCheck: Promise<void> = selectedProjectId
 			? refreshNotificationStatusCache(selectedProjectId, {
-					invalidateLists: true,
+					afterOwnAction: false,
 				}).then(
 					() => undefined,
 					() => undefined
@@ -301,19 +314,18 @@ function ProjectLayout() {
 				notificationStatus.hasUnreadInquiryComments),
 	}));
 
-	/** reflectChanges が false のときは、状態が変わっても開いている画面を取り直さない */
+	/** afterOwnAction のときは、自分の操作による変化では開いている画面を取り直さない */
 	const refreshNotificationStatus = useCallback(
-		async ({ reflectChanges = true }: { reflectChanges?: boolean } = {}) => {
+		async ({ afterOwnAction = false }: { afterOwnAction?: boolean } = {}) => {
 			if (!selectedProjectId) {
 				setNotificationStatus(EMPTY_NOTIFICATION_STATUS);
 				return;
 			}
 
 			try {
-				const { next, changed } = await refreshNotificationStatusCache(
+				const { next, hasNewChanges } = await refreshNotificationStatusCache(
 					selectedProjectId,
-					// 自分の操作の結果は画面に反映済みなので、一覧を古くしない
-					{ invalidateLists: reflectChanges }
+					{ afterOwnAction }
 				);
 				// 応答を待つ間に企画が切り替わっていたら、前の企画の状態を反映しない
 				if (
@@ -324,7 +336,7 @@ function ProjectLayout() {
 
 				setNotificationStatus(next);
 				// 開いている画面にも新しいお知らせや返信を反映する
-				if (changed && reflectChanges) void router.invalidate();
+				if (hasNewChanges) void router.invalidate();
 			} catch {
 				// 企画から外された場合に別の企画へ切り替える
 				await refreshMyProjects().catch(() => undefined);
@@ -337,7 +349,7 @@ function ProjectLayout() {
 	useEffect(
 		() =>
 			registerNotificationDotRefresh(() =>
-				refreshNotificationStatus({ reflectChanges: false })
+				refreshNotificationStatus({ afterOwnAction: true })
 			),
 		[refreshNotificationStatus]
 	);

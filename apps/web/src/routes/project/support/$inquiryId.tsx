@@ -21,6 +21,21 @@ import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 import { queryClient } from "@/lib/query/client";
 import { projectMembersQuery, projectQueryKeys } from "@/lib/query/project";
 
+/**
+ * 既読にしてから、一覧とサイドバーのドットを取り直させる。失敗しても表示は続ける。
+ * 既読になる前に一覧へ戻って取り直した場合に備え、既読のあとにも一覧を古くする
+ */
+function markInquiryRead(projectId: string, inquiryId: string) {
+	void readProjectInquiry(projectId, inquiryId)
+		.then(() => {
+			void queryClient.invalidateQueries({
+				queryKey: projectQueryKeys.inquiries(projectId),
+			});
+			return refreshNotificationDot();
+		})
+		.catch(() => undefined);
+}
+
 const searchSchema = z.object({
 	projectId: z.string().optional(),
 });
@@ -84,9 +99,7 @@ function ProjectSupportDetailPage() {
 	// 詳細を表示したときと、新しいコメントを取り直したときに既読にする。失敗しても表示は続ける
 	useEffect(() => {
 		if (!selectedProjectId || !loadedInquiry) return;
-		void readProjectInquiry(selectedProjectId, loadedInquiry.id)
-			.then(() => refreshNotificationDot())
-			.catch(() => undefined);
+		markInquiryRead(selectedProjectId, loadedInquiry.id);
 	}, [selectedProjectId, loadedInquiry]);
 
 	if (!data || !inquiry || !selectedProjectId) {
@@ -114,10 +127,7 @@ function ProjectSupportDetailPage() {
 			const res = await getProjectInquiry(selectedProjectId, inquiryId);
 			if (refreshId !== latestRefreshIdRef.current) return;
 			setInquiry(res.inquiry);
-			// 既読にしたあとでサイドバーのドットを取り直す
-			void readProjectInquiry(selectedProjectId, inquiryId)
-				.then(() => refreshNotificationDot())
-				.catch(() => undefined);
+			markInquiryRead(selectedProjectId, inquiryId);
 		} catch (error) {
 			if (refreshId !== latestRefreshIdRef.current) return;
 			reportHandledError({

@@ -12,7 +12,11 @@ import { refreshNotificationDot } from "@/lib/project/notification-status";
 import { useProjectStore } from "@/lib/project/store";
 import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 import { queryClient } from "@/lib/query/client";
-import { projectFormsQuery } from "@/lib/query/project";
+import {
+	projectFormsQuery,
+	projectQueryKeys,
+	waitForNotificationStatusCheck,
+} from "@/lib/query/project";
 import { ProjectFormAnswerDialog } from "./-components/ProjectFormAnswerDialog";
 import styles from "./index.module.scss";
 
@@ -58,17 +62,20 @@ function setFormResponse(
 		prev: ProjectFormListItem["response"]
 	) => NonNullable<ProjectFormListItem["response"]>
 ) {
-	queryClient.setQueryData(projectFormsQuery(projectId).queryKey, prev =>
-		prev
-			? {
-					...prev,
-					forms: prev.forms.map(f =>
-						f.formDeliveryId === deliveryId
-							? { ...f, response: update(f.response) }
-							: f
-					),
-				}
-			: prev
+	const { queryKey } = projectFormsQuery(projectId);
+	queryClient.setQueryData(
+		queryKey,
+		prev =>
+			prev && {
+				...prev,
+				forms: prev.forms.map(f =>
+					f.formDeliveryId === deliveryId
+						? { ...f, response: update(f.response) }
+						: f
+				),
+			},
+		// 取得した時刻を保ち、ほかの人の変化を取り直すまでの時間を延ばさない
+		{ updatedAt: queryClient.getQueryState(queryKey)?.dataUpdatedAt }
 	);
 }
 
@@ -84,10 +91,11 @@ export const Route = createFileRoute("/project/forms/")({
 		syncSelectedProjectFromSearch(search.projectId);
 	},
 	loader: async ({ context }) => {
-		// 新着があれば一覧が古くなっているので、確認を待ってから読む
-		await context.notificationStatusCheck;
 		const { selectedProjectId } = useProjectStore.getState();
 		if (selectedProjectId) {
+			await waitForNotificationStatusCheck(context.notificationStatusCheck, [
+				projectQueryKeys.forms(selectedProjectId),
+			]);
 			await queryClient.fetchQuery(projectFormsQuery(selectedProjectId));
 		}
 		return { projectId: selectedProjectId };

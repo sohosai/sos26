@@ -19,13 +19,13 @@ Firebase のユーザーが替わったとき（サインアウトを含む）�
 
 ### 1.2 キャッシュする API
 
-staleTime のあいだは API を呼ばずにキャッシュを返す。自分の操作による変化は 4 章の更新ですぐに反映し、ほかの人の操作による変化は次の表の時点で反映する。
+staleTime のあいだは API を呼ばずにキャッシュを返す。自分の操作による変化は 4 章の更新ですぐに反映し、ほかの人の操作による変化は次の表の時点で反映する。開いている画面は staleTime を過ぎても自動では取り直さない。
 
 | 対象 | 定義 | staleTime | ほかの人の操作を反映する時点 |
 |---|---|---|---|
-| 委員の候補（委員メンバー、自分の申請、全企画） | `lib/query/committee.ts` | 60 秒 | 最大 60 秒後。委員の申請一覧を開いたときは、自分の申請を取り直す |
-| 企画の申請・お知らせ・問い合わせの一覧 | `lib/query/project.ts` | 30 秒 | notification-status が変わったとき（5 章）。ほかのメンバーの回答・問い合わせの作成・コメントのように notification-status に出ない変化は、最大 30 秒後 |
-| 企画メンバーの一覧 | `lib/query/project.ts` | 30 秒 | メンバー管理画面を開いたとき。問い合わせの担当者の候補では最大 30 秒後 |
+| 委員の候補（委員メンバー、自分の申請、全企画） | `lib/query/committee.ts` | 60 秒 | 前回の取得から 60 秒以上たって、候補を使う画面を開いたとき。委員の申請一覧を開いたときは、自分の申請を取り直す |
+| 企画の申請・お知らせ・問い合わせの一覧 | `lib/query/project.ts` | 30 秒 | notification-status が変わったとき（5 章）。ほかのメンバーの回答・問い合わせの作成・コメントのように notification-status に出ない変化は、前回の取得から 30 秒以上たって一覧を開いたとき |
+| 企画メンバーの一覧 | `lib/query/project.ts` | 30 秒 | メンバー管理画面を開いたとき。問い合わせの担当者の候補では、前回の取得から 30 秒以上たって候補を使う画面を開いたとき |
 | 企画の notification-status | `lib/query/project.ts` | 30 秒 | `/project` の中で画面を移るたびと、60 秒ごと（5 章）。前回の値と比べるため、`gcTime` を無期限にしてキャッシュから消さない |
 
 ## 2. query の定義
@@ -97,14 +97,20 @@ loader を持たないダイアログでは、開いたときに `queryClient.fe
 
 `queryClient.setQueryData` でキャッシュを直接書き換える。申請の回答と、お知らせの既読がこの形である。
 
+`updatedAt` には書き換える前の取得時刻を渡す。渡さないと書き換えた時刻が取得時刻になり、ほかの人の変化を取り直すまでの時間が延びる。
+
 ```ts
-queryClient.setQueryData(projectNoticesQuery(projectId).queryKey, prev =>
-	prev && {
-		...prev,
-		notices: prev.notices.map(n =>
-			n.id === noticeId ? { ...n, isRead: true } : n
-		),
-	}
+const { queryKey } = projectNoticesQuery(projectId);
+queryClient.setQueryData(
+	queryKey,
+	prev =>
+		prev && {
+			...prev,
+			notices: prev.notices.map(n =>
+				n.id === noticeId ? { ...n, isRead: true } : n
+			),
+		},
+	{ updatedAt: queryClient.getQueryState(queryKey)?.dataUpdatedAt }
 );
 ```
 
@@ -118,7 +124,7 @@ queryClient.setQueryData(projectNoticesQuery(projectId).queryKey, prev =>
 | 申請の編集・共同編集者と閲覧者の変更・承認など、申請詳細を取り直す操作 | `committeeQueryKeys.myForms` |
 | 委員による企画の基本情報の更新 | `committeeQueryKeys.allProjects` |
 | 企画メンバーの削除、副企画責任者の任命とリクエストの承認・取り消し・辞退 | `projectQueryKeys.members(projectId)` |
-| 問い合わせの作成、問い合わせ詳細を開く | `projectQueryKeys.inquiries(projectId)` |
+| 問い合わせの作成、問い合わせ詳細を開いたときと既読にしたあと | `projectQueryKeys.inquiries(projectId)` |
 
 取得中の query を無効にすると、その取得が成功した時点で無効が打ち消される。問い合わせ詳細のように、取得と同時に状態が変わる操作では、取得を待ってから無効にする。
 
@@ -137,20 +143,39 @@ void router.invalidate();
 
 ## 5. `/project` の新着の反映
 
+### 5.1 確認する時点
+
 `/project` のレイアウト（`routes/project/route.tsx`）は、次の時点で notification-status を取り直し、キャッシュにあった前回の値と比べる。直前（1 秒以内）に取り直していれば、その値を使う。
 
-| 時点 | 変わっていたときの処理 |
-|---|---|
-| `/project` の中で画面を移るとき（`beforeLoad`） | notification-status 以外の企画の query を古くする |
-| 60 秒ごとと、タブに戻ったとき | 同じく古くしたうえで `router.invalidate()` を呼び、開いている画面を取り直す |
-| 自分の操作のあと（`refreshNotificationDot()`） | サイドバーのドットだけを新しくする。操作の結果は画面に反映済みなので、一覧は古くしない |
+| 時点 | 変化とみなすもの | 変化があったときの処理 |
+|---|---|---|
+| `/project` の中で画面を移るとき（`beforeLoad`） | すべての項目 | notification-status 以外の企画の query を古くする |
+| 60 秒ごとと、タブに戻ったとき | すべての項目 | 同じく古くしたうえで `router.invalidate()` を呼び、開いている画面を取り直す |
+| 自分の操作のあと（`refreshNotificationDot()`） | `latestActivityAt` だけ | 同上 |
 
-`beforeLoad` は確認を待たず、その Promise を `context.notificationStatusCheck` として子ルートに渡す。キャッシュから一覧を読む loader（申請・お知らせ・問い合わせの一覧）と `/project` の loader だけがこれを待ってから `fetchQuery` を呼ぶ。こうすると、一覧を読まない画面は確認を待たずに読み込める。
+サイドバーのドットはどの時点でも新しい値にする。自分の操作のあとに `latestActivityAt` だけを見るのは、操作の結果を画面に反映済みだからである。`latestActivityAt` は配信と実委の活動の時刻から決まり、自分の回答や既読では変わらない。
+
+URL に `projectId` があるときは、`beforeLoad` で先にその企画へ切り替えてから確かめる。
+
+### 5.2 確認を待つ loader
+
+`beforeLoad` は確認を待たず、その Promise を `context.notificationStatusCheck` として子ルートに渡す。待つのは次の loader だけにし、一覧を読まない画面は確認を待たずに読み込む。
+
+| loader | 待つ条件 |
+|---|---|
+| `/project` | 常に待つ（ドットの値を読むため） |
+| 申請・お知らせ・問い合わせの一覧 | 一覧のキャッシュが staleTime 内のとき（`waitForNotificationStatusCheck`）。古いときや無いときは、待たずに取得する |
 
 ```ts
 loader: async ({ context }) => {
-	await context.notificationStatusCheck;
-	// ...
+	const { selectedProjectId } = useProjectStore.getState();
+	if (selectedProjectId) {
+		await waitForNotificationStatusCheck(context.notificationStatusCheck, [
+			projectQueryKeys.forms(selectedProjectId),
+		]);
+		await queryClient.fetchQuery(projectFormsQuery(selectedProjectId));
+	}
+	return { projectId: selectedProjectId };
 },
 ```
 

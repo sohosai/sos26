@@ -11,6 +11,7 @@ import {
 	projectInquiriesQuery,
 	projectMembersQuery,
 	projectQueryKeys,
+	waitForNotificationStatusCheck,
 } from "@/lib/query/project";
 
 export const Route = createFileRoute("/project/support/")({
@@ -22,8 +23,6 @@ export const Route = createFileRoute("/project/support/")({
 		],
 	}),
 	loader: async ({ context }) => {
-		// 新着があれば一覧が古くなっているので、確認を待ってから読む
-		await context.notificationStatusCheck;
 		const { selectedProjectId } = useProjectStore.getState();
 		if (!selectedProjectId)
 			return {
@@ -31,6 +30,10 @@ export const Route = createFileRoute("/project/support/")({
 				projectMembers: [] as never[],
 				availableForms: [] as never[],
 			};
+		await waitForNotificationStatusCheck(context.notificationStatusCheck, [
+			projectQueryKeys.inquiries(selectedProjectId),
+			projectQueryKeys.forms(selectedProjectId),
+		]);
 		const [inquiriesRes, membersRes, formsRes] = await Promise.all([
 			queryClient.fetchQuery(projectInquiriesQuery(selectedProjectId)),
 			queryClient.fetchQuery(projectMembersQuery(selectedProjectId)),
