@@ -34,6 +34,8 @@ export const Route = createFileRoute("/committee/support/$inquiryId")({
 			{ name: "description", content: "お問い合わせ詳細" },
 		],
 	}),
+	// 操作の結果は画面の state にだけ反映するので、ページを離れたら loader のデータを捨て、開き直したときに古い表示を出さない
+	gcTime: 0,
 	loader: async ({ params }) => {
 		const { committeeMember, permissions } = useAuthStore.getState();
 		const [[inquiryRes, projectMembersRes], membersRes, formsRes] =
@@ -99,6 +101,16 @@ function CommitteeSupportDetailPage() {
 		if (!inquiry) return;
 		void readCommitteeInquiry(inquiry.id).catch(() => undefined);
 	}, [inquiry]);
+
+	// 応答で差し替えるときも番号を進め、その前に出ていた取り直しの応答で差し替えを戻さない
+	const updateInquiryLocally = (
+		update: (
+			prev: NonNullable<typeof currentInquiry>
+		) => NonNullable<typeof currentInquiry>
+	) => {
+		latestRefreshIdRef.current += 1;
+		setCurrentInquiry(prev => (prev ? update(prev) : prev));
+	};
 
 	// 操作で変わるアクティビティや担当者・ステータスを反映するため、詳細だけを取り直す。
 	// 続けて操作したときに古い応答で上書きしないよう、最後に出したリクエストの分だけ反映する
@@ -225,12 +237,17 @@ function CommitteeSupportDetailPage() {
 			}}
 			onRemoveAssignee={async assigneeId => {
 				await removeCommitteeInquiryAssignee(inquiryId, assigneeId);
-				await refreshInquiry();
+				// 自分を外したときは一覧へ移る。閲覧できなくなることもあるので取り直さない
+				const removedSelf = [
+					...currentInquiry.committeeAssignees,
+					...currentInquiry.projectAssignees,
+				].some(a => a.id === assigneeId && a.user.id === user?.id);
+				if (!removedSelf) await refreshInquiry();
 			}}
 			onPublishDraft={async commentId => {
 				try {
 					const { comment } = await publishDraftComment(inquiryId, commentId);
-					setCurrentInquiry(prev => ({
+					updateInquiryLocally(prev => ({
 						...prev,
 						comments: prev.comments.map(c =>
 							c.id === comment.id
@@ -255,7 +272,7 @@ function CommitteeSupportDetailPage() {
 			onDeleteComment={async commentId => {
 				try {
 					await deleteCommitteeInquiryComment(inquiryId, commentId);
-					setCurrentInquiry(prev => ({
+					updateInquiryLocally(prev => ({
 						...prev,
 						comments: prev.comments.filter(c => c.id !== commentId),
 					}));
@@ -280,7 +297,7 @@ function CommitteeSupportDetailPage() {
 						commentId,
 						{ body }
 					);
-					setCurrentInquiry(prev => ({
+					updateInquiryLocally(prev => ({
 						...prev,
 						comments: prev.comments.map(c =>
 							c.id === comment.id ? { ...c, body: comment.body } : c
@@ -320,7 +337,10 @@ function CommitteeSupportDetailPage() {
 			onPublishDraftInquiry={async () => {
 				try {
 					const res = await publishDraftInquiry(inquiryId);
-					setCurrentInquiry(prev => ({ ...prev, ...res.inquiry }));
+					updateInquiryLocally(prev =>
+						// 応答を待つ間に別の問い合わせへ移っていたら重ねない
+						prev.id === res.inquiry.id ? { ...prev, ...res.inquiry } : prev
+					);
 					toast.success("お問い合わせを送信しました");
 				} catch (error) {
 					reportHandledError({
