@@ -81,6 +81,8 @@ export const Route = createFileRoute("/committee/forms/$formId/")({
 		meta: [{ title: "申請詳細 | 雙峰祭オンラインシステム" }],
 	}),
 	validateSearch: searchSchema,
+	// 操作の結果は画面の state にだけ反映するので、ページを離れたら loader のデータを捨て、開き直したときに古い表示を出さない
+	gcTime: 0,
 	loader: async ({ params }) => {
 		const [formRes, membersRes] = await Promise.all([
 			getFormDetail(params.formId),
@@ -197,6 +199,12 @@ function RouteComponent() {
 		});
 	};
 
+	// 応答で差し替えるときも番号を進め、その前に出ていた取り直しの応答で差し替えを戻さない
+	const updateFormLocally = (update: (prev: typeof form) => typeof form) => {
+		latestDetailRequestIdRef.current += 1;
+		setForm(update);
+	};
+
 	// 応答に画面で使う形の詳細が含まれない操作のあとに、詳細だけを取り直す
 	const reloadForm = async () => {
 		latestDetailRequestIdRef.current += 1;
@@ -239,7 +247,7 @@ function RouteComponent() {
 		setRemovingId(userId);
 		try {
 			await removeFormCollaborator(form.id, userId);
-			setForm(prev => ({
+			updateFormLocally(prev => ({
 				...prev,
 				collaborators: prev.collaborators.filter(c => c.user.id !== userId),
 			}));
@@ -266,7 +274,7 @@ function RouteComponent() {
 			const res = await updateFormViewers(form.id, {
 				viewers: viewers as Parameters<typeof updateFormViewers>[1]["viewers"],
 			});
-			setForm(prev => ({ ...prev, viewers: res.viewers }));
+			updateFormLocally(prev => ({ ...prev, viewers: res.viewers }));
 		} catch (error) {
 			reportHandledError({
 				error,

@@ -94,6 +94,8 @@ export const Route = createFileRoute(
 	head: () => ({
 		meta: [{ title: "企画登録フォーム詳細 | 雙峰祭オンラインシステム" }],
 	}),
+	// 操作の結果は画面の state にだけ反映するので、ページを離れたら loader のデータを捨て、開き直したときに古い表示を出さない
+	gcTime: 0,
 	loader: async ({ params }) => {
 		const [{ form }, { committeeMembers }, { forms: allForms }] =
 			await Promise.all([
@@ -288,6 +290,12 @@ function RouteComponent() {
 
 	if (!user) return null;
 
+	// 応答で差し替えるときも番号を進め、その前に出ていた取り直しの応答で差し替えを戻さない
+	const updateFormLocally = (update: (prev: typeof form) => typeof form) => {
+		latestDetailRequestIdRef.current += 1;
+		setForm(update);
+	};
+
 	// 応答に画面で使う形の詳細が含まれない操作のあとに、詳細だけを取り直す
 	const reloadForm = async () => {
 		latestDetailRequestIdRef.current += 1;
@@ -333,7 +341,7 @@ function RouteComponent() {
 		setRemovingId(targetUserId);
 		try {
 			await removeProjectRegistrationFormCollaborator(formId, targetUserId);
-			setForm(prev => ({
+			updateFormLocally(prev => ({
 				...prev,
 				collaborators: prev.collaborators.filter(
 					c => c.user.id !== targetUserId
@@ -565,7 +573,7 @@ function RouteComponent() {
 				activeForms={activeForms}
 				onSuccess={updated =>
 					// 更新の応答には回答数が含まれない。更新で回答数は変わらないため、手元の値を残す
-					setForm(prev => ({
+					updateFormLocally(prev => ({
 						...updated,
 						responseCount: prev.responseCount,
 					}))
