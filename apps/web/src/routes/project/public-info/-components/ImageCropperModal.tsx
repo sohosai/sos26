@@ -134,7 +134,7 @@ export function ImageCropperModal({
 								src={imageSrc}
 								onLoad={onImageLoad}
 								style={{ maxHeight: "60vh", objectFit: "contain" }}
-								alt="マップの画像"
+								alt="切り抜き対象の画像"
 							/>
 						</ReactCrop>
 					)}
