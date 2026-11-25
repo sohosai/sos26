@@ -14,14 +14,17 @@ import {
 	deleteInquiryEndpoint,
 	type GetCommitteeInquiryResponse,
 	getCommitteeInquiryEndpoint,
+	type ListCommitteeInquiriesQuery,
 	type ListCommitteeInquiriesResponse,
 	listCommitteeInquiriesEndpoint,
 	type PublishDraftCommentResponse,
 	type PublishDraftInquiryResponse,
 	publishDraftCommentEndpoint,
 	publishDraftInquiryEndpoint,
+	type ReadInquiryResponse,
 	type RemoveInquiryAssigneeResponse,
 	type ReopenInquiryResponse,
+	readCommitteeInquiryEndpoint,
 	removeCommitteeInquiryAssigneeEndpoint,
 	reopenCommitteeInquiryEndpoint,
 	type UpdateDraftCommentRequest,
@@ -43,8 +46,10 @@ import { callBodyApi, callGetApi, callNoBodyApi } from "./core";
  * GET /committee/inquiries
  * 実委側お問い合わせ一覧
  */
-export async function listCommitteeInquiries(): Promise<ListCommitteeInquiriesResponse> {
-	return callGetApi(listCommitteeInquiriesEndpoint);
+export async function listCommitteeInquiries(
+	query: ListCommitteeInquiriesQuery
+): Promise<ListCommitteeInquiriesResponse> {
+	return callGetApi(listCommitteeInquiriesEndpoint, { query });
 }
 
 /**
@@ -219,6 +224,18 @@ export async function deleteDraftInquiry(
 	inquiryId: string
 ): Promise<DeleteInquiryResponse> {
 	return callNoBodyApi(deleteInquiryEndpoint, {
+		pathParams: { inquiryId },
+	});
+}
+
+/**
+ * POST /committee/inquiries/:inquiryId/read
+ * 実委側お問い合わせのコメントを既読にする
+ */
+export async function readCommitteeInquiry(
+	inquiryId: string
+): Promise<ReadInquiryResponse> {
+	return callNoBodyApi(readCommitteeInquiryEndpoint, {
 		pathParams: { inquiryId },
 	});
 }

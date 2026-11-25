@@ -16,16 +16,10 @@ import type { SelectedCell } from "./MastersheetTable";
 // ─────────────────────────────────────────────────────────────
 
 type ApiColumn = GetMastersheetDataResponse["columns"][number];
-type HistoryEntry =
-	BatchMastersheetHistoryResponse["groups"][number]["history"][number];
+type HistoryGroup = BatchMastersheetHistoryResponse["groups"][number];
+type HistoryEntry = HistoryGroup["history"][number];
 
-type CellHistoryGroup = {
-	columnId: string;
-	projectId: string;
-	columnName: string;
-	projectLabel: string;
-	history: HistoryEntry[];
-};
+const HISTORY_FETCH_DEBOUNCE_MS = 300;
 
 type Props = {
 	ref?: React.Ref<HTMLDivElement>;
@@ -117,10 +111,9 @@ export function HistoryPanel({
 	rows,
 	selectedCells,
 }: Props) {
-	const [groups, setGroups] = useState<CellHistoryGroup[]>([]);
+	const [groups, setGroups] = useState<HistoryGroup[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const abortRef = useRef<AbortController | null>(null);
 
 	const columnMap = useMemo(
 		() => new Map(columns.map(c => [c.id, c])),
@@ -137,68 +130,59 @@ export function HistoryPanel({
 		() => getHistoryTargetCells(selectedCells, columns),
 		[selectedCells, columns]
 	);
-
-	const prevSelectionKeyRef = useRef("");
+	const historyTargetCellsRef = useRef(historyTargetCells);
+	historyTargetCellsRef.current = historyTargetCells;
+	// 選択の内容が変わったときだけ取得し直す
+	const selectionKey = historyTargetCells
+		.map(c => `${c.columnId}:${c.projectId}`)
+		.sort()
+		.join(",");
 
 	useEffect(() => {
 		if (!open) return;
 
-		const cellsToFetch = historyTargetCells;
-
-		// 内容が変わっていなければスキップ
-		const selectionKey = cellsToFetch
-			.map(c => `${c.columnId}:${c.projectId}`)
-			.sort()
-			.join(",");
-		if (selectionKey === prevSelectionKeyRef.current) return;
-		prevSelectionKeyRef.current = selectionKey;
+		const cellsToFetch = historyTargetCellsRef.current;
 
 		// セル未選択 or FORM_ITEM が 0 件なら空表示
-		if (cellsToFetch.length === 0) {
+		if (selectionKey === "") {
 			setGroups([]);
 			setLoading(false);
 			setError(null);
 			return;
 		}
 
-		abortRef.current?.abort();
 		const controller = new AbortController();
-		abortRef.current = controller;
-
 		setLoading(true);
 		setError(null);
 
-		batchMastersheetHistory(cellsToFetch, controller.signal)
-			.then(res => {
-				if (controller.signal.aborted) return;
+		const timerId = setTimeout(() => {
+			batchMastersheetHistory(cellsToFetch, controller.signal)
+				.then(res => {
+					if (controller.signal.aborted) return;
 
-				const newGroups: CellHistoryGroup[] = res.groups.map(g => ({
-					columnId: g.columnId,
-					projectId: g.projectId,
-					columnName: columnMap.get(g.columnId)?.name ?? g.columnId,
-					projectLabel: projectMap.get(g.projectId)?.name ?? g.projectId,
-					history: g.history,
-				}));
+					// 最新順にソート
+					const newGroups = res.groups.slice().sort((a, b) => {
+						const aDate = a.history[0]?.createdAt ?? new Date(0);
+						const bDate = b.history[0]?.createdAt ?? new Date(0);
+						return new Date(bDate).getTime() - new Date(aDate).getTime();
+					});
 
-				// 最新順にソート
-				newGroups.sort((a, b) => {
-					const aDate = a.history[0]?.createdAt ?? new Date(0);
-					const bDate = b.history[0]?.createdAt ?? new Date(0);
-					return new Date(bDate).getTime() - new Date(aDate).getTime();
-				});
-
-				setGroups(newGroups);
-				setLoading(false);
-			})
-			.catch(() => {
-				if (!controller.signal.aborted) {
-					setError("履歴の取得に失敗しました");
+					setGroups(newGroups);
 					setLoading(false);
-				}
-			});
+				})
+				.catch(() => {
+					if (!controller.signal.aborted) {
+						setError("履歴の取得に失敗しました");
+						setLoading(false);
+					}
+				});
+		}, HISTORY_FETCH_DEBOUNCE_MS);
 
-		return () => controller.abort();
-	}, [open, historyTargetCells, columnMap, projectMap]);
+		return () => {
+			clearTimeout(timerId);
+			controller.abort();
+		};
+	}, [open, selectionKey]);
 
 	if (!open) return null;
 
@@ -276,10 +260,10 @@ export function HistoryPanel({
 						>
 							<div className={styles.cellGroupHeader}>
 								<Text size="2" weight="medium">
-									{group.projectLabel}
+									{projectMap.get(group.projectId)?.name ?? group.projectId}
 								</Text>
 								<Text size="1" color="gray">
-									{group.columnName}
+									{columnMap.get(group.columnId)?.name ?? group.columnId}
 								</Text>
 							</div>
 							{group.history.map((entry, i) => (

@@ -1,26 +1,36 @@
 # Docker での開発環境構築
 
-Docker Composeを用いてSOS26の開発環境をローカルで起動する手順です。
+Docker Compose を用いて SOS26 の開発環境をローカルで起動する手順です。
 
 ## 前提条件
 
 - Docker / Docker Compose
 - SendGrid の API キー（認証メール等を実際に送信するため）
 
-## 1. 環境変数を設定する
+## 環境変数を設定する
 
-開発用のデフォルト値は `compose.yml` の `app.environment` に書かれています（DB・ストレージ・Firebase Auth Emulator の接続先など）。
-デフォルト値がないのは SendGrid と VAPID 鍵だけなので、**リポジトリ直下**に `.env` を作ってこれらを設定します。
+`compose.yml` の `env_file` は、API の `.env.example`、API の `.env`、Web の `.env.example`、Web の `.env` の順に読み込みます。
+DB、ストレージ、Firebase Auth Emulator の接続先など、開発用の既定値は各 `.env.example` にあります。
+各 `.env` に書いた値で既定値を上書きできるため、`.env.example` をコピーする必要はありません。
+
+`apps/api/.env` を作成し、SendGrid の設定と VAPID 鍵を記入してください。
 
 ```env
-# ./.env（リポジトリ直下。apps/api/.env ではない）
+# apps/api/.env
 SENDGRID_API_KEY=<SendGrid の API キー>
 EMAIL_FROM=<SendGrid で認証済みの送信元アドレス>
 VAPID_PUBLIC_KEY=<生成した公開鍵>
 VAPID_PRIVATE_KEY=<生成した秘密鍵>
 ```
 
-Web 側の `VITE_VAPID_PUBLIC_KEY` は、指定しなければ `VAPID_PUBLIC_KEY` と同じ値が使われます。
+`apps/web/.env` を作成し、API の `VAPID_PUBLIC_KEY` と同じ公開鍵を記入してください。
+
+```env
+# apps/web/.env
+VITE_VAPID_PUBLIC_KEY=<API と同じ公開鍵>
+```
+
+既定値を使う項目は `.env` に書かず、空文字で上書きする場合だけ `変数名=` と書いてください。
 
 VAPID 鍵（Web Push 用の鍵ペア）は外部サービスへの登録不要で、手元で生成できます。
 
@@ -30,13 +40,13 @@ bunx web-push generate-vapid-keys
 docker run --rm node:24-alpine npx -y web-push generate-vapid-keys
 ```
 
-## 2. 起動する
+## 起動する
 
 ```bash
 docker compose up -d
 ```
 
-## 3. アクセスする
+## アクセスする
 
 | URL | 内容 |
 |---|---|
@@ -57,20 +67,22 @@ docker compose up -d
 
 ### 本物の Firebase プロジェクトを使う
 
-リポジトリ直下の `.env` に以下を追加します。エミュレータの接続先を**空で指定する**ことで、エミュレータを使わなくなります（行ごと消すとデフォルトのエミュレータに戻ります）。
+エミュレータを無効化するため、`apps/api/.env` と `apps/web/.env` で接続先を空文字で上書きし、本物の Firebase プロジェクトの値を設定します。
+接続先の行を削除すると `.env.example` の既定値が使われ、エミュレータに接続します。
 
 ```env
-# ./.env
-# エミュレータを無効化（空を指定する）
+# apps/api/.env
+# エミュレータを無効化するため、接続先を空文字で上書きする
 FIREBASE_AUTH_EMULATOR_HOST=
-VITE_FIREBASE_AUTH_EMULATOR_URL=
-
-# API（Firebase Admin のサービスアカウント）
 FIREBASE_PROJECT_ID=<プロジェクト ID>
 FIREBASE_CLIENT_EMAIL=<サービスアカウントのメールアドレス>
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+```
 
-# Web（Firebase コンソールのウェブアプリ設定）
+```env
+# apps/web/.env
+# エミュレータを無効化するため、接続先を空文字で上書きする
+VITE_FIREBASE_AUTH_EMULATOR_URL=
 VITE_FIREBASE_API_KEY=<API キー>
 VITE_FIREBASE_AUTH_DOMAIN=<プロジェクト ID>.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=<プロジェクト ID>
@@ -94,7 +106,7 @@ docker compose exec app bun run db:seed
 docker compose exec app bun run db:migrate:dev
 ```
 
-リポジトリ直下の `.env` を変更した場合は、もう一度 `docker compose up -d` を実行してください。変更が検出され、`app` コンテナが作り直されます。
+`apps/api/.env` / `apps/web/.env` を変更した場合は、もう一度 `docker compose up -d` を実行してください。変更が検出され、`app` コンテナが作り直されます。
 
 ## 停止・リセット
 

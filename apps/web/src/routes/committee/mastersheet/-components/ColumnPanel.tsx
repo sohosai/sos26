@@ -191,7 +191,7 @@ function ColumnMetaBadges({ col }: { col: ApiColumn }) {
 
 type EditColumnFormProps = {
 	col: ApiColumn;
-	onSuccess: () => void;
+	onSuccess: (column: ApiColumn) => void;
 	onCancel: () => void;
 };
 
@@ -264,14 +264,14 @@ function EditColumnForm({ col, onSuccess, onCancel }: EditColumnFormProps) {
 		}
 		setLoading(true);
 		try {
-			await updateMastersheetColumn(col.id, {
+			const { column } = await updateMastersheetColumn(col.id, {
 				name: name.trim(),
 				description: description.trim() || null,
 				viewers: col.type === "CUSTOM" ? viewers : undefined,
 				options: optionsInput,
 			});
 			toast.success("カラムを更新しました");
-			onSuccess();
+			onSuccess(column);
 		} catch (error) {
 			toast.error(isClientError(error) ? error.message : "更新に失敗しました");
 		} finally {
@@ -367,6 +367,8 @@ type AccessibleColumnRowProps = {
 	isPinned: boolean;
 	onToggle: (visible: boolean) => void;
 	onSuccess: () => void;
+	onColumnUpdated: (column: ApiColumn) => void;
+	onColumnDeleted: (columnId: string) => void;
 	accessRequests: AccessRequest[];
 	onRequestHandled: (id: string) => void;
 };
@@ -377,6 +379,8 @@ function AccessibleColumnRow({
 	isPinned,
 	onToggle,
 	onSuccess,
+	onColumnUpdated,
+	onColumnDeleted,
 	accessRequests,
 	onRequestHandled,
 }: AccessibleColumnRowProps) {
@@ -394,7 +398,7 @@ function AccessibleColumnRow({
 		try {
 			await deleteMastersheetColumn(col.id);
 			toast.success("カラムを削除しました");
-			onSuccess();
+			onColumnDeleted(col.id);
 		} catch (error) {
 			toast.error(isClientError(error) ? error.message : "削除に失敗しました");
 		} finally {
@@ -560,9 +564,9 @@ function AccessibleColumnRow({
 				<div className={styles.cardEditForm}>
 					<EditColumnForm
 						col={col}
-						onSuccess={() => {
+						onSuccess={column => {
 							setIsEditing(false);
-							onSuccess();
+							onColumnUpdated(column);
 						}}
 						onCancel={() => setIsEditing(false)}
 					/>
@@ -828,7 +832,10 @@ type Props = {
 	pinnedColumnIds: string[];
 	onToggleColumn: (columnId: string, visible: boolean) => void;
 	onTogglePinColumn: (columnId: string, pinned: boolean) => void;
+	/** 列の追加やアクセス申請の承認で、表示する値が変わったとき */
 	onSuccess: () => void;
+	onColumnUpdated: (column: ApiColumn) => void;
+	onColumnDeleted: (columnId: string) => void;
 };
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: カラムパネルは複数セクション・状態を管理するUI
@@ -841,6 +848,8 @@ export function ColumnPanel({
 	onToggleColumn,
 	onTogglePinColumn,
 	onSuccess,
+	onColumnUpdated,
+	onColumnDeleted,
 }: Props) {
 	const [searchText, setSearchText] = useState("");
 	const [discoverLoading, setDiscoverLoading] = useState(false);
@@ -1108,6 +1117,8 @@ export function ColumnPanel({
 											isPinned={pinnedColumnIds.includes(col.id)}
 											onToggle={v => onToggleColumn(col.id, v)}
 											onSuccess={onSuccess}
+											onColumnUpdated={onColumnUpdated}
+											onColumnDeleted={onColumnDeleted}
 											accessRequests={accessRequests}
 											onRequestHandled={handleRequestHandled}
 										/>
@@ -1134,6 +1145,8 @@ export function ColumnPanel({
 												isPinned={pinnedColumnIds.includes(col.id)}
 												onToggle={v => onToggleColumn(col.id, v)}
 												onSuccess={onSuccess}
+												onColumnUpdated={onColumnUpdated}
+												onColumnDeleted={onColumnDeleted}
 												accessRequests={accessRequests}
 												onRequestHandled={handleRequestHandled}
 											/>

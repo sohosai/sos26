@@ -1,6 +1,6 @@
 import { Heading, Text } from "@radix-ui/themes";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/primitives";
 import { SupportDetail } from "@/components/support/SupportDetail";
@@ -13,6 +13,7 @@ import {
 	getCommitteeInquiry,
 	publishDraftComment,
 	publishDraftInquiry,
+	readCommitteeInquiry,
 	removeCommitteeInquiryAssignee,
 	reopenCommitteeInquiry,
 	updateCommitteeDraftComment,
@@ -33,14 +34,24 @@ export const Route = createFileRoute("/committee/support/$inquiryId")({
 			{ name: "description", content: "お問い合わせ詳細" },
 		],
 	}),
+	// 操作の結果は画面の state にだけ反映するので、ページを離れたら loader のデータを捨て、開き直したときに古い表示を出さない
+	gcTime: 0,
+	// パラメータが変わったら作り直し、前の詳細を待っていた応答を移った先の画面に入れない
+	remountDeps: ({ params }) => params,
 	loader: async ({ params }) => {
 		const { committeeMember, permissions } = useAuthStore.getState();
-		const inquiryRes = await getCommitteeInquiry(params.inquiryId);
-		const [membersRes, projectMembersRes, formsRes] = await Promise.all([
-			listCommitteeMembersPicker(),
-			listCommitteeProjectMembers(inquiryRes.inquiry.projectId),
-			listMyForms(),
-		]);
+		const [[inquiryRes, projectMembersRes], membersRes, formsRes] =
+			await Promise.all([
+				getCommitteeInquiry(params.inquiryId).then(
+					async res =>
+						[
+							res,
+							await listCommitteeProjectMembers(res.inquiry.projectId),
+						] as const
+				),
+				listCommitteeMembersPicker(),
+				listMyForms(),
+			]);
 
 		// INQUIRY_ADMIN 権限チェック（store から参照）
 		const isAdmin = permissions?.has("INQUIRY_ADMIN") ?? false;
@@ -80,10 +91,50 @@ function CommitteeSupportDetailPage() {
 	const router = useRouter();
 	const { user } = useAuthStore();
 	const [currentInquiry, setCurrentInquiry] = useState(inquiry);
+	const latestRefreshIdRef = useRef(0);
 
 	useEffect(() => {
+		latestRefreshIdRef.current += 1;
 		setCurrentInquiry(inquiry);
 	}, [inquiry]);
+
+	// 詳細を表示したときと、新しいコメントを取り直したときに既読にする。失敗しても表示は続ける
+	useEffect(() => {
+		if (!inquiry) return;
+		void readCommitteeInquiry(inquiry.id).catch(() => undefined);
+	}, [inquiry]);
+
+	// 応答で差し替えるときも番号を進め、その前に出ていた取り直しの応答で差し替えを戻さない
+	const updateInquiryLocally = (
+		update: (
+			prev: NonNullable<typeof currentInquiry>
+		) => NonNullable<typeof currentInquiry>
+	) => {
+		latestRefreshIdRef.current += 1;
+		setCurrentInquiry(prev => (prev ? update(prev) : prev));
+	};
+
+	// 操作で変わるアクティビティや担当者・ステータスを反映するため、詳細だけを取り直す。
+	// 続けて操作したときに古い応答で上書きしないよう、最後に出したリクエストの分だけ反映する
+	const refreshInquiry = async () => {
+		latestRefreshIdRef.current += 1;
+		const refreshId = latestRefreshIdRef.current;
+		try {
+			const res = await getCommitteeInquiry(inquiryId);
+			if (refreshId !== latestRefreshIdRef.current) return;
+			setCurrentInquiry(res.inquiry);
+			void readCommitteeInquiry(inquiryId).catch(() => undefined);
+		} catch (error) {
+			if (refreshId !== latestRefreshIdRef.current) return;
+			reportHandledError({
+				error,
+				operation: "read",
+				userMessage: "お問い合わせの再読み込みに失敗しました",
+				ui: { type: "toast" },
+				context: { inquiryId },
+			});
+		}
+	};
 
 	if (!currentInquiry) {
 		return (
@@ -124,7 +175,7 @@ function CommitteeSupportDetailPage() {
 					} else {
 						await reopenCommitteeInquiry(inquiryId);
 					}
-					await router.invalidate();
+					await refreshInquiry();
 				} catch (error) {
 					reportHandledError({
 						error,
@@ -145,7 +196,7 @@ function CommitteeSupportDetailPage() {
 						fileIds,
 						isDraft,
 					});
-					await router.invalidate();
+					await refreshInquiry();
 					if (isDraft) {
 						toast.success("下書きを保存しました");
 					}
@@ -171,7 +222,7 @@ function CommitteeSupportDetailPage() {
 						userId,
 						side,
 					});
-					await router.invalidate();
+					await refreshInquiry();
 				} catch (error) {
 					reportHandledError({
 						error,
@@ -188,12 +239,24 @@ function CommitteeSupportDetailPage() {
 			}}
 			onRemoveAssignee={async assigneeId => {
 				await removeCommitteeInquiryAssignee(inquiryId, assigneeId);
-				await router.invalidate();
+				// 自分を外したときは一覧へ移る。閲覧できなくなることもあるので取り直さない
+				const removedSelf = [
+					...currentInquiry.committeeAssignees,
+					...currentInquiry.projectAssignees,
+				].some(a => a.id === assigneeId && a.user.id === user?.id);
+				if (!removedSelf) await refreshInquiry();
 			}}
 			onPublishDraft={async commentId => {
 				try {
-					await publishDraftComment(inquiryId, commentId);
-					await router.invalidate();
+					const { comment } = await publishDraftComment(inquiryId, commentId);
+					updateInquiryLocally(prev => ({
+						...prev,
+						comments: prev.comments.map(c =>
+							c.id === comment.id
+								? { ...c, isDraft: comment.isDraft, sentAt: comment.sentAt }
+								: c
+						),
+					}));
 					toast.success("コメントを送信しました");
 				} catch (error) {
 					reportHandledError({
@@ -211,7 +274,10 @@ function CommitteeSupportDetailPage() {
 			onDeleteComment={async commentId => {
 				try {
 					await deleteCommitteeInquiryComment(inquiryId, commentId);
-					await router.invalidate();
+					updateInquiryLocally(prev => ({
+						...prev,
+						comments: prev.comments.filter(c => c.id !== commentId),
+					}));
 					toast.success("コメントを削除しました");
 				} catch (error) {
 					reportHandledError({
@@ -228,8 +294,17 @@ function CommitteeSupportDetailPage() {
 			}}
 			onUpdateDraft={async (commentId, body) => {
 				try {
-					await updateCommitteeDraftComment(inquiryId, commentId, { body });
-					await router.invalidate();
+					const { comment } = await updateCommitteeDraftComment(
+						inquiryId,
+						commentId,
+						{ body }
+					);
+					updateInquiryLocally(prev => ({
+						...prev,
+						comments: prev.comments.map(c =>
+							c.id === comment.id ? { ...c, body: comment.body } : c
+						),
+					}));
 					toast.success("下書きを更新しました");
 				} catch (error) {
 					reportHandledError({
@@ -247,7 +322,7 @@ function CommitteeSupportDetailPage() {
 			onUpdateViewers={async viewers => {
 				try {
 					await updateCommitteeInquiryViewers(inquiryId, { viewers });
-					await router.invalidate();
+					await refreshInquiry();
 				} catch (error) {
 					reportHandledError({
 						error,
@@ -263,8 +338,11 @@ function CommitteeSupportDetailPage() {
 			}}
 			onPublishDraftInquiry={async () => {
 				try {
-					await publishDraftInquiry(inquiryId);
-					await router.invalidate();
+					const res = await publishDraftInquiry(inquiryId);
+					updateInquiryLocally(prev =>
+						// 応答を待つ間に別の問い合わせへ移っていたら重ねない
+						prev.id === res.inquiry.id ? { ...prev, ...res.inquiry } : prev
+					);
 					toast.success("お問い合わせを送信しました");
 				} catch (error) {
 					reportHandledError({
@@ -305,13 +383,7 @@ function CommitteeSupportDetailPage() {
 					fileIds,
 					relatedFormId,
 				});
-				try {
-					const refreshed = await getCommitteeInquiry(inquiryId);
-					setCurrentInquiry(refreshed.inquiry);
-				} catch (err) {
-					console.error("failed to refresh inquiry after draft update", err);
-					await router.invalidate();
-				}
+				await refreshInquiry();
 			}}
 		/>
 	);

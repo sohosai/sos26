@@ -22,7 +22,7 @@ type Props = {
 	onOpenChange: (open: boolean) => void;
 	projectId: string;
 	formDeliveryId: string;
-	onSubmitSuccess: (submittedAt: Date | null) => void;
+	onSubmitSuccess: (responseId: string, submittedAt: Date | null) => void;
 	onDraftSaved: (responseId: string) => void;
 };
 
@@ -152,7 +152,7 @@ export function ProjectFormAnswerDialog({
 			: await createFormResponse(projectId, formDeliveryId, body).then(
 					r => r.response
 				);
-		onSubmitSuccess(response.submittedAt);
+		onSubmitSuccess(response.id, response.submittedAt);
 	};
 
 	return (
