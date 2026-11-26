@@ -11,3 +11,5 @@ docs
 *.log
 *.tsbuildinfo
 .DS_Store
+**/.env
+**/.env.*

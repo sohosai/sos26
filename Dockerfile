@@ -1,37 +1,47 @@
 # syntax=docker/dockerfile:1.7
 
-FROM oven/bun:1.2.10 AS builder
+FROM oven/bun:1.2.10 AS base
 WORKDIR /app
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies first for better layer cache reuse.
+# ソース変更時にも依存関係のインストール結果を再利用できるようにする。
 COPY package.json bun.lock tsconfig.json turbo.json biome.json prisma.config.ts ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY packages/shared/package.json packages/shared/package.json
-RUN bun install --frozen-lockfile --ignore-scripts
 
-# Prisma Client is generated into node_modules, so generate it from the schema alone
-# to keep the node_modules layer cached when only source code changes.
+FROM base AS builder
+RUN bun install --frozen-lockfile --ignore-scripts
+# Prisma Client は node_modules 配下に生成されるため、schema.prisma のみから先に生成して
+# ソースコード変更時にもキャッシュが効くようにする。
 COPY apps/api/prisma/schema.prisma apps/api/prisma/schema.prisma
 RUN bun run --cwd apps/api db:generate
-
-# Copy source code and build API.
 COPY apps/api ./apps/api
 COPY packages/shared ./packages/shared
 RUN bun run build --filter=@sos26/api
 
-FROM oven/bun:1.2.10 AS runner
-WORKDIR /app
+FROM base AS prod-deps
+RUN bun install --frozen-lockfile --production --ignore-scripts --filter @sos26/api
+COPY apps/api/prisma/schema.prisma apps/api/prisma/schema.prisma
+# 実行用の依存関係には ER 図生成ツールを含めないため、クライアントだけを生成する。
+RUN cd apps/api && bun ../../node_modules/prisma/build/index.js generate --generator client
+# distroless では OpenSSL の自動検出ができないため、各 CPU 向けのエンジンを固定パスで指定する。
+RUN cd node_modules/.prisma/client && ln -s libquery_engine-*.so.node libquery_engine.so.node \
+	&& cd /app/node_modules/@prisma/engines && ln -s schema-engine-* schema-engine
 
-RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+# Bun で glibc を使いたいので Debian ベースを使う。
+FROM gcr.io/distroless/cc-debian13:nonroot AS runner
+WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV PRISMA_QUERY_ENGINE_LIBRARY=/app/node_modules/.prisma/client/libquery_engine.so.node
+ENV PRISMA_SCHEMA_ENGINE_BINARY=/app/node_modules/@prisma/engines/schema-engine
 
-# Runtime files for API execution (Prisma client is under node_modules).
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /usr/local/bin/bun /usr/local/bin/bun
+
+COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
