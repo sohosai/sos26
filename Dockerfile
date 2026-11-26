@@ -30,8 +30,8 @@ RUN cd apps/api && bun ../../node_modules/prisma/build/index.js generate --gener
 RUN cd node_modules/.prisma/client && ln -s libquery_engine-*.so.node libquery_engine.so.node \
 	&& cd /app/node_modules/@prisma/engines && ln -s schema-engine-* schema-engine
 
-# Prisma と sharp が必要とする共有ライブラリを含む Debian 12 ベースを使う。
-FROM gcr.io/distroless/cc-debian12:nonroot AS runner
+# Prisma と sharp が必要とする共有ライブラリを含む Debian 13 ベースを使う。
+FROM gcr.io/distroless/cc-debian13:nonroot AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
