@@ -11,8 +11,5 @@ docs
 *.log
 *.tsbuildinfo
 .DS_Store
-
-.claude
-.agents
 **/.env
 **/.env.*
