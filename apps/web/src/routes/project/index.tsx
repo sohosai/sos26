@@ -3,16 +3,13 @@ import type {
 	GetActiveProjectRegistrationFormsResponse,
 	GetProjectRegistrationFormResponsesResponse,
 } from "@sos26/shared";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/primitives";
 import { ProjectDetailEditDialog } from "@/components/project/ProjectDetailEditDialog";
 import { ProjectRegistrationFormResponseEditDialog } from "@/components/project/ProjectRegistrationFormResponseEditDialog";
-import {
-	getApplicationPeriod,
-	getProjectRegistrationFormResponses,
-} from "@/lib/api/project";
+import { getProjectRegistrationFormResponses } from "@/lib/api/project";
 import { getActiveProjectRegistrationForms } from "@/lib/api/project-registration-form";
 import { useAuthStore } from "@/lib/auth";
 import { formatDate, formatProjectNumber } from "@/lib/format";
@@ -23,6 +20,9 @@ import {
 import { useProject, useProjectStore } from "@/lib/project/store";
 import styles from "./index.module.scss";
 
+// 申請期間は /project の loader で取得したものを使う
+const projectLayoutRoute = getRouteApi("/project");
+
 export const Route = createFileRoute("/project/")({
 	component: ProjectIndexPage,
 	loader: async () => {
@@ -31,20 +31,17 @@ export const Route = createFileRoute("/project/")({
 			return {
 				registrationFormResponses: [],
 				registrationForms: [],
-				applicationPeriodInfo: null,
 			};
 		}
 
 		const project = projects.find(p => p.id === selectedProjectId);
 
-		const [responsesResult, formsResult, applicationPeriodResult] =
-			await Promise.allSettled([
-				getProjectRegistrationFormResponses(selectedProjectId),
-				project
-					? getActiveProjectRegistrationForms(project.type, project.location)
-					: Promise.resolve({ forms: [] }),
-				getApplicationPeriod(),
-			]);
+		const [responsesResult, formsResult] = await Promise.allSettled([
+			getProjectRegistrationFormResponses(selectedProjectId),
+			project
+				? getActiveProjectRegistrationForms(project.type, project.location)
+				: Promise.resolve({ forms: [] }),
+		]);
 
 		return {
 			registrationFormResponses:
@@ -53,10 +50,6 @@ export const Route = createFileRoute("/project/")({
 					: [],
 			registrationForms:
 				formsResult.status === "fulfilled" ? formsResult.value.forms : [],
-			applicationPeriodInfo:
-				applicationPeriodResult.status === "fulfilled"
-					? applicationPeriodResult.value
-					: null,
 		};
 	},
 	head: () => ({
@@ -323,11 +316,9 @@ function RegistrationFormsSection({
 function ProjectIndexPage() {
 	const project = useProject();
 	const { projects, setProjects } = useProjectStore();
-	const {
-		registrationFormResponses,
-		registrationForms,
-		applicationPeriodInfo,
-	} = Route.useLoaderData();
+	const { registrationFormResponses, registrationForms } =
+		Route.useLoaderData();
+	const { applicationPeriodInfo } = projectLayoutRoute.useLoaderData();
 	const { user } = useAuthStore();
 	const [responses, setResponses] = useState(registrationFormResponses);
 	const [forms, setForms] = useState(registrationForms);

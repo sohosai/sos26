@@ -261,7 +261,9 @@ export type ListProjectRegistrationFormsResponse = z.infer<
 // ─────────────────────────────────────────────────────────────
 
 export const getProjectRegistrationFormDetailResponseSchema = z.object({
-	form: projectRegistrationFormDetailSchema,
+	form: projectRegistrationFormDetailSchema.extend({
+		responseCount: z.number().int(),
+	}),
 });
 export type GetProjectRegistrationFormDetailResponse = z.infer<
 	typeof getProjectRegistrationFormDetailResponseSchema

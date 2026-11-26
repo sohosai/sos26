@@ -2,11 +2,7 @@ import { Badge, Heading, Text } from "@radix-ui/themes";
 import type { Bureau, GetProjectNoticeResponse } from "@sos26/shared";
 import { bureauLabelMap, ErrorCode } from "@sos26/shared";
 import { IconEye } from "@tabler/icons-react";
-import {
-	createFileRoute,
-	useNavigate,
-	useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -15,6 +11,7 @@ import { DataTable, DateCell } from "@/components/patterns";
 import { Button } from "@/components/primitives";
 import { getProjectNotice, listProjectNotices } from "@/lib/api/project-notice";
 import { isClientError } from "@/lib/http/error";
+import { refreshNotificationDot } from "@/lib/project/notification-status";
 import { useProjectStore } from "@/lib/project/store";
 import { syncSelectedProjectFromSearch } from "@/lib/project/sync";
 import { NoticeDetailDialog } from "./-components/NoticeDetailDialog";
@@ -149,7 +146,6 @@ export const Route = createFileRoute("/project/notice/")({
 function RouteComponent() {
 	const { notices: initialNotices } = Route.useLoaderData();
 	const search = Route.useSearch();
-	const router = useRouter();
 	const navigate = useNavigate();
 	const [notices, setNotices] = useState<NoticeRow[]>(initialNotices);
 	const { selectedProjectId } = useProjectStore();
@@ -167,7 +163,7 @@ function RouteComponent() {
 	useEffect(() => {
 		const targetNoticeId = search.noticeId;
 		if (!targetNoticeId) {
-			// 一覧から開いたお知らせは、既読更新によるloaderの再実行後も閉じない。
+			// 一覧から開いたお知らせは、新着の反映などで loader が再実行されても閉じない。
 			// URL経由で開いた場合のみ、noticeIdがなくなったら選択を解除する。
 			setSelectedNotice(current =>
 				current?.source === "search" ? null : current
@@ -216,16 +212,13 @@ function RouteComponent() {
 		return () => controller.abort();
 	}, [search.noticeId, selectedProjectId, navigate, initialNotices]);
 
-	const handleRead = useCallback(
-		(noticeId: string) => {
-			setNotices(prev =>
-				prev.map(n => (n.id === noticeId ? { ...n, isRead: true } : n))
-			);
-			markCachedNoticeRead(noticeId);
-			void router.invalidate();
-		},
-		[router]
-	);
+	const handleRead = useCallback((noticeId: string) => {
+		setNotices(prev =>
+			prev.map(n => (n.id === noticeId ? { ...n, isRead: true } : n))
+		);
+		markCachedNoticeRead(noticeId);
+		void refreshNotificationDot();
+	}, []);
 
 	const columns = [
 		noticeColumnHelper.accessor("title", {

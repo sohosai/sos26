@@ -13,14 +13,17 @@ COPY packages/shared/package.json packages/shared/package.json
 
 FROM base AS builder
 RUN bun install --frozen-lockfile --ignore-scripts
+# Prisma Client は node_modules 配下に生成されるため、schema.prisma のみから先に生成して
+# ソースコード変更時にもキャッシュが効くようにする。
+COPY apps/api/prisma/schema.prisma apps/api/prisma/schema.prisma
+RUN bun run --cwd apps/api db:generate
 COPY apps/api ./apps/api
 COPY packages/shared ./packages/shared
-RUN bun run --cwd apps/api db:generate
 RUN bun run build --filter=@sos26/api
 
 FROM base AS prod-deps
 RUN bun install --frozen-lockfile --production --ignore-scripts --filter @sos26/api
-COPY apps/api/prisma ./apps/api/prisma
+COPY apps/api/prisma/schema.prisma apps/api/prisma/schema.prisma
 # 実行用の依存関係には ER 図生成ツールを含めないため、クライアントだけを生成する。
 RUN cd apps/api && bun ../../node_modules/prisma/build/index.js generate --generator client
 # distroless では OpenSSL の自動検出ができないため、各 CPU 向けのエンジンを固定パスで指定する。

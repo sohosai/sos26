@@ -237,6 +237,7 @@ enum InquiryActivityType { ASSIGNEE_ADDED, ASSIGNEE_REMOVED, VIEWER_UPDATED, STA
 |---------|------|------|------|
 | GET | `/project/:projectId/inquiries` | 自分が担当のお問い合わせ一覧 | 企画メンバー |
 | GET | `/project/:projectId/inquiries/:inquiryId` | お問い合わせ詳細 | 企画側担当者 |
+| POST | `/project/:projectId/inquiries/:inquiryId/read` | コメントを既読にする（詳細を表示したときと取り直したときに呼ぶ） | 企画側担当者 |
 | POST | `/project/:projectId/inquiries` | お問い合わせ作成 | 企画メンバー |
 | POST | `/project/:projectId/inquiries/:inquiryId/comments` | コメント追加 | 企画側担当者 |
 | PATCH | `/project/:projectId/inquiries/:inquiryId/reopen` | 再オープン | 企画側担当者 |
@@ -251,6 +252,7 @@ enum InquiryActivityType { ASSIGNEE_ADDED, ASSIGNEE_REMOVED, VIEWER_UPDATED, STA
 |---------|------|------|------|
 | GET | `/committee/inquiries` | お問い合わせ一覧 | 担当者 / 閲覧者 / 管理者 |
 | GET | `/committee/inquiries/:inquiryId` | お問い合わせ詳細 | 担当者 / 閲覧者 / 管理者 |
+| POST | `/committee/inquiries/:inquiryId/read` | コメントを既読にする（詳細を表示したときと取り直したときに呼ぶ） | 担当者 / 閲覧者 / 管理者 |
 | POST | `/committee/inquiries` | お問い合わせ作成 | 実委人 |
 | POST | `/committee/inquiries/:inquiryId/comments` | コメント追加 | 担当者 / 管理者 |
 | POST | `/committee/inquiries/:inquiryId/comments/:commentId/publish` | 下書きコメントを正式送信 | 下書き作成者 |
@@ -308,6 +310,15 @@ API 内で以下の自動遷移が行われる:
   - 実委側担当者として割り当てられている
   - 閲覧者スコープに一致する（ALL / BUREAU + 所属局 / INDIVIDUAL + userId）
 
+一覧画面の列（11.2）ごとに取得する。クエリパラメータは次のとおり。
+
+| パラメータ | 内容 |
+|-----------|------|
+| `view` | 取得する列。`MINE`（自分の担当）/ `UNASSIGNED`（担当者未割り当て。INQUIRY_ADMIN 以外は常に空）/ `VIEWING`（閲覧中）/ `DRAFT`（下書き）/ `RESOLVED`（解決済み） |
+| `search` | 件名・企画名・企画番号（3 桁表示）の部分一致 |
+| `awaitingReplyFrom` | 次に返信が期待される側（`PROJECT` / `COMMITTEE`）で絞り込む。対象は未解決の問い合わせだけ |
+| `cursor` / `limit` | 更新日時の降順でページ分けする。`limit` を省くと全件を返し、続きがあればレスポンスの `nextCursor` に次の `cursor` を返す。`nextCursor` はそのページの最後の行の更新日時と ID を持つ |
+
 ---
 
 ## 11. UI 仕様
@@ -333,7 +344,10 @@ API 内で以下の自動遷移が行われる:
 - 自分がアクセス可能な解決済みお問い合わせを一覧
 
 共通:
-- 検索機能
+- 「閲覧中」と「解決済み」は 50 件ずつ表示し、「もっと見る」で続きを読み込む。ほかの列は全件を表示する
+- 検索語がないときは、詳細から戻ったときとタブを切り替えたときに、前に取得した一覧を表示したまま取り直す
+- タブ「未完了」のバッジは「自分の担当」、タブ「下書き」のバッジは下書きの件数
+- 検索機能（件名・企画名・企画番号。入力の 300 ms 後にサーバーで検索する）
 - 各セクション内のお問い合わせが0件の場合はセクション非表示
 - 一覧に表示する「○件の返信」は公開済みコメント件数（下書きは含めない）
 

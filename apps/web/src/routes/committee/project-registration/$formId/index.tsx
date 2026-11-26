@@ -9,13 +9,9 @@ import {
 	IconClock,
 	IconEye,
 } from "@tabler/icons-react";
-import {
-	createFileRoute,
-	useNavigate,
-	useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { type ComponentProps, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AnswerDetailDialog } from "@/components/form/Answer/AnswerDetailDialog";
 import type { Form } from "@/components/form/type";
@@ -40,6 +36,7 @@ import {
 	buildAnswerValueMap,
 } from "@/lib/form/answer-table";
 import { getProjectRegistrationFormStatus } from "@/lib/form/form-status";
+import { useLazyResponses } from "@/lib/form/use-lazy-responses";
 import { formatDate } from "@/lib/format";
 import {
 	PROJECT_LOCATION_LABELS,
@@ -97,15 +94,16 @@ export const Route = createFileRoute(
 	head: () => ({
 		meta: [{ title: "企画登録フォーム詳細 | 雙峰祭オンラインシステム" }],
 	}),
+	// 操作の結果は画面の state にだけ反映するので、ページを離れたら loader のデータを捨て、開き直したときに古い表示を出さない
+	gcTime: 0,
+	// パラメータが変わったら作り直し、前の詳細を待っていた応答を移った先の画面に入れない
+	remountDeps: ({ params }) => params,
 	loader: async ({ params }) => {
-		const [{ form }, { committeeMembers }, { forms: allForms }, responsesRes] =
+		const [{ form }, { committeeMembers }, { forms: allForms }] =
 			await Promise.all([
 				getProjectRegistrationFormDetail(params.formId),
 				listCommitteeMembersPicker(),
 				listProjectRegistrationForms(),
-				listProjectRegistrationFormResponses(params.formId).catch(() => ({
-					responses: [],
-				})),
 			]);
 		const currentUserId = useAuthStore.getState().user?.id;
 		const currentMember = committeeMembers.find(
@@ -126,17 +124,11 @@ export const Route = createFileRoute(
 				name: m.user.name,
 				avatarFileId: m.user.avatarFileId,
 			}));
-		const existingCollaboratorIds = new Set(
-			form.collaborators.map(c => c.user.id)
-		);
-		const availableMembers = committeeMembers
-			.filter(
-				m =>
-					m.user.id !== form.ownerId &&
-					!existingCollaboratorIds.has(m.user.id) &&
-					m.permissions.some(
-						p => p.permission === "PROJECT_REGISTRATION_FORM_CREATE"
-					)
+		const collaboratorCandidates = committeeMembers
+			.filter(m =>
+				m.permissions.some(
+					p => p.permission === "PROJECT_REGISTRATION_FORM_CREATE"
+				)
 			)
 			.map(m => ({
 				userId: m.user.id,
@@ -156,9 +148,8 @@ export const Route = createFileRoute(
 			form,
 			canCreate,
 			approvers,
-			availableMembers,
+			collaboratorCandidates,
 			activeForms,
-			responses: responsesRes.responses,
 		};
 	},
 });
@@ -166,16 +157,23 @@ export const Route = createFileRoute(
 function RouteComponent() {
 	const { formId } = Route.useParams();
 	const {
-		form,
+		form: loadedForm,
 		canCreate,
 		approvers,
-		availableMembers,
+		collaboratorCandidates,
 		activeForms,
-		responses,
 	} = Route.useLoaderData();
 	const navigate = useNavigate();
-	const router = useRouter();
 	const { user } = useAuthStore();
+
+	// 操作の結果を loader の再実行なしで反映するため、手元で持つ
+	const [form, setForm] = useState(loadedForm);
+	const [loadedFrom, setLoadedFrom] = useState(loadedForm);
+	if (loadedFrom !== loadedForm) {
+		setLoadedFrom(loadedForm);
+		setForm(loadedForm);
+	}
+	const latestDetailRequestIdRef = useRef(0);
 
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -195,8 +193,25 @@ function RouteComponent() {
 		(isOwner || isWriteCollaborator) && canCreate && !form.isActive;
 	const canEditAnswers = isOwner || isWriteCollaborator;
 
+	const collaboratorUserIds = new Set(form.collaborators.map(c => c.user.id));
+	const availableMembers = collaboratorCandidates.filter(
+		m => m.userId !== form.ownerId && !collaboratorUserIds.has(m.userId)
+	);
+
 	const previewForm = useMemo(() => formDetailToPreviewForm(form), [form]);
-	const answerRows = useMemo(() => buildAnswerRows(responses), [responses]);
+	const {
+		responses,
+		error: responsesError,
+		reload: reloadResponses,
+	} = useLazyResponses(
+		formId,
+		activeTab === "answers",
+		listProjectRegistrationFormResponses
+	);
+	const answerRows = useMemo(
+		() => (responses ? buildAnswerRows(responses) : null),
+		[responses]
+	);
 	const answerColumns = useMemo(
 		() => [
 			answerColumnHelper.display({
@@ -277,12 +292,38 @@ function RouteComponent() {
 
 	if (!user) return null;
 
+	// 応答で差し替えるときも番号を進め、その前に出ていた取り直しの応答で差し替えを戻さない
+	const updateFormLocally = (update: (prev: typeof form) => typeof form) => {
+		latestDetailRequestIdRef.current += 1;
+		setForm(update);
+	};
+
+	// 応答に画面で使う形の詳細が含まれない操作のあとに、詳細だけを取り直す
+	const reloadForm = async () => {
+		latestDetailRequestIdRef.current += 1;
+		const requestId = latestDetailRequestIdRef.current;
+		try {
+			const res = await getProjectRegistrationFormDetail(formId);
+			// 続けて取り直したときの古い応答や、別のフォームへ移る前の応答では上書きしない
+			if (requestId !== latestDetailRequestIdRef.current) return;
+			setForm(prev => (prev.id === res.form.id ? res.form : prev));
+		} catch (error) {
+			reportHandledError({
+				error,
+				operation: "read",
+				userMessage: "フォームの再取得に失敗しました",
+				ui: { type: "toast" },
+				context: { formId },
+			});
+		}
+	};
+
 	const handleAddCollaborator = async (targetUserId: string) => {
 		try {
 			await addProjectRegistrationFormCollaborator(formId, targetUserId, {
 				isWrite: true,
 			});
-			await router.invalidate();
+			await reloadForm();
 			toast.success("共同編集者を追加しました");
 		} catch (error) {
 			reportHandledError({
@@ -302,7 +343,12 @@ function RouteComponent() {
 		setRemovingId(targetUserId);
 		try {
 			await removeProjectRegistrationFormCollaborator(formId, targetUserId);
-			await router.invalidate();
+			updateFormLocally(prev => ({
+				...prev,
+				collaborators: prev.collaborators.filter(
+					c => c.user.id !== targetUserId
+				),
+			}));
 			toast.success("共同編集者を削除しました");
 		} catch (error) {
 			reportHandledError({
@@ -325,7 +371,7 @@ function RouteComponent() {
 			await updateProjectRegistrationFormAuthorization(formId, authId, {
 				status: "APPROVED",
 			});
-			await router.invalidate();
+			await reloadForm();
 			toast.success("承認しました。フォームが公開されました。");
 		} catch (error) {
 			reportHandledError({
@@ -346,7 +392,7 @@ function RouteComponent() {
 			await updateProjectRegistrationFormAuthorization(formId, authId, {
 				status: "REJECTED",
 			});
-			await router.invalidate();
+			await reloadForm();
 			toast.success("却下しました");
 		} catch (error) {
 			reportHandledError({
@@ -467,33 +513,18 @@ function RouteComponent() {
 						onClick={() => setActiveTab("answers")}
 					>
 						回答
-						{responses.length > 0 && (
-							<span className={styles.tabBadge}>{responses.length}</span>
+						{form.responseCount > 0 && (
+							<span className={styles.tabBadge}>{form.responseCount}</span>
 						)}
 					</button>
 				</div>
 
 				{activeTab === "answers" ? (
-					<section className={styles.answersSection}>
-						{answerRows.length === 0 ? (
-							<Text size="2" color="gray">
-								まだ回答がありません。
-							</Text>
-						) : (
-							<DataTable<AnswerRow>
-								data={answerRows}
-								columns={answerColumns}
-								features={{
-									sorting: true,
-									globalFilter: true,
-									columnVisibility: false,
-									selection: false,
-									copy: false,
-									csvExport: true,
-								}}
-							/>
-						)}
-					</section>
+					<AnswersSection
+						rows={answerRows}
+						error={responsesError}
+						columns={answerColumns}
+					/>
 				) : (
 					<div className={styles.contentLayout}>
 						<FormItemsPreview items={previewForm.items} />
@@ -509,7 +540,7 @@ function RouteComponent() {
 							onRemoveCollaborator={handleRemoveCollaborator}
 							onApprove={handleApprove}
 							onReject={handleReject}
-							onAuthRequestSuccess={() => router.invalidate()}
+							onAuthRequestSuccess={reloadForm}
 							onEdit={() => setEditDialogOpen(true)}
 							onDelete={() => setDeleteConfirmOpen(true)}
 						/>
@@ -524,7 +555,13 @@ function RouteComponent() {
 					form={previewForm}
 					canEditAnswers={canEditAnswers}
 					fetchResponse={getProjectRegistrationFormResponse}
-					onSave={editProjectRegistrationFormAnswer}
+					onSave={async (
+						...args: Parameters<typeof editProjectRegistrationFormAnswer>
+					) => {
+						const res = await editProjectRegistrationFormAnswer(...args);
+						reloadResponses();
+						return res;
+					}}
 					submittedAtLabel="提出日"
 					submittedAtFallback="-"
 				/>
@@ -536,7 +573,13 @@ function RouteComponent() {
 				formId={form.id}
 				initialForm={form}
 				activeForms={activeForms}
-				onSuccess={() => router.invalidate()}
+				onSuccess={updated =>
+					// 更新の応答には回答数が含まれない。更新で回答数は変わらないため、手元の値を残す
+					updateFormLocally(prev => ({
+						...updated,
+						responseCount: prev.responseCount,
+					}))
+				}
 			/>
 
 			<AlertDialog.Root
@@ -568,6 +611,39 @@ function RouteComponent() {
 				</AlertDialog.Content>
 			</AlertDialog.Root>
 		</div>
+	);
+}
+
+function AnswersSection({
+	rows,
+	error,
+	columns,
+}: {
+	rows: AnswerRow[] | null;
+	error: string | null;
+	columns: ComponentProps<typeof DataTable<AnswerRow>>["columns"];
+}) {
+	return (
+		<section className={styles.answersSection}>
+			{!rows || rows.length === 0 ? (
+				<Text size="2" color={error ? "red" : "gray"}>
+					{error ?? (rows ? "まだ回答がありません。" : "読み込み中...")}
+				</Text>
+			) : (
+				<DataTable<AnswerRow>
+					data={rows}
+					columns={columns}
+					features={{
+						sorting: true,
+						globalFilter: true,
+						columnVisibility: false,
+						selection: false,
+						copy: false,
+						csvExport: true,
+					}}
+				/>
+			)}
+		</section>
 	);
 }
 

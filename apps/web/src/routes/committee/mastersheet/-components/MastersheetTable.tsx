@@ -18,7 +18,7 @@ import {
 	IconFileText,
 	IconPencil,
 } from "@tabler/icons-react";
-import { Link as RouterLink, useRouter } from "@tanstack/react-router";
+import { Link as RouterLink } from "@tanstack/react-router";
 import type { ColumnFiltersState } from "@tanstack/react-table";
 import {
 	type ColumnDef,
@@ -45,9 +45,9 @@ import {
 	editFormItemCell,
 	upsertMastersheetCell,
 } from "@/lib/api/committee-mastersheet";
+import { getAuthenticatedFileUrl, getFileContentUrl } from "@/lib/api/files";
 import { formatProjectNumber } from "@/lib/format";
 import { isClientError } from "@/lib/http/error";
-import { useStorageUrl } from "@/lib/storage";
 import styles from "./MastersheetTable.module.scss";
 
 type MastersheetRow = {
@@ -59,6 +59,8 @@ type MastersheetRow = {
 };
 
 type ApiColumn = GetMastersheetDataResponse["columns"][number];
+type MastersheetCell =
+	GetMastersheetDataResponse["rows"][number]["cells"][number];
 
 export type SelectedCell = {
 	columnId: string;
@@ -77,6 +79,13 @@ type Props = {
 	onColumnVisibilityChange?: (visibility: VisibilityState) => void;
 	onColumnFiltersChange?: (filters: ColumnFiltersState) => void;
 	onSelectionChange?: (cells: SelectedCell[]) => void;
+	/** cell が undefined のときはセルを取り除く */
+	onCellChange: (
+		projectId: string,
+		columnId: string,
+		cell: MastersheetCell | undefined
+	) => void;
+	onReload: () => Promise<void>;
 	selectionIgnoreRef?: React.RefObject<HTMLElement | null>;
 	showColumnIds?: boolean;
 };
@@ -402,15 +411,26 @@ type FormCellFile = NonNullable<
 >["files"][number];
 
 function CompactFileLink({ file }: { file: FormCellFile }) {
-	const url = useStorageUrl(file.id, file.isPublic);
-
-	if (!url) {
-		return <Text size="2">{file.fileName}</Text>;
+	async function handleClick() {
+		// await のあとに開くとポップアップブロックに掛かるため、先にタブを開いておく
+		const tab = window.open("", "_blank");
+		if (!tab) return;
+		tab.opener = null;
+		try {
+			tab.location.href = file.isPublic
+				? getFileContentUrl(file.id)
+				: await getAuthenticatedFileUrl(file.id);
+		} catch {
+			tab.close();
+			toast.error("ファイルを開けませんでした");
+		}
 	}
 
 	return (
-		<Link href={url} target="_blank" rel="noopener noreferrer" size="2">
-			{file.fileName}
+		<Link asChild size="2">
+			<button type="button" onClick={handleClick}>
+				{file.fileName}
+			</button>
 		</Link>
 	);
 }
@@ -805,47 +825,65 @@ function buildCustomPayload(
 	return { textValue: typeof value === "string" ? value : null };
 }
 
-async function saveFormItemCellEdit(
+function buildPayload(
 	col: ApiColumn,
-	projectId: string,
 	value: unknown
-): Promise<boolean> {
-	if (!col.canEdit || col.type !== "FORM_ITEM") return false;
-	await editFormItemCell(
-		col.id,
-		projectId,
-		buildEditPayload(col.formItemType, value)
-	);
-	return true;
+): EditFormItemCellRequest | UpsertMastersheetCellRequest | null {
+	if (col.type === "CUSTOM") return buildCustomPayload(col.dataType, value);
+	if (!col.canEdit) return null;
+	if (col.type === "FORM_ITEM") {
+		return buildEditPayload(col.formItemType, value);
+	}
+	return buildEditPayload(col.projectRegistrationFormItemType, value);
 }
 
-async function savePrfItemCellEdit(
+/** 保存の応答を待たずに表示するセル */
+function buildOptimisticCell(
 	col: ApiColumn,
-	projectId: string,
-	value: unknown
-): Promise<boolean> {
-	if (!col.canEdit || col.type !== "PROJECT_REGISTRATION_FORM_ITEM")
-		return false;
-	await editFormItemCell(
-		col.id,
-		projectId,
-		buildEditPayload(col.projectRegistrationFormItemType, value)
-	);
-	return true;
+	prev: MastersheetCell | undefined,
+	payload: EditFormItemCellRequest | UpsertMastersheetCellRequest
+): MastersheetCell {
+	const key = col.type === "CUSTOM" ? "cellValue" : "formValue";
+	const base = prev?.[key] ?? {
+		textValue: null,
+		numberValue: null,
+		files: [],
+		selectedOptionIds: [],
+	};
+	return {
+		...prev,
+		columnId: col.id,
+		[key]: {
+			...base,
+			...("textValue" in payload && { textValue: payload.textValue ?? null }),
+			...("numberValue" in payload && {
+				numberValue: payload.numberValue ?? null,
+			}),
+			...(payload.selectedOptionIds && {
+				selectedOptionIds: payload.selectedOptionIds,
+			}),
+		},
+	};
 }
 
-async function saveCustomCellEdit(
+/** セルごとに最後に送った保存の番号。古い保存の結果で表示を上書きしないために使う */
+const latestSaveIds = new Map<string, number>();
+let nextSaveId = 0;
+
+function isResponseLost(error: unknown): boolean {
+	return !(isClientError(error) && error.kind === "api");
+}
+
+async function saveCell(
 	col: ApiColumn,
 	projectId: string,
-	value: unknown
-): Promise<boolean> {
-	if (col.type !== "CUSTOM") return false;
-	await upsertMastersheetCell(
-		col.id,
-		projectId,
-		buildCustomPayload(col.dataType, value)
-	);
-	return true;
+	payload: EditFormItemCellRequest | UpsertMastersheetCellRequest
+): Promise<MastersheetCell> {
+	const { cell } =
+		col.type === "CUSTOM"
+			? await upsertMastersheetCell(col.id, projectId, payload)
+			: await editFormItemCell(col.id, projectId, payload);
+	return cell;
 }
 
 export function MastersheetTable({
@@ -860,11 +898,11 @@ export function MastersheetTable({
 	onColumnVisibilityChange,
 	onColumnFiltersChange,
 	onSelectionChange,
+	onCellChange,
+	onReload,
 	selectionIgnoreRef,
 	showColumnIds = false,
 }: Props) {
-	const router = useRouter();
-
 	const effectivePinnedColumnIds = useMemo(() => {
 		const ids = pinnedColumnIds ?? [];
 		return ["actions", ...ids.filter(id => id !== "actions")];
@@ -903,22 +941,36 @@ export function MastersheetTable({
 	) {
 		const col = columns.find(c => c.id === columnId);
 		if (!col) return;
+		const payload = buildPayload(col, value);
+		if (!payload) return;
 
+		const projectId = row.project.id;
+		const prevCell = row.cells[columnId];
+		const saveKey = `${projectId}:${columnId}`;
+		const saveId = ++nextSaveId;
+		latestSaveIds.set(saveKey, saveId);
+		onCellChange(
+			projectId,
+			columnId,
+			buildOptimisticCell(col, prevCell, payload)
+		);
 		try {
-			const didSave =
-				(await saveFormItemCellEdit(col, row.project.id, value)) ||
-				(await savePrfItemCellEdit(col, row.project.id, value)) ||
-				(await saveCustomCellEdit(col, row.project.id, value));
-			if (!didSave) return;
+			const cell = await saveCell(col, projectId, payload);
+			if (latestSaveIds.get(saveKey) !== saveId) return;
+			onCellChange(projectId, columnId, cell);
 		} catch (error) {
-			toast.error(
-				isClientError(error) ? error.message : "セルの更新に失敗しました"
-			);
-			await router.invalidate();
-			return;
+			if (latestSaveIds.get(saveKey) !== saveId) return;
+			onCellChange(projectId, columnId, prevCell);
+			await handleSaveFailure(error);
 		}
+	}
 
-		await router.invalidate();
+	async function handleSaveFailure(error: unknown) {
+		toast.error(
+			isClientError(error) ? error.message : "セルの更新に失敗しました"
+		);
+		// 応答が届かなかったときは、サーバーで保存できていることがあるため取り直す
+		if (isResponseLost(error)) await onReload();
 	}
 
 	return (

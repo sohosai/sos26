@@ -1,5 +1,6 @@
 import { Callout, Heading, Text } from "@radix-ui/themes";
 import type {
+	GetApplicationPeriodResponse,
 	GetProjectNotificationStatusResponse,
 	GetProjectPublicInfoResponse,
 	MyProject,
@@ -7,11 +8,13 @@ import type {
 } from "@sos26/shared";
 import {
 	createFileRoute,
+	type ErrorComponentProps,
 	Outlet,
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { RouteError } from "@/components/common/RouteError";
 import { ProjectSelector } from "@/components/layout/ProjectSelector";
 import { projectMenuItems, Sidebar } from "@/components/layout/Sidebar";
 import { Button } from "@/components/primitives";
@@ -21,11 +24,12 @@ import {
 	getApplicationPeriod,
 	getProjectNotificationStatus,
 	joinProject,
-	listMyProjects,
 } from "@/lib/api/project";
 import { getProjectPublicInfo } from "@/lib/api/project-public-info";
 import { requireAuth, useAuthStore } from "@/lib/auth";
 import { reportHandledError } from "@/lib/error/report";
+import { refreshMyProjects } from "@/lib/project/my-projects";
+import { registerNotificationDotRefresh } from "@/lib/project/notification-status";
 import { useProjectStore } from "@/lib/project/store";
 import styles from "./route.module.scss";
 
@@ -115,29 +119,51 @@ const EMPTY_PUBLIC_INFO_MODERATION: PublicInfoModeration = {
 	hiddenMapImageFileIds: [],
 };
 
+/**
+ * /project に入ったときに取得した申請期間。取得に失敗したときは null。
+ * ルートの自動コード分割で別チャンクから参照されるため、変数ではなくオブジェクトの値を書き換える
+ */
+const applicationPeriodCache: {
+	/** まだ取得していないときは undefined */
+	info: GetApplicationPeriodResponse | null | undefined;
+} = {
+	info: undefined,
+};
+
+/** loader が最後に読み込んだ企画。ルートの自動コード分割のため、オブジェクトの値を書き換える */
+const loadedProject: { id: string | null | undefined } = { id: undefined };
+
 export const Route = createFileRoute("/project")({
-	beforeLoad: async ({ location }) => {
+	beforeLoad: async ({ location, cause }) => {
 		await requireAuth(location.href);
 		useAuthStore.getState().setActivePortal("project");
 
-		const res = await listMyProjects();
-
-		const store = useProjectStore.getState();
-		const currentId = store.selectedProjectId;
-		const isValid =
-			currentId && res.projects.some((p: Project) => p.id === currentId);
-
-		store.setProjects(res.projects);
-		if (!isValid && res.projects[0]) {
-			store.setSelectedProjectId(res.projects[0].id);
+		// 子ルートの loader が選択中の企画を使うので、loader ではなくここで決める。
+		// /project の中でページを移るたびには取得せず、一覧が変わりうる操作のあとに refreshMyProjects を呼ぶ。
+		// 入ったときの取得に失敗した場合に備えて、一覧が空のときも取り直す
+		if (cause === "enter" || useProjectStore.getState().projects.length === 0) {
+			await refreshMyProjects();
 		}
 	},
-	loader: async () => {
+	// /project の中でページを移るたびには、通知状態と公開情報を取り直さない。
+	// 取り直すのは、/project に入ったとき、選択中の企画が変わったとき、router.invalidate() されたとき（新着の反映や企画の作成・参加など）
+	shouldReload: ({ cause }) =>
+		cause === "enter" ||
+		useProjectStore.getState().selectedProjectId !== loadedProject.id,
+	loader: async ({ cause }) => {
 		const store = useProjectStore.getState();
 		const { selectedProjectId } = store;
+		loadedProject.id = selectedProjectId;
+
+		const applicationPeriodPromise =
+			cause === "enter" || applicationPeriodCache.info === undefined
+				? getApplicationPeriod().catch(() => null)
+				: Promise.resolve(applicationPeriodCache.info);
 
 		if (!selectedProjectId) {
+			applicationPeriodCache.info = await applicationPeriodPromise;
 			return {
+				applicationPeriodInfo: applicationPeriodCache.info,
 				notificationStatus: EMPTY_NOTIFICATION_STATUS,
 				publicInfoProjectId: null,
 				publicInfo: null,
@@ -146,11 +172,21 @@ export const Route = createFileRoute("/project")({
 			};
 		}
 
-		const [notificationStatusResult, publicInfoResult] =
-			await Promise.allSettled([
-				getProjectNotificationStatus(selectedProjectId),
-				getProjectPublicInfo(selectedProjectId),
-			]);
+		const [
+			applicationPeriodResult,
+			notificationStatusResult,
+			publicInfoResult,
+		] = await Promise.allSettled([
+			applicationPeriodPromise,
+			getProjectNotificationStatus(selectedProjectId),
+			getProjectPublicInfo(selectedProjectId),
+		]);
+		// applicationPeriodPromise は失敗を null にしているので reject しない
+		const applicationPeriodInfo =
+			applicationPeriodResult.status === "fulfilled"
+				? applicationPeriodResult.value
+				: null;
+		applicationPeriodCache.info = applicationPeriodInfo;
 
 		const notificationStatus =
 			notificationStatusResult.status === "fulfilled"
@@ -173,6 +209,7 @@ export const Route = createFileRoute("/project")({
 				: EMPTY_PUBLIC_INFO_MODERATION;
 
 		return {
+			applicationPeriodInfo,
 			notificationStatus,
 			publicInfoProjectId: selectedProjectId,
 			publicInfo,
@@ -181,11 +218,44 @@ export const Route = createFileRoute("/project")({
 		};
 	},
 	component: ProjectLayout,
+	errorComponent: ProjectErrorComponent,
 });
 
+/**
+ * 企画から外されたときやアカウントを切り替えたときは、選択中の企画で子ページを読めずにエラーになる。
+ * 企画一覧を取り直して選択中の企画が変わったらダッシュボードへ移り、変わらなければエラーを表示する。
+ * 移動するのは、問い合わせ詳細のように URL に前の企画の ID を含むページを、切り替えた企画で開き直さないため
+ */
+function ProjectErrorComponent({ error }: ErrorComponentProps) {
+	const router = useRouter();
+	const [recoveryFailed, setRecoveryFailed] = useState(false);
+
+	useEffect(() => {
+		const before = useProjectStore.getState().selectedProjectId;
+		refreshMyProjects()
+			.then(() => {
+				if (useProjectStore.getState().selectedProjectId !== before) {
+					void router.navigate({ to: "/project" });
+				} else {
+					setRecoveryFailed(true);
+				}
+			})
+			.catch(() => setRecoveryFailed(true));
+	}, [router]);
+
+	return recoveryFailed ? <RouteError error={error} /> : null;
+}
+
 function ProjectLayout() {
-	const { notificationStatus: initialNotificationStatus } =
-		Route.useLoaderData();
+	const {
+		notificationStatus: initialNotificationStatus,
+		applicationPeriodInfo: loadedApplicationPeriodInfo,
+	} = Route.useLoaderData();
+	// 取得に失敗したときは保守的に期間外として扱う
+	const applicationPeriodInfo = loadedApplicationPeriodInfo ?? {
+		isOpen: false,
+		periods: null,
+	};
 	const navigate = useNavigate();
 	const router = useRouter();
 	const { projects, selectedProjectId, setSelectedProjectId, setProjects } =
@@ -193,10 +263,6 @@ function ProjectLayout() {
 	const selectedProject =
 		projects.find(p => p.id === selectedProjectId) ?? null;
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-	const [applicationPeriodInfo, setApplicationPeriodInfo] = useState<{
-		isOpen: boolean;
-		periods: { start: string; end: string }[] | null;
-	} | null>(null);
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 	const [joinDialogOpen, setJoinDialogOpen] = useState(false);
 	const { user } = useAuthStore();
@@ -210,19 +276,6 @@ function ProjectLayout() {
 	useEffect(() => {
 		setNotificationStatus(initialNotificationStatus);
 	}, [initialNotificationStatus]);
-
-	useEffect(() => {
-		const fetchApplicationPeriod = async () => {
-			try {
-				const info = await getApplicationPeriod();
-				setApplicationPeriodInfo(info);
-			} catch {
-				// API失敗時は保守的に期間外として扱う
-				setApplicationPeriodInfo({ isOpen: false, periods: null });
-			}
-		};
-		void fetchApplicationPeriod();
-	}, []);
 
 	const hasPrivilegedProject = projects.some(
 		project =>
@@ -239,35 +292,50 @@ function ProjectLayout() {
 				notificationStatus.hasUnreadInquiryComments),
 	}));
 
-	const refreshNotificationStatus = useCallback(async () => {
-		if (!selectedProjectId) {
-			setNotificationStatus(EMPTY_NOTIFICATION_STATUS);
-			return;
-		}
-
-		try {
-			const next = await getProjectNotificationStatus(selectedProjectId);
-			// 応答を待つ間に企画が切り替わっていたら、前の企画の状態を反映しない
-			if (useProjectStore.getState().selectedProjectId !== selectedProjectId) {
+	/** reflectChanges が false のときは、状態が変わっても開いている画面を取り直さない */
+	const refreshNotificationStatus = useCallback(
+		async ({ reflectChanges = true }: { reflectChanges?: boolean } = {}) => {
+			if (!selectedProjectId) {
+				setNotificationStatus(EMPTY_NOTIFICATION_STATUS);
 				return;
 			}
 
-			const current = notificationStatusRef.current;
-			const changed =
-				next.hasUnansweredForms !== current.hasUnansweredForms ||
-				next.hasUncheckedNotices !== current.hasUncheckedNotices ||
-				next.hasUnreadInquiryComments !== current.hasUnreadInquiryComments ||
-				next.latestActivityAt?.getTime() !==
-					current.latestActivityAt?.getTime();
+			try {
+				const next = await getProjectNotificationStatus(selectedProjectId);
+				// 応答を待つ間に企画が切り替わっていたら、前の企画の状態を反映しない
+				if (
+					useProjectStore.getState().selectedProjectId !== selectedProjectId
+				) {
+					return;
+				}
 
-			setNotificationStatus(next);
-			// 開いている画面にも新しいお知らせや返信を反映する
-			if (changed) void router.invalidate();
-		} catch {
-			// 企画から外された場合は beforeLoad が別の企画へ切り替える
-			void router.invalidate();
-		}
-	}, [router, selectedProjectId]);
+				const current = notificationStatusRef.current;
+				const changed =
+					next.hasUnansweredForms !== current.hasUnansweredForms ||
+					next.hasUncheckedNotices !== current.hasUncheckedNotices ||
+					next.hasUnreadInquiryComments !== current.hasUnreadInquiryComments ||
+					next.latestActivityAt?.getTime() !==
+						current.latestActivityAt?.getTime();
+
+				setNotificationStatus(next);
+				// 開いている画面にも新しいお知らせや返信を反映する
+				if (changed && reflectChanges) void router.invalidate();
+			} catch {
+				// 企画から外された場合に別の企画へ切り替える
+				await refreshMyProjects().catch(() => undefined);
+				void router.invalidate();
+			}
+		},
+		[router, selectedProjectId]
+	);
+
+	useEffect(
+		() =>
+			registerNotificationDotRefresh(() =>
+				refreshNotificationStatus({ reflectChanges: false })
+			),
+		[refreshNotificationStatus]
+	);
 
 	useEffect(() => {
 		let lastRefreshAt = 0;
@@ -301,11 +369,12 @@ function ProjectLayout() {
 			const { project } = await joinProject({ inviteCode });
 
 			if (!projects.some(p => p.id === project.id)) {
-				// アイコンは直後の invalidate による一覧再取得で反映される
+				// アイコンは直後の一覧の取り直しで反映される
 				setProjects([...projects, { ...project, iconFileId: null }]);
 			}
 
 			setSelectedProjectId(project.id);
+			void refreshMyProjects().catch(() => undefined);
 			router.invalidate();
 		} catch (error) {
 			reportHandledError({
@@ -359,21 +428,11 @@ function ProjectLayout() {
 					</Callout.Root>
 				)}
 				{projects.length === 0 ? (
-					applicationPeriodInfo ? (
-						<EmptyProjectState
-							onCreateProject={() => setCreateDialogOpen(true)}
-							onJoinProject={() => setJoinDialogOpen(true)}
-							isApplicationPeriodOpen={applicationPeriodInfo.isOpen}
-						/>
-					) : (
-						<div className={styles.emptyState}>
-							<div className={styles.emptyStateContent}>
-								<Heading size="5" className={styles.emptyStateHeading}>
-									読み込み中...
-								</Heading>
-							</div>
-						</div>
-					)
+					<EmptyProjectState
+						onCreateProject={() => setCreateDialogOpen(true)}
+						onJoinProject={() => setJoinDialogOpen(true)}
+						isApplicationPeriodOpen={applicationPeriodInfo.isOpen}
+					/>
 				) : (
 					selectedProjectId && <Outlet key={selectedProjectId} />
 				)}
@@ -382,9 +441,10 @@ function ProjectLayout() {
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}
 				onCreated={project => {
-					// アイコンは直後の invalidate による一覧再取得で反映される
+					// アイコンは直後の一覧の取り直しで反映される
 					setProjects([...projects, { ...project, iconFileId: null }]);
 					setSelectedProjectId(project.id);
+					void refreshMyProjects().catch(() => undefined);
 					router.invalidate();
 				}}
 			/>

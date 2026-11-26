@@ -1,17 +1,16 @@
 import { AlertDialog, Badge, Heading, Separator, Text } from "@radix-ui/themes";
-import type { GetNoticeResponse } from "@sos26/shared";
+import type {
+	GetNoticeResponse,
+	UpdateNoticeAuthorizationResponse,
+} from "@sos26/shared";
 import {
 	IconArrowLeft,
 	IconCalendar,
 	IconClock,
 	IconPaperclip,
 } from "@tabler/icons-react";
-import {
-	createFileRoute,
-	useNavigate,
-	useRouter,
-} from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AttachmentPreviewButton } from "@/components/filePreview/AttachmentPreviewButton";
 import { Button } from "@/components/primitives";
@@ -24,6 +23,7 @@ import {
 	updateNoticeAuthorization,
 } from "@/lib/api/committee-notice";
 import { useAuthStore } from "@/lib/auth";
+import { reportHandledError } from "@/lib/error/report";
 import { formatDate } from "@/lib/format";
 import { getNoticeStatusFromAuth } from "@/lib/notice-status";
 import { sanitizeHtml } from "@/lib/sanitize";
@@ -38,6 +38,10 @@ export const Route = createFileRoute("/committee/notice/$noticeId/")({
 	head: () => ({
 		meta: [{ title: "お知らせ詳細 | 雙峰祭オンラインシステム" }],
 	}),
+	// 操作の結果は画面の state にだけ反映するので、ページを離れたら loader のデータを捨て、開き直したときに古い表示を出さない
+	gcTime: 0,
+	// パラメータが変わったら作り直し、前の詳細を待っていた応答を移った先の画面に入れない
+	remountDeps: ({ params }) => params,
 	loader: async ({ params }) => {
 		const [noticeRes, membersRes] = await Promise.all([
 			getNotice(params.noticeId),
@@ -52,10 +56,17 @@ export const Route = createFileRoute("/committee/notice/$noticeId/")({
 
 function RouteComponent() {
 	const { noticeId } = Route.useParams();
-	const { notice, committeeMembers } = Route.useLoaderData();
+	const { notice: loadedNotice, committeeMembers } = Route.useLoaderData();
 	const navigate = useNavigate();
-	const router = useRouter();
 	const { user } = useAuthStore();
+	const [notice, setNotice] = useState(loadedNotice);
+	const latestRefetchIdRef = useRef(0);
+
+	// 別のお知らせに移ったら、取得中の再取得の応答を捨てる
+	useEffect(() => {
+		latestRefetchIdRef.current += 1;
+		setNotice(loadedNotice);
+	}, [loadedNotice]);
 
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -90,10 +101,40 @@ function RouteComponent() {
 			avatarFileId: m.user.avatarFileId,
 		}));
 
+	// 応答で差し替えるときも番号を進め、その前に出ていた再取得の応答で差し替えを戻さない
+	const updateNoticeLocally = (
+		update: (prev: typeof notice) => typeof notice
+	) => {
+		latestRefetchIdRef.current += 1;
+		setNotice(update);
+	};
+
+	// 応答は最後に出した再取得の分だけ反映する。続けて操作したときに古い応答で上書きしないため
+	const refetchNotice = async () => {
+		latestRefetchIdRef.current += 1;
+		const refetchId = latestRefetchIdRef.current;
+		try {
+			const res = await getNotice(noticeId);
+			if (refetchId === latestRefetchIdRef.current) setNotice(res.notice);
+		} catch (error) {
+			if (refetchId !== latestRefetchIdRef.current) return;
+			reportHandledError({
+				error,
+				operation: "read",
+				userMessage: "お知らせの最新の状態を取得できませんでした",
+				ui: { type: "toast" },
+				context: { noticeId },
+			});
+		}
+	};
+
 	const handleAddCollaborator = async (userId: string) => {
 		try {
-			await addCollaborator(notice.id, { userId });
-			await router.invalidate();
+			const res = await addCollaborator(notice.id, { userId });
+			updateNoticeLocally(prev => ({
+				...prev,
+				collaborators: [...prev.collaborators, res.collaborator],
+			}));
 		} catch {
 			toast.error("共同編集者の追加に失敗しました");
 		}
@@ -103,7 +144,10 @@ function RouteComponent() {
 		setRemovingId(collaboratorId);
 		try {
 			await removeCollaborator(notice.id, collaboratorId);
-			await router.invalidate();
+			updateNoticeLocally(prev => ({
+				...prev,
+				collaborators: prev.collaborators.filter(c => c.id !== collaboratorId),
+			}));
 		} catch {
 			toast.error("共同編集者の削除に失敗しました");
 		} finally {
@@ -123,23 +167,36 @@ function RouteComponent() {
 		}
 	};
 
+	// 承認では配信先が作られることがあり、応答に含まれないので詳細を取り直す
 	const handleApprove = async (authorizationId: string) => {
 		try {
 			await updateNoticeAuthorization(noticeId, authorizationId, {
 				status: "APPROVED",
 			});
-			await router.invalidate();
 		} catch {
 			toast.error("承認に失敗しました");
+			return;
 		}
+		await refetchNotice();
+	};
+
+	const applyAuthorization = (
+		authorization: UpdateNoticeAuthorizationResponse["authorization"]
+	) => {
+		updateNoticeLocally(prev => ({
+			...prev,
+			authorizations: prev.authorizations.map(a =>
+				a.id === authorization.id ? { ...a, ...authorization } : a
+			),
+		}));
 	};
 
 	const handleReject = async (authorizationId: string) => {
 		try {
-			await updateNoticeAuthorization(noticeId, authorizationId, {
+			const res = await updateNoticeAuthorization(noticeId, authorizationId, {
 				status: "REJECTED",
 			});
-			await router.invalidate();
+			applyAuthorization(res.authorization);
 		} catch {
 			toast.error("却下に失敗しました");
 		}
@@ -147,10 +204,10 @@ function RouteComponent() {
 
 	const handleCancelApproval = async (authorizationId: string) => {
 		try {
-			await updateNoticeAuthorization(noticeId, authorizationId, {
+			const res = await updateNoticeAuthorization(noticeId, authorizationId, {
 				status: "REJECTED",
 			});
-			await router.invalidate();
+			applyAuthorization(res.authorization);
 			toast.success("承認を取り消しました");
 		} catch {
 			toast.error("承認の取り消しに失敗しました");
@@ -234,7 +291,7 @@ function RouteComponent() {
 				onApprove={handleApprove}
 				onReject={handleReject}
 				onCancelApproval={handleCancelApproval}
-				onPublishSuccess={() => router.invalidate()}
+				onPublishSuccess={refetchNotice}
 				onEdit={() => setEditDialogOpen(true)}
 				onDelete={() => setDeleteConfirmOpen(true)}
 			/>
@@ -246,7 +303,7 @@ function RouteComponent() {
 				noticeId={notice.id}
 				initialValues={{ title: notice.title, body: notice.body ?? "" }}
 				initialAttachments={notice.attachments}
-				onSuccess={() => router.invalidate()}
+				onSuccess={refetchNotice}
 			/>
 
 			{/* 削除確認ダイアログ */}

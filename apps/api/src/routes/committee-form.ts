@@ -37,6 +37,7 @@ import {
 	mapFormToApiShape,
 	mapItemToApiShape,
 } from "../lib/form-constraints";
+import { findLatestFormItemEditHistoryIds } from "../lib/latest-edit-history";
 import {
 	notifyFormAuthorizationCancelled,
 	notifyFormAuthorizationDecided,
@@ -302,6 +303,27 @@ const requireNotApproved = async (formId: string) => {
  * 2. 共同編集者 → 閲覧可
  * 3. 閲覧者（FormViewer）にマッチ → 閲覧可
  */
+function isFormResponseViewer(
+	form: { ownerId: string; collaborators: { userId: string }[] },
+	viewers: {
+		scope: string;
+		bureauValue: string | null;
+		userId: string | null;
+	}[],
+	userId: string,
+	committeeMember: CommitteeMember
+): boolean {
+	if (form.ownerId === userId) return true;
+	if (form.collaborators.some(c => c.userId === userId)) return true;
+	return viewers.some(
+		viewer =>
+			viewer.scope === "ALL" ||
+			(viewer.scope === "BUREAU" &&
+				viewer.bureauValue === committeeMember.Bureau) ||
+			(viewer.scope === "INDIVIDUAL" && viewer.userId === userId)
+	);
+}
+
 async function canViewFormResponses(
 	formId: string,
 	userId: string,
@@ -319,24 +341,7 @@ async function canViewFormResponses(
 		where: { formId, deletedAt: null },
 	});
 
-	// 1. owner
-	if (form.ownerId === userId) return true;
-
-	// 2. collaborator
-	if (form.collaborators.some(c => c.userId === userId)) return true;
-
-	// 3. viewer
-	for (const viewer of viewers) {
-		if (viewer.scope === "ALL") return true;
-		if (
-			viewer.scope === "BUREAU" &&
-			viewer.bureauValue === committeeMember.Bureau
-		)
-			return true;
-		if (viewer.scope === "INDIVIDUAL" && viewer.userId === userId) return true;
-	}
-
-	return false;
+	return isFormResponseViewer(form, viewers, userId, committeeMember);
 }
 
 // 承認時の配信スケジュール日時バリデーション
@@ -515,9 +520,25 @@ committeeFormRoute.get(
 			include: { user: { select: userSelect } },
 		});
 
+		const canViewResponses = isFormResponseViewer(
+			form,
+			viewers,
+			c.get("user").id,
+			getCommitteeMember(c)
+		);
+		const responseCount = canViewResponses
+			? await prisma.formResponse.count({
+					where: {
+						formDelivery: { formAuthorization: { formId } },
+						submittedAt: { not: null },
+					},
+				})
+			: null;
+
 		return c.json({
 			form: {
 				...form,
+				responseCount,
 				items: form.items.map(mapItemToApiShape),
 				attachments: mapFormAttachments(form.attachments),
 				authorizationDetail: form.authorizations[0] ?? null,
@@ -1135,56 +1156,26 @@ committeeFormRoute.get(
 			throw Errors.forbidden("回答の閲覧権限がありません");
 		}
 
-		const responses = await prisma.formResponse.findMany({
-			where: {
-				formDelivery: { formAuthorization: { formId } },
-				submittedAt: { not: null }, // 提出済みのみ
-			},
-			include: {
-				respondent: { select: userSelect },
-				formDelivery: {
-					include: {
-						project: {
-							select: {
-								id: true,
-								number: true,
-								name: true,
+		const [responses, formItems] = await Promise.all([
+			prisma.formResponse.findMany({
+				where: {
+					formDelivery: { formAuthorization: { formId } },
+					submittedAt: { not: null }, // 提出済みのみ
+				},
+				include: {
+					respondent: { select: userSelect },
+					formDelivery: {
+						include: {
+							project: {
+								select: {
+									id: true,
+									number: true,
+									name: true,
+								},
 							},
 						},
 					},
-				},
-				answers: {
-					include: {
-						files: answerFilesInclude,
-						selectedOptions: {
-							include: {
-								formItemOption: { select: { id: true, label: true } },
-							},
-						},
-					},
-				},
-			},
-			orderBy: { submittedAt: "desc" },
-		});
-
-		// FormItemEditHistory の最新値を取得
-		const formItems = await prisma.formItem.findMany({
-			where: { formId },
-			select: { id: true },
-		});
-		const formItemIds = formItems.map(fi => fi.id);
-		const projectIds = [
-			...new Set(responses.map(r => r.formDelivery.projectId)),
-		];
-
-		const allHistory =
-			formItemIds.length && projectIds.length
-				? await prisma.formItemEditHistory.findMany({
-						where: {
-							formItemId: { in: formItemIds },
-							projectId: { in: projectIds },
-						},
-						orderBy: { createdAt: "desc" },
+					answers: {
 						include: {
 							files: answerFilesInclude,
 							selectedOptions: {
@@ -1193,14 +1184,42 @@ committeeFormRoute.get(
 								},
 							},
 						},
-					})
-				: [];
+					},
+				},
+				orderBy: { submittedAt: "desc" },
+			}),
+			prisma.formItem.findMany({
+				where: { formId },
+				select: { id: true },
+			}),
+		]);
 
-		const latestByCell = new Map<string, (typeof allHistory)[0]>();
-		for (const h of allHistory) {
-			const key = `${h.formItemId}:${h.projectId}`;
-			if (!latestByCell.has(key)) latestByCell.set(key, h);
-		}
+		// FormItemEditHistory の最新値を取得
+		const formItemIds = formItems.map(fi => fi.id);
+		const projectIds = [
+			...new Set(responses.map(r => r.formDelivery.projectId)),
+		];
+
+		const latestHistoryIds = await findLatestFormItemEditHistoryIds(
+			formItemIds,
+			projectIds
+		);
+		const latestHistories = latestHistoryIds.length
+			? await prisma.formItemEditHistory.findMany({
+					where: { id: { in: latestHistoryIds } },
+					include: {
+						files: answerFilesInclude,
+						selectedOptions: {
+							include: {
+								formItemOption: { select: { id: true, label: true } },
+							},
+						},
+					},
+				})
+			: [];
+		const latestByCell = new Map(
+			latestHistories.map(h => [`${h.formItemId}:${h.projectId}`, h])
+		);
 
 		return c.json({
 			responses: responses.map(r => ({
@@ -1307,23 +1326,19 @@ committeeFormRoute.get(
 		const projectIds = [
 			...new Set(responses.map(r => r.formDelivery.projectId)),
 		];
-		const allHistory =
-			fileItemIds.length && projectIds.length
-				? await prisma.formItemEditHistory.findMany({
-						where: {
-							formItemId: { in: fileItemIds },
-							projectId: { in: projectIds },
-						},
-						orderBy: { createdAt: "desc" },
-						include: { files: answerFilesWithKeyInclude },
-					})
-				: [];
-
-		const latestByCell = new Map<string, (typeof allHistory)[0]>();
-		for (const h of allHistory) {
-			const key = `${h.formItemId}:${h.projectId}`;
-			if (!latestByCell.has(key)) latestByCell.set(key, h);
-		}
+		const latestHistoryIds = await findLatestFormItemEditHistoryIds(
+			fileItemIds,
+			projectIds
+		);
+		const latestHistories = latestHistoryIds.length
+			? await prisma.formItemEditHistory.findMany({
+					where: { id: { in: latestHistoryIds } },
+					include: { files: answerFilesWithKeyInclude },
+				})
+			: [];
+		const latestByCell = new Map(
+			latestHistories.map(h => [`${h.formItemId}:${h.projectId}`, h])
+		);
 
 		// エントリを事前に収集して、全ファイルが存在することを確認
 		const entries = collectZipEntries({
@@ -1434,13 +1449,13 @@ committeeFormRoute.get(
 		// FormItemEditHistory の最新値を取得
 		const formItemIds = r.answers.map(a => a.formItemId);
 		const projectId = r.formDelivery.project.id;
-		const allHistory = formItemIds.length
+		const latestHistoryIds = await findLatestFormItemEditHistoryIds(
+			formItemIds,
+			[projectId]
+		);
+		const latestHistories = latestHistoryIds.length
 			? await prisma.formItemEditHistory.findMany({
-					where: {
-						formItemId: { in: formItemIds },
-						projectId,
-					},
-					orderBy: { createdAt: "desc" },
+					where: { id: { in: latestHistoryIds } },
 					include: {
 						files: answerFilesInclude,
 						selectedOptions: {
@@ -1451,11 +1466,7 @@ committeeFormRoute.get(
 					},
 				})
 			: [];
-
-		const latestByItem = new Map<string, (typeof allHistory)[0]>();
-		for (const h of allHistory) {
-			if (!latestByItem.has(h.formItemId)) latestByItem.set(h.formItemId, h);
-		}
+		const latestByItem = new Map(latestHistories.map(h => [h.formItemId, h]));
 
 		return c.json({
 			response: {
