@@ -524,6 +524,7 @@ function RouteComponent() {
 						rows={answerRows}
 						error={responsesError}
 						columns={answerColumns}
+						csvFileName={`${form.title}_回答`}
 					/>
 				) : (
 					<div className={styles.contentLayout}>
@@ -618,10 +619,12 @@ function AnswersSection({
 	rows,
 	error,
 	columns,
+	csvFileName,
 }: {
 	rows: AnswerRow[] | null;
 	error: string | null;
 	columns: ComponentProps<typeof DataTable<AnswerRow>>["columns"];
+	csvFileName: string;
 }) {
 	return (
 		<section className={styles.answersSection}>
@@ -633,6 +636,7 @@ function AnswersSection({
 				<DataTable<AnswerRow>
 					data={rows}
 					columns={columns}
+					csvFileName={csvFileName}
 					features={{
 						sorting: true,
 						globalFilter: true,
