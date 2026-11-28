@@ -25,6 +25,35 @@
 	position: relative;
 }
 
+// 行が多い表は表の中で縦にスクロールさせ、見えている行だけを描画する。
+// 高さを固定するので、描画する行が変わってもページの高さは変わらない。
+// スクロールするのは Radix の Table が中に持つ ScrollArea の Viewport なので、そこまで高さを渡す
+.virtualized {
+	height: var(--data-table-virtualized-height, 70vh);
+
+	:global(.rt-TableRoot) {
+		height: 100%;
+	}
+
+	// 固定した見出しの上にスクロールバーを出し、つまみが見出しに隠れないようにする
+	:global(.rt-ScrollAreaScrollbar) {
+		z-index: 5;
+	}
+
+	:global(.rt-TableHeader) :global(.rt-TableColumnHeaderCell) {
+		position: sticky;
+		top: 0;
+		z-index: 3;
+		// 見出しの薄い色を、下の行が透けない色の上に重ねる
+		background: linear-gradient(var(--gray-a1), var(--gray-a1)),
+			var(--color-panel-solid);
+
+		&.pinnedHeaderCell {
+			background: var(--accent-2);
+		}
+	}
+}
+
 :global(.rt-TableCell) {
 	vertical-align: middle;
 }
@@ -36,7 +65,7 @@
 
 .pinnedHeaderCell {
 	position: sticky !important;
-	z-index: 3;
+	z-index: 4;
 	background-color: var(--accent-2);
 }
 

@@ -23,6 +23,7 @@
     "@tabler/icons-react": "^3.36.1",
     "@tanstack/react-router": "^1.147.1",
     "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.14.28",
     "@tiptap/extension-link": "^3.19.0",
     "@tiptap/extension-placeholder": "^3.19.0",
     "@tiptap/pm": "^3.19.0",
