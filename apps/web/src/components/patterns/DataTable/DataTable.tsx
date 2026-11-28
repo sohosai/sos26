@@ -36,6 +36,7 @@ import {
 	memo,
 	type MouseEvent as ReactMouseEvent,
 	type ReactNode,
+	useCallback,
 	useEffect,
 	useLayoutEffect,
 	useMemo,
@@ -489,12 +490,17 @@ function useRowVirtualizer<T extends RowData>(
 			viewport.scrollTop;
 		setScrollMargin(prev => (prev === top ? prev : top));
 	});
+	// 並べ替えで行の位置が変わっても、測った高さを行に結びつけておく。
+	// 描画のたびに作り直すと、全行の位置の計算がやり直されるので、行が変わったときだけ作る
+	const getItemKey = useCallback(
+		(index: number) => rows[index]?.id ?? index,
+		[rows]
+	);
 	const virtualizer = useVirtualizer({
 		count: rows.length,
 		getScrollElement: () => getTableViewport(scrollContainerRef.current),
 		estimateSize: () => ESTIMATED_ROW_HEIGHT,
-		// 並べ替えで行の位置が変わっても、測った高さを行に結びつけておく
-		getItemKey: index => rows[index]?.id ?? index,
+		getItemKey,
 		overscan: 10,
 		scrollMargin,
 		enabled: virtualize,

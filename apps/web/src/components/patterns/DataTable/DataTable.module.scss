@@ -35,6 +35,11 @@
 		height: 100%;
 	}
 
+	// 固定した見出しの上にスクロールバーを出し、つまみが見出しに隠れないようにする
+	:global(.rt-ScrollAreaScrollbar) {
+		z-index: 5;
+	}
+
 	:global(.rt-TableHeader) :global(.rt-TableColumnHeaderCell) {
 		position: sticky;
 		top: 0;
